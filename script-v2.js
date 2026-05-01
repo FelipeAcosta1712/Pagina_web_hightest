@@ -64,6 +64,75 @@ const isValidPhone = (phone) => {
     return phone.trim() === '' || regex.test(phone);
 };
 
+/**
+ * Notificaciones tipo Toast (sin dependencias)
+ */
+const Toast = {
+    containerId: 'htToastContainer',
+
+    ensureContainer() {
+        let container = document.getElementById(this.containerId);
+        if (container) return container;
+
+        container = document.createElement('div');
+        container.id = this.containerId;
+        container.className = 'ht-toast-container';
+        container.setAttribute('aria-live', 'polite');
+        container.setAttribute('aria-atomic', 'true');
+        document.body.appendChild(container);
+        return container;
+    },
+
+    show({ title, message, variant = 'info', duration = 2800 } = {}) {
+        const safeTitle = (title ?? '').toString().trim();
+        const safeMessage = (message ?? '').toString().trim();
+        if (!safeTitle && !safeMessage) return;
+
+        const iconByVariant = {
+            success: '✅',
+            error: '⚠️',
+            info: 'ℹ️'
+        };
+
+        const container = this.ensureContainer();
+        const toast = document.createElement('div');
+        toast.className = `ht-toast ht-toast--${variant}`;
+        toast.setAttribute('role', 'status');
+
+        const icon = document.createElement('div');
+        icon.className = 'ht-toast__icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = iconByVariant[variant] || iconByVariant.info;
+
+        const content = document.createElement('div');
+        content.className = 'ht-toast__content';
+
+        if (safeTitle) {
+            const titleEl = document.createElement('div');
+            titleEl.className = 'ht-toast__title';
+            titleEl.textContent = safeTitle;
+            content.appendChild(titleEl);
+        }
+
+        if (safeMessage) {
+            const messageEl = document.createElement('div');
+            messageEl.className = 'ht-toast__message';
+            messageEl.textContent = safeMessage;
+            content.appendChild(messageEl);
+        }
+
+        toast.appendChild(icon);
+        toast.appendChild(content);
+
+        container.appendChild(toast);
+
+        window.setTimeout(() => {
+            toast.classList.add('ht-toast--out');
+            toast.addEventListener('animationend', () => toast.remove(), { once: true });
+        }, Math.max(900, Number(duration) || 0));
+    }
+};
+
 // ===========================
 // MÓDULO: MENU HAMBURGUESA
 // ===========================
@@ -1197,11 +1266,64 @@ const FormValidatorContact = {
 const AuthManager = {
     currentUser: null,
     storageKey: 'hightest_user',
+    _initialized: false,
+    _loginInProgress: false,
+
+    ensureAuthNotice() {
+        const authModal = document.getElementById('authModal');
+        if (!authModal) return null;
+
+        let notice = authModal.querySelector('#authModalNotice');
+        if (notice) return notice;
+
+        const loginTab = document.getElementById('loginTab');
+        const subtitle = authModal.querySelector('.auth-modal__subtitle');
+        if (!loginTab) return null;
+
+        notice = document.createElement('div');
+        notice.id = 'authModalNotice';
+        notice.className = 'auth-modal__notice auth-modal__notice--hidden';
+        notice.setAttribute('role', 'status');
+        notice.setAttribute('aria-live', 'polite');
+
+        if (subtitle && subtitle.parentElement === loginTab) {
+            subtitle.insertAdjacentElement('afterend', notice);
+        } else {
+            loginTab.insertAdjacentElement('afterbegin', notice);
+        }
+
+        return notice;
+    },
+
+    showAuthNotice({ message, variant = 'success', duration = 3000 } = {}) {
+        const text = (message ?? '').toString().trim();
+        if (!text) return;
+
+        const notice = this.ensureAuthNotice();
+        if (!notice) return;
+
+        notice.textContent = text;
+        notice.classList.remove('auth-modal__notice--hidden');
+        notice.classList.toggle('auth-modal__notice--success', variant === 'success');
+        notice.classList.toggle('auth-modal__notice--error', variant === 'error');
+        notice.classList.toggle('auth-modal__notice--info', variant === 'info');
+
+        window.clearTimeout(this._noticeTimeoutId);
+        this._noticeTimeoutId = window.setTimeout(() => {
+            notice.classList.add('auth-modal__notice--hidden');
+            notice.textContent = '';
+        }, Math.max(900, Number(duration) || 0));
+    },
 
     /**
      * Inicializar el gestor de autenticación
      */
     init() {
+        if (this._initialized) {
+            console.log('🔐 AuthManager: Ya estaba inicializado, omitiendo.');
+            return;
+        }
+        this._initialized = true;
         console.log('🔐 AuthManager: Inicializando...');
         this.loadUserFromStorage();
         this.setupEventListeners();
@@ -1368,18 +1490,31 @@ const AuthManager = {
      */
     async handleLogin(e) {
         e.preventDefault();
+
+        if (this._loginInProgress) return;
+        this._loginInProgress = true;
+
+        let redirectScheduled = false;
+
         const form = e.target;
         const email = form.querySelector('input[name="email"]').value.trim();
         const password = form.querySelector('input[name="password"]').value;
 
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
+
         // Validaciones básicas
         if (!email || !password) {
             alert('Por favor, completa todos los campos');
+            this._loginInProgress = false;
+            if (submitBtn) submitBtn.disabled = false;
             return;
         }
 
         if (!this.isValidEmail(email)) {
             alert('Correo electrónico inválido');
+            this._loginInProgress = false;
+            if (submitBtn) submitBtn.disabled = false;
             return;
         }
 
@@ -1398,6 +1533,8 @@ const AuthManager = {
 
             if (!response.ok) {
                 alert('Acceso denegado: Verifique sus credenciales de HIGH TEST.');
+                this._loginInProgress = false;
+                if (submitBtn) submitBtn.disabled = false;
                 return;
             }
 
@@ -1417,14 +1554,26 @@ const AuthManager = {
             };
 
             this.saveUserToStorage();
-            this.closeAuthModal();
 
-            // Redirigir al panel administrativo
-            alert(`¡Bienvenido ${this.currentUser.name}! Redirigiendo al panel administrativo...`);
-            window.location.href = 'admin-panel.html';
+            // Mostrar mensaje en el mismo modal y luego redirigir
+            this.showAuthNotice({
+                message: `Acceso concedido. Bienvenido, ${this.currentUser.name}. Redirigiendo al panel administrativo...`,
+                variant: 'success',
+                duration: 3000
+            });
+
+            redirectScheduled = true;
+            window.setTimeout(() => {
+                window.location.href = 'admin-panel.html';
+            }, 3000);
         } catch (error) {
             console.error('Error en el sistema de acceso:', error);
             alert('Error en el sistema de acceso. Intente nuevamente.');
+        } finally {
+            if (!redirectScheduled) {
+                this._loginInProgress = false;
+                if (submitBtn) submitBtn.disabled = false;
+            }
         }
     },
 
@@ -1577,11 +1726,14 @@ const PublicCertificatesManager = {
 const CertificatesAuthManager = {
     currentClient: null,
     storageKey: 'hightest_client',
+    _initialized: false,
 
     /**
      * Inicializar el gestor de autenticación de certificados
      */
     init() {
+        if (this._initialized) return;
+        this._initialized = true;
         this.loadClientFromStorage();
         this.updateClientUI();
         this.setupModalControls();
