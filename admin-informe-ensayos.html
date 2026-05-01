@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="FR-7.8 Informe de ensayos eléctricos - HIGH TEST SAS">
+    <meta name="author" content="HIGH TEST SAS">
+    <title>FR-7.8 Informe de Ensayos | HIGH TEST SAS</title>
+    <link rel="stylesheet" href="styles-v2.css">
+</head>
+<body>
+    <!-- HEADER INFORME DE ENSAYOS -->
+    <header class="header header--admin" role="banner">
+        <div class="header__container">
+            <div class="header__logo">
+                <a href="index.html#inicio" class="header__logo-link">
+                    <img src="/image/logo.png" alt="HIGH TEST SAS" class="header__logo-image">
+                </a>
+            </div>
+            <nav class="header__nav" role="navigation" aria-label="Navegación informe de ensayos">
+                <button class="header__menu-toggle" aria-label="Abrir menú" aria-expanded="false">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul class="header__menu">
+                    <li><a href="admin-panel.html#items" class="header__link">⬅ Volver al Panel</a></li>
+                </ul>
+                <button class="header__icon-btn" id="themeToggleBtn" aria-label="Cambiar tema de color" title="Cambiar tema">
+                    🌙
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="admin-panel admin-main" role="main">
+        <div class="container">
+            <section class="admin-section">
+                <div class="admin-section__header">
+                    <h1 class="admin-section__title">FR-7.8 Informe de Ensayos Eléctricos</h1>
+                    <p class="admin-section__subtitle">Formato para documentar los resultados de los ensayos eléctricos realizados a equipos y elementos sometidos a prueba.</p>
+                </div>
+                <div class="admin-section__content">
+                    <!-- DATOS GENERALES DEL SERVICIO -->
+                    <div class="admin-checklist__info">
+                        <div class="checklist-header-grid">
+                            <div class="checklist-header-field">
+                                <label for="infCliente">Cliente</label>
+                                <input type="text" id="infCliente" name="cliente" placeholder="Nombre del cliente">
+                            </div>
+                            <div class="checklist-header-field">
+                                <label for="infUbicacion">Ubicación / Sitio de ensayo</label>
+                                <input type="text" id="infUbicacion" name="ubicacion" placeholder="Dirección o instalación donde se realizó el ensayo">
+                            </div>
+                            <div class="checklist-header-field">
+                                <label for="infFechaEnsayo">Fecha del ensayo</label>
+                                <input type="date" id="infFechaEnsayo" name="fecha_ensayo">
+                            </div>
+                            <div class="checklist-header-field">
+                                <label for="infNumero">N° de informe</label>
+                                <input type="text" id="infNumero" name="numero_informe" placeholder="Código interno del informe">
+                            </div>
+                        </div>
+                        <div class="checklist-header-grid" style="margin-top: 8px;">
+                            <div class="checklist-header-field">
+                                <label for="infEquipo">Equipo / Elemento ensayado</label>
+                                <input type="text" id="infEquipo" name="equipo" placeholder="Descripción del equipo o elemento evaluado">
+                            </div>
+                            <div class="checklist-header-field">
+                                <label for="infReferencia">Referencia / Identificación</label>
+                                <input type="text" id="infReferencia" name="referencia" placeholder="Placa, serie o código interno">
+                            </div>
+                            <div class="checklist-header-field">
+                                <label for="infNorma">Norma / Procedimiento aplicado</label>
+                                <input type="text" id="infNorma" name="norma" placeholder="Norma técnica o procedimiento utilizado">
+                            </div>
+                            <div class="checklist-header-field">
+                                <label for="infRecepcion">N° de recepción</label>
+                                <input type="text" id="infRecepcion" name="numero_recepcion" placeholder="Relación con recepción de ítems">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TABLA DE RESULTADOS -->
+                    <table class="admin-table checklist-table" aria-label="Resultados de los ensayos eléctricos">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Parámetro / Ensayo</th>
+                                <th>Unidad</th>
+                                <th>Valor medido</th>
+                                <th>Criterio / Límite</th>
+                                <th>Resultado</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1</td>
+                                <td><input type="text" class="checklist-observation" placeholder="Ej: Tensión de prueba"></td>
+                                <td><input type="text" class="checklist-observation" placeholder="kV"></td>
+                                <td><input type="text" class="checklist-observation" placeholder="Valor medido"></td>
+                                <td><input type="text" class="checklist-observation" placeholder="Criterio de aceptación"></td>
+                                <td>
+                                    <select class="checklist-observation" name="resultado_1">
+                                        <option value="">-</option>
+                                        <option value="conforme">Conforme</option>
+                                        <option value="no_conforme">No conforme</option>
+                                        <option value="no_aplica">No aplica</option>
+                                    </select>
+                                </td>
+                                <td><input type="text" class="checklist-observation" placeholder="Observaciones"></td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td><input type="text" class="checklist-observation" placeholder="Parámetro adicional"></td>
+                                <td><input type="text" class="checklist-observation" placeholder="Unidad"></td>
+                                <td><input type="text" class="checklist-observation" placeholder="Valor medido"></td>
+                                <td><input type="text" class="checklist-observation" placeholder="Criterio de aceptación"></td>
+                                <td>
+                                    <select class="checklist-observation" name="resultado_2">
+                                        <option value="">-</option>
+                                        <option value="conforme">Conforme</option>
+                                        <option value="no_conforme">No conforme</option>
+                                        <option value="no_aplica">No aplica</option>
+                                    </select>
+                                </td>
+                                <td><input type="text" class="checklist-observation" placeholder="Observaciones"></td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td><input type="text" class="checklist-observation" placeholder="Parámetro adicional"></td>
+                                <td><input type="text" class="checklist-observation" placeholder="Unidad"></td>
+                                <td><input type="text" class="checklist-observation" placeholder="Valor medido"></td>
+                                <td><input type="text" class="checklist-observation" placeholder="Criterio de aceptación"></td>
+                                <td>
+                                    <select class="checklist-observation" name="resultado_3">
+                                        <option value="">-</option>
+                                        <option value="conforme">Conforme</option>
+                                        <option value="no_conforme">No conforme</option>
+                                        <option value="no_aplica">No aplica</option>
+                                    </select>
+                                </td>
+                                <td><input type="text" class="checklist-observation" placeholder="Observaciones"></td>
+                            </tr>
+                            <tr>
+                                <td>4</td>
+                                <td><input type="text" class="checklist-observation" placeholder="Parámetro adicional"></td>
+                                <td><input type="text" class="checklist-observation" placeholder="Unidad"></td>
+                                <td><input type="text" class="checklist-observation" placeholder="Valor medido"></td>
+                                <td><input type="text" class="checklist-observation" placeholder="Criterio de aceptación"></td>
+                                <td>
+                                    <select class="checklist-observation" name="resultado_4">
+                                        <option value="">-</option>
+                                        <option value="conforme">Conforme</option>
+                                        <option value="no_conforme">No conforme</option>
+                                        <option value="no_aplica">No aplica</option>
+                                    </select>
+                                </td>
+                                <td><input type="text" class="checklist-observation" placeholder="Observaciones"></td>
+                            </tr>
+                            <tr>
+                                <td>5</td>
+                                <td><input type="text" class="checklist-observation" placeholder="Parámetro adicional"></td>
+                                <td><input type="text" class="checklist-observation" placeholder="Unidad"></td>
+                                <td><input type="text" class="checklist-observation" placeholder="Valor medido"></td>
+                                <td><input type="text" class="checklist-observation" placeholder="Criterio de aceptación"></td>
+                                <td>
+                                    <select class="checklist-observation" name="resultado_5">
+                                        <option value="">-</option>
+                                        <option value="conforme">Conforme</option>
+                                        <option value="no_conforme">No conforme</option>
+                                        <option value="no_aplica">No aplica</option>
+                                    </select>
+                                </td>
+                                <td><input type="text" class="checklist-observation" placeholder="Observaciones"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- CONCLUSIONES Y OBSERVACIONES GENERALES -->
+                    <div class="admin-checklist__footer" style="margin-top: 16px;">
+                        <p><strong>Conclusiones del ensayo:</strong></p>
+                        <textarea id="infConclusiones" name="conclusiones" rows="4" style="width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; resize: vertical;" placeholder="Describa de forma clara las conclusiones generales del ensayo."></textarea>
+
+                        <p style="margin-top: 12px;"><strong>Observaciones generales:</strong></p>
+                        <textarea id="infObservacionesGenerales" name="observaciones_generales" rows="3" style="width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; resize: vertical;" placeholder="Registre observaciones relevantes adicionales al resultado del ensayo."></textarea>
+
+                        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; align-items: flex-end;">
+                            <div style="flex: 1 1 200px;">
+                                <label for="infResponsable" style="display:block; font-size: 13px; font-weight:600; margin-bottom:4px;">Responsable del informe</label>
+                                <input type="text" id="infResponsable" name="responsable" style="width:100%; border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; font-size:13px;" placeholder="Nombre del profesional responsable">
+                            </div>
+                            <div style="flex: 1 1 200px;">
+                                <label for="infCargo" style="display:block; font-size: 13px; font-weight:600; margin-bottom:4px;">Cargo</label>
+                                <input type="text" id="infCargo" name="cargo" style="width:100%; border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; font-size:13px;" placeholder="Cargo del responsable">
+                            </div>
+                            <div style="flex: 1 1 200px;">
+                                <label for="infFirma" style="display:block; font-size: 13px; font-weight:600; margin-bottom:4px;">Firma / VoBo</label>
+                                <input type="text" id="infFirma" name="firma" style="width:100%; border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; font-size:13px;" placeholder="Espacio para firma o VoBo">
+                            </div>
+                            <div style="flex: 0 0 auto; margin-left:auto;">
+                                <button type="button" class="btn btn--primary" id="btnInformePdf">Generar PDF</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+    <script src="script-v2.js"></script>
+</body>
+</html>

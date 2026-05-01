@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Portal de Cliente HIGH TEST SAS - Acceso a sus certificados y ensayos">
+    <meta name="keywords" content="portal cliente, HIGH TEST, certificados, ensayos eléctricos">
+    <meta name="author" content="HIGH TEST SAS">
+    <meta name="theme-color" content="#10b981">
+    <title>Portal de Cliente | HIGH TEST SAS</title>
+    <link rel="stylesheet" href="styles-v2.css">
+</head>
+<body>
+    <!-- HEADER CLIENTE -->
+    <header class="header header--client" role="banner">
+        <div class="header__container">
+            <div class="header__logo">
+                <a href="index.html#inicio" class="header__logo-link">
+                    <img src="/image/logo.png" alt="HIGH TEST SAS" class="header__logo-image">
+                </a>
+            </div>
+            <nav class="header__nav" role="navigation" aria-label="Navegación cliente">
+                <button class="header__menu-toggle" id="clientMenuToggle" aria-label="Abrir menú" aria-expanded="false">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul class="header__menu" id="clientHeaderMenu">
+                    <li><a href="#certificates" class="header__link">Certificados</a></li>
+                    <li><a href="#history" class="header__link">Historial</a></li>
+                    <li><a href="#requests" class="header__link">Solicitudes</a></li>
+                    <li><a href="#support" class="header__link">Soporte</a></li>
+                    <!-- Acción especial menú móvil: salir -->
+                    <li class="header__menu-item--action">
+                        <button class="header__menu-btn header__menu-btn--secondary" id="clientLogoutMobileBtn" aria-label="Cerrar sesión">
+                            🚪 Salir
+                        </button>
+                    </li>
+                </ul>
+                <button class="header__icon-btn" id="themeToggleBtn" aria-label="Cambiar tema de color" title="Cambiar tema">
+                    🌙
+                </button>
+                <div class="header__user-info">
+                    <span class="user-info__name" id="clientUserName">Cliente</span>
+                    <span class="user-info__company" id="clientUserCompany">Empresa</span>
+                </div>
+                <button class="header__cta header__cta--logout" id="clientLogoutBtn" aria-label="Cerrar sesión">
+                    🚪 Salir
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- PORTAL DE CLIENTE -->
+    <main id="clientPortal" class="client-portal client-main" role="main">
+        <div class="container">
+            <!-- WELCOME SECTION -->
+            <section class="client-welcome">
+                <div class="welcome-hero">
+                    <h1 class="welcome-hero__title">🏢 Bienvenido, <span id="clientWelcomeName">Cliente</span></h1>
+                    <p class="welcome-hero__subtitle">
+                        Este es su Portal de Clientes HIGH TEST para <span id="clientWelcomeCompany">su empresa</span>.
+                        Consulte y descargue sus certificados de ensayo, revise el historial de servicios y realice seguimientos en un solo lugar.
+                    </p>
+                </div>
+            </section>
+
+            <!-- GRID PRINCIPAL: CERTIFICADOS + EMPRESA -->
+            <div class="client-grid">
+                <!-- ACCESO DIRECTO A CERTIFICADOS -->
+                <section class="client-section client-quick-access" id="certificates">
+                    <div class="client-section__header">
+                        <h2 class="client-section__title">📄 Sus Certificados de Ensayo</h2>
+                        <p class="client-section__subtitle">Documentos oficiales emitidos por HIGH TEST para sus equipos y elementos de protección.</p>
+                    </div>
+                    <div class="client-section__content">
+                        <div class="certificates-grid" id="clientCertificates">
+                            <!-- Los certificados se cargarán dinámicamente -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- INFORMACIÓN DE LA EMPRESA -->
+                <section class="client-section client-company-info" id="company">
+                    <div class="client-section__header">
+                        <h2 class="client-section__title">🏢 Información de su Empresa</h2>
+                    </div>
+                    <div class="client-section__content">
+                        <div class="company-info" id="companyInfo">
+                            <!-- La información se cargará dinámicamente -->
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- GRID SECUNDARIO: HISTORIAL + SOLICITUDES -->
+            <div class="client-grid">
+                <!-- HISTORIAL DE ENSAYOS -->
+                <section class="client-section client-history" id="history">
+                    <div class="client-section__header">
+                        <h2 class="client-section__title">📚 Historial de Servicios</h2>
+                    </div>
+                    <div class="client-section__content">
+                        <div class="history-timeline" id="clientHistory">
+                            <!-- El historial se cargará dinámicamente -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ESTADO DE SOLICITUDES -->
+                <section class="client-section client-requests" id="requests">
+                    <div class="client-section__header">
+                        <h2 class="client-section__title">📋 Estado de Solicitudes</h2>
+                    </div>
+                    <div class="client-section__content">
+                        <div class="requests-list" id="clientRequests">
+                            <!-- Las solicitudes se cargarán dinámicamente -->
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- SOPORTE Y CONTACTO -->
+            <section class="client-section client-support" id="support">
+                <div class="client-section__header">
+                    <h2 class="client-section__title">🆘 Centro de Soporte HIGH TEST</h2>
+                    <p class="client-section__subtitle">Estamos para ayudarle: elija el canal de atención que prefiera.</p>
+                </div>
+                <div class="client-section__content">
+                    <div class="support__grid">
+                        <div class="support-card">
+                            <div class="support-card__icon">📧</div>
+                            <h3>Correo Electrónico</h3>
+                            <p>Soporte técnico especializado</p>
+                            <a href="mailto:soporte@hightest.com" class="btn btn--outline">Enviar Consulta</a>
+                        </div>
+                        <div class="support-card">
+                            <div class="support-card__icon">📱</div>
+                            <h3>WhatsApp</h3>
+                            <p>Asistencia inmediata</p>
+                            <a href="https://wa.me/573226197864" target="_blank" class="btn btn--outline">Contactar</a>
+                        </div>
+                        <div class="support-card">
+                            <div class="support-card__icon">📞</div>
+                            <h3>Teléfono</h3>
+                            <p>Línea directa de atención</p>
+                            <a href="tel:+573226197864" class="btn btn--outline">Llamar</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- SCRIPTS -->
+    <script src="script-v2.js"></script>
+</body>
+</html>

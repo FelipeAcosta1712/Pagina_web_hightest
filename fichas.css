@@ -1,0 +1,128 @@
+/* fichas.css - estilos de la vista de fichas técnicas */
+body {
+  background: #f4f6f9;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  color: #1e293b;
+  margin: 0;
+}
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.fichas-header h1 { margin: 0; font-size: 28px; color: #003a80; }
+.fichas-grid { display: grid; grid-template-columns: 280px 1fr 280px; gap: 20px; align-items: start; }
+.card { background: #ffffff; border-left: 6px solid #0b62b0; padding: 14px; box-shadow: 0 1px 4px rgba(16,24,40,0.05); border-radius: 6px; margin-bottom: 16px; }
+.card h3 { margin: 0 0 8px; font-size: 16px; color: #0b62b0; }
+.card ul { margin: 0; padding-left: 18px; }
+.sheet { background: linear-gradient(180deg,#ffffff 0%, #f6fbff 100%); border: 1px solid #e6eef7; border-radius: 8px; padding: 12px; }
+.sheet-top { text-align:center; padding: 12px 6px; border-bottom: 2px solid #e6eef7; }
+.sheet-title { font-weight: 700; font-size: 20px; color: #003a80; letter-spacing: 1px; }
+.sheet-subtitle { font-size: 13px; color: #334155; margin-top: 6px; }
+.sheet-body { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 12px; }
+.sheet-left, .sheet-center, .sheet-right { display:flex; flex-direction: column; gap: 12px; }
+.box { background: #fff; border: 1px solid #e9f0fb; padding: 10px; border-radius:6px; }
+.box h4 { margin: 0 0 8px; color: #0b62b0; }
+.sheet-image { background: linear-gradient(135deg, #e9f4ff, #ffffff); border: 2px dashed rgba(11,98,176,0.12); border-radius: 6px; min-height: 260px; display:flex; align-items:center; justify-content:center; color:#0b62b0; font-weight:600; }
+.photo-placeholder { padding: 12px; text-align:center; width: 100%; }
+.params-table { width:100%; border-collapse: collapse; font-size:13px; }
+.params-table th, .params-table td { border: 1px solid #e6eef7; padding: 6px 8px; text-align:left; }
+.params-table th { background: #f1f7ff; color: #0b62b0; font-weight:700; }
+.sheet-footer { display:flex; justify-content:space-between; padding: 10px 12px; border-top: 2px solid #e6eef7; margin-top:12px; font-weight:600; color:#0b3a66; }
+@media (max-width: 980px) {
+  .fichas-grid { grid-template-columns: 1fr; }
+  .sheet-body { grid-template-columns: 1fr; }
+  .sheet-image { min-height: 180px; }
+}
+
+/* GALERÍA: 3 tarjetas por fila en escritorio, 2 en tablet y 1 en móvil */
+.fichas-gallery { margin-bottom: 22px; }
+.fichas-gallery h2 { color: #003a80; margin-bottom: 10px; }
+.gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
+.ficha-card { background:#fff; border:1px solid #e6eef7; border-radius:8px; padding:12px; box-sizing: border-box; box-shadow:0 2px 6px rgba(16,24,40,0.04); cursor:pointer; width: auto; }
+.ficha-card:focus { outline: 3px solid rgba(11,98,176,0.15); }
+.ficha-thumb { height:120px; border-radius:6px; background:linear-gradient(135deg,#e9f4ff,#ffffff); display:flex; align-items:center; justify-content:center; color:#0b62b0; font-weight:700; }
+.ficha-title { margin-top:8px; font-size:14px; color:#003a80; }
+
+/* Header/menu styles and responsive mobile menu */
+.header__menu { display:flex; gap:8px; align-items:center; margin:0; padding:0; list-style:none; }
+.header__menu li { margin: 0; }
+.header__menu a { color: inherit; text-decoration:none; }
+.header__menu-toggle { display:none; background:transparent; border:none; cursor:pointer; padding:8px; }
+.header__menu-toggle span { display:block; width:18px; height:2px; background:#0b62b0; margin:3px 0; border-radius:2px; }
+
+@media (max-width: 800px) {
+  .header__menu { display:none; position:absolute; top:64px; right:14px; background:#fff; padding:10px; border-radius:6px; box-shadow:0 6px 18px rgba(2,6,23,0.12); flex-direction:column; z-index:200; }
+  .header__menu.open { display:flex; }
+  .header__menu-toggle { display:inline-flex; }
+}
+
+@media (max-width: 900px) {
+  .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .gallery-grid { grid-template-columns: 1fr; }
+  .ficha-thumb { height:100px; }
+}
+
+/* MODAL */
+.modal { display:none; position:fixed; inset:0; z-index:1000; align-items:center; justify-content:center; }
+.modal.open { display:flex; }
+.modal-overlay { position:absolute; inset:0; background:rgba(2,6,23,0.6); backdrop-filter: blur(2px); }
+.modal-dialog { position:relative; max-width:1100px; width:95%; max-height:90vh; overflow:auto; background:#fff; padding:14px; border-radius:10px; box-shadow:0 20px 60px rgba(2,6,23,0.4); z-index:2; }
+.modal-close { position:absolute; right:10px; top:8px; background:transparent; border:none; font-size:20px; cursor:pointer; }
+.modal-body { padding-top:28px; }
+.modal-footer { display:flex; justify-content:space-between; gap:8px; margin-top:12px; }
+.modal-prev, .modal-next { background:#0b62b0; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
+.modal-prev[disabled], .modal-next[disabled] { opacity:0.5; cursor:default; }
+
+/* Botones extra en el modal */
+.modal-edit { background:transparent; color:#0b62b0; border:1px solid #0b62b0; padding:8px 12px; border-radius:6px; cursor:pointer; }
+.modal-edit:hover { background: rgba(11,98,176,0.05); }
+.modal-download { background:#06b6d4; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
+.modal-download:hover { filter: brightness(0.95); }
+
+.modal-body.editing { outline: 2px dashed rgba(11,98,176,0.18); padding: 14px; }
+
+.ficha-overview { padding: 12px; }
+.ficha-summary { margin-top:12px; color:#1f2937; line-height:1.45; }
+.ficha-saved-note { margin-top:10px; font-size:13px; color:#065f46; background: #ecfdf5; padding:8px; border-radius:6px; border:1px solid #d1fae5; }
+.save-note { position:relative; display:inline-block; background:#10b981; color:#fff; padding:6px 10px; border-radius:6px; margin-bottom:8px; }
+
+body.theme-dark .ficha-summary { color: #cfeaff; }
+body.theme-dark .ficha-saved-note { color:#a7f3d0; background: rgba(10,55,38,0.08); border-color: rgba(167,243,208,0.06); }
+
+/* Search and theme controls */
+.visually-hidden { position:absolute; left:-10000px; width:1px; height:1px; overflow:hidden; }
+.fichas-controls .search-input { padding:8px 10px; border:1px solid #dbeafc; border-radius:6px; min-width:220px; background:#fff; color:#0b233f; }
+.fichas-controls .search-input:focus { outline: 2px solid rgba(11,98,176,0.15); box-shadow: 0 0 0 3px rgba(11,98,176,0.06); }
+
+/* Dark theme overrides for fichas view */
+body.theme-dark { background: #071223; color: #e6eef7; }
+body.theme-dark .container { background: transparent; }
+body.theme-dark .card, body.theme-dark .sheet, body.theme-dark .ficha-card { background: #081826; border-color: rgba(255,255,255,0.06); color:#e6eef7; }
+body.theme-dark .sheet-title { color: #9fd4ff; }
+body.theme-dark .sheet-subtitle { color: #cfeaff; }
+body.theme-dark .params-table th, body.theme-dark .params-table td { border-color: rgba(255,255,255,0.06); color:#e6eef7; }
+body.theme-dark .ficha-thumb { background: linear-gradient(135deg,#0d2a44,#09202f); color:#cfeaff; }
+body.theme-dark .modal-dialog { background: #07131f; color:#e6eef7; }
+body.theme-dark .modal-overlay { background: rgba(2,6,23,0.8); }
+body.theme-dark .btn { background: rgba(255,255,255,0.03); color: #e6eef7; border-color: rgba(255,255,255,0.06); }
+
+/* Darken header in dark theme and adjust header controls */
+body.theme-dark .header { background: #07131f; border-bottom: 1px solid rgba(255,255,255,0.04); }
+body.theme-dark .header__nav .btn, body.theme-dark .header__nav a, body.theme-dark .header__menu { color: #e6eef7; }
+body.theme-dark .header__menu { background: #07131f; }
+body.theme-dark .header__menu.open { background: #07131f; }
+body.theme-dark .header__menu-toggle span { background: #e6eef7; }
+
+/* Titles color adjustments for dark theme */
+.fichas-header h1, .fichas-header h2, .fichas-gallery h2 { transition: color .2s; }
+body.theme-dark .fichas-header h1,
+body.theme-dark .fichas-header h2,
+body.theme-dark .fichas-gallery h2 { color: #ffffff; }
+.ficha-title { transition: color .2s; }
+body.theme-dark .ficha-title { color: #9fd4ff; }
+
+@media (max-width: 600px) {
+  .fichas-controls { width: 100%; justify-content: flex-end; }
+  .fichas-controls .search-input { min-width: 140px; }
+}
+

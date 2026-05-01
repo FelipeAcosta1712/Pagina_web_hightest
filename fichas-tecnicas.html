@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fichas técnicas de ensayo | HIGH TEST SAS</title>
+    <link rel="stylesheet" href="styles-v2.css">
+    <link rel="stylesheet" href="fichas.css">
+</head>
+<body>
+    <header class="header header--admin" role="banner">
+        <div class="header__container">
+            <div class="header__logo">
+                <a href="index.html#inicio" class="header__logo-link">
+                    <img src="/image/logo.png" alt="HIGH TEST SAS" class="header__logo-image">
+                </a>
+            </div>
+            <nav class="header__nav" role="navigation" aria-label="Navegación">
+                <button class="header__menu-toggle" id="fichasMenuToggle" aria-label="Abrir menú" aria-expanded="false">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul class="header__menu" id="fichasHeaderMenu">
+                    <li><a href="fichas-tecnicas.html" class="header__link">Galería</a></li>
+                    <li><a href="admin-panel.html" class="header__link">Panel</a></li>
+                    <li class="header__menu-item--action">
+                        <button id="mobileThemeToggleBtn" class="header__menu-btn header__menu-btn--secondary theme-toggle-menu" aria-label="Cambiar tema">🌙 Tema</button>
+                    </li>
+                </ul>
+                <a href="admin-panel.html" class="btn btn--secondary">← Volver</a>
+                <button id="themeToggleBtn" class="btn btn--secondary" aria-pressed="false" title="Cambiar tema">🌙</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="fichas-main">
+        <div class="container">
+            <div class="fichas-header" style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+                <h1>Fichas técnicas de ensayo</h1>
+                <div class="fichas-controls" style="display:flex; align-items:center; gap:8px; margin-left:auto;">
+                    <label for="fichaSearch" class="visually-hidden">Buscar fichas</label>
+                    <input id="fichaSearch" class="control__input search-input" type="search" placeholder="🔍 Buscar fichas..." aria-label="Buscar fichas">
+                </div>
+            </div>
+
+            <!-- GALERÍA DE FICHAS -->
+            <section class="fichas-gallery">
+                <h2>Galería de fichas</h2>
+                <div class="gallery-grid" id="galleryGrid">
+                    <!-- Las tarjetas se generan dinámicamente desde fichas.js -->
+                </div>
+            </section>
+
+            <div class="fichas-grid">
+                <aside class="fichas-col fichas-col--left">
+                    
+                    
+            
+                    <!-- MODAL PARA VER FICHA -->
+                    <div id="fichaModal" class="modal" aria-hidden="true">
+                        <div class="modal-overlay"></div>
+                        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+                            <button class="modal-close" aria-label="Cerrar">✕</button>
+                            <div class="modal-body" id="modalBody">
+                                <!-- Contenido inyectado dinámicamente -->
+                            </div>
+                            <div class="modal-footer">
+                                <button class="modal-prev" type="button">← Anterior</button>
+                                <button class="modal-next" type="button">Siguiente →</button>
+                                <button class="modal-edit" type="button">Editar</button>
+                                <button class="modal-download" type="button">Ver ficha técnica</button>
+                            </div>
+                        </div>
+                    </div>
+                    <script src="script-v2.js"></script>
+                    <script src="fichas.js"></script>
+                        
+                    </div>
+                    
+                </aside>
+
+                
+
+                
+            </div>
+        </div>
+    </main>
+
+    <footer class="site-footer" role="contentinfo">
+        <div class="container site-footer__inner">
+            <div class="site-footer__col">
+                <p class="site-footer__brand">HIGH TEST SAS — Fichas técnicas de ensayo</p>
+                <p class="site-footer__desc">Las fichas técnicas documentan procedimientos de ensayo, criterios de aceptación, registros de calibración y resultados. Son esenciales para garantizar la trazabilidad, la seguridad del personal, el cumplimiento normativo y la calidad de los resultados; además facilitan auditorías, formación y mejora continua.</p>
+            </div>
+            
+           
+        </div>
+    </footer>
+
+</body>
+</html>
+
+
+<style>
+
+    .site-footer__brand {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #0b62b0;
+    }
+</style>

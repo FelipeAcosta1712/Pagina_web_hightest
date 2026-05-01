@@ -1,0 +1,3 @@
+[build]
+  publish = "." # Aquí le decimos que use la carpeta raíz para el frontend
+  functions = "netlify/functions" # Aquí vive nuestro backend gratis

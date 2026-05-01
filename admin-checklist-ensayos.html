@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Lista de chequeo para ensayos eléctricos en sitio - HIGH TEST SAS">
+    <meta name="author" content="HIGH TEST SAS">
+    <title>Lista de Chequeo Ensayos en Sitio | HIGH TEST SAS</title>
+    <link rel="stylesheet" href="styles-v2.css">
+</head>
+<body>
+    <!-- HEADER LISTA DE CHEQUEO -->
+    <header class="header header--admin" role="banner">
+        <div class="header__container">
+            <div class="header__logo">
+                <a href="index.html#inicio" class="header__logo-link">
+                    <img src="/image/logo.png" alt="HIGH TEST SAS" class="header__logo-image">
+                </a>
+            </div>
+            <nav class="header__nav" role="navigation" aria-label="Navegación lista de chequeo">
+                <button class="header__menu-toggle" aria-label="Abrir menú" aria-expanded="false">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul class="header__menu">
+                    <li><a href="admin-panel.html#items" class="header__link">⬅ Volver al Panel</a></li>
+                </ul>
+                <button class="header__icon-btn" id="themeToggleBtn" aria-label="Cambiar tema de color" title="Cambiar tema">
+                    🌙
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="admin-panel admin-main" role="main">
+        <div class="container">
+            <section class="admin-section">
+                <div class="admin-section__header">
+                    <h1 class="admin-section__title">FR-7.2 Lista de Chequeo para Ensayos Eléctricos en Sitio</h1>
+                    <p class="admin-section__subtitle">Formato tipo checklist para verificación de condiciones antes, durante y después de los ensayos eléctricos en sitio.</p>
+                </div>
+                <div class="admin-section__content">
+                    <div class="admin-checklist__info">
+                        <div class="checklist-header-grid">
+                            <div class="checklist-header-field">
+                                <label for="chkCliente">Cliente</label>
+                                <input type="text" id="chkCliente" name="cliente" placeholder="Nombre del cliente">
+                            </div>
+                            <div class="checklist-header-field">
+                                <label for="chkDireccion">Dirección sitio de ensayo</label>
+                                <input type="text" id="chkDireccion" name="direccion" placeholder="Dirección donde se realiza el ensayo">
+                            </div>
+                            <div class="checklist-header-field">
+                                <label for="chkFecha">Fecha de diligenciamiento</label>
+                                <input type="date" id="chkFecha" name="fecha_diligenciamiento">
+                            </div>
+                            <div class="checklist-header-field">
+                                <label for="chkRecepcion">N° de Recepción</label>
+                                <input type="text" id="chkRecepcion" name="numero_recepcion" placeholder="Código de recepción">
+                            </div>
+                        </div>
+                    </div>
+
+                    <table class="admin-table checklist-table" aria-label="Lista de chequeo ensayos eléctricos en sitio">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Ítem / Actividad</th>
+                                <th>OK</th>
+                                <th>No OK</th>
+                                <th>No Aplica</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 7.1 Identificación del servicio (Alistamiento) -->
+                            <tr class="checklist-section-row">
+                                <th colspan="6">7.1 Identificación del servicio (Alistamiento)</th>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Alcance del servicio definido y confirmado.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Tipo de ensayo definido conforme al servicio.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Requisitos técnicos y de seguridad identificados.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Cantidad definida de los elementos a ensayar.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Fechas y tiempos estimados de ejecución definidos.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Servicio dentro del alcance del laboratorio HIGH TEST.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Condiciones del sitio evaluadas preliminarmente.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+
+                            <!-- 7.2 Identificación y verificación de equipos (Alistamiento) -->
+                            <tr class="checklist-section-row">
+                                <th colspan="6">7.2 Identificación y verificación de equipos (Alistamiento)</th>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Equipos principales seleccionados.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Equipos auxiliares completos.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Equipo con confirmación metrológica vigente.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Verificación funcional de los equipos.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Baterías de respaldo para continuidad operativa de los equipos.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Extensiones eléctricas en condiciones seguras de uso.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Cables, pértigas y accesorios verificados y en buen estado.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Cables con continuidad y menor a 5 Ω.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Disponibilidad de cables adecuados (longitud, aislamiento y tipo).</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+
+                            <!-- 7.3 Autorización del ensayo (Alistamiento) -->
+                            <tr class="checklist-section-row">
+                                <th colspan="6">7.3 Autorización del ensayo (Alistamiento)</th>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Servicio dentro del alcance del laboratorio validado con el cliente.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Personal técnico competente asignado al ensayo.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Carnet de identificación del personal HIGH TEST disponible.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Elementos de protección personal disponibles.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Formato FR-6.3 Control de Acceso impreso para el ensayo.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Riesgos identificados y controlados.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Equipos disponibles y en condiciones adecuadas.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+
+                            <!-- 7.4 Transporte y logística (Alistamiento) -->
+                            <tr class="checklist-section-row">
+                                <th colspan="6">7.4 Transporte y logística (Alistamiento)</th>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Equipos correctamente embalados.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Equipos protegidos contra humedad, polvo y golpes.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Equipos asegurados adecuadamente durante el transporte.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Vehículo en condiciones adecuadas para el transporte.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Cables y accesorios transportados sin daños.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+
+                            <!-- 7.5 Preparación del sitio de ensayo (sitio) -->
+                            <tr class="checklist-section-row">
+                                <th colspan="6">7.5 Preparación del sitio de ensayo (sitio)</th>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Área de ensayo delimitada y señalizada.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Acceso restringido a personal no autorizado.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Control de acceso implementado según FR-6.3.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Alimentación eléctrica adecuada y disponible.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Tomas y extensiones en buen estado.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Entorno del ensayo sin conductores energizados cercanos.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Geometría del montaje adecuada según procedimiento.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Cableado del sistema instalado correctamente (HV / retorno).</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Sistema de medición configurado y verificado.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+
+                            <!-- 7.6 Condiciones que invalidan el ensayo (sitio) -->
+                            <tr class="checklist-section-row">
+                                <th colspan="6">7.6 Condiciones que invalidan el ensayo (sitio)</th>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Ausencia de lluvia, llovizna o humedad excesiva.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Sin contaminación o daño del elemento bajo ensayo.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Condiciones ambientales dentro del rango permitido.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Sin entorno no controlado o con interferencias.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Sin fallas en alimentación o puesta a tierra.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+
+                            <!-- 7.7 Puesta a tierra (sitio) -->
+                            <tr class="checklist-section-row">
+                                <th colspan="6">7.7 Puesta a tierra (sitio)</th>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Sistema de tierra disponible y funcional.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Conexiones a tierra firmes y seguras.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Todos los equipos conectados a una tierra común.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Continuidad de las conexiones de tierra verificada.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+
+                            <!-- 7.8 Verificación previa del sistema de ensayo (sitio) -->
+                            <tr class="checklist-section-row">
+                                <th colspan="6">7.8 Verificación previa del sistema de ensayo (sitio)</th>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Verificación de tensión en vacío (10x) realizada según procedimiento.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Verificación de corriente en vacío y con carga según plan de ensayo.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Registro de parámetros eléctricos previo al inicio del ensayo.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+
+                            <!-- 7.9 Ejecución del ensayo (sitio) -->
+                            <tr class="checklist-section-row">
+                                <th colspan="6">7.9 Ejecución del ensayo (sitio)</th>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Montaje correcto del elemento bajo ensayo.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Conexiones verificadas antes de energizar.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Encendido y aislamiento de los equipos principales y auxiliares controlados.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Incremento controlado y progresivo de la tensión durante el ensayo.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Monitoreo continuo de variables eléctricas durante el ensayo.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+
+                            <!-- 7.10 Evaluación, mitigación y clasificación del evento (sitio) -->
+                            <tr class="checklist-section-row">
+                                <th colspan="6">7.10 Evaluación, mitigación y clasificación del evento (sitio)</th>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Verificación durante el ensayo de posibles anomalías en el comportamiento eléctrico.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Evaluación del evento en caso de presentarse (atribuible o no al elemento).</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+
+                            <!-- 7.11 Desmontaje y retiro (sitio) -->
+                            <tr class="checklist-section-row">
+                                <th colspan="6">7.11 Desmontaje y retiro (sitio)</th>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Sistema completamente desenergizado antes del desmontaje.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Desmontaje de equipos y accesorios de forma ordenada y segura.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Equipos y accesorios en buen estado para transporte.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+
+                            <!-- 7.12 Entrega de resultados (sitio) -->
+                            <tr class="checklist-section-row">
+                                <th colspan="6">7.12 Entrega de resultados (sitio)</th>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Formatos diligenciados completamente.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Condiciones del ensayo registradas.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Información entregada al responsable / cargada al sistema.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+
+                            <!-- 7.13 Recepción de equipos en instalaciones (instalaciones) -->
+                            <tr class="checklist-section-row">
+                                <th colspan="6">7.13 Recepción de equipos en instalaciones (instalaciones)</th>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Equipos recibidos en instalaciones.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Inspección del estado físico y funcional de los equipos al retorno.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                            <tr>
+                                <td>•</td>
+                                <td>Comprobación y registro del estado de los equipos al retorno.</td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="checkbox"></td>
+                                <td><input type="text" class="checklist-observation"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="admin-checklist__footer">
+                        <p><strong>Observaciones generales:</strong></p>
+                        <textarea id="chkObservacionesGenerales" name="observaciones_generales" rows="4" style="width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; resize: vertical;"></textarea>
+
+                        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; align-items: flex-end;">
+                            <div style="flex: 1 1 200px;">
+                                <label for="chkResponsable" style="display:block; font-size: 13px; font-weight:600; margin-bottom:4px;">Responsable</label>
+                                <input type="text" id="chkResponsable" name="responsable" style="width:100%; border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; font-size:13px;">
+                            </div>
+                            <div style="flex: 1 1 200px;">
+                                <label for="chkNombre" style="display:block; font-size: 13px; font-weight:600; margin-bottom:4px;">Nombre</label>
+                                <input type="text" id="chkNombre" name="nombre" style="width:100%; border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; font-size:13px;">
+                            </div>
+                            <div style="flex: 1 1 200px;">
+                                <label for="chkCargo" style="display:block; font-size: 13px; font-weight:600; margin-bottom:4px;">Cargo</label>
+                                <input type="text" id="chkCargo" name="cargo" style="width:100%; border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; font-size:13px;">
+                            </div>
+                            <div style="flex: 0 0 auto; margin-left:auto;">
+                                <button type="button" class="btn btn--primary" id="btnChecklistPdf">Generar PDF</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+    <script src="script-v2.js"></script>
+</body>
+</html>

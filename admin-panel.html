@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Panel Administrativo HIGH TEST SAS - Gestión de  y ensayos eléctricos">
+    <meta name="keywords" content="panel administrativo, HIGH TEST, gestión , ensayos eléctricos">
+    <meta name="author" content="HIGH TEST SAS">
+    <meta name="theme-color" content="#003A80">
+    <title>Panel Administrativo | HIGH TEST SAS</title>
+    <link rel="stylesheet" href="styles-v2.css">
+</head>
+<body>
+    <!-- HEADER ADMINISTRATIVO -->
+    <header class="header header--admin" role="banner">
+        <div class="header__container">
+            <div class="header__logo">
+                <a href="index.html#inicio" class="header__logo-link">
+                    <img src="/image/logo.png" alt="HIGH TEST SAS" class="header__logo-image">
+                </a>
+            </div>
+            <nav class="header__nav" role="navigation" aria-label="Navegación administrativa">
+                <button class="header__menu-toggle" id="adminMenuToggle" aria-label="Abrir menú" aria-expanded="false">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul class="header__menu" id="adminHeaderMenu">
+                    <li><a href="#certificates" class="header__link">Certificados</a></li>
+                    <li><a href="#clients" class="header__link">Clientes</a></li>
+                    <li><a href="#reports" class="header__link">Reportes</a></li>
+                    <!-- Acción especial menú móvil: salir -->
+                    <li class="header__menu-item--action">
+                        <button class="header__menu-btn header__menu-btn--secondary" id="adminLogoutMobileBtn" aria-label="Cerrar sesión">
+                            🚪 Salir
+                        </button>
+                    </li>
+                </ul>
+                <button class="header__icon-btn" id="themeToggleBtn" aria-label="Cambiar tema de color" title="Cambiar tema">
+                    🌙
+                </button>
+                <div class="header__user-info">
+                    <span class="user-info__name" id="adminUserName">Usuario</span>
+                    <span class="user-info__role">Administrador</span>
+                </div>
+                <button class="header__cta header__cta--logout" id="adminLogoutBtn" aria-label="Cerrar sesión">
+                    🚪 Salir
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- PANEL ADMINISTRATIVO -->
+    <main class="admin-panel admin-main" role="main">
+        <div class="container">
+            <!-- DASHBOARD HEADER -->
+            <div class="admin-dashboard__header">
+                <h1 class="admin-dashboard__title">Panel de Administración HIGH TEST</h1>
+                <p class="admin-dashboard__subtitle">Gestión completa de certificados, reportes y operaciones</p>
+            </div>
+
+            <!-- ESTADÍSTICAS RÁPIDAS -->
+            <section class="admin-section admin-stats-wrapper">
+                <div class="admin-section__header">
+                    <h2 class="admin-section__title">Resumen Operativo</h2>
+                </div>
+                <div class="admin-section__content">
+                    <div class="admin-stats">
+                        <div class="stat-card stat-card--total">
+                            <div class="stat-card__icon">📊</div>
+                            <div class="stat-card__content">
+                                <h3 id="statTotalCerts">0</h3>
+                                <p>Certificados Totales</p>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-card--completed">
+                            <div class="stat-card__icon">✅</div>
+                            <div class="stat-card__content">
+                                <h3 id="statCompletedCerts">0</h3>
+                                <p>Completados</p>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-card--pending">
+                            <div class="stat-card__icon">⏳</div>
+                            <div class="stat-card__content">
+                                <h3 id="statPendingCerts">0</h3>
+                                <p>Pendientes</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ENLACE A RECEPCIÓN DE ÍTEMS -->
+            <section class="admin-section admin-quick-link" id="items">
+                <div class="admin-section__header">
+                    <h2 class="admin-section__title">Formatos HIGH TEST</h2>
+                </div>
+                <div class="admin-section__content">
+                    <div class="support-card admin-quick-link__card">
+                        <div>
+                            <h3>📦 Sistema de Recepción de Ítems</h3>
+                            <p>Acceda a la plataforma dedicada para el ingreso y entrega de equipos.</p>
+                        </div>
+                        <a href="https://fr-7-4-1-ft-recepcion-entrega-items.netlify.app/" target="_blank" rel="noopener noreferrer" class="btn btn--primary">Abrir Recepción</a>
+                    </div>
+
+                    <div class="support-card admin-quick-link__card">
+                        <div>
+                            <h3>📝 Lista de Chequeo en Sitio</h3>
+                            <p>Abra el formato FR-7.2 para la lista de chequeo de ensayos eléctricos en sitio.</p>
+                        </div>
+                        <a href="admin-checklist-ensayos.html" class="btn btn--secondary">Abrir Checklist</a>
+                    </div>
+
+                    <div class="support-card admin-quick-link__card">
+                        <div>
+                            <h3>📄 Informe de Ensayos Eléctricos</h3>
+                            <p>Abra el formato FR-7.8 para elaborar el informe de ensayos eléctricos.</p>
+                        </div>
+                        <a href="admin-informe-ensayos.html" class="btn btn--secondary">Abrir Informe</a>
+                    </div>
+                    <div class="support-card admin-quick-link__card">
+                        <div>
+                            <h3>📑 Fichas técnicas de ensayo</h3>
+                            <p>Accede a las fichas técnicas de ensayo y visualiza los detalles del FR-7.2 Anexo N.</p>
+                        </div>
+                        <a href="fichas-tecnicas.html" class="btn btn--primary">Abrir Fichas</a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- GESTIÓN DE CERTIFICADOS -->
+            <section class="admin-section admin-certificates" id="certificates">
+                <div class="admin-section__header">
+                    <h2 class="admin-section__title">Gestión de Certificados</h2>
+                    <button class="btn btn--primary" id="addCertificateBtn">
+                        ➕ Nuevo Certificado
+                    </button>
+                </div>
+
+                <div class="admin-section__content">
+                    <!-- CONTROLES DE BÚSQUEDA Y FILTROS -->
+                    <div class="admin-filters admin-controls">
+                        <div class="control__search">
+                        <input
+                            type="text"
+                            id="adminSearchCertificates"
+                            class="control__input"
+                            placeholder="🔍 Buscar por número, cliente o producto..."
+                            aria-label="Buscar certificados"
+                        >
+                        </div>
+                        <div class="control__filters">
+                            <select id="adminFilterStatus" class="control__select" aria-label="Filtrar por estado">
+                            <option value="">Todos los estados</option>
+                            <option value="completado">✅ Completados</option>
+                            <option value="en-proceso">⏳ En proceso</option>
+                            <option value="pendiente">📋 Pendiente</option>
+                            <option value="cancelado">❌ Cancelado</option>
+                            </select>
+                            <select id="adminFilterType" class="control__select" aria-label="Filtrar por tipo">
+                            <option value="">Todos los tipos</option>
+                            <option value="reporte">📄 Informe de ensayo</option>
+                            <option value="certificado">🎖️ Informe de verificación</option>
+                            </select>
+                            <input type="date" id="adminFilterDate" class="control__input control__input--date">
+                        </div>
+                    </div>
+
+                    <!-- TABLA DE CERTIFICADOS -->
+                    <table class="admin-table certificates-table" id="certificatesTable">
+                        <thead>
+                            <tr>
+                                <th>Número</th>
+                                <th>Cliente</th>
+                                <th>Producto</th>
+                                <th>Tipo</th>
+                                <th>Estado</th>
+                                <th>Fecha</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="certificatesTableBody">
+                            <!-- Los certificados se cargarán dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- GESTIÓN DE CLIENTES -->
+            <section class="admin-section admin-clients" id="clients">
+                <div class="admin-section__header">
+                    <h2 class="admin-section__title">Gestión de Clientes</h2>
+                    <button class="btn btn--secondary" id="addClientBtn">
+                        👤 Nuevo Cliente
+                    </button>
+                </div>
+
+                <div class="admin-section__content">
+                    <div class="clients-grid" id="clientsGrid">
+                        <!-- Los clientes se cargarán dinámicamente -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- REPORTES Y ANALÍTICAS -->
+            <section class="admin-section admin-reports" id="reports">
+                <div class="admin-section__header">
+                    <h2 class="admin-section__title">Reportes y Analíticas</h2>
+                </div>
+
+                <div class="admin-section__content reports-grid">
+                    <div class="report-card">
+                        <h3>Certificados por Mes</h3>
+                        <canvas id="monthlyChart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="report-card">
+                        <h3>Distribución por Tipo</h3>
+                        <canvas id="typeChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- SCRIPTS -->
+    <script src="script-v2.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>

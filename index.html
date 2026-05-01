@@ -1,0 +1,1831 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="HIGH TEST SAS - Laboratorio acreditado en ensayos eléctricos para elementos de protección personal (EPP) bajo normas IEC, ASTM y NTC.">
+    <meta name="keywords" content="ensayos eléctricos, EPP, laboratorio acreditado, ISO/IEC 17025, alta tensión, aislamiento">
+    <meta name="author" content="HIGH TEST SAS">
+    <meta name="theme-color" content="#003A80">
+    <title>HIGH TEST SAS | Laboratorio de Ensayos Eléctricos</title>
+    <link rel="stylesheet" href="styles-v2.css">
+</head>
+<body>
+    <!-- HEADER -->
+    <header class="header" role="banner">
+        <div class="header__container">
+            <div class="header__logo">
+                <a href="index.html#inicio" class="header__logo-link">
+                    <img src="/image/logo.png" alt="HIGH TEST SAS - Laboratorio Acreditado" class="header__logo-image">
+                </a>
+            </div>
+            <nav class="header__nav" role="navigation" aria-label="Navegación principal">
+                <button class="header__menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul class="header__menu" id="headerMenu">
+                    <li><a href="#inicio" class="header__link">Inicio</a></li>
+                    <li><a href="#servicios" class="header__link">Servicios</a></li>
+                    <li><a href="#capacidad" class="header__link">Capacidad Técnica</a></li>
+                    <li><a href="#acreditacion" class="header__link">Acreditación</a></li>
+                    <li><a href="#certificados" class="header__link">Certificados</a></li>
+                    <li><a href="#nosotros" class="header__link">Nosotros</a></li>
+                    <li><a href="#contacto" class="header__link">Contacto</a></li>
+                    <!-- Acciones especiales solo para menú móvil: Portal Clientes e Ingreso HIGH TEST -->
+                    <li class="header__menu-item--action">
+                        <button class="header__menu-btn" id="mobileCertificatesBtn" aria-label="Acceso al portal de cliente y certificados">
+                            📄 Portal Clientes
+                        </button>
+                    </li>
+                    <li class="header__menu-item--action">
+                        <button class="header__menu-btn" id="mobileLoginBtn" aria-label="Acceso HIGH TEST">
+                            🔐 Ingreso HIGH TEST
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+            <div class="header__actions">
+                <button class="header__icon-btn" id="themeToggleBtn" aria-label="Cambiar tema de color" title="Cambiar tema">
+                    🌙
+                </button>
+                <button class="header__cta header__cta--secondary" id="certificatesBtn" aria-label="Acceso al portal de cliente y certificados">
+                    📄 Portal Clientes<br><span class="header__cta-sub">Certificados</span>
+                </button>
+                <button class="header__cta" id="loginBtn" aria-label="Acceso HIGH TEST">🔐 INGRESO<br>HIGH TEST</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MODAL LOGIN -->
+    <div class="auth-modal" id="authModal" role="dialog" aria-labelledby="authModalTitle" aria-hidden="true">
+        <div class="auth-modal__content">
+            <button class="auth-modal__close" id="authModalClose" aria-label="Cerrar modal">&times;</button>
+            
+            <div class="auth-modal__tabs">
+                <button class="auth-modal__tab active" data-tab="login" aria-selected="true">Iniciar Sesión</button>
+            </div>
+
+            <!-- TAB: LOGIN -->
+            <div class="auth-modal__tab-content active" id="loginTab">
+                <h2 id="authModalTitle" class="auth-modal__title">🔐 Acceso al Panel HIGH TEST</h2>
+                <p class="auth-modal__subtitle">Acceso exclusivo para personal autorizado de HIGH TEST SAS</p>
+
+                <form class="auth-form" id="loginForm">
+                    <div class="form__group">
+                        <label for="loginEmail" class="form__label">Correo Electrónico</label>
+                        <input 
+                            type="email" 
+                            id="loginEmail" 
+                            name="email" 
+                            class="form__input" 
+                            required
+                            placeholder="usuario@hightest.com"
+                        >
+                    </div>
+
+                    <div class="form__group">
+                        <label for="loginPassword" class="form__label">Contraseña</label>
+                        <input 
+                            type="password" 
+                            id="loginPassword" 
+                            name="password" 
+                            class="form__input" 
+                            required
+                            placeholder="••••••••"
+                        >
+                    </div>
+
+                    <div class="auth-form__remember">
+                        <label class="auth-form__checkbox">
+                            <input type="checkbox" name="remember" id="rememberMe">
+                            <span>Recordarme en este dispositivo</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn--primary btn--block">
+                        🔓 Acceder al Panel
+                    </button>
+
+                    <p class="auth-form__link">
+                        <a href="#" class="auth-form__forgot-password">¿Olvidaste tu contraseña?</a>
+                    </p>
+                </form>
+
+                <div class="auth-modal__divider">O</div>
+
+                <button class="auth-form__social-btn auth-form__social-btn--google">
+                    <span>📧 Continuar con Google</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DESCARGA DE CERTIFICADOS -->
+    <div class="certificates-modal" id="certificatesModal" role="dialog" aria-labelledby="certificatesModalTitle" aria-hidden="true">
+        <div class="certificates-modal__content">
+            <button class="certificates-modal__close" id="certificatesModalClose" aria-label="Cerrar modal">&times;</button>
+            
+            <div class="certificates-modal__header">
+                <h2 id="certificatesModalTitle" class="certificates-modal__title">🔐 Acceso al Portal de Clientes</h2>
+                <p class="certificates-modal__subtitle">Ingrese su correo y contraseña de cliente para acceder a su portal y consultar/descargar sus certificados.</p>
+            </div>
+
+            <form class="certificates-form" id="certificatesForm">
+                <div class="form__group">
+                    <label for="certificatesEmail" class="form__label">Correo Electrónico</label>
+                    <input 
+                        type="email" 
+                        id="certificatesEmail" 
+                        name="email" 
+                        class="form__input" 
+                        required
+                        placeholder="cliente@empresa.com"
+                    >
+                </div>
+
+                <div class="form__group">
+                    <label for="certificatesPassword" class="form__label">Contraseña de Cliente</label>
+                    <input 
+                        type="password" 
+                        id="certificatesPassword" 
+                        name="password" 
+                        class="form__input" 
+                        required
+                        placeholder="••••••••"
+                    >
+                </div>
+
+                <div class="certificates-form__info">
+                    <div class="info__icon">ℹ️</div>
+                    <div class="info__text">
+                        <p><strong>¿Aún no tiene credenciales de cliente?</strong></p>
+                        <p>Contacte a nuestro equipo para solicitar acceso a su portal y certificados.</p>
+                        <p><a href="https://wa.me/573226197864" target="_blank">📱 WhatsApp: +57 322 619 7864</a></p>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn--primary btn--block">
+                    ➡️ Ingresar al Portal de Clientes
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL RESULTADO VERIFICACIÓN DE INFORME -->
+    <div class="report-modal" id="reportVerifyModal" role="dialog" aria-labelledby="reportVerifyTitle" aria-hidden="true">
+        <div class="report-modal__content">
+            <button class="report-modal__close" id="reportVerifyClose" aria-label="Cerrar verificación de informe">&times;</button>
+            <div class="report-modal__header">
+                <h2 id="reportVerifyTitle" class="report-modal__title">Resultado de verificación de informe</h2>
+                <p class="report-modal__subtitle">Validación informativa basada en datos de ejemplo del laboratorio HIGH TEST SAS.</p>
+            </div>
+            <div class="report-modal__body" id="reportVerifyBody">
+                <!-- El contenido se completa dinámicamente con JavaScript -->
+            </div>
+            <div class="report-modal__footer">
+                <button type="button" class="btn btn--secondary btn--block" id="reportVerifyCloseFooter">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CONTENIDO DE BLOG -->
+    <div class="report-modal" id="blogPostModal" role="dialog" aria-labelledby="blogPostTitle" aria-hidden="true">
+        <div class="report-modal__content">
+            <button class="report-modal__close" id="blogPostClose" aria-label="Cerrar detalle de artículo">&times;</button>
+            <div class="report-modal__header">
+                <h2 id="blogPostTitle" class="report-modal__title">Título del artículo</h2>
+                <p id="blogPostMeta" class="report-modal__subtitle">Fecha · Tiempo de lectura</p>
+            </div>
+            <div class="report-modal__body" id="blogPostBody">
+                <!-- El contenido se completa dinámicamente con JavaScript -->
+            </div>
+            <div class="report-modal__footer">
+                <button type="button" class="btn btn--secondary btn--block" id="blogPostCloseFooter">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HERO SECTION -->
+    <section class="hero" id="inicio" role="main">
+        <div class="hero__container">
+            <div class="hero__content">
+                <p class="hero__label">Laboratorio de</p>
+                <h2 class="hero__title">
+                    Ensayos eléctricos para elementos de protección personal bajo estándares técnicos
+                </h2>
+                <p class="hero__subtitle">
+                    ISO/IEC 17025 acreditado | Seguridad y confiabilidad en cada ensayo
+                </p>
+                <div class="hero__buttons">
+                    <button class="btn btn--primary btn--large" onclick="document.querySelector('#contacto').scrollIntoView({behavior: 'smooth'})">
+                        ↓ Conoce más
+                    </button>
+                    <a href="https://wa.me/573226197864" target="_blank" rel="noopener" class="btn btn--secondary btn--large">
+                        Contactar WhatsApp
+                    </a>
+                    <div class="hero__verify" aria-label="Verificación de informes de ensayo">
+                        <label for="numeroInforme" class="hero__verify-label">Verificar informe HIGH TEST</label>
+                        <div class="hero__verify-controls">
+                            <input
+                                type="text"
+                                id="numeroInforme"
+                                class="hero__verify-input"
+                                placeholder="Ej: HT-2025-001"
+                                autocomplete="off"
+                            >
+                            <button type="button" class="btn btn--secondary hero__verify-btn" id="verifyReportBtn">
+                                Validar informe
+                            </button>
+                        </div>
+                        <p class="hero__verify-result" id="verifyReportResult" aria-live="polite"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- VALOR AGREGADO -->
+    <section class="value-section" role="region" aria-labelledby="value-title">
+        <div class="container">
+            <h2 id="value-title" class="section-title">Nuestro valor agregado</h2>
+            
+            <div class="value__grid">
+                <div class="value__card">
+                    <div class="value__icon">⚡</div>
+                    <h3 class="value__title">Entrega rápida y confiable</h3>
+                    <p class="value__text">
+                        Procesos optimizados y automatizados para garantizar resultados confiables en tiempos establecidos, desde solicitud hasta informe técnico final.
+                    </p>
+                </div>
+                
+                <div class="value__card">
+                    <div class="value__icon">👥</div>
+                    <h3 class="value__title">Acompañamiento especializado</h3>
+                    <p class="value__text">
+                        Equipo de expertos disponible para guiar cada etapa del proceso de ensayo, resolviendo dudas técnicas y optimizando your testing.
+                    </p>
+                </div>
+                
+                <div class="value__card">
+                    <div class="value__icon">🔬</div>
+                    <h3 class="value__title">Precisión técnica garantizada</h3>
+                    <p class="value__text">
+						Equipamiento acreditado, trazabilidad metrológica ONAC y metodologías ISO/IEC 17025 para asegurar máxima precisión en resultados de ensayo.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- INTRODUCCIÓN TÉCNICA -->
+    <section class="intro-section" role="region" aria-labelledby="intro-title">
+        <div class="container">
+            <div class="intro__content">
+                <div class="intro__main">
+                    <h2 id="intro-title" class="intro__title">Laboratorio especializado en seguridad eléctrica</h2>
+                    <p class="intro__badge">Laboratorio acreditado ISO/IEC 17025 · Ensayos en EPP y equipos eléctricos</p>
+                    <p class="intro__text">
+                        HIGH TEST SAS es un laboratorio de ensayos acreditado bajo ISO/IEC 17025, especializado en la evaluación 
+                        de elementos de protección personal (EPP) y equipos sometidos a riesgo eléctrico. Nuestro equipo técnico 
+                        es competente en ensayos dieléctricos, pruebas de alta tensión y evaluación de aislamiento según normas
+                        internacionales exigentes.
+                    </p>
+                    <p class="intro__text intro__text--secondary">
+                        Proporcionamos resultados trazables, verificables e imparciales, con documentación completa de cada ensayo
+                        y criterios de aceptación claramente definidos para sus auditorías internas, clientes finales y entes
+                        reguladores.
+                    </p>
+                    <div class="intro__meta">
+                        <div class="intro__meta-item">
+                            <span class="intro__meta-value">+10 años</span>
+                            <span class="intro__meta-label">de experiencia acumulada en ensayos eléctricos</span>
+                        </div>
+                        <div class="intro__meta-item">
+                            <span class="intro__meta-value">+1.000</span>
+                            <span class="intro__meta-label">informes emitidos para clientes industriales y del sector energía</span>
+                        </div>
+                        <div class="intro__meta-item">
+                            <span class="intro__meta-value">Trazabilidad</span>
+                            <span class="intro__meta-label">equipos verificados con soporte metrológico vigente</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="intro__panel" aria-label="Resumen de capacidades técnicas">
+                    <div class="intro__panel-header">
+                        <span class="intro__panel-icon">🔍</span>
+                        <div>
+                            <p class="intro__panel-kicker">Qué evaluamos</p>
+                            <p class="intro__panel-title">Cobertura técnica de HIGH TEST</p>
+                        </div>
+                    </div>
+                    <ul class="intro__panel-list">
+                        <li>
+                            <span class="intro__panel-label">Riesgos eléctricos en EPP</span>
+                            <span class="intro__panel-desc">Guantes, mangas, pértigas y herramientas aisladas sometidas a alta tensión controlada.</span>
+                        </li>
+                        <li>
+                            <span class="intro__panel-label">Condiciones de ensayo trazables</span>
+                            <span class="intro__panel-desc">Registro de tensión aplicada, tiempo de ensayo, fugas de corriente y resultados de conformidad.</span>
+                        </li>
+                        <li>
+                            <span class="intro__panel-label">Cumplimiento normativo</span>
+                            <span class="intro__panel-desc">Aplicación de normas IEC, ASTM, NTC y procedimientos internos validados por ONAC.</span>
+                        </li>
+                    </ul>
+                    <div class="intro__panel-note">
+                        Cada informe consolida los datos de ensayo, criterios de aceptación y trazabilidad de equipos, facilitando
+                        auditorías, renovaciones de contratos y demostración de cumplimiento frente a entes reguladores.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SERVICIOS TÉCNICOS -->
+    <section class="services" id="servicios" role="region" aria-labelledby="services-title">
+        <div class="container">
+            <h2 id="services-title" class="section-title">Servicios de ensayo</h2>
+            <p class="section-subtitle">Pruebas técnicas para garantizar la seguridad eléctrica de elementos de protección</p>
+            
+            <div class="services__grid">
+                <!-- Ensayos dieléctricos -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="/image/DETE.jpg" alt="Equipo para ensayos dieléctricos" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Ensayos dieléctricos en EPP</h3>
+                    </div>
+                    <div class="service-card__body">
+                        <p class="service-card__description">
+                            Evaluación de la capacidad de aislamiento eléctrico de guantes, mangas y otros EPP contra voltajes de prueba especificados.
+                        </p>
+                        <dl class="service-card__specs">
+                            <dt>Normas aplicadas:</dt>
+                            <dd>IEC 61008-1, ASTM F496, NTC 2054</dd>
+                            <dt>Rango:</dt>
+                            <dd>5 kV - 50 kV AC</dd>
+                            <dt>Resultado:</dt>
+                            <dd>Verificación de aislamiento sin ruptura dieléctrica</dd>
+                        </dl>
+                    </div>
+                </article>
+
+                <!-- Ensayos de guantes aislantes -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="/image/guantes.png" alt="Guantes aislantes de protección eléctrica" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Ensayos de guantes aislantes</h3>
+                    </div>
+                    <div class="service-card__body">
+                        <p class="service-card__description">
+                            Pruebas completas de resistencia dieléctrica, resistividad superficial y resistencia mecánica en guantes de protección eléctrica.
+                        </p>
+                        <dl class="service-card__specs">
+                            <dt>Normas aplicadas:</dt>
+                            <dd>IEC 60903, ASTM D120, NTC 3892</dd>
+                            <dt>Clases de protección:</dt>
+                            <dd>00, 0, 1, 2, 3, 4 (según rango kV)</dd>
+                            <dt>Resultado:</dt>
+                            <dd>Clasificación y reporte de conformidad</dd>
+                        </dl>
+                    </div>
+                </article>
+
+                <!-- Ensayos de mangas aislantes -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="/image/mangueras.jpg" alt="Mangas aislantes de protección contra riesgos eléctricos" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Ensayos de mangas aislantes</h3>
+                    </div>
+                    <div class="service-card__body">
+                        <p class="service-card__description">
+                            Evaluación de protección en miembros superiores mediante pruebas de aislamiento y resistencia a punción.
+                        </p>
+                        <dl class="service-card__specs">
+                            <dt>Normas aplicadas:</dt>
+                            <dd>IEC 61008-1, ASTM F496, NTC 2054</dd>
+                            <dt>Longitud estándar:</dt>
+                            <dd>45 cm, 60 cm, 90 cm</dd>
+                            <dt>Resultado:</dt>
+                            <dd>Aprobación o rechazo según especificación técnica</dd>
+                        </dl>
+                    </div>
+                </article>
+
+                <!-- Ensayos de pértigas -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="/image/pertigas.jpeg" alt="Pértigas aislantes para trabajos en altura" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Ensayos de pértigas aislantes</h3>
+                    </div>
+                    <div class="service-card__body">
+                        <p class="service-card__description">
+                            Pruebas de rigidez dieléctrica y resistencia mecánica en pértigas de trabajo para labores de tensión en altura.
+                        </p>
+                        <dl class="service-card__specs">
+                            <dt>Normas aplicadas:</dt>
+                            <dd>IEC 60855, ASTM F711, NTC 2041</dd>
+                            <dt>Rango de longitud:</dt>
+                            <dd>2 m a 10 m</dd>
+                            <dt>Resultado:</dt>
+                            <dd>Certificación de capacidad de aislamiento</dd>
+                        </dl>
+                    </div>
+                </article>
+
+                <!-- Ensayos de herramientas aisladas -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="/image/jumper.png" alt="Herramientas aisladas para trabajos eléctricos" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Ensayos de herramientas aisladas</h3>
+                    </div>
+                    <div class="service-card__body">
+                        <p class="service-card__description">
+                            Evaluación de destornilladores, alicates y otros implementos con aislamiento dieléctrico para trabajo en tensión.
+                        </p>
+                        <dl class="service-card__specs">
+                            <dt>Normas aplicadas:</dt>
+                            <dd>IEC 60900, ASTM F406, NTC 1802</dd>
+                            <dt>Rango de voltaje:</dt>
+                            <dd>Clase O (1000V) hasta Clase 4 (35 kV)</dd>
+                            <dt>Resultado:</dt>
+                            <dd>Clasificación funcional y reporte detallado</dd>
+                        </dl>
+                    </div>
+                </article>
+
+                <!-- Ensayos de alta tensión -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="/image/tierras.jpg" alt="Sistema de prueba de alta tensión" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Ensayos de alta tensión</h3>
+                    </div>
+                    <div class="service-card__body">
+                        <p class="service-card__description">
+                            Pruebas de rigidez dieléctrica y comportamiento de aislamiento bajo condiciones de voltaje elevado controlado.
+                        </p>
+                        <dl class="service-card__specs">
+                            <dt>Rango disponible:</dt>
+                            <dd>Hasta 120 kV AC / 170 kV DC</dd>
+                            <dt>Normas referencia:</dt>
+                            <dd>IEC 60243, ASTM D149</dd>
+                            <dt>Resultado:</dt>
+                            <dd>Gráficas de ruptura y reporte técnico</dd>
+                        </dl>
+                    </div>
+                </article>
+
+                <!-- Ensayos de fuga de corriente -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="/image/jumper.png" alt="Medidor de corriente de fuga" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Ensayos de fuga de corriente</h3>
+                    </div>
+                    <div class="service-card__body">
+                        <p class="service-card__description">
+                            Medición de corrientes de escape y recubrimiento en EPP bajo condiciones de humedad controlada.
+                        </p>
+                        <dl class="service-card__specs">
+                            <dt>Conforme a:</dt>
+                            <dd>IEC 60950, EN 61010-1</dd>
+                            <dt>Rango de medición:</dt>
+                            <dd>Microamperios a miliamperios</dd>
+                            <dt>Resultado:</dt>
+                            <dd>Comparativa con límites técnicos</dd>
+                        </dl>
+                    </div>
+                </article>
+
+                <!-- Ensayos ANSI SAIA A92.2 -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="/image/vehiculos.jpg" alt="Plataformas elevadas y dispositivos aéreos" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Ensayos ANSI SAIA A92.2</h3>
+                    </div>
+                    <div class="service-card__body">
+                        <p class="service-card__description">
+                            Evaluación de seguridad eléctrica en plataformas elevadas motorizadas, manlifts y dispositivos aéreos de acceso personalizados.
+                        </p>
+                        <dl class="service-card__specs">
+                            <dt>Norma aplicada:</dt>
+                            <dd>ANSI SAIA A92.2 (Powered Platforms, Manlifts, Aerial Devices)</dd>
+                            <dt>Áreas de prueba:</dt>
+                            <dd>Aislamiento, continuidad de tierra, protección contra sobrecorriente</dd>
+                            <dt>Resultado:</dt>
+                            <dd>Reporte de conformidad para certificación de seguridad</dd>
+                        </dl>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- CAPACIDAD TÉCNICA -->
+    <section class="capacity" id="capacidad" role="region" aria-labelledby="capacity-title">
+        <div class="container">
+            <h2 id="capacity-title" class="section-title">Capacidad técnica</h2>
+            <p class="section-subtitle">Alcance e infraestructura de laboratorio</p>
+
+            <div class="capacity__grid">
+                <div class="capacity__card">
+                    <h3 class="capacity__card-title">Rangos de tensión</h3>
+                    <ul class="capacity__list">
+                        <li>Baja tensión: 0 - 1000V AC/DC</li>
+                        <li>Media tensión: 1 - 50 kV AC</li>
+                        <li>Alta tensión: 50 - 120 kV AC</li>
+                        <li>Muy alta tensión: Hasta 170 kV DC</li>
+                    </ul>
+                </div>
+
+                <div class="capacity__card">
+                    <h3 class="capacity__card-title">Métodos de medición</h3>
+                    <ul class="capacity__list">
+                        <li>Resistencia de aislamiento (Megaohmetría)</li>
+                        <li>Capacitancia y factor de disipación</li>
+                        <li>Corriente de fuga superficial</li>
+                        <li>Rigidez dieléctrica</li>
+                        <li>Resistencia de contacto</li>
+                    </ul>
+                </div>
+
+                <div class="capacity__card">
+                    <h3 class="capacity__card-title">Condiciones de prueba</h3>
+                    <ul class="capacity__list">
+                        <li>Temperatura: 16°C - 35°C</li>
+                        <li>Humedad: 45% - 75% HR</li>
+                        <li>Presión: 86 - 106 kPa</li>
+                        <li>Protección: Clase II / Instalación segura</li>
+                    </ul>
+                </div>
+
+                <div class="capacity__card">
+                    <h3 class="capacity__card-title">Tipos de muestras</h3>
+                    <ul class="capacity__list">
+                        <li>Guantes aislantes (todas las clases)</li>
+                        <li>Mangas y prendas de protección</li>
+                        <li>Pértigas y herramientas aisladas</li>
+                        <li>Materiales y componentes dieléctricos</li>
+                        <li>Cables y conductores</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="capacity__table">
+                <h3 class="capacity__table-title">Matriz de servicios por norma</h3>
+                <div class="capacity__table-wrapper">
+                    <table class="capacity__data-table" role="table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Norma</th>
+                                <th scope="col">Producto EPP</th>
+                                <th scope="col">Rango kV</th>
+                                <th scope="col">Resultado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>IEC 60903</td>
+                                <td>Guantes aislantes</td>
+                                <td>0-35</td>
+                                <td>Clase de protección</td>
+                            </tr>
+                            <tr>
+                                <td>IEC 61008-1</td>
+                                <td>EPP vs alto voltaje</td>
+                                <td>0-120</td>
+                                <td>Aprobación/Rechazo</td>
+                            </tr>
+                            <tr>
+                                <td>ASTM F496</td>
+                                <td>Guantes, mangas</td>
+                                <td>0-50</td>
+                                <td>Especificación cumplida</td>
+                            </tr>
+                            <tr>
+                                <td>NTC 2054</td>
+                                <td>EPP eléctrico</td>
+                                <td>0-35</td>
+                                <td>Conformidad técnica</td>
+                            </tr>
+                            <tr>
+                                <td>IEC 60900</td>
+                                <td>Herramientas aisladas</td>
+                                <td>0-35</td>
+                                <td>Clase de voltaje</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ACREDITACIÓN Y NORMAS -->
+    <section class="accreditation" id="acreditacion" role="region" aria-labelledby="accreditation-title">
+        <div class="container">
+            <h2 id="accreditation-title" class="accreditation__title">Acreditación ISO/IEC 17025</h2>
+            <p class="accreditation__subtitle">Laboratorio acreditado bajo los más altos estándares internacionales. Nuestros ensayos cumplen con normativas técnicas certificadas para garantizar confiabilidad y precisión.</p>
+
+            <div class="accreditation__grid">
+                <div class="accreditation__card" data-scroll>
+                    <svg class="accreditation__icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.95h7c-.5 4.17-2.92 7.83-7 9.28V11.95z"/></svg>
+                    <h3 class="accreditation__card-title">ISO/IEC 17025</h3>
+                    <p class="accreditation__card-text">
+							Acreditación de competencia de laboratorios de ensayo. 
+							Garantiza imparcialidad, competencia técnica e independencia en la ejecución de ensayos.
+                    </p>
+                </div>
+
+                <div class="accreditation__card" data-scroll>
+                    <svg class="accreditation__icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+                    <h3 class="accreditation__card-title">Trazabilidad metrológica</h3>
+                    <p class="accreditation__card-text">
+							Todos los instrumentos se verifican con estándares nacionales e internacionales 
+							reconocidos. Documentación de trazabilidad de los equipos de medición disponible.
+                    </p>
+                </div>
+
+                <div class="accreditation__card" data-scroll>
+                    <svg class="accreditation__icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                    <h3 class="accreditation__card-title">Normas de referencia</h3>
+                    <p class="accreditation__card-text">
+                        Aplicación de normas IEC, ASTM, NTC, EN y otras especificaciones técnicas 
+                        internacionales para garantizar resultados comparables.
+                    </p>
+                </div>
+
+                <div class="accreditation__card" data-scroll>
+                    <svg class="accreditation__icon" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                    <h3 class="accreditation__card-title">Personal técnico</h3>
+                    <p class="accreditation__card-text">
+                        Equipo multidisciplinario con formación en ingeniería eléctrica, metrología 
+                        y seguridad industrial. Certificación continua.
+                    </p>
+                </div>
+
+                <div class="accreditation__card" data-scroll>
+                    <svg class="accreditation__icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-2.08-2.74-1.35 1.78L9.21 19l4.63-6.11z"/></svg>
+                    <h3 class="accreditation__card-title">Control de calidad</h3>
+                    <p class="accreditation__card-text">
+                        Verificación cruzada, auditorías internas y participación en comparaciones 
+                        interlaboratorio (ensayos de aptitud).
+                    </p>
+                </div>
+
+                <div class="accreditation__card" data-scroll>
+                    <svg class="accreditation__icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 11l-4-4 1.41-1.41L10 9.17l6.59-6.59L18 4l-8 8z"/></svg>
+                    <h3 class="accreditation__card-title">Seguridad e imparcialidad</h3>
+                    <p class="accreditation__card-text">
+                        Políticas de confidencialidad, gestión de conflictos de interés y 
+                        conformidad con regulaciones técnicas vigentes.
+                    </p>
+                </div>
+            </div>
+
+            <div class="standards__section">
+                <h3 class="standards__title">Normas técnicas aplicadas</h3>
+                <div class="standards__grid">
+                    <div class="standard__item" data-scroll>
+                        <h4>IEC 60903</h4>
+                        <p>Guantes aislantes de caucho para trabajos en tensión</p>
+                    </div>
+                    <div class="standard__item" data-scroll>
+                        <h4>IEC 61008-1</h4>
+                        <p>Ropa de protección contra riesgos eléctricos</p>
+                    </div>
+                    <div class="standard__item" data-scroll>
+                        <h4>ASTM D120</h4>
+                        <p>Especificación para guantes de caucho aislante</p>
+                    </div>
+                    <div class="standard__item" data-scroll>
+                        <h4>ASTM F496</h4>
+                        <p>Práctica para medición de resistencia de aislamiento</p>
+                    </div>
+                    <div class="standard__item" data-scroll>
+                        <h4>NTC 2054</h4>
+                        <p>Equipos de protección personal para riesgos eléctricos</p>
+                    </div>
+                    <div class="standard__item" data-scroll>
+                        <h4>IEC 60243-1</h4>
+                        <p>Métodos de ensayo para rigidez dieléctrica de aislantes</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- EQUIPOS DE ENSAYO -->
+    <section class="equipment" role="region" aria-labelledby="equipment-title">
+        <div class="container">
+            <h2 id="equipment-title" class="section-title">Equipos de ensayo</h2>
+            <p class="section-subtitle">Instrumentación acreditada y con trazabilidad metrológica</p>
+
+            <div class="equipment__grid">
+                <div class="equipment__card" data-scroll>
+                    <span class="equipment__icon">⚡</span>
+                    <h3 class="equipment__card-title">Sistema de alta tensión AC/DC</h3>
+                    <p class="equipment__specs">
+                        <strong>Especificación:</strong> 0-120 kV AC / 0-170 kV DC
+                    </p>
+                    <p class="equipment__specs">
+                        <strong>Precisión:</strong> ±0.5% durante todo el rango
+                    </p>
+                    <p class="equipment__specs">
+						<strong>Trazabilidad metrológica:</strong> Anual, soportada con certificados de ensayo de equipos patrón
+                    </p>
+                </div>
+
+                <div class="equipment__card" data-scroll>
+                    <span class="equipment__icon">🔬</span>
+                    <h3 class="equipment__card-title">Megaohmetro digital</h3>
+                    <p class="equipment__specs">
+                        <strong>Rango:</strong> 0 Ω - 2 GΩ (medición de resistencia)
+                    </p>
+                    <p class="equipment__specs">
+                        <strong>Voltajes de prueba:</strong> 500V, 1000V, 2500V, 5000V
+                    </p>
+                    <p class="equipment__specs">
+                        <strong>Modelo:</strong> Verificado según IEC 61010-1
+                    </p>
+                </div>
+
+                <div class="equipment__card" data-scroll>
+                    <span class="equipment__icon">📊</span>
+                    <h3 class="equipment__card-title">Medidor de corriente de fuga</h3>
+                    <p class="equipment__specs">
+                        <strong>Resolución:</strong> 0.1 µA - 100 mA
+                    </p>
+                    <p class="equipment__specs">
+                        <strong>Cumplimiento:</strong> IEC 60950 / EN 61010-1
+                    </p>
+                    <p class="equipment__specs">
+                        <strong>Incertidumbre:</strong> ±(1.5% + 2µA)
+                    </p>
+                </div>
+
+                <div class="equipment__card" data-scroll>
+                    <span class="equipment__icon">🔌</span>
+                    <h3 class="equipment__card-title">Analizador de impedancia</h3>
+                    <p class="equipment__specs">
+                        <strong>Frecuencia:</strong> 20 Hz - 1 MHz
+                    </p>
+                    <p class="equipment__specs">
+                        <strong>Capacitancia / Factor D:</strong> Medición simultánea
+                    </p>
+                    <p class="equipment__specs">
+                        <strong>Aplicación:</strong> Caracterización de aislantes
+                    </p>
+                </div>
+
+                <div class="equipment__card" data-scroll>
+                    <span class="equipment__icon">📱</span>
+                    <h3 class="equipment__card-title">Multímetro de precisión</h3>
+                    <p class="equipment__specs">
+                        <strong>Resolución:</strong> 6.5 dígitos
+                    </p>
+                    <p class="equipment__specs">
+                        <strong>Funciones:</strong> VDC, VAC, Ohms, Capacitancia
+                    </p>
+                    <p class="equipment__specs">
+                        <strong>Incertidumbre:</strong> ±0.02% (especificaciones técnicas)
+                    </p>
+                </div>
+
+                <div class="equipment__card" data-scroll>
+                    <span class="equipment__icon">🌡️</span>
+                    <h3 class="equipment__card-title">Cámara ambiental controlada</h3>
+                    <p class="equipment__specs">
+                        <strong>Rango térmico:</strong> 16°C - 35°C ±2°C
+                    </p>
+                    <p class="equipment__specs">
+                        <strong>Humedad relativa:</strong> 45% - 75% ±5% HR
+                    </p>
+                    <p class="equipment__specs">
+                        <strong>Control:</strong> Automático con registro de datos
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TESTIMONIOS Y CASOS DE ÉXITO -->
+    <section class="testimonials" id="testimonios" role="region" aria-labelledby="testimonials-title">
+        <div class="container">
+            <h2 id="testimonials-title" class="section-title">Testimonios de clientes</h2>
+            <p class="section-subtitle">Empresas que confían en nuestros servicios de ensayo</p>
+            
+            <div class="testimonials__grid">
+                <article class="testimonial__card" data-scroll>
+                    <div class="testimonial__header">
+                        <div class="testimonial__avatar">JC</div>
+                        <div class="testimonial__meta">
+                            <h4 class="testimonial__name">Juan Carlos Martínez</h4>
+                            <p class="testimonial__role">Gerente de Seguridad - Empresa Eléctrica XYZ</p>
+                        </div>
+                    </div>
+                    <p class="testimonial__text">
+                        "Los ensayos de HIGH TEST SAS han sido fundamentales para validar nuestros EPP. El profesionalismo y rigurosidad técnica de su equipo nos da total confianza para equipar a nuestro personal."
+                    </p>
+                    <div class="testimonial__rating">
+                        <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
+                    </div>
+                </article>
+
+                <article class="testimonial__card" data-scroll>
+                    <div class="testimonial__header">
+                        <div class="testimonial__avatar">MC</div>
+                        <div class="testimonial__meta">
+                            <h4 class="testimonial__name">María Claudia López</h4>
+                            <p class="testimonial__role">Directora de Calidad - Importadora de EPP</p>
+                        </div>
+                    </div>
+                    <p class="testimonial__text">
+                        "Excelente servicio. Los reportes son claros, detallados y aceptados sin objeciones por nuestros clientes internacionales. Definitivamente los recomendamos."
+                    </p>
+                    <div class="testimonial__rating">
+                        <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
+                    </div>
+                </article>
+
+                <article class="testimonial__card" data-scroll>
+                    <div class="testimonial__header">
+                        <div class="testimonial__avatar">RG</div>
+                        <div class="testimonial__meta">
+                            <h4 class="testimonial__name">Roberto García</h4>
+                            <p class="testimonial__role">Responsable de Seguridad - Contratista Especializado</p>
+                        </div>
+                    </div>
+                    <p class="testimonial__text">
+                        "Cuando necesitamos certificar nuestro equipo de trabajo, HIGH TEST SAS fue nuestra opción. Cumplimientos de plazos, presupuestos justos y resultados confiables. 100% satisfecho."
+                    </p>
+                    <div class="testimonial__rating">
+                        <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- CENTRO DE RECURSOS Y CERTIFICADOS -->
+    <section class="certifications-hub" id="certificados" role="region" aria-labelledby="cert-hub-title">
+        <div class="container">
+            <h2 id="cert-hub-title" class="section-title">Centro de recursos y certificados</h2>
+            <p class="section-subtitle">Documentos de acreditación, certificados y casos de éxito verificados</p>
+            
+            <!-- FILTROS -->
+            <div class="cert-hub__filters">
+                <button class="cert-hub__filter-btn active" data-filter="all" aria-pressed="true">
+                    Todos
+                </button>
+                <button class="cert-hub__filter-btn" data-filter="certificates" aria-pressed="false">
+                    📄 Certificados
+                </button>
+                <button class="cert-hub__filter-btn" data-filter="cases" aria-pressed="false">
+                    ⭐ Casos de Éxito
+                </button>
+                <button class="cert-hub__filter-btn" data-filter="guides" aria-pressed="false">
+                    📖 Guías Técnicas
+                </button>
+            </div>
+
+            <!-- GRID DE DOCUMENTOS -->
+            <div class="cert-hub__grid">
+                <!-- CERTIFICADOS -->
+                <div class="cert-hub__card cert-hub__card--certificate" data-category="certificates" data-scroll>
+                    <div class="cert-hub__card-header certificates">
+                        <span class="cert-hub__badge">Certificado ISO</span>
+                    </div>
+                    <div class="cert-hub__card-body">
+                        <h3 class="cert-hub__card-title">ISO/IEC 17025:2017 - Acreditación General</h3>
+                        <p class="cert-hub__card-text">
+                            Certificado de acreditación emitido por ONAC (Organismo Nacional de Acreditación) válido por 3 años. Garantiza competencia técnica del laboratorio.
+                        </p>
+                        <div class="cert-hub__meta">
+                            <span class="cert-hub__validity">✓ Vigente hasta: Dic 2026</span>
+                        </div>
+                    </div>
+                    <a href="#" class="cert-hub__download-btn">
+                        <span>📥 Ver certificado</span>
+                    </a>
+                </div>
+
+                <div class="cert-hub__card cert-hub__card--certificate" data-category="certificates" data-scroll>
+                    <div class="cert-hub__card-header certificates">
+                        <span class="cert-hub__badge">Trazabilidad metrológica</span>
+                    </div>
+                    <div class="cert-hub__card-body">
+                        <h3 class="cert-hub__card-title">Documentación de trazabilidad de equipos - 2024</h3>
+                        <p class="cert-hub__card-text">
+                            Documentación de la trazabilidad metrológica de los equipos utilizados en los ensayos (Megohmímetro, Sistema HV, Medidores de fuga), soportada con certificados emitidos por laboratorios acreditados.
+                        </p>
+                        <div class="cert-hub__meta">
+                            <span class="cert-hub__validity">✓ Vigentes 12 meses</span>
+                        </div>
+                    </div>
+                    <a href="#" class="cert-hub__download-btn">
+                        <span>📥 Descargar pack</span>
+                    </a>
+                </div>
+
+                <div class="cert-hub__card cert-hub__card--certificate" data-category="certificates" data-scroll>
+                    <div class="cert-hub__card-header certificates">
+                        <span class="cert-hub__badge">Alcance Técnico</span>
+                    </div>
+                    <div class="cert-hub__card-body">
+                        <h3 class="cert-hub__card-title">Alcance ISO/IEC 17025 - Listado de Servicios</h3>
+                        <p class="cert-hub__card-text">
+                            Documento que especifica exactamente qué servicios de ensayo están acreditados, con rangos de medición, incertidumbres y referencias normativas.
+                        </p>
+                        <div class="cert-hub__meta">
+                            <span class="cert-hub__validity">✓ Actualización: Mar 2025</span>
+                        </div>
+                    </div>
+                    <a href="#" class="cert-hub__download-btn">
+                        <span>📥 Descargar PDF</span>
+                    </a>
+                </div>
+
+                <!-- CASOS DE ÉXITO -->
+                <div class="cert-hub__card cert-hub__card--case-study" data-category="cases" data-scroll>
+                    <div class="cert-hub__card-header case-studies">
+                        <span class="cert-hub__badge">Validación EPP</span>
+                        <span class="cert-hub__badge-secondary">Empresa Eléctrica</span>
+                    </div>
+                    <div class="cert-hub__card-body">
+                        <h3 class="cert-hub__card-title">Validación de 1,200 unidades de guantes aislantes - Clase 3</h3>
+                        <p class="cert-hub__card-text">
+                            Proceso de validación integral de existencias de EPP para una distribuidora de energía eléctrica. Incluye muestreo estadístico, ensayos dieléctricos y reporte final.
+                        </p>
+                        <div class="cert-hub__meta">
+                            <span class="cert-hub__result">✓ Resultado: 98% conformidad</span>
+                            <span class="cert-hub__client">Cliente: Empresa Eléctrica Nacional</span>
+                        </div>
+                    </div>
+                    <a href="#" class="cert-hub__download-btn">
+                        <span>📥 Ver caso completo</span>
+                    </a>
+                </div>
+
+                <div class="cert-hub__card cert-hub__card--case-study" data-category="cases" data-scroll>
+                    <div class="cert-hub__card-header case-studies">
+                        <span class="cert-hub__badge">Certificación</span>
+                        <span class="cert-hub__badge-secondary">Importador</span>
+                    </div>
+                    <div class="cert-hub__card-body">
+                        <h3 class="cert-hub__card-title">Certificación técnica previa a importación - 500 unidades</h3>
+                        <p class="cert-hub__card-text">
+                            Validación de lotes de importación de guantes y mangas aislantes antes de nacionalización. Garantía de conformidad normativa para el cliente final.
+                        </p>
+                        <div class="cert-hub__meta">
+                            <span class="cert-hub__result">✓ Resultado: Aprobado para comercialización</span>
+                            <span class="cert-hub__client">Cliente: Importadora de EPP SAC</span>
+                        </div>
+                    </div>
+                    <a href="#" class="cert-hub__download-btn">
+                        <span>📥 Ver informe</span>
+                    </a>
+                </div>
+
+                <div class="cert-hub__card cert-hub__card--case-study" data-category="cases" data-scroll>
+                    <div class="cert-hub__card-header case-studies">
+                        <span class="cert-hub__badge">Auditoría Técnica</span>
+                        <span class="cert-hub__badge-secondary">Conformidad</span>
+                    </div>
+                    <div class="cert-hub__card-body">
+                        <h3 class="cert-hub__card-title">Auditoría de cumplimiento normativo - Contratista Eléctrico</h3>
+                        <p class="cert-hub__card-text">
+                            Auditoría integral de EPP en uso para verificar conformidad con normas vigentes. Incluye revisión técnica de ensayos realizados, muestreo y recomendaciones de mejora.
+                        </p>
+                        <div class="cert-hub__meta">
+                            <span class="cert-hub__result">✓ Resultado: 95% conformidad, plan de mejora implementado</span>
+                            <span class="cert-hub__client">Cliente: Contratista Especializado SAS</span>
+                        </div>
+                    </div>
+                    <a href="#" class="cert-hub__download-btn">
+                        <span>📥 Ver auditoría</span>
+                    </a>
+                </div>
+
+                <!-- GUÍAS TÉCNICAS -->
+                <div class="cert-hub__card cert-hub__card--guide" data-category="guides" data-scroll>
+                    <div class="cert-hub__card-header guides">
+                        <span class="cert-hub__badge">Norma IEC</span>
+                    </div>
+                    <div class="cert-hub__card-body">
+                        <h3 class="cert-hub__card-title">Guía técnica IEC 60903 - Guantes aislantes de caucho</h3>
+                        <p class="cert-hub__card-text">
+                            Resumen ejecutivo de requisitos técnicos, clases de protección, métodos de ensayo y criterios de aceptación según la norma IEC 60903.
+                        </p>
+                        <div class="cert-hub__meta">
+                            <span class="cert-hub__pages">📄 12 páginas</span>
+                            <span class="cert-hub__update">Actualizado: Ene 2025</span>
+                        </div>
+                    </div>
+                    <a href="#" class="cert-hub__download-btn">
+                        <span>📥 Descargar guía</span>
+                    </a>
+                </div>
+
+                <div class="cert-hub__card cert-hub__card--guide" data-category="guides" data-scroll>
+                    <div class="cert-hub__card-header guides">
+                        <span class="cert-hub__badge">Norma ASTM</span>
+                    </div>
+                    <div class="cert-hub__card-body">
+                        <h3 class="cert-hub__card-title">Guía técnica ASTM F496 - Ensayos dieléctricos</h3>
+                        <p class="cert-hub__card-text">
+                            Guía práctica de metodología de ensayos dieléctricos en EPP según ASTM F496, incluyendo procedimientos de montaje, voltajes de prueba y seguridad.
+                        </p>
+                        <div class="cert-hub__meta">
+                            <span class="cert-hub__pages">📄 16 páginas</span>
+                            <span class="cert-hub__update">Actualizado: Feb 2025</span>
+                        </div>
+                    </div>
+                    <a href="#" class="cert-hub__download-btn">
+                        <span>📥 Descargar guía</span>
+                    </a>
+                </div>
+
+                <div class="cert-hub__card cert-hub__card--guide" data-category="guides" data-scroll>
+                    <div class="cert-hub__card-header guides">
+                        <span class="cert-hub__badge">Norma NTC</span>
+                    </div>
+                    <div class="cert-hub__card-body">
+                        <h3 class="cert-hub__card-title">Guía técnica NTC 2054 - EPP contra riesgos eléctricos</h3>
+                        <p class="cert-hub__card-text">
+                            Documento técnico que integra requisitos de la norma técnica colombiana NTC 2054 con ejemplos prácticos, checklist de verificación y referencias a otras normas.
+                        </p>
+                        <div class="cert-hub__meta">
+                            <span class="cert-hub__pages">📄 14 páginas</span>
+                            <span class="cert-hub__update">Actualizado: Mar 2025</span>
+                        </div>
+                    </div>
+                    <a href="#" class="cert-hub__download-btn">
+                        <span>📥 Descargar guía</span>
+                    </a>
+                </div>
+
+                
+            </div>
+
+            <!-- SECCIÓN DE INFORMACIÓN -->
+            <div class="cert-hub__info-section">
+                <h3 class="cert-hub__info-title">¿Cómo solicitamos documentación?</h3>
+                <div class="cert-hub__info-grid">
+                    <div class="cert-hub__info-card">
+                        <span class="cert-hub__info-icon">📧</span>
+                        <h4>Por correo electrónico</h4>
+                        <p>Solicita directamente los documentos a <strong>info@hightest.com.co</strong></p>
+                    </div>
+                    <div class="cert-hub__info-card">
+                        <span class="cert-hub__info-icon">☎️</span>
+                        <h4>Por teléfono</h4>
+                        <p>Llama al <strong>+57 (1) 2547890</strong> para informes en tiempo real</p>
+                    </div>
+                    <div class="cert-hub__info-card">
+                        <span class="cert-hub__info-icon">💬</span>
+                        <h4>WhatsApp</h4>
+                        <p>Comunícate vía WhatsApp: <strong>+57 322 6197864</strong></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- RECURSOS Y DESCARGABLES -->
+    <section class="resources" id="recursos" role="region" aria-labelledby="resources-title">
+        <div class="container">
+            <h2 id="resources-title" class="section-title">Recursos y descargables</h2>
+            <p class="section-subtitle">Documentos técnicos, guías y casos de estudio</p>
+            
+            <div class="resources__grid">
+                <div class="resource__card" data-scroll>
+                    <div class="resource__icon">📋</div>
+                    <h3 class="resource__title">Catálogo de Servicios</h3>
+                    <p class="resource__description">Descripción completa de todos nuestros servicios de ensayo, normas aplicadas y especificaciones técnicas.</p>
+                    <a href="#" class="resource__link">Descargar PDF<span> ↓</span></a>
+                </div>
+
+                <div class="resource__card" data-scroll>
+                    <div class="resource__icon">📊</div>
+                    <h3 class="resource__title">Caso de Éxito: Empresa Eléctrica</h3>
+                    <p class="resource__description">Estudio de validación de 500 unidades de EPP para operadores de líneas de alta tensión.</p>
+                    <a href="#" class="resource__link">Descargar PDF<span> ↓</span></a>
+                </div>
+
+                <div class="resource__card" data-scroll>
+                    <div class="resource__icon">📖</div>
+                    <h3 class="resource__title">Guía de Normas IEC 60903</h3>
+                    <p class="resource__description">Resumen técnico de requisitos para guantes aislantes según la norma internacional IEC 60903.</p>
+                    <a href="#" class="resource__link">Descargar PDF<span> ↓</span></a>
+                </div>
+
+                <div class="resource__card" data-scroll>
+                    <div class="resource__icon">✓</div>
+                    <h3 class="resource__title">Procedimiento de Ensayo</h3>
+                    <p class="resource__description">Metodología detallada de cómo HIGH TEST SAS ejecuta los ensayos dieléctricos paso a paso.</p>
+                    <a href="#" class="resource__link">Descargar PDF<span> ↓</span></a>
+                </div>
+
+                <div class="resource__card" data-scroll>
+                    <div class="resource__icon">💡</div>
+                    <h3 class="resource__title">Artículo: Seguridad en Alturas</h3>
+                    <p class="resource__description">Análisis sobre los requisitos de seguridad eléctrica para trabajos en altura y sistemas de protección.</p>
+                    <a href="#" class="resource__link">Descargar PDF<span> ↓</span></a>
+                </div>
+
+                <div class="resource__card" data-scroll>
+                    <div class="resource__icon">🔬</div>
+                    <h3 class="resource__title">Boletín Técnico Q2 2025</h3>
+                    <p class="resource__description">Novedades en normativas, equipos de laboratorio y actualizaciones técnicas del segundo trimestre.</p>
+                    <a href="#" class="resource__link">Descargar PDF<span> ↓</span></a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- BLOG Y ARTÍCULOS -->
+    <section class="blog" id="blog" role="region" aria-labelledby="blog-title">
+        <div class="container">
+            <h2 id="blog-title" class="section-title">Blog y recursos educativos</h2>
+            <p class="section-subtitle">Artículos sobre seguridad eléctrica y normativas técnicas</p>
+            
+            <div class="blog__grid">
+                <article class="blog__post" data-scroll>
+                    <div class="blog__image">
+                        <div class="blog__image-placeholder">🔌</div>
+                    </div>
+                    <div class="blog__content">
+                        <h3 class="blog__title">¿Por qué es importante la rigidez dieléctrica en EPP?</h3>
+                        <p class="blog__excerpt">La rigidez dieléctrica es la capacidad del material para resistir una descarga eléctrica sin ruptura. Descubre cómo se mide y por qué es crítica para tu seguridad.</p>
+                        <footer class="blog__meta">
+                            <span class="blog__date">15 Mar 2025</span>
+                            <span class="blog__read-time">Lectura: 5 min</span>
+                        </footer>
+                    </div>
+                </article>
+
+                <article class="blog__post" data-scroll>
+                    <div class="blog__image">
+                        <div class="blog__image-placeholder">⚠️</div>
+                    </div>
+                    <div class="blog__content">
+                        <h3 class="blog__title">Nuevas actualizaciones en la norma ASTM F496</h3>
+                        <p class="blog__excerpt">Los cambios en los criterios de aceptación para ensayos de guantes aislantes. Información vital para proveedores y compradores de EPP.</p>
+                        <footer class="blog__meta">
+                            <span class="blog__date">8 Mar 2025</span>
+                            <span class="blog__read-time">Lectura: 7 min</span>
+                        </footer>
+                    </div>
+                </article>
+
+                <article class="blog__post" data-scroll>
+                    <div class="blog__image">
+                        <div class="blog__image-placeholder">🛡️</div>
+                    </div>
+                    <div class="blog__content">
+                        <h3 class="blog__title">5 errores comunes en la selección de guantes aislantes</h3>
+                        <p class="blog__excerpt">Guía práctica para evitar cometer errores costosos al seleccionar el EPP. Aprende cuáles son los criterios más importantes.</p>
+                        <footer class="blog__meta">
+                            <span class="blog__date">28 Feb 2025</span>
+                            <span class="blog__read-time">Lectura: 6 min</span>
+                        </footer>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- NOSOTROS -->
+    <section class="about" id="nosotros" role="region" aria-labelledby="about-title">
+        <div class="container">
+            <h2 id="about-title" class="section-title">Sobre HIGH TEST SAS</h2>
+            <div class="about__content">
+                <div class="about__text-block">
+                    <h3>Experiencia en seguridad eléctrica</h3>
+                    <p>
+                        HIGH TEST SAS fue fundada con el propósito de proporcionar servicios de ensayo de calidad 
+                        en el campo de la seguridad eléctrica. Con más de una década de experiencia, 
+                        nuestra institución se ha posicionado como referente en evaluación de elementos de 
+                        protección personal contra riesgos eléctricos.
+                    </p>
+                    <p>
+                        Nuestro enfoque es combinar rigor técnico con atención al cliente, garantizando 
+                        que cada informe sea una herramienta confiable para la toma de decisiones en materia 
+                        de seguridad ocupacional.
+                    </p>
+                </div>
+
+                <div class="about__image">
+                    <img src="/image/equipohumano.jpeg" alt="Equipo técnico de HIGH TEST SAS realizando ensayos" class="about__image-img">
+                </div>
+
+                <div class="about__stats">
+                    <div class="stat__item">
+                        <span class="stat__number">10+</span>
+                        <span class="stat__label">Años de experiencia</span>
+                    </div>
+                    <div class="stat__item">
+                        <span class="stat__number">5000+</span>
+                        <span class="stat__label">Ensayos realizados</span>
+                    </div>
+                    <div class="stat__item">
+                        <span class="stat__number">150+</span>
+                        <span class="stat__label">Clientes activos</span>
+                    </div>
+                    <div class="stat__item">
+                        <span class="stat__number">8</span>
+                        <span class="stat__label">Especialistas técnicos</span>
+                    </div>
+                </div>
+
+                <div class="about__values">
+                    <h3>Nuestros principios</h3>
+                    <ul class="values__list">
+                        <li><strong>Competencia:</strong> Personal certificado en normas técnicas internacionales</li>
+                        <li><strong>Imparcialidad:</strong> Resultados independientes sin influencias comerciales</li>
+                        <li><strong>Trazabilidad:</strong> Documentación completa de cada ensayo</li>
+                        <li><strong>Confidencialidad:</strong> Protección total de información técnica y comercial</li>
+                        <li><strong>Responsabilidad:</strong> Cumplimiento de plazos y calidad garantizada</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTORES ATENDIDOS -->
+    <section class="sectors" role="region" aria-labelledby="sectors-title">
+        <div class="container">
+            <h2 id="sectors-title" class="section-title">Sectores que servimos</h2>
+            <div class="sectors__grid">
+                <article class="sector__card">
+                    <h3 class="sector__title">Sector eléctrico</h3>
+                    <p class="sector__description">
+                        Distribuidoras de energía, generadoras y empresas de transmisión con necesidad 
+                        de validar EPP para personal de operación y mantenimiento.
+                    </p>
+                </article>
+
+                <article class="sector__card">
+                    <h3 class="sector__title">Industria manufacturera</h3>
+                    <p class="sector__description">
+                        Plantas de producción, refinerías e industrias de transformación con procesos 
+                        que involucren riesgos eléctricos significativos.
+                    </p>
+                </article>
+
+                <article class="sector__card">
+                    <h3 class="sector__title">Contratistas especializados</h3>
+                    <p class="sector__description">
+                        Empresas de instalación, mantenimiento y servicios eléctricos que requieren 
+                        certificación de equipos de protección para sus operarios.
+                    </p>
+                </article>
+
+                <article class="sector__card">
+                    <h3 class="sector__title">Retail y distribuidores</h3>
+                    <p class="sector__description">
+                        Comercializadores de EPP que necesitan validar conformidad técnica antes 
+                        de colocar productos en el mercado.
+                    </p>
+                </article>
+
+                <article class="sector__card">
+                    <h3 class="sector__title">Organismos de control</h3>
+                    <p class="sector__description">
+                        Entes reguladores, inspectorados y organizaciones de vigilancia en seguridad 
+                        ocupacional que requieren ensayos independientes.
+                    </p>
+                </article>
+
+                <article class="sector__card">
+                    <h3 class="sector__title">Importadores</h3>
+                    <p class="sector__description">
+                        Empresas importadoras que necesitan validar cumplimiento técnico de productos 
+                        antes de nacionalización y venta.
+                    </p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- DESCARGA DE CERTIFICADOS (Solo para usuarios autenticados) -->
+    <section class="my-certificates my-certificates--hidden" id="misCertificados" role="region" aria-labelledby="my-cert-title">
+        <div class="container">
+            <div class="my-certificates__header">
+                <h2 id="my-cert-title" class="section-title">Panel de Administración HIGH TEST</h2>
+                <p class="section-subtitle">Gestión completa de certificados, reportes técnicos y documentación de ensayos</p>
+            </div>
+
+            <div class="my-certificates__content">
+                <!-- TARJETA DE INFORMACIÓN DEL USUARIO -->
+                <div class="my-certificates__user-card">
+                    <div class="user-card__avatar" id="userAvatar">👤</div>
+                    <div class="user-card__info">
+                        <h3 class="user-card__name" id="userName">Usuario</h3>
+                        <p class="user-card__email" id="userEmail">correo@empresa.com</p>
+                        <p class="user-card__company" id="userCompany">Empresa</p>
+                    </div>
+                    <button class="user-card__logout-btn" id="logoutBtn" aria-label="Cerrar sesión">
+                        🚪 Cerrar sesión
+                    </button>
+                </div>
+
+                <!-- FILTROS Y BÚSQUEDA -->
+                <div class="my-certificates__controls">
+                    <div class="control__search">
+                        <input 
+                            type="text" 
+                            id="searchCertificates" 
+                            class="control__input"
+                            placeholder="🔍 Buscar certificado por número, fecha o producto..."
+                            aria-label="Buscar certificados"
+                        >
+                    </div>
+                    <div class="control__filters">
+                        <select id="filterStatus" class="control__select" aria-label="Filtrar por estado">
+                            <option value="">Todos los estados</option>
+                            <option value="completado">✓ Completados</option>
+                            <option value="en-proceso">⏳ En proceso</option>
+                            <option value="pendiente">⏳ Pendiente de revisión</option>
+                        </select>
+                        <select id="filterType" class="control__select" aria-label="Filtrar por tipo">
+                            <option value="">Todos los tipos</option>
+                            <option value="reporte">📄 Informe de ensayo</option>
+                            <option value="certificado">🎖️ Informe de verificación</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- GRID DE CERTIFICADOS -->
+                <div class="my-certificates__grid" id="certificatesGrid">
+                    <!-- Ejemplos de certificados (se reemplazarán con datos reales del usuario) -->
+                    
+                    <!-- Certificado 1 -->
+                    <div class="certificate-item" data-cert-id="HT-2025-001" data-status="completado" data-type="reporte">
+                        <div class="certificate-item__header">
+                            <div class="certificate-item__type-badge">📄 Informe de ensayo</div>
+                            <div class="certificate-item__status-badge badge--completed">✓ Completado</div>
+                        </div>
+                        <div class="certificate-item__body">
+                            <h3 class="certificate-item__title">Ensayo dieléctrico - Guantes aislantes Clase 2</h3>
+                            <dl class="certificate-item__details">
+                                <dt>Número:</dt>
+                                <dd>HT-2025-001</dd>
+                                <dt>Producto:</dt>
+                                <dd>Guantes aislantes de caucho - Protección 10 kV</dd>
+                                <dt>Norma aplicada:</dt>
+                                <dd>IEC 60903 / ASTM D120</dd>
+                                <dt>Fecha de finalización:</dt>
+                                <dd>15 de marzo de 2025</dd>
+                                <dt>Resultado:</dt>
+                                <dd><span class="badge--success">Conforme</span></dd>
+                            </dl>
+                        </div>
+                        <div class="certificate-item__actions">
+                            <a href="#" class="btn btn--primary btn--small" title="Descargar PDF">
+                                📥 Descargar PDF
+                            </a>
+                            <button class="btn btn--secondary btn--small" title="Ver detalles">
+                                👁️ Ver detalles
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Certificado 2 -->
+                    <div class="certificate-item" data-cert-id="HT-2025-002" data-status="completado" data-type="certificado">
+                        <div class="certificate-item__header">
+                            <div class="certificate-item__type-badge">🎖️ Certificado</div>
+                            <div class="certificate-item__status-badge badge--completed">✓ Completado</div>
+                        </div>
+                        <div class="certificate-item__body">
+                            <h3 class="certificate-item__title">Certificación de conformidad - Pértigas aislantes</h3>
+                            <dl class="certificate-item__details">
+                                <dt>Número:</dt>
+                                <dd>HT-2025-002</dd>
+                                <dt>Producto:</dt>
+                                <dd>Pértigas aislantes telescópicas - 5m</dd>
+                                <dt>Norma aplicada:</dt>
+                                <dd>IEC 60855 / ASTM F711</dd>
+                                <dt>Fecha de finalización:</dt>
+                                <dd>10 de marzo de 2025</dd>
+                                <dt>Resultado:</dt>
+                                <dd><span class="badge--success">Conforme</span></dd>
+                            </dl>
+                        </div>
+                        <div class="certificate-item__actions">
+                            <a href="#" class="btn btn--primary btn--small" title="Descargar PDF">
+                                📥 Descargar PDF
+                            </a>
+                            <button class="btn btn--secondary btn--small" title="Ver detalles">
+                                👁️ Ver detalles
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Certificado 3 -->
+                    <div class="certificate-item" data-cert-id="HT-2025-003" data-status="en-proceso" data-type="reporte">
+                        <div class="certificate-item__header">
+                            <div class="certificate-item__type-badge">📄 Reporte Técnico</div>
+                            <div class="certificate-item__status-badge badge--in-progress">⏳ En proceso</div>
+                        </div>
+                        <div class="certificate-item__body">
+                            <h3 class="certificate-item__title">Ensayo de fuga de corriente - Herramientas aisladas</h3>
+                            <dl class="certificate-item__details">
+                                <dt>Número:</dt>
+                                <dd>HT-2025-003</dd>
+                                <dt>Producto:</dt>
+                                <dd>Set de destornilladores aislantes</dd>
+                                <dt>Norma aplicada:</dt>
+                                <dd>IEC 60900 / ASTM F406</dd>
+                                <dt>Fecha estimada:</dt>
+                                <dd>22 de marzo de 2025</dd>
+                                <dt>Progreso:</dt>
+                                <dd><div class="progress-bar"><div class="progress-bar__fill progress-bar__fill--65"></div></div></dd>
+                            </dl>
+                        </div>
+                        <div class="certificate-item__actions">
+                            <button class="btn btn--disabled btn--small" disabled title="Aún no disponible">
+                                📥 Descarga en proceso
+                            </button>
+                            <button class="btn btn--secondary btn--small" title="Ver progreso">
+                                📊 Ver progreso
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Certificado 4 -->
+                    <div class="certificate-item" data-cert-id="HT-2024-098" data-status="completado" data-type="reporte">
+                        <div class="certificate-item__header">
+                            <div class="certificate-item__type-badge">📄 Informe de ensayo</div>
+                            <div class="certificate-item__status-badge badge--completed">✓ Completado</div>
+                        </div>
+                        <div class="certificate-item__body">
+                            <h3 class="certificate-item__title">Informe de ensayo funcional - Megohmímetro digital</h3>
+                            <dl class="certificate-item__details">
+                                <dt>Número:</dt>
+                                <dd>HT-2024-098</dd>
+                                <dt>Equipo evaluado:</dt>
+                                <dd>Megohmímetro - Modelo XYZ3000</dd>
+                                <dt>Rango evaluado:</dt>
+                                <dd>0 Ω - 2 GΩ</dd>
+                                <dt>Fecha de ensayo:</dt>
+                                <dd>5 de febrero de 2025</dd>
+                                <dt>Resultado:</dt>
+                                <dd><span class="badge--success">Conforme</span></dd>
+                            </dl>
+                        </div>
+                        <div class="certificate-item__actions">
+                            <a href="#" class="btn btn--primary btn--small" title="Descargar PDF">
+                                📥 Descargar PDF
+                            </a>
+                            <button class="btn btn--secondary btn--small" title="Ver detalles">
+                                👁️ Ver detalles
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Certificado 5 -->
+                    <div class="certificate-item" data-cert-id="HT-2024-085" data-status="completado" data-type="reporte">
+                        <div class="certificate-item__header">
+                            <div class="certificate-item__type-badge">📄 Reporte Técnico</div>
+                            <div class="certificate-item__status-badge badge--completed">✓ Completado</div>
+                        </div>
+                        <div class="certificate-item__body">
+                            <h3 class="certificate-item__title">Ensayo de resistencia de aislamiento - Cables de potencia</h3>
+                            <dl class="certificate-item__details">
+                                <dt>Número:</dt>
+                                <dd>HT-2024-085</dd>
+                                <dt>Producto:</dt>
+                                <dd>Cables de potencia - Sección 50mm²</dd>
+                                <dt>Norma aplicada:</dt>
+                                <dd>IEC 60811 / ASTM D495</dd>
+                                <dt>Fecha de finalización:</dt>
+                                <dd>28 de febrero de 2025</dd>
+                                <dt>Resultado:</dt>
+                                <dd><span class="badge--success">Conforme</span></dd>
+                            </dl>
+                        </div>
+                        <div class="certificate-item__actions">
+                            <a href="#" class="btn btn--primary btn--small" title="Descargar PDF">
+                                📥 Descargar PDF
+                            </a>
+                            <button class="btn btn--secondary btn--small" title="Ver detalles">
+                                👁️ Ver detalles
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RESUMEN DE ESTADÍSTICAS -->
+                <div class="my-certificates__stats">
+                    <h3 class="stats__title">Tu resumen de ensayos</h3>
+                    <div class="stats__grid">
+                        <div class="stat-card">
+                            <div class="stat-card__icon">📊</div>
+                            <div class="stat-card__content">
+                                <p class="stat-card__value" id="statTotal">5</p>
+                                <p class="stat-card__label">Ensayos totales</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card__icon">✓</div>
+                            <div class="stat-card__content">
+                                <p class="stat-card__value" id="statCompleted">4</p>
+                                <p class="stat-card__label">Completados</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card__icon">⏳</div>
+                            <div class="stat-card__content">
+                                <p class="stat-card__value" id="statInProgress">1</p>
+                                <p class="stat-card__label">En progreso</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card__icon">📅</div>
+                            <div class="stat-card__content">
+                                <p class="stat-card__value" id="statLastDate">15 mar</p>
+                                <p class="stat-card__label">Último ensayo</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN DE AYUDA -->
+                <div class="my-certificates__help">
+                    <h3 class="help__title">¿Necesitas ayuda?</h3>
+                    <div class="help__grid">
+                        <div class="help-card">
+                            <span class="help-card__icon">📧</span>
+                            <h4>Por correo</h4>
+                            <p>Solicita facturas o copias: <strong>high.testsas@gmail.com</strong></p>
+                        </div>
+                        <div class="help-card">
+                            <span class="help-card__icon">☎️</span>
+                            <h4>Por teléfono</h4>
+                            <p>Llamadas de lunes a viernes: <strong>+57 322 6197864</strong></p>
+                        </div>
+                        <div class="help-card">
+                            <span class="help-card__icon">💬</span>
+                            <h4>WhatsApp</h4>
+                            <p>Disponible 24/7: <strong>+57 322 6197864</strong></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA FINAL -->
+    <section class="final-cta" role="region" aria-labelledby="cta-title">
+        <div class="container">
+            <div class="final-cta__content">
+                <h2 id="cta-title" class="final-cta__title">
+                    ¿Necesita validar la seguridad eléctrica de sus productos?
+                </h2>
+                <p class="final-cta__subtitle">
+                    Solicite una cotización sin compromiso. Nuestro equipo técnico evaluará sus necesidades específicas.
+                </p>
+                <div class="final-cta__buttons">
+                    <button class="btn btn--primary btn--large" onclick="document.querySelector('#contacto').scrollIntoView({behavior: 'smooth'})">
+                        Solicitar cotización
+                    </button>
+                    <a href="https://wa.me/573226197864" target="_blank" rel="noopener" class="btn btn--secondary btn--large">
+                        Contactar WhatsApp
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTACTO -->
+    <section class="contact" id="contacto" role="region" aria-labelledby="contact-title">
+        <div class="container">
+            <h2 id="contact-title" class="section-title">Contacto y cotizaciones</h2>
+            <div class="contact__content">
+                <div class="contact__form-wrapper">
+                    <form class="contact__form" id="contactForm" name="contactForm">
+                        <div class="form__feedback" id="formFeedback"></div>
+
+                        <div class="form__group">
+                            <label for="name" class="form__label">Nombre completo *</label>
+                            <input 
+                                type="text" 
+                                id="name" 
+                                name="name" 
+                                class="form__input" 
+                                required
+                                aria-required="true"
+                                placeholder="Ej: Juan Pérez"
+                            >
+                        </div>
+
+                        <div class="form__group">
+                            <label for="company" class="form__label">Empresa *</label>
+                            <input 
+                                type="text" 
+                                id="company" 
+                                name="company" 
+                                class="form__input" 
+                                required
+                                aria-required="true"
+                                placeholder="Ej: Empresa de servicios eléctricos"
+                            >
+                        </div>
+
+                        <div class="form__group">
+                            <label for="email" class="form__label">Correo electrónico *</label>
+                            <input 
+                                type="email" 
+                                id="email" 
+                                name="email" 
+                                class="form__input" 
+                                required
+                                aria-required="true"
+                                placeholder="ej@empresa.com"
+                            >
+                        </div>
+
+                        <div class="form__group">
+                            <label for="phone" class="form__label">Teléfono *</label>
+                            <input 
+                                type="tel" 
+                                id="phone" 
+                                name="phone" 
+                                class="form__input" 
+                                required
+                                aria-required="true"
+                                placeholder="+57 300 123 4567"
+                            >
+                        </div>
+
+                        <div class="form__group">
+                            <label for="service" class="form__label">Servicio de interés *</label>
+                            <select id="service" name="service" class="form__input" required aria-required="true">
+                                <option value="">Seleccionar servicio...</option>
+                                <option value="dielectrico">Ensayos dieléctricos</option>
+                                <option value="guantes">Ensayos de guantes aislantes</option>
+                                <option value="mangas">Ensayos de mangas aislantes</option>
+                                <option value="pertigas">Ensayos de pértigas</option>
+                                <option value="herramientas">Ensayos de herramientas aisladas</option>
+                                <option value="alta-tension">Ensayos de alta tensión</option>
+                                <option value="fuga">Ensayos de fuga de corriente</option>
+                                <option value="otro">Otro servicio</option>
+                            </select>
+                        </div>
+
+                        <div class="form__group">
+                            <label for="message" class="form__label">Mensaje técnico *</label>
+                            <textarea 
+                                id="message" 
+                                name="message" 
+                                class="form__input form__textarea" 
+                                rows="6" 
+                                required
+                                aria-required="true"
+                                placeholder="Describa brevemente los productos/materiales a ensayar y requisitos especiales"
+                            ></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn--primary btn--block">
+                            Enviar solicitud de cotización
+                        </button>
+                        <p class="form__notice">* Campos obligatorios</p>
+                    </form>
+                </div>
+
+                <div class="contact__info">
+                    <h3 class="contact__info-title">Información de contacto</h3>
+                    
+                    <div class="contact__info-item">
+                        <strong class="contact__label">Teléfono</strong>
+                        <a href="tel:+573226197864" class="contact__link">+57 322 6197864</a>
+                    </div>
+
+                    <div class="contact__info-item">
+                        <strong class="contact__label">Correo electrónico</strong>
+                        <a href="mailto:high.testsas@gmail.com" class="contact__link">high.testsas@gmail.com</a>
+                    </div>
+
+                    <div class="contact__info-item">
+                        <strong class="contact__label">WhatsApp</strong>
+                        <a href="https://wa.me/573226197864" target="_blank" rel="noopener" class="contact__link">
+                            Escribir mensaje
+                        </a>
+                    </div>
+
+                    <div class="contact__info-item">
+                        <strong class="contact__label">Ubicación</strong>
+                        <p class="contact__text">Bogotá D.C., Colombia</p>
+                    </div>
+
+                    <div class="contact__info-item">
+                        <strong class="contact__label">Horario de atención</strong>
+                        <p class="contact__text">
+                            Lunes a viernes: 8:00 AM - 5:00 PM<br>
+                            Sábado: 8:00 AM - 12:00 PM<br>
+                            Domingo: Cerrado
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <div class="footer__content">
+                <div class="footer__column">
+                    <img src="/image/logo.jpeg" alt="HIGH TEST SAS" class="footer__logo-image">
+                    <p class="footer__text">
+                        Laboratorio acreditado ISO/IEC 17025 especializado en ensayos eléctricos 
+                        para elementos de protección personal.
+                    </p>
+                </div>
+
+                <div class="footer__column">
+                    <h3 class="footer__title">Navegación</h3>
+                    <nav class="footer__nav">
+                        <a href="#inicio" class="footer__link">Inicio</a>
+                        <a href="#servicios" class="footer__link">Servicios</a>
+                        <a href="#capacidad" class="footer__link">Capacidad técnica</a>
+                        <a href="#acreditacion" class="footer__link">Acreditación</a>
+                        <a href="#nosotros" class="footer__link">Nosotros</a>
+                        <a href="#contacto" class="footer__link">Contacto</a>
+                    </nav>
+                </div>
+
+                <div class="footer__column">
+                    <h3 class="footer__title">Contacto</h3>
+                    <p class="footer__text">
+                        <a href="tel:+573226197864" class="footer__link">+57 322 6197864</a><br>
+                        <a href="mailto:high.testsas@gmail.com" class="footer__link">high.testsas@gmail.com</a><br>
+                        <a href="https://wa.me/573226197864" target="_blank" rel="noopener" class="footer__link">WhatsApp</a>
+                    </p>
+                </div>
+
+                <div class="footer__column">
+                    <h3 class="footer__title">Redes Sociales</h3>
+                    <div class="footer__social">
+                        <a href="https://www.linkedin.com/company/high-test-sas" target="_blank" rel="noopener" class="footer__social-link" aria-label="LinkedIn" title="LinkedIn">
+                            <svg class="footer__social-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M20.5 2h-17A1.5 1.5 0 002 3.5v17A1.5 1.5 0 003.5 22h17a1.5 1.5 0 001.5-1.5v-17A1.5 1.5 0 0020.5 2zM8 19H5v-9h3zM6.5 8.25A1.75 1.75 0 118.3 6.5a1.78 1.78 0 01-1.8 1.75zM19 19h-3v-4.74c0-1.42-.6-1.93-1.38-1.93A1.74 1.74 0 0013 14.19a.66.66 0 000 .14V19h-3v-9h2.9v1.3a3.11 3.11 0 012.7-1.4c1.55 0 3.36.86 3.36 3.66z"/>
+                            </svg>
+                        </a>
+                        <a href="https://www.facebook.com/hightestsas" target="_blank" rel="noopener" class="footer__social-link" aria-label="Facebook" title="Facebook">
+                            <svg class="footer__social-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                            </svg>
+                        </a>
+                        <a href="https://www.instagram.com/hightestsas" target="_blank" rel="noopener" class="footer__social-link" aria-label="Instagram" title="Instagram">
+                            <svg class="footer__social-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.057-1.645.069-4.849.069-3.204 0-3.584-.012-4.849-.069-3.259-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163C8.756 0 8.334.012 7.053.072 2.695.272.273 2.69.073 7.052.012 8.333 0 8.756 0 12c0 3.244.011 3.667.072 4.948.2 4.358 2.619 6.78 6.98 6.98 1.281.06 1.704.072 4.948.072 3.244 0 3.667-.012 4.947-.072 4.358-.2 6.78-2.619 6.98-6.98.06-1.281.072-1.704.072-4.948 0-3.244-.011-3.667-.072-4.947-.2-4.358-2.619-6.78-6.98-6.98C15.668.012 15.245 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm4.965-10.322a1.44 1.44 0 100-2.88 1.44 1.44 0 000 2.88z"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
+               
+            </div>
+
+            <div class="footer__bottom">
+                <p class="footer__copyright">
+                    &copy; 2025 HIGH TEST SAS. Todos los derechos reservados.<br>
+                    <span class="footer__certification">Laboratorio Acreditado ISO/IEC 17025</span>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Botón flotante WhatsApp -->
+    <a href="https://wa.me/573226197864" target="_blank" rel="noopener" class="whatsapp-float" aria-label="Abrir WhatsApp" title="Escribir por WhatsApp">
+        <svg viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+            <g>
+                <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 3 .97 4.29L2.05 22l6.305-1.654A9.96 9.96 0 0012 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.41 0-2.78-.29-4.05-.82l-.29-.15-3.01.788.802-2.906-.19-.3A7.993 7.993 0 014 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/>
+                <path d="M16.67 13.13c-.23-.12-1.46-.72-1.69-.8-.23-.07-.4-.11-.56.11-.16.23-.64.8-.78.96-.14.16-.29.18-.52.06-.23-.12-.92-.34-1.75-.96-.65-.58-1.07-1.3-1.2-1.53-.12-.23-.01-.36.09-.47.1-.1.23-.26.35-.4.12-.13.16-.23.25-.38.08-.15.04-.28-.02-.4-.06-.11-.56-1.32-.76-1.8-.2-.48-.4-.41-.56-.42-.14-.01-.3-.01-.45-.01-.16 0-.4.06-.62.31-.22.25-.84.82-.84 2.01 0 1.19.86 2.33 1 2.49.14.16 1.98 3.04 4.8 4.27.67.28 1.18.44 1.58.57.67.21 1.28.18 1.76.11.54-.08 1.64-.67 1.87-1.32.23-.64.23-1.19.16-1.31-.07-.11-.23-.18-.48-.31z"/>
+            </g>
+        </svg>
+    </a>
+
+    <script src="script-v2.js"></script>
+</body>
+</html>
