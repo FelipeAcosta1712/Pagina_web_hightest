@@ -1540,7 +1540,8 @@ const AuthManager = {
 
             const remember = !!form.querySelector('input[name="remember"]')?.checked;
             const user = resultado?.user;
-            const userName = user?.name || email;
+            const userName = user?.nombre || user?.name || email;
+            const userRole = user?.rol || user?.rol || rol;
 
             // Login exitoso - Usuario HIGH TEST
             this.currentUser = {
@@ -1550,6 +1551,7 @@ const AuthManager = {
                 company: 'HIGH TEST SAS',
                 loginTime: new Date().toLocaleString(),
                 userType: 'hightest',
+                role: userRole,
                 remember
             };
 
