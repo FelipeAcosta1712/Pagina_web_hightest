@@ -49,6 +49,73 @@ const throttle = (fn, delay = 100) => {
 };
 
 /**
+
+        const AccreditationGallery = {
+            init() {
+                this.section = document.getElementById('acreditacion');
+                if (!this.section) return;
+
+                this.thumbs = this.section.querySelectorAll('.gallery__thumb');
+                this.modal = document.getElementById('accreditationModal');
+                if (!this.thumbs.length || !this.modal) return;
+
+                this.titleEl = this.modal.querySelector('.modal__title');
+                this.downloadEl = this.modal.querySelector('.modal__download');
+                this.closeBtn = this.modal.querySelector('.modal__close');
+
+                this.bindEvents();
+            },
+
+            bindEvents() {
+                this.thumbs.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const title = btn.dataset.title || '';
+                        const href = btn.dataset.href || '#';
+                        const preview = btn.dataset.img || btn.querySelector('img')?.src || '';
+                        this.openModal(title, href, preview);
+                    });
+                });
+
+                if (this.closeBtn) {
+                    this.closeBtn.addEventListener('click', () => this.closeModal());
+                }
+
+                // close on outside click
+                this.modal.addEventListener('click', (e) => {
+                    if (e.target === this.modal) this.closeModal();
+                });
+
+                // ESC to close
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && this.modal.getAttribute('aria-hidden') === 'false') {
+                        this.closeModal();
+                    }
+                });
+            },
+
+            openModal(title, href, previewSrc) {
+                if (this.titleEl) this.titleEl.textContent = title;
+                if (this.downloadEl) this.downloadEl.setAttribute('href', href);
+                // preview image
+                const imgEl = this.modal.querySelector('.modal__preview');
+                if (imgEl) {
+                    imgEl.src = previewSrc || '';
+                    imgEl.alt = title || 'Vista previa del certificado';
+                }
+                this.modal.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+                // focus the download link for accessibility
+                if (this.downloadEl) this.downloadEl.focus();
+            },
+
+            closeModal() {
+                this.modal.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+            }
+        };
+
+        // ===========================
+        // MÓDULO: VALIDACIÓN DE FORMULARIO
  * Validar email
  */
 const isValidEmail = (email) => {
@@ -1079,10 +1146,12 @@ const App = {
         ScrollAnimations.init();
         Navigation.init();
         CertificationsHub.init();
+        AccreditationGallery.init();
         AuthManager.init();
         CertificatesManager.init();
         PublicCertificatesManager.init();
         CertificatesAuthManager.init();
+        ClientAuth.init();
         BlogManager.init();
         HeroCarousel.init();
 
@@ -1782,7 +1851,8 @@ const CertificatesAuthManager = {
         const certificatesBtn = document.getElementById('certificatesBtn');
         const certificatesModal = document.getElementById('certificatesModal');
         const closeBtn = document.getElementById('certificatesModalClose');
-        const certificatesForm = document.getElementById('certificatesForm');
+        // Buscar el formulario de certificados por varios posibles ids (compatibilidad)
+        const certificatesForm = document.getElementById('certificatesForm') || document.getElementById('clientLoginForm') || document.querySelector('#certificatesModal form') || document.querySelector('.certificates-form');
 
         if (!certificatesBtn || !certificatesModal) {
             console.error('❌ CertificatesAuthManager: elementos de modal no encontrados');
@@ -1800,6 +1870,14 @@ const CertificatesAuthManager = {
             }
 
             this.openCertificatesModal();
+
+            // Al abrir el modal, enfocar el campo de email si existe (soporta id clientEmail)
+            setTimeout(() => {
+                const modal = document.getElementById('certificatesModal');
+                if (!modal) return;
+                const emailInput = modal.querySelector('input[name="email"]') || modal.querySelector('#clientEmail') || document.getElementById('clientEmail') || modal.querySelector('#certificatesEmail');
+                if (emailInput) emailInput.focus();
+            }, 120);
         });
 
         // Botón de certificados en menú móvil
@@ -1834,7 +1912,10 @@ const CertificatesAuthManager = {
         });
 
         if (certificatesForm) {
+            console.log('📌 CertificatesAuthManager: enlazando submit del formulario de certificados', certificatesForm.id || certificatesForm.className);
             certificatesForm.addEventListener('submit', (e) => this.handleCertificatesAuth(e));
+        } else {
+            console.warn('⚠️ CertificatesAuthManager: no se encontró formulario de certificados para enlazar submit');
         }
     },
 
@@ -1869,57 +1950,139 @@ const CertificatesAuthManager = {
     /**
      * Manejar autenticación de certificados
      */
-    handleCertificatesAuth(e) {
+    async handleCertificatesAuth(e) {
         e.preventDefault();
         const form = e.target;
-        const email = form.querySelector('input[name="email"]').value.trim();
-        const password = form.querySelector('input[name="password"]').value;
+
+        // Soporte para distintos atributos de campo: name="email" | id="clientEmail" | id="certificatesEmail"
+        const emailEl = form.querySelector('input[name="email"]') || form.querySelector('#clientEmail') || document.getElementById('clientEmail') || form.querySelector('#certificatesEmail');
+        const passwordEl = form.querySelector('input[name="password"]') || form.querySelector('#clientPassword') || document.getElementById('clientPassword') || form.querySelector('#certificatesPassword');
+
+        const email = (emailEl && emailEl.value) ? emailEl.value.trim() : '';
+        const password = (passwordEl && passwordEl.value) ? passwordEl.value : '';
+
+        // Preparar feedback inline profesional
+        const modal = document.getElementById('certificatesModal');
+        let feedbackEl = modal && modal.querySelector('.certificates__feedback');
+        if (!feedbackEl && modal) {
+            feedbackEl = document.createElement('div');
+            feedbackEl.className = 'certificates__feedback';
+            const formParent = form.parentElement || modal;
+            formParent.insertBefore(feedbackEl, form);
+        }
+
+        const setFeedback = (msg, isError = true) => {
+            if (!feedbackEl) return;
+            const icon = isError ? '⚠️' : '✓';
+            const bgColor = isError 
+                ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.04) 100%)'
+                : 'linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(34, 197, 94, 0.04) 100%)';
+            const borderColor = isError ? '#fca5a5' : '#86efac';
+            const textColor = isError ? '#7f1d1d' : '#166534';
+            
+            feedbackEl.innerHTML = `
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 14px 16px;
+                    border-radius: 12px;
+                    background: ${bgColor};
+                    border: 1.5px solid ${borderColor};
+                    font-size: 14px;
+                    font-weight: 600;
+                    line-height: 1.5;
+                    color: ${textColor};
+                    animation: slideDown 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+                ">
+                    <span style="font-size: 18px; flex-shrink: 0; display: inline-block;">${icon}</span>
+                    <span>${msg}</span>
+                </div>
+            `;
+        };
+
+        // Inyectar animación CSS si no existe
+        if (!document.getElementById('clientAuthAnimations')) {
+            const style = document.createElement('style');
+            style.id = 'clientAuthAnimations';
+            style.textContent = `
+                @keyframes slideDown {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
 
         // Validaciones básicas
         if (!email || !password) {
-            alert('Por favor, completa todos los campos');
+            setFeedback('Completa tu correo y tu contraseña para continuar.', true);
             return;
         }
 
         if (!this.isValidEmail(email)) {
-            alert('Correo electrónico inválido');
+            setFeedback('Escribe un correo válido, por favor.', true);
             return;
         }
 
-        // Credenciales válidas para clientes
-        const validClientCredentials = [
-            { email: 'cliente@empresa1.com', password: 'cert123', name: 'Cliente Empresa 1', company: 'Empresa 1 SAS' },
-            { email: 'juan.perez@empresa2.com', password: 'juan456', name: 'Juan Pérez', company: 'Empresa 2 Ltda' },
-            { email: 'maria.garcia@empresa3.com', password: 'maria789', name: 'María García', company: 'Empresa 3 S.A.' },
-            { email: 'cliente@hightestcliente.com', password: 'cliente123', name: 'Cliente Demo', company: 'Cliente Demo' }
-        ];
-
-        // Verificar credenciales de cliente
-        const clientCredential = validClientCredentials.find(cred => cred.email === email && cred.password === password);
-
-        if (!clientCredential) {
-            alert('Credenciales incorrectas. Si no recuerda sus datos o aún no tiene acceso, contacte a nuestro equipo de HIGH TEST.');
-            return;
+        // Desactivar botón de submit y mostrar estado
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.dataset.originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Ingresando...';
         }
 
-        // Autenticación exitosa - Guardar como usuario cliente
-        this.currentClient = {
-            id: Date.now(),
-            name: clientCredential.name,
-            email: clientCredential.email,
-            company: clientCredential.company,
-            loginTime: new Date().toLocaleString(),
-            userType: 'client'
-        };
+        try {
+            const resp = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'login_cliente', email, password })
+            });
 
-        // Guardar en localStorage con clave diferente
-        localStorage.setItem('hightest_client', JSON.stringify(this.currentClient));
+            const json = await resp.json().catch(() => ({}));
 
-        this.closeCertificatesModal();
+            if (!resp.ok || !json.ok) {
+                setFeedback(json?.error || 'No pudimos validar tus datos. Revisa el correo y la contraseña e inténtalo de nuevo.', true);
+                console.warn('CertificatesAuthManager login_cliente failed:', json);
+                return;
+            }
 
-        // Redirigir al portal de cliente
-        alert(`¡Bienvenido ${this.currentClient.name}! Estamos ingresando a su portal de cliente HIGH TEST.`);
-        window.location.href = 'client-portal.html';
+            // Login exitoso
+            const user = json.user || {};
+            this.currentClient = {
+                id: user.id || Date.now(),
+                name: user.name || user.nombre || user.nombre_empresa || email,
+                email: user.email || email,
+                company: user.company || user.nombre_empresa || null,
+                loginTime: new Date().toLocaleString(),
+                userType: 'client'
+            };
+
+            localStorage.setItem(this.storageKey, JSON.stringify(this.currentClient));
+
+            setFeedback(`Todo listo, ${this.currentClient.name}. Estamos entrando a tu portal de cliente.`, false);
+
+            // Cerrar modal y redirigir después de pequeña pausa
+            setTimeout(() => {
+                this.closeCertificatesModal();
+                window.location.href = 'client-portal.html';
+            }, 900);
+        } catch (err) {
+            console.error('CertificatesAuthManager: error conectando al servidor', err);
+            setFeedback('No pudimos conectar con el servidor. Intenta nuevamente en unos segundos.', true);
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = submitBtn.dataset.originalText || 'Ingresar';
+            }
+        }
     },
 
     /**
@@ -2188,6 +2351,146 @@ function bindCertificatesBtnFallback() {
         }
     });
 }
+
+// ===========================
+// MÓDULO: AUTH CLIENTES (ClientAuth)
+// ===========================
+
+const ClientAuth = {
+    formId: 'clientLoginForm',
+    storageKey: 'hightest_client',
+
+    init() {
+        const form = document.getElementById(this.formId);
+        if (!form) return;
+        form.addEventListener('submit', (e) => this.handleLogin(e));
+        console.log('🔑 ClientAuth: escuchando submit en #' + this.formId);
+    },
+
+    async handleLogin(e) {
+        e.preventDefault();
+        const form = e.target;
+        const emailEl = form.querySelector('input[name="email"]') || form.querySelector('#clientEmail') || document.getElementById('clientEmail');
+        const passwordEl = form.querySelector('input[name="password"]') || form.querySelector('#clientPassword') || document.getElementById('clientPassword');
+
+        const email = emailEl?.value?.trim() || '';
+        const password = passwordEl?.value || '';
+
+        // feedback inline profesional
+        let feedback = form.querySelector('.client-login__feedback');
+        if (!feedback) {
+            feedback = document.createElement('div');
+            feedback.className = 'client-login__feedback';
+            form.insertBefore(feedback, form.firstChild);
+        }
+
+        const setFeedback = (msg, isError = true) => {
+            const icon = isError ? '⚠️' : '✓';
+            const bgColor = isError 
+                ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.04) 100%)'
+                : 'linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(34, 197, 94, 0.04) 100%)';
+            const borderColor = isError ? '#fca5a5' : '#86efac';
+            const textColor = isError ? '#7f1d1d' : '#166534';
+            
+            feedback.innerHTML = `
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 14px 16px;
+                    border-radius: 12px;
+                    background: ${bgColor};
+                    border: 1.5px solid ${borderColor};
+                    font-size: 14px;
+                    font-weight: 600;
+                    line-height: 1.5;
+                    color: ${textColor};
+                    animation: slideDown 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+                ">
+                    <span style="font-size: 18px; flex-shrink: 0; display: inline-block;">${icon}</span>
+                    <span>${msg}</span>
+                </div>
+            `;
+        };
+
+        // Inyectar animación CSS si no existe
+        if (!document.getElementById('clientAuthAnimations')) {
+            const style = document.createElement('style');
+            style.id = 'clientAuthAnimations';
+            style.textContent = `
+                @keyframes slideDown {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+
+        if (!email || !password) {
+            setFeedback('Completa tu correo y tu contraseña para continuar.');
+            return;
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            setFeedback('Escribe un correo válido, por favor.');
+            return;
+        }
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.dataset.orig = submitBtn.textContent;
+            submitBtn.textContent = 'Ingresando…';
+        }
+
+        try {
+            const resp = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'login_cliente', email, password })
+            });
+
+            const data = await resp.json().catch(() => ({}));
+
+            if (!resp.ok || !data.ok) {
+                setFeedback(data?.error || 'No pudimos validar tus datos. Revisa el correo y la contraseña e inténtalo de nuevo.');
+                console.warn('ClientAuth failed', data);
+                return;
+            }
+
+            const user = data.user || {};
+            const client = {
+                id: user.id || Date.now(),
+                name: user.name || user.nombre || user.nombre_empresa || email,
+                email: user.email || email,
+                company: user.company || user.nombre_empresa || null,
+                loginTime: new Date().toLocaleString()
+            };
+
+            localStorage.setItem(this.storageKey, JSON.stringify(client));
+            setFeedback(`Todo listo, ${client.name}. Estamos entrando a tu portal de cliente.`, false);
+
+            setTimeout(() => {
+                window.location.href = 'client-portal.html';
+            }, 800);
+        } catch (err) {
+            console.error('ClientAuth error:', err);
+            setFeedback('No pudimos conectar con el servidor. Intenta nuevamente en unos segundos.');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = submitBtn.dataset.orig || 'Ingresar';
+            }
+        }
+    }
+};
 
 // ===========================
 // GESTOR DEL PANEL ADMINISTRATIVO

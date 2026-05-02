@@ -28,7 +28,6 @@
                 <ul class="header__menu" id="headerMenu">
                     <li><a href="#inicio" class="header__link">Inicio</a></li>
                     <li><a href="#servicios" class="header__link">Servicios</a></li>
-                    <li><a href="#capacidad" class="header__link">Capacidad Técnica</a></li>
                     <li><a href="#acreditacion" class="header__link">Acreditación</a></li>
                     <li><a href="#certificados" class="header__link">Certificados</a></li>
                     <li><a href="#nosotros" class="header__link">Nosotros</a></li>
@@ -132,12 +131,12 @@
                 <p class="certificates-modal__subtitle">Ingrese su correo y contraseña de cliente para acceder a su portal y consultar/descargar sus certificados.</p>
             </div>
 
-            <form class="certificates-form" id="certificatesForm">
+            <form class="certificates-form" id="clientLoginForm">
                 <div class="form__group">
                     <label for="certificatesEmail" class="form__label">Correo Electrónico</label>
                     <input 
                         type="email" 
-                        id="certificatesEmail" 
+                        id="clientEmail" 
                         name="email" 
                         class="form__input" 
                         required
@@ -149,7 +148,7 @@
                     <label for="certificatesPassword" class="form__label">Contraseña de Cliente</label>
                     <input 
                         type="password" 
-                        id="certificatesPassword" 
+                        id="clientPassword" 
                         name="password" 
                         class="form__input" 
                         required
@@ -390,51 +389,7 @@
                     </div>
                 </article>
 
-                <!-- Ensayos de fuga de corriente -->
-                <article class="service-card">
-                    <div class="service-card__image">
-                        <img src="/image/jumper.png" alt="Medidor de corriente de fuga" class="service-card__img">
-                    </div>
-                    <div class="service-card__header">
-                        <h3 class="service-card__title">Ensayos de fuga de corriente</h3>
-                    </div>
-                    <div class="service-card__body">
-                        <p class="service-card__description">
-                            Medición de corrientes de escape y recubrimiento en EPP bajo condiciones de humedad controlada.
-                        </p>
-                        <dl class="service-card__specs">
-                            <dt>Conforme a:</dt>
-                            <dd>IEC 60950, EN 61010-1</dd>
-                            <dt>Rango de medición:</dt>
-                            <dd>Microamperios a miliamperios</dd>
-                            <dt>Resultado:</dt>
-                            <dd>Comparativa con límites técnicos</dd>
-                        </dl>
-                    </div>
-                </article>
-
-                <!-- Ensayos ANSI SAIA A92.2 -->
-                <article class="service-card">
-                    <div class="service-card__image">
-                        <img src="/image/vehiculos.jpg" alt="Plataformas elevadas y dispositivos aéreos" class="service-card__img">
-                    </div>
-                    <div class="service-card__header">
-                        <h3 class="service-card__title">Ensayos ANSI SAIA A92.2</h3>
-                    </div>
-                    <div class="service-card__body">
-                        <p class="service-card__description">
-                            Evaluación de seguridad eléctrica en plataformas elevadas motorizadas, manlifts y dispositivos aéreos de acceso personalizados.
-                        </p>
-                        <dl class="service-card__specs">
-                            <dt>Norma aplicada:</dt>
-                            <dd>ANSI SAIA A92.2 (Powered Platforms, Manlifts, Aerial Devices)</dd>
-                            <dt>Áreas de prueba:</dt>
-                            <dd>Aislamiento, continuidad de tierra, protección contra sobrecorriente</dd>
-                            <dt>Resultado:</dt>
-                            <dd>Reporte de conformidad para certificación de seguridad</dd>
-                        </dl>
-                    </div>
-                </article>
+            
             </div>
         </div>
     </section>
@@ -489,20 +444,7 @@
                         y criterios de aceptación claramente definidos para sus auditorías internas, clientes finales y entes
                         reguladores.
                     </p>
-                    <div class="intro__meta">
-                        <div class="intro__meta-item">
-                            <span class="intro__meta-value">+10 años</span>
-                            <span class="intro__meta-label">de experiencia acumulada en ensayos eléctricos</span>
-                        </div>
-                        <div class="intro__meta-item">
-                            <span class="intro__meta-value">+1.000</span>
-                            <span class="intro__meta-label">informes emitidos para clientes industriales y del sector energía</span>
-                        </div>
-                        <div class="intro__meta-item">
-                            <span class="intro__meta-value">Trazabilidad</span>
-                            <span class="intro__meta-label">equipos verificados con soporte metrológico vigente</span>
-                        </div>
-                    </div>
+                  
                 </div>
 
                 <div class="intro__panel" aria-label="Resumen de capacidades técnicas">
@@ -538,59 +480,7 @@
 
     
 
-    <!-- CAPACIDAD TÉCNICA -->
-    <section class="capacity" id="capacidad" role="region" aria-labelledby="capacity-title">
-        <div class="container">
-            <h2 id="capacity-title" class="section-title">Capacidad técnica</h2>
-            <p class="section-subtitle">Alcance e infraestructura de laboratorio</p>
-
-            <div class="capacity__grid">
-                <div class="capacity__card">
-                    <h3 class="capacity__card-title">Rangos de tensión</h3>
-                    <ul class="capacity__list">
-                        <li>Baja tensión: 0 - 1000V AC/DC</li>
-                        <li>Media tensión: 1 - 50 kV AC</li>
-                        <li>Alta tensión: 50 - 120 kV AC</li>
-                        <li>Muy alta tensión: Hasta 170 kV DC</li>
-                    </ul>
-                </div>
-
-                <div class="capacity__card">
-                    <h3 class="capacity__card-title">Métodos de medición</h3>
-                    <ul class="capacity__list">
-                        <li>Resistencia de aislamiento (Megaohmetría)</li>
-                        <li>Capacitancia y factor de disipación</li>
-                        <li>Corriente de fuga superficial</li>
-                        <li>Rigidez dieléctrica</li>
-                        <li>Resistencia de contacto</li>
-                    </ul>
-                </div>
-
-                <div class="capacity__card">
-                    <h3 class="capacity__card-title">Condiciones de prueba</h3>
-                    <ul class="capacity__list">
-                        <li>Temperatura: 16°C - 35°C</li>
-                        <li>Humedad: 45% - 75% HR</li>
-                        <li>Presión: 86 - 106 kPa</li>
-                        <li>Protección: Clase II / Instalación segura</li>
-                    </ul>
-                </div>
-
-                <div class="capacity__card">
-                    <h3 class="capacity__card-title">Tipos de muestras</h3>
-                    <ul class="capacity__list">
-                        <li>Guantes aislantes (todas las clases)</li>
-                        <li>Mangas y prendas de protección</li>
-                        <li>Pértigas y herramientas aisladas</li>
-                        <li>Materiales y componentes dieléctricos</li>
-                        <li>Cables y conductores</li>
-                    </ul>
-                </div>
-            </div>
-
-            
-        </div>
-    </section>
+   
 
     <!-- CERTIFICACIONES Y ACREDITACIONES -->
     <section class="accreditation" id="acreditacion" role="region" aria-labelledby="accreditation-title">
@@ -623,7 +513,7 @@
 
                 <a class="accreditation__card accreditation__card--download" href="/pdf/iso-9001.pdf" download="ISO-9001.pdf" data-scroll>
                     <div class="accreditation__media">
-                        <img src="/image/logo.jpeg" alt="Certificación ISO 9001" class="accreditation__image">
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ_mfBC3KY_mZ3PQKDfPYWE4v2wz2vgaWHqVA&s" alt="Certificación ISO 9001" class="accreditation__image">
                     </div>
                     <div class="accreditation__download-tag">Descargar PDF</div>
                     <h3 class="accreditation__card-title">ISO 9001</h3>
@@ -636,157 +526,9 @@
         </div>
     </section>
 
-    <!-- EQUIPOS DE ENSAYO -->
-    <section class="equipment" role="region" aria-labelledby="equipment-title">
-        <div class="container">
-            <h2 id="equipment-title" class="section-title">Equipos de ensayo</h2>
-            <p class="section-subtitle">Instrumentación acreditada y con trazabilidad metrológica</p>
+    
 
-            <div class="equipment__grid">
-                <div class="equipment__card" data-scroll>
-                    <span class="equipment__icon">⚡</span>
-                    <h3 class="equipment__card-title">Sistema de alta tensión AC/DC</h3>
-                    <p class="equipment__specs">
-                        <strong>Especificación:</strong> 0-120 kV AC / 0-170 kV DC
-                    </p>
-                    <p class="equipment__specs">
-                        <strong>Precisión:</strong> ±0.5% durante todo el rango
-                    </p>
-                    <p class="equipment__specs">
-						<strong>Trazabilidad metrológica:</strong> Anual, soportada con certificados de ensayo de equipos patrón
-                    </p>
-                </div>
-
-                <div class="equipment__card" data-scroll>
-                    <span class="equipment__icon">🔬</span>
-                    <h3 class="equipment__card-title">Megaohmetro digital</h3>
-                    <p class="equipment__specs">
-                        <strong>Rango:</strong> 0 Ω - 2 GΩ (medición de resistencia)
-                    </p>
-                    <p class="equipment__specs">
-                        <strong>Voltajes de prueba:</strong> 500V, 1000V, 2500V, 5000V
-                    </p>
-                    <p class="equipment__specs">
-                        <strong>Modelo:</strong> Verificado según IEC 61010-1
-                    </p>
-                </div>
-
-                <div class="equipment__card" data-scroll>
-                    <span class="equipment__icon">📊</span>
-                    <h3 class="equipment__card-title">Medidor de corriente de fuga</h3>
-                    <p class="equipment__specs">
-                        <strong>Resolución:</strong> 0.1 µA - 100 mA
-                    </p>
-                    <p class="equipment__specs">
-                        <strong>Cumplimiento:</strong> IEC 60950 / EN 61010-1
-                    </p>
-                    <p class="equipment__specs">
-                        <strong>Incertidumbre:</strong> ±(1.5% + 2µA)
-                    </p>
-                </div>
-
-                <div class="equipment__card" data-scroll>
-                    <span class="equipment__icon">🔌</span>
-                    <h3 class="equipment__card-title">Analizador de impedancia</h3>
-                    <p class="equipment__specs">
-                        <strong>Frecuencia:</strong> 20 Hz - 1 MHz
-                    </p>
-                    <p class="equipment__specs">
-                        <strong>Capacitancia / Factor D:</strong> Medición simultánea
-                    </p>
-                    <p class="equipment__specs">
-                        <strong>Aplicación:</strong> Caracterización de aislantes
-                    </p>
-                </div>
-
-                <div class="equipment__card" data-scroll>
-                    <span class="equipment__icon">📱</span>
-                    <h3 class="equipment__card-title">Multímetro de precisión</h3>
-                    <p class="equipment__specs">
-                        <strong>Resolución:</strong> 6.5 dígitos
-                    </p>
-                    <p class="equipment__specs">
-                        <strong>Funciones:</strong> VDC, VAC, Ohms, Capacitancia
-                    </p>
-                    <p class="equipment__specs">
-                        <strong>Incertidumbre:</strong> ±0.02% (especificaciones técnicas)
-                    </p>
-                </div>
-
-                <div class="equipment__card" data-scroll>
-                    <span class="equipment__icon">🌡️</span>
-                    <h3 class="equipment__card-title">Cámara ambiental controlada</h3>
-                    <p class="equipment__specs">
-                        <strong>Rango térmico:</strong> 16°C - 35°C ±2°C
-                    </p>
-                    <p class="equipment__specs">
-                        <strong>Humedad relativa:</strong> 45% - 75% ±5% HR
-                    </p>
-                    <p class="equipment__specs">
-                        <strong>Control:</strong> Automático con registro de datos
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- TESTIMONIOS Y CASOS DE ÉXITO -->
-    <section class="testimonials" id="testimonios" role="region" aria-labelledby="testimonials-title">
-        <div class="container">
-            <h2 id="testimonials-title" class="section-title">Testimonios de clientes</h2>
-            <p class="section-subtitle">Empresas que confían en nuestros servicios de ensayo</p>
-            
-            <div class="testimonials__grid">
-                <article class="testimonial__card" data-scroll>
-                    <div class="testimonial__header">
-                        <div class="testimonial__avatar">JC</div>
-                        <div class="testimonial__meta">
-                            <h4 class="testimonial__name">Juan Carlos Martínez</h4>
-                            <p class="testimonial__role">Gerente de Seguridad - Empresa Eléctrica XYZ</p>
-                        </div>
-                    </div>
-                    <p class="testimonial__text">
-                        "Los ensayos de HIGH TEST SAS han sido fundamentales para validar nuestros EPP. El profesionalismo y rigurosidad técnica de su equipo nos da total confianza para equipar a nuestro personal."
-                    </p>
-                    <div class="testimonial__rating">
-                        <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
-                    </div>
-                </article>
-
-                <article class="testimonial__card" data-scroll>
-                    <div class="testimonial__header">
-                        <div class="testimonial__avatar">MC</div>
-                        <div class="testimonial__meta">
-                            <h4 class="testimonial__name">María Claudia López</h4>
-                            <p class="testimonial__role">Directora de Calidad - Importadora de EPP</p>
-                        </div>
-                    </div>
-                    <p class="testimonial__text">
-                        "Excelente servicio. Los reportes son claros, detallados y aceptados sin objeciones por nuestros clientes internacionales. Definitivamente los recomendamos."
-                    </p>
-                    <div class="testimonial__rating">
-                        <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
-                    </div>
-                </article>
-
-                <article class="testimonial__card" data-scroll>
-                    <div class="testimonial__header">
-                        <div class="testimonial__avatar">RG</div>
-                        <div class="testimonial__meta">
-                            <h4 class="testimonial__name">Roberto García</h4>
-                            <p class="testimonial__role">Responsable de Seguridad - Contratista Especializado</p>
-                        </div>
-                    </div>
-                    <p class="testimonial__text">
-                        "Cuando necesitamos certificar nuestro equipo de trabajo, HIGH TEST SAS fue nuestra opción. Cumplimientos de plazos, presupuestos justos y resultados confiables. 100% satisfecho."
-                    </p>
-                    <div class="testimonial__rating">
-                        <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
-                    </div>
-                </article>
-            </div>
-        </div>
-    </section>
+    
 
     <!-- CENTRO DE RECURSOS Y CERTIFICADOS -->
     <section class="certifications-hub" id="certificados" role="region" aria-labelledby="cert-hub-title">
@@ -989,27 +731,7 @@
                 
             </div>
 
-            <!-- SECCIÓN DE INFORMACIÓN -->
-            <div class="cert-hub__info-section">
-                <h3 class="cert-hub__info-title">¿Cómo solicitamos documentación?</h3>
-                <div class="cert-hub__info-grid">
-                    <div class="cert-hub__info-card">
-                        <span class="cert-hub__info-icon">📧</span>
-                        <h4>Por correo electrónico</h4>
-                        <p>Solicita directamente los documentos a <strong>info@hightest.com.co</strong></p>
-                    </div>
-                    <div class="cert-hub__info-card">
-                        <span class="cert-hub__info-icon">☎️</span>
-                        <h4>Por teléfono</h4>
-                        <p>Llama al <strong>+57 (1) 2547890</strong> para informes en tiempo real</p>
-                    </div>
-                    <div class="cert-hub__info-card">
-                        <span class="cert-hub__info-icon">💬</span>
-                        <h4>WhatsApp</h4>
-                        <p>Comunícate vía WhatsApp: <strong>+57 322 6197864</strong></p>
-                    </div>
-                </div>
-            </div>
+           
         </div>
     </section>
 
@@ -1072,48 +794,147 @@
             <p class="section-subtitle">Artículos sobre seguridad eléctrica y normativas técnicas</p>
             
             <div class="blog__grid">
-                <article class="blog__post" data-scroll>
+                <!-- PDF: Aspectos generales (abre modal) -->
+                
+
+                <!-- PDF: Seguridad (abre modal) -->
+                <article class="blog__post" data-scroll data-type="pdf" data-pdf="/pdf/seguridad.pdf" data-title="Seguridad y buenas prácticas" data-desc="Guía sobre procedimientos de seguridad, manejo de EPP y control de riesgos aplicados durante los ensayos.">
                     <div class="blog__image">
-                        <div class="blog__image-placeholder">🔌</div>
+                        <img src="/image/banner3.png" alt="Seguridad" class="blog__image-img">
                     </div>
                     <div class="blog__content">
-                        <h3 class="blog__title">¿Por qué es importante la rigidez dieléctrica en EPP?</h3>
-                        <p class="blog__excerpt">La rigidez dieléctrica es la capacidad del material para resistir una descarga eléctrica sin ruptura. Descubre cómo se mide y por qué es crítica para tu seguridad.</p>
+                        <h3 class="blog__title">Seguridad y buenas prácticas en alta tensión</h3>
+                        <p class="blog__excerpt">Guía sobre procedimientos de seguridad, manejo de EPP y control de riesgos aplicados durante los ensayos.</p>
                         <footer class="blog__meta">
-                            <span class="blog__date">15 Mar 2025</span>
-                            <span class="blog__read-time">Lectura: 5 min</span>
+                            <a href="/documentos/aspectos generales y seguridad..pdf" class="btn btn--primary btn--small" download="Seguridad_HIGH_TEST.pdf">📥 Descargar PDF</a>
                         </footer>
                     </div>
                 </article>
 
-                <article class="blog__post" data-scroll>
+                <!-- Video de demostración 1 -->
+                <div class="blog__post blog__video" data-scroll data-type="video" data-video-src="https://res.cloudinary.com/dmy0prpa5/video/upload/v1777683466/Ensayo_Diel%C3%A9ctrico__Guantes_online-video-cutter.com_vyvkam.mp4">
                     <div class="blog__image">
-                        <div class="blog__image-placeholder">⚠️</div>
+                        <video controls preload="metadata" playsinline class="blog__video-player" aria-label="Video demostración ensayo dieléctrico">
+                            <source src="https://res.cloudinary.com/dmy0prpa5/video/upload/v1777683466/Ensayo_Diel%C3%A9ctrico__Guantes_online-video-cutter.com_vyvkam.mp4" type="video/mp4">
+                            Tu navegador no soporta la reproducción de video.
+                        </video>
                     </div>
                     <div class="blog__content">
-                        <h3 class="blog__title">Nuevas actualizaciones en la norma ASTM F496</h3>
-                        <p class="blog__excerpt">Los cambios en los criterios de aceptación para ensayos de guantes aislantes. Información vital para proveedores y compradores de EPP.</p>
+                        <h3 class="blog__title">Demostración: Ensayo dieléctrico en guantes</h3>
+                        <p class="blog__excerpt">Video demostrativo que muestra el procedimiento y criterios de aceptación en ensayos dieléctricos sobre guantes aislantes.</p>
                         <footer class="blog__meta">
-                            <span class="blog__date">8 Mar 2025</span>
-                            <span class="blog__read-time">Lectura: 7 min</span>
+                            <a href="#" class="btn btn--secondary btn--small js-open-video" data-video="https://res.cloudinary.com/dmy0prpa5/video/upload/v1777683466/Ensayo_Diel%C3%A9ctrico__Guantes_online-video-cutter.com_vyvkam.mp4">Abrir</a>
+                            <a href="https://res.cloudinary.com/dmy0prpa5/video/upload/v1777683466/Ensayo_Diel%C3%A9ctrico__Guantes_online-video-cutter.com_vyvkam.mp4" class="btn btn--secondary btn--small" target="_blank" rel="noopener">Ver en nueva pestaña</a>
                         </footer>
                     </div>
-                </article>
+                </div>
 
-                <article class="blog__post" data-scroll>
+                <!-- Video de demostración 2 (nuevo) -->
+                <div class="blog__post blog__video" data-scroll data-type="video" data-video-src="https://res.cloudinary.com/dmy0prpa5/video/upload/v1777685455/aspectos_generales_yhomow.mp4">
                     <div class="blog__image">
-                        <div class="blog__image-placeholder">🛡️</div>
+                        <video controls preload="metadata" playsinline class="blog__video-player" aria-label="Video aspectos generales">
+                            <source src="https://res.cloudinary.com/dmy0prpa5/video/upload/v1777685455/aspectos_generales_yhomow.mp4" type="video/mp4">
+                            Tu navegador no soporta la reproducción de video.
+                        </video>
                     </div>
                     <div class="blog__content">
-                        <h3 class="blog__title">5 errores comunes en la selección de guantes aislantes</h3>
-                        <p class="blog__excerpt">Guía práctica para evitar cometer errores costosos al seleccionar el EPP. Aprende cuáles son los criterios más importantes.</p>
+                        <h3 class="blog__title">Video: Aspectos generales del laboratorio</h3>
+                        <p class="blog__excerpt">Resumen visual de los aspectos generales, alcance y políticas de calidad del laboratorio.</p>
                         <footer class="blog__meta">
-                            <span class="blog__date">28 Feb 2025</span>
-                            <span class="blog__read-time">Lectura: 6 min</span>
+                            <a href="#" class="btn btn--secondary btn--small js-open-video" data-video="https://res.cloudinary.com/dmy0prpa5/video/upload/v1777685455/aspectos_generales_yhomow.mp4">Abrir</a>
+                            <a href="https://res.cloudinary.com/dmy0prpa5/video/upload/v1777685455/aspectos_generales_yhomow.mp4" class="btn btn--secondary btn--small" target="_blank" rel="noopener">Ver en nueva pestaña</a>
                         </footer>
                     </div>
-                </article>
+                </div>
             </div>
+        </div>
+    </section>
+
+    <!-- Modal genérico para PDFs y Videos -->
+    <div id="global-modal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="modal__content" role="document">
+        <div class="modal__header">
+          <strong id="modal-title">Detalle</strong>
+          <button class="modal__close" id="modalClose" aria-label="Cerrar">✕</button>
+        </div>
+        <div class="modal__body">
+          <div class="modal__media" id="modalMedia"></div>
+          <div class="modal__text" id="modalText"></div>
+        </div>
+        <div class="modal__actions" id="modalActions">
+          <!-- acciones inyectadas -->
+        </div>
+      </div>
+    </div>
+
+    <script>
+    (function(){
+      const modal = document.getElementById('global-modal');
+      const modalContent = modal.querySelector('.modal__content');
+      const modalTitle = document.getElementById('modal-title');
+      const modalMedia = document.getElementById('modalMedia');
+      const modalText = document.getElementById('modalText');
+      const modalActions = document.getElementById('modalActions');
+      const modalClose = document.getElementById('modalClose');
+
+      function openModal(isVideo){ 
+        modal.classList.add('modal--open'); 
+        modal.setAttribute('aria-hidden','false');
+        if(isVideo) modalContent.classList.add('modal--video');
+        else modalContent.classList.remove('modal--video');
+      }
+      function closeModal(){
+        modal.classList.remove('modal--open'); 
+        modal.setAttribute('aria-hidden','true');
+        modalContent.classList.remove('modal--video');
+        // limpiar media
+        modalMedia.innerHTML = '';
+        modalText.innerHTML = '';
+        modalActions.innerHTML = '';
+      }
+
+      modalClose.addEventListener('click', closeModal);
+      modal.addEventListener('click', function(e){ if(e.target === modal) closeModal(); });
+
+      // PDF card images: abrir modal con intro + descarga
+      document.querySelectorAll('.blog__post[data-type="pdf"]').forEach(function(card){
+        const img = card.querySelector('.blog__image-img');
+        img.addEventListener('click', function(){
+          const pdf = card.getAttribute('data-pdf');
+          const title = card.getAttribute('data-title') || '';
+          const desc = card.getAttribute('data-desc') || '';
+          modalTitle.textContent = title;
+          modalMedia.innerHTML = '<img src="'+ (img.src || '') +'" alt="'+ title +'" style="max-width:100%;height:auto;border-radius:6px;">';
+          modalText.innerHTML = '<p>'+ desc +'</p>';
+          modalActions.innerHTML = '<a class="modal__download" href="'+ pdf +'" download>📥 Descargar PDF</a> ';
+          openModal(false);
+        });
+      });
+
+      // Botones para abrir video en modal
+      document.querySelectorAll('.js-open-video').forEach(function(btn){
+        btn.addEventListener('click', function(e){
+          e.preventDefault();
+          const src = btn.getAttribute('data-video');
+          const parent = btn.closest('.blog__post');
+          const title = parent ? (parent.querySelector('.blog__title')?.textContent || 'Video') : 'Video';
+          modalTitle.textContent = title;
+          modalMedia.innerHTML = '<video controls playsinline src="'+ src +'"></video>';
+          modalText.innerHTML = '';
+          modalActions.innerHTML = '<a class="modal__open-new" href="'+ src +'" target="_blank" rel="noopener">Abrir en nueva pestaña</a>';
+          openModal(true);
+        });
+      });
+
+      // Stop video playback when modal closes (cleanup)
+      const observer = new MutationObserver(function(){
+        if(modal.classList.contains('modal--open')===false){
+          const v = modal.querySelector('video'); if(v){ try{ v.pause(); v.currentTime = 0;}catch(e){} }
+        }
+      });
+      observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+    })();
+    </script>
         </div>
     </section>
 
@@ -1122,41 +943,26 @@
         <div class="container">
             <h2 id="about-title" class="section-title">Sobre HIGH TEST SAS</h2>
             <div class="about__content">
-                <div class="about__text-block">
-                    <h3>Experiencia en seguridad eléctrica</h3>
-                    <p>
-                        HIGH TEST SAS fue fundada con el propósito de proporcionar servicios de ensayo de calidad 
-                        en el campo de la seguridad eléctrica. Con más de una década de experiencia, 
-                        nuestra institución se ha posicionado como referente en evaluación de elementos de 
-                        protección personal contra riesgos eléctricos.
-                    </p>
-                    <p>
-                        Nuestro enfoque es combinar rigor técnico con atención al cliente, garantizando 
-                        que cada informe sea una herramienta confiable para la toma de decisiones en materia 
-                        de seguridad ocupacional.
-                    </p>
-                </div>
+                <div class="about__main">
+                    <div class="about__text-block">
+                        <h3>Experiencia en seguridad eléctrica</h3>
+                        <p>
+                            HIGH TEST SAS fue fundada con el propósito de proporcionar servicios de ensayo de calidad 
+                            en el campo de la seguridad eléctrica. Con más de una década de experiencia, 
+                            nuestra institución se ha posicionado como referente en evaluación de elementos de 
+                            protección personal contra riesgos eléctricos.
+                        </p>
+                        <p>
+                            Nuestro enfoque es combinar rigor técnico con atención al cliente, garantizando 
+                            que cada informe sea una herramienta confiable para la toma de decisiones en materia 
+                            de seguridad ocupacional.
+                        </p>
 
-                <div class="about__image">
-                    <img src="/image/equipohumano.jpeg" alt="Equipo técnico de HIGH TEST SAS realizando ensayos" class="about__image-img">
-                </div>
+                        
+                    </div>
 
-                <div class="about__stats">
-                    <div class="stat__item">
-                        <span class="stat__number">10+</span>
-                        <span class="stat__label">Años de experiencia</span>
-                    </div>
-                    <div class="stat__item">
-                        <span class="stat__number">5000+</span>
-                        <span class="stat__label">Ensayos realizados</span>
-                    </div>
-                    <div class="stat__item">
-                        <span class="stat__number">150+</span>
-                        <span class="stat__label">Clientes activos</span>
-                    </div>
-                    <div class="stat__item">
-                        <span class="stat__number">8</span>
-                        <span class="stat__label">Especialistas técnicos</span>
+                    <div class="about__image">
+                        <img src="/image/equipohumano.jpeg" alt="Equipo técnico de HIGH TEST SAS realizando ensayos" class="about__image-img">
                     </div>
                 </div>
 
@@ -1165,7 +971,6 @@
                     <ul class="values__list">
                         <li><strong>Competencia:</strong> Personal certificado en normas técnicas internacionales</li>
                         <li><strong>Imparcialidad:</strong> Resultados independientes sin influencias comerciales</li>
-                        <li><strong>Trazabilidad:</strong> Documentación completa de cada ensayo</li>
                         <li><strong>Confidencialidad:</strong> Protección total de información técnica y comercial</li>
                         <li><strong>Responsabilidad:</strong> Cumplimiento de plazos y calidad garantizada</li>
                     </ul>
@@ -1174,61 +979,7 @@
         </div>
     </section>
 
-    <!-- SECTORES ATENDIDOS -->
-    <section class="sectors" role="region" aria-labelledby="sectors-title">
-        <div class="container">
-            <h2 id="sectors-title" class="section-title">Sectores que servimos</h2>
-            <div class="sectors__grid">
-                <article class="sector__card">
-                    <h3 class="sector__title">Sector eléctrico</h3>
-                    <p class="sector__description">
-                        Distribuidoras de energía, generadoras y empresas de transmisión con necesidad 
-                        de validar EPP para personal de operación y mantenimiento.
-                    </p>
-                </article>
-
-                <article class="sector__card">
-                    <h3 class="sector__title">Industria manufacturera</h3>
-                    <p class="sector__description">
-                        Plantas de producción, refinerías e industrias de transformación con procesos 
-                        que involucren riesgos eléctricos significativos.
-                    </p>
-                </article>
-
-                <article class="sector__card">
-                    <h3 class="sector__title">Contratistas especializados</h3>
-                    <p class="sector__description">
-                        Empresas de instalación, mantenimiento y servicios eléctricos que requieren 
-                        certificación de equipos de protección para sus operarios.
-                    </p>
-                </article>
-
-                <article class="sector__card">
-                    <h3 class="sector__title">Retail y distribuidores</h3>
-                    <p class="sector__description">
-                        Comercializadores de EPP que necesitan validar conformidad técnica antes 
-                        de colocar productos en el mercado.
-                    </p>
-                </article>
-
-                <article class="sector__card">
-                    <h3 class="sector__title">Organismos de control</h3>
-                    <p class="sector__description">
-                        Entes reguladores, inspectorados y organizaciones de vigilancia en seguridad 
-                        ocupacional que requieren ensayos independientes.
-                    </p>
-                </article>
-
-                <article class="sector__card">
-                    <h3 class="sector__title">Importadores</h3>
-                    <p class="sector__description">
-                        Empresas importadoras que necesitan validar cumplimiento técnico de productos 
-                        antes de nacionalización y venta.
-                    </p>
-                </article>
-            </div>
-        </div>
-    </section>
+    
 
     <!-- DESCARGA DE CERTIFICADOS (Solo para usuarios autenticados) -->
     <section class="my-certificates my-certificates--hidden" id="misCertificados" role="region" aria-labelledby="my-cert-title">
@@ -1671,7 +1422,6 @@
                     <nav class="footer__nav">
                         <a href="#inicio" class="footer__link">Inicio</a>
                         <a href="#servicios" class="footer__link">Servicios</a>
-                        <a href="#capacidad" class="footer__link">Capacidad técnica</a>
                         <a href="#acreditacion" class="footer__link">Acreditación</a>
                         <a href="#nosotros" class="footer__link">Nosotros</a>
                         <a href="#contacto" class="footer__link">Contacto</a>
