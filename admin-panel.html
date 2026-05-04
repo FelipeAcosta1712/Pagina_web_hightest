@@ -192,14 +192,58 @@
             <section class="admin-section admin-clients" id="clients">
                 <div class="admin-section__header">
                     <h2 class="admin-section__title">Gestión de Clientes</h2>
-                    <button class="btn btn--secondary" id="addClientBtn">
-                        👤 Nuevo Cliente
+                    <button class="btn btn--primary" id="addClientBtn">
+                        ➕ Nuevo Cliente
                     </button>
                 </div>
 
                 <div class="admin-section__content">
-                    <div class="clients-grid" id="clientsGrid">
-                        <!-- Los clientes se cargarán dinámicamente -->
+                    <!-- FORMULARIO DE NUEVO CLIENTE (OCULTO POR DEFECTO) -->
+                    <div class="client-form-container" id="clientFormContainer" style="display: none;">
+                        <form class="client-form" id="clientForm">
+                            <h3>Agregar Nuevo Cliente</h3>
+                            <div class="form-group">
+                                <label for="clientNombre">Nombre Empresa *</label>
+                                <input type="text" id="clientNombre" placeholder="Nombre de la empresa" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="clientEmail">Email *</label>
+                                <input type="email" id="clientEmail" placeholder="correo@empresa.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="clientPassword">Contraseña *</label>
+                                <div class="password-input-wrapper">
+                                    <input type="password" id="clientPassword" placeholder="Contraseña segura" required>
+                                    <button type="button" class="password-toggle" onclick="AdminPanelManager.togglePasswordVisibility('clientPassword')" title="Mostrar/ocultar contraseña">👁️</button>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn--primary">Guardar Cliente</button>
+                                <button type="button" class="btn btn--secondary" id="cancelClientBtn">Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- TABLA DE CLIENTES -->
+                    <div class="clients-table-container">
+                        <table class="admin-table clients-table" id="clientsTable">
+                            <thead>
+                                <tr>
+                                    <th>Empresa</th>
+                                    <th>Email</th>
+                                    <th>Contraseña</th>
+                                    <th>Fecha Registro</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clientsTableBody">
+                                <tr class="empty-state">
+                                    <td colspan="5" style="text-align: center; padding: 2rem;">
+                                        ℹ️ No hay clientes registrados
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </section>

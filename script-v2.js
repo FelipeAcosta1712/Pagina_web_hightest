@@ -2511,6 +2511,7 @@ const AdminPanelManager = {
         this.setupUI();
         this.loadMockData();
         this.setupEventListeners();
+        this.setupClientsManagement();
         this.updateStats();
     },
 
@@ -2522,9 +2523,69 @@ const AdminPanelManager = {
     },
 
     setupUI() {
-        // Actualizar nombre de usuario
+        // Actualizar nombre de usuario desde tabla de usuarios
         const userNameEl = document.getElementById('adminUserName');
-        if (userNameEl) userNameEl.textContent = this.currentUser.name;
+        if (userNameEl) {
+            this.fetchAndDisplayUserName(userNameEl);
+        }
+    },
+
+    async fetchAndDisplayUserName(userNameEl) {
+        const currentUser = this.currentUser || {};
+        const email = (currentUser.email || '').trim().toLowerCase();
+
+        if (!email) {
+            userNameEl.textContent = this.getAdminDisplayName();
+            return;
+        }
+
+        try {
+            const response = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'get_user_nombre',
+                    email: email
+                })
+            });
+
+            const result = await response.json();
+            
+            if (result.ok && result.nombre) {
+                userNameEl.textContent = result.nombre.trim();
+            } else {
+                userNameEl.textContent = this.getAdminDisplayName();
+            }
+        } catch (error) {
+            console.error('Error fetching user name from table:', error);
+            userNameEl.textContent = this.getAdminDisplayName();
+        }
+    },
+
+    getAdminDisplayName() {
+        const currentUser = this.currentUser || {};
+        const storedName = (currentUser.name || '').trim();
+        const storedEmail = (currentUser.email || '').trim().toLowerCase();
+
+        if (storedName && storedName !== storedEmail) {
+            return storedName;
+        }
+
+        if (storedEmail === 'admin@hightest.com') {
+            return 'Administrador HIGH TEST';
+        }
+
+        if (storedEmail) {
+            const localPart = storedEmail.split('@')[0] || '';
+            const readableName = localPart
+                .replace(/[._-]+/g, ' ')
+                .trim()
+                .replace(/\b\w/g, (character) => character.toUpperCase());
+
+            return readableName || 'Administrador HIGH TEST';
+        }
+
+        return 'Administrador HIGH TEST';
     },
 
     loadMockData() {
@@ -2749,6 +2810,253 @@ const AdminPanelManager = {
 
     addNewCertificate() {
         alert('Funcionalidad para agregar nuevo certificado - próximamente');
+    },
+
+    // ===========================
+    // GESTIÓN DE CLIENTES
+    // ===========================
+
+    setupClientsManagement() {
+        const addClientBtn = document.getElementById('addClientBtn');
+        const cancelClientBtn = document.getElementById('cancelClientBtn');
+        const clientForm = document.getElementById('clientForm');
+        const clientFormContainer = document.getElementById('clientFormContainer');
+
+        if (addClientBtn) {
+            addClientBtn.addEventListener('click', () => {
+                clientFormContainer.style.display = clientFormContainer.style.display === 'none' ? 'block' : 'none';
+            });
+        }
+
+        if (cancelClientBtn) {
+            cancelClientBtn.addEventListener('click', () => {
+                clientFormContainer.style.display = 'none';
+                clientForm.reset();
+            });
+        }
+
+        if (clientForm) {
+            clientForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await this.saveClient();
+            });
+        }
+
+        this.loadClientes();
+    },
+
+    async loadClientes() {
+        try {
+            const response = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_clientes' })
+            });
+
+            const result = await response.json();
+            
+            if (result.ok && result.clientes) {
+                this.renderClientesTable(result.clientes);
+            }
+        } catch (error) {
+            console.error('Error loading clientes:', error);
+        }
+    },
+
+    renderClientesTable(clientes) {
+        const tbody = document.getElementById('clientsTableBody');
+        if (!tbody) return;
+        if (!Array.isArray(clientes) || clientes.length === 0) {
+            tbody.innerHTML = '<tr class="empty-state"><td colspan="5" style="text-align: center; padding: 2rem;">ℹ️ No hay clientes registrados</td></tr>';
+            return;
+        }
+
+        const escapeHtml = (s) => {
+            if (s === null || s === undefined) return '';
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        };
+
+        tbody.innerHTML = clientes.map(cliente => {
+            const createdRaw = cliente.created_at || cliente.createdAt || '';
+            let fecha = '';
+            try {
+                if (createdRaw) {
+                    if (typeof createdRaw === 'string' && createdRaw.includes('T')) {
+                        fecha = createdRaw.split('T')[0];
+                    } else {
+                        fecha = new Date(createdRaw).toISOString().split('T')[0];
+                    }
+                }
+            } catch (e) {
+                fecha = '';
+            }
+
+            const nombreEsc = escapeHtml(cliente.nombre_empresa);
+            const emailEsc = escapeHtml(cliente.email);
+            const pwd = cliente.password ? String(cliente.password) : '';
+            const pwdEsc = escapeHtml(pwd);
+            const idEsc = escapeHtml(cliente.id);
+
+            // Escapes para pasar en onclick (single-quoted)
+            const escForOnclick = (v) => String(v || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+            return `
+            <tr>
+                <td><strong>${nombreEsc}</strong></td>
+                <td>${emailEsc}</td>
+                <td>
+                    <div class="password-cell">
+                        <input type="password" value="${pwdEsc}" readonly class="password-input-table">
+                        <button type="button" class="password-toggle-small" onclick="AdminPanelManager.toggleTablePasswordVisibility(this)" title="Mostrar/ocultar">👁️</button>
+                    </div>
+                </td>
+                <td>${fecha}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn--small btn--outline" onclick="AdminPanelManager.editCliente('${escForOnclick(idEsc)}', '${escForOnclick(cliente.nombre_empresa)}', '${escForOnclick(cliente.email)}', '${escForOnclick(pwd)}')">✏️ Editar</button>
+                        <button class="btn btn--small btn--error" onclick="AdminPanelManager.deleteCliente('${escForOnclick(idEsc)}', '${escForOnclick(cliente.nombre_empresa)}')">🗑️ Eliminar</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+        }).join('');
+    },
+
+    async saveClient() {
+        let nombre = document.getElementById('clientNombre').value.trim().toUpperCase();
+        let email = document.getElementById('clientEmail').value.trim().toLowerCase();
+        const password = document.getElementById('clientPassword').value;
+
+        if (!nombre || !email || !password) {
+            alert('Por favor completa todos los campos');
+            return;
+        }
+
+        try {
+            const response = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'add_cliente',
+                    nombre_empresa: nombre,
+                    email: email,
+                    password: password
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.ok) {
+                alert('✅ Cliente agregado exitosamente');
+                document.getElementById('clientForm').reset();
+                document.getElementById('clientFormContainer').style.display = 'none';
+                await this.loadClientes();
+            } else {
+                alert(`❌ Error: ${result.error}`);
+            }
+        } catch (error) {
+            console.error('Error saving client:', error);
+            alert('Error al guardar el cliente');
+        }
+    },
+
+    editCliente(id, nombre, email, password) {
+        const newNombre = prompt('Nombre de empresa:', nombre);
+        if (newNombre === null) return;
+
+        const newEmail = prompt('Email:', email);
+        if (newEmail === null) return;
+
+        const newPassword = prompt('Contraseña:', password);
+        if (newPassword === null) return;
+
+        this.updateCliente(id, newNombre.toUpperCase(), newEmail.toLowerCase(), newPassword);
+    },
+
+    async updateCliente(id, nombre, email, password) {
+        try {
+            const response = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'update_cliente',
+                    id: id,
+                    nombre_empresa: nombre,
+                    email: email,
+                    password: password
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.ok) {
+                alert('✅ Cliente actualizado exitosamente');
+                await this.loadClientes();
+            } else {
+                alert(`❌ Error: ${result.error}`);
+            }
+        } catch (error) {
+            console.error('Error updating client:', error);
+            alert('Error al actualizar el cliente');
+        }
+    },
+
+    deleteCliente(id, nombre) {
+        if (!confirm(`¿Estás seguro de que deseas eliminar a ${nombre}?`)) {
+            return;
+        }
+
+        this.executeDeleteCliente(id);
+    },
+
+    async executeDeleteCliente(id) {
+        try {
+            const response = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'delete_cliente',
+                    id: id
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.ok) {
+                alert('✅ Cliente eliminado exitosamente');
+                await this.loadClientes();
+            } else {
+                alert(`❌ Error: ${result.error}`);
+            }
+        } catch (error) {
+            console.error('Error deleting client:', error);
+            alert('Error al eliminar el cliente');
+        }
+    },
+
+    togglePasswordVisibility(fieldId) {
+        const field = document.getElementById(fieldId);
+        if (field.type === 'password') {
+            field.type = 'text';
+        } else {
+            field.type = 'password';
+        }
+    },
+
+    toggleTablePasswordVisibility(button) {
+        const input = button.previousElementSibling;
+        if (input.type === 'password') {
+            input.type = 'text';
+            button.textContent = '🙈';
+        } else {
+            input.type = 'password';
+            button.textContent = '👁️';
+        }
     },
 
     logout() {

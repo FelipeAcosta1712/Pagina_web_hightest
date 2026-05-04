@@ -117,6 +117,106 @@ exports.handler = async (event) => {
                 return jsonResponse(200, { ok: true, user, tipo: 'cliente' });
             }
 
+            // Obtener nombre del usuario desde tabla usuarios
+            if (payload.action === 'get_user_nombre') {
+                const email = normalizeText(payload.email).toLowerCase();
+                
+                const { data, error } = await supabase
+                    .from('usuarios')
+                    .select('nombre')
+                    .ilike('email', email)
+                    .single();
+
+                if (error || !data) {
+                    return jsonResponse(404, { ok: false, error: 'Usuario no encontrado' });
+                }
+
+                return jsonResponse(200, { ok: true, nombre: data.nombre || '' });
+            }
+
+            // Obtener lista de clientes
+            if (payload.action === 'get_clientes') {
+                const { data, error } = await supabase
+                    .from('clientes')
+                    .select('id, nombre_empresa, email, created_at')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al obtener clientes', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true, clientes: data || [] });
+            }
+
+            // Agregar nuevo cliente
+            if (payload.action === 'add_cliente') {
+                const { nombre_empresa, email, password } = payload;
+
+                if (!nombre_empresa || !email || !password) {
+                    return jsonResponse(400, { ok: false, error: 'Faltan campos requeridos' });
+                }
+
+                const { data, error } = await supabase
+                    .from('clientes')
+                    .insert([{ nombre_empresa: nombre_empresa.trim(), email: email.trim().toLowerCase(), password }])
+                    .select('id, nombre_empresa, email');
+
+                if (error) {
+                    if (error.message.includes('duplicate')) {
+                        return jsonResponse(409, { ok: false, error: 'El email ya existe' });
+                    }
+                    return jsonResponse(500, { ok: false, error: 'Error al crear cliente', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true, cliente: data[0] });
+            }
+
+            // Actualizar cliente
+            if (payload.action === 'update_cliente') {
+                const { id, nombre_empresa, email, password } = payload;
+
+                if (!id || !nombre_empresa || !email) {
+                    return jsonResponse(400, { ok: false, error: 'Faltan campos requeridos' });
+                }
+
+                const updateData = { nombre_empresa: nombre_empresa.trim(), email: email.trim().toLowerCase() };
+                if (password && password.trim()) {
+                    updateData.password = password;
+                }
+
+                const { data, error } = await supabase
+                    .from('clientes')
+                    .update(updateData)
+                    .eq('id', id)
+                    .select('id, nombre_empresa, email');
+
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al actualizar cliente', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true, cliente: data[0] });
+            }
+
+            // Eliminar cliente
+            if (payload.action === 'delete_cliente') {
+                const { id } = payload;
+
+                if (!id) {
+                    return jsonResponse(400, { ok: false, error: 'ID de cliente requerido' });
+                }
+
+                const { error } = await supabase
+                    .from('clientes')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al eliminar cliente', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true, message: 'Cliente eliminado exitosamente' });
+            }
+
             return jsonResponse(400, { ok: false, error: 'Acción no soportada' });
         } catch (err) {
             return jsonResponse(500, { ok: false, error: err.message });
