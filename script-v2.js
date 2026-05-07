@@ -2499,6 +2499,10 @@ const ClientAuth = {
 const AdminPanelManager = {
     currentUser: null,
     certificates: [],
+    clientsCatalog: [],
+    processSequence: 5,
+    currentViewTab: 'acreditados',
+    currentCertificateTypeTab: 'acreditado',
 
     init() {
         this.loadUserFromStorage();
@@ -2512,7 +2516,10 @@ const AdminPanelManager = {
         this.loadMockData();
         this.setupEventListeners();
         this.setupClientsManagement();
+        this.setupAdminTabs();
+        this.applyAdminTabState('acreditados', false);
         this.updateStats();
+        this.renderReportInsights();
     },
 
     loadUserFromStorage() {
@@ -2592,39 +2599,43 @@ const AdminPanelManager = {
         // Datos simulados de certificados
         this.certificates = [
             {
-                id: 'HT-2025-001',
+                id: 'HT-R26-0001',
                 client: 'Empresa 1 SAS',
-                product: 'Guantes aislantes Clase 2',
-                type: 'reporte',
-                status: 'completado',
-                date: '2025-03-15',
+                type: 'acreditado',
+                status: 'recepcion',
+                receptionDate: '2025-03-15',
+                deliveryDate: '',
+                finalizedDate: '',
                 value: 2500000
             },
             {
-                id: 'HT-2025-002',
+                id: 'HT-R26-0002',
                 client: 'Empresa 2 Ltda',
-                product: 'Herramientas aislantes',
-                type: 'certificado',
-                status: 'en-proceso',
-                date: '2025-03-10',
+                type: 'no-acreditado',
+                status: 'lavado',
+                receptionDate: '2025-03-10',
+                deliveryDate: '',
+                finalizedDate: '',
                 value: 1800000
             },
             {
-                id: 'HT-2025-003',
+                id: 'HT-R26-0003',
                 client: 'Empresa 3 S.A.',
-				product: 'Ensayo funcional de equipos',
-				type: 'reporte',
-                status: 'completado',
-                date: '2025-03-08',
+                type: 'acreditado',
+                status: 'en-proceso-de-ensayo',
+                receptionDate: '2025-03-08',
+                deliveryDate: '',
+                finalizedDate: '',
                 value: 950000
             },
             {
-                id: 'HT-2025-004',
+                id: 'HT-R26-0004',
                 client: 'Cliente Demo',
-				product: 'Informe de ensayo adicional',
-				type: 'reporte',
-                status: 'pendiente',
-                date: '2025-03-05',
+                type: 'no-acreditado',
+                status: 'finalizado',
+                receptionDate: '2025-03-05',
+                deliveryDate: '2025-03-12',
+                finalizedDate: '2025-03-14',
                 value: 1200000
             }
         ];
@@ -2649,11 +2660,19 @@ const AdminPanelManager = {
             });
         }
 
-        // Búsqueda y filtros
+        // Búsqueda y filtros - ACREDITADOS
         const searchInput = document.getElementById('adminSearchCertificates');
         const statusFilter = document.getElementById('adminFilterStatus');
         const typeFilter = document.getElementById('adminFilterType');
+        const monthFilter = document.getElementById('adminFilterMonth');
         const dateFilter = document.getElementById('adminFilterDate');
+        const finalizedSearchInput = document.getElementById('adminSearchFinalizedCertificates');
+        const finalizedStatusFilter = document.getElementById('adminFilterFinalizedStatus');
+        const finalizedTypeFilter = document.getElementById('adminFilterFinalizedType');
+        const finalizedMonthFilter = document.getElementById('adminFilterFinalizedMonth');
+        const finalizedDateFilter = document.getElementById('adminFilterFinalizedDate');
+        const statsMonthFilter = document.getElementById('statsMonthFilter');
+        const clearStatsMonthFilter = document.getElementById('clearStatsMonthFilter');
 
         if (searchInput) {
             searchInput.addEventListener('input', () => this.filterCertificates());
@@ -2664,8 +2683,85 @@ const AdminPanelManager = {
         if (typeFilter) {
             typeFilter.addEventListener('change', () => this.filterCertificates());
         }
+        if (monthFilter) {
+            monthFilter.addEventListener('change', () => this.filterCertificates());
+        }
         if (dateFilter) {
             dateFilter.addEventListener('change', () => this.filterCertificates());
+        }
+        if (finalizedSearchInput) {
+            finalizedSearchInput.addEventListener('input', () => this.filterFinalizedCertificates());
+        }
+        if (finalizedStatusFilter) {
+            finalizedStatusFilter.addEventListener('change', () => this.filterFinalizedCertificates());
+        }
+        if (finalizedTypeFilter) {
+            finalizedTypeFilter.addEventListener('change', () => this.filterFinalizedCertificates());
+        }
+        if (finalizedMonthFilter) {
+            finalizedMonthFilter.addEventListener('change', () => this.filterFinalizedCertificates());
+        }
+        if (finalizedDateFilter) {
+            finalizedDateFilter.addEventListener('change', () => this.filterFinalizedCertificates());
+        }
+        if (statsMonthFilter) {
+            statsMonthFilter.addEventListener('change', () => this.updateStats());
+        }
+        if (clearStatsMonthFilter) {
+            clearStatsMonthFilter.addEventListener('click', () => {
+                if (statsMonthFilter) {
+                    statsMonthFilter.value = '';
+                }
+                this.updateStats();
+            });
+        }
+
+        // Búsqueda y filtros - NO ACREDITADOS
+        const searchInputNoAcreditados = document.getElementById('adminSearchCertificatesNoAcreditados');
+        const statusFilterNoAcreditados = document.getElementById('adminFilterStatusNoAcreditados');
+        const monthFilterNoAcreditados = document.getElementById('adminFilterMonthNoAcreditados');
+        const dateFilterNoAcreditados = document.getElementById('adminFilterDateNoAcreditados');
+        const finalizedSearchInputNoAcreditados = document.getElementById('adminSearchFinalizedCertificatesNoAcreditados');
+        const finalizedStatusFilterNoAcreditados = document.getElementById('adminFilterFinalizedStatusNoAcreditados');
+        const finalizedMonthFilterNoAcreditados = document.getElementById('adminFilterFinalizedMonthNoAcreditados');
+        const finalizedDateFilterNoAcreditados = document.getElementById('adminFilterFinalizedDateNoAcreditados');
+        const statsMonthFilterNoAcreditados = document.getElementById('statsMonthFilterNoAcreditados');
+        const clearStatsMonthFilterNoAcreditados = document.getElementById('clearStatsMonthFilterNoAcreditados');
+
+        if (searchInputNoAcreditados) {
+            searchInputNoAcreditados.addEventListener('input', () => this.filterCertificatesNoAcreditados());
+        }
+        if (statusFilterNoAcreditados) {
+            statusFilterNoAcreditados.addEventListener('change', () => this.filterCertificatesNoAcreditados());
+        }
+        if (monthFilterNoAcreditados) {
+            monthFilterNoAcreditados.addEventListener('change', () => this.filterCertificatesNoAcreditados());
+        }
+        if (dateFilterNoAcreditados) {
+            dateFilterNoAcreditados.addEventListener('change', () => this.filterCertificatesNoAcreditados());
+        }
+        if (finalizedSearchInputNoAcreditados) {
+            finalizedSearchInputNoAcreditados.addEventListener('input', () => this.filterFinalizedCertificatesNoAcreditados());
+        }
+        if (finalizedStatusFilterNoAcreditados) {
+            finalizedStatusFilterNoAcreditados.addEventListener('change', () => this.filterFinalizedCertificatesNoAcreditados());
+        }
+        if (finalizedMonthFilterNoAcreditados) {
+            finalizedMonthFilterNoAcreditados.addEventListener('change', () => this.filterFinalizedCertificatesNoAcreditados());
+        }
+        if (finalizedDateFilterNoAcreditados) {
+            finalizedDateFilterNoAcreditados.addEventListener('change', () => this.filterFinalizedCertificatesNoAcreditados());
+        }
+        if (statsMonthFilterNoAcreditados) {
+            statsMonthFilterNoAcreditados.addEventListener('change', () => this.updateStatsNoAcreditados());
+        }
+        if (clearStatsMonthFilterNoAcreditados) {
+            clearStatsMonthFilterNoAcreditados.addEventListener('click', () => {
+                if (statsMonthFilterNoAcreditados) {
+                    statsMonthFilterNoAcreditados.value = '';
+                }
+                this.updateStatsNoAcreditados();
+            });
         }
 
         // Nuevo certificado
@@ -2674,37 +2770,123 @@ const AdminPanelManager = {
             addCertBtn.addEventListener('click', () => this.addNewCertificate());
         }
 
+        const closeProcessModalBtn = document.getElementById('closeCertificateProcessModal');
+        const cancelProcessModalBtn = document.getElementById('cancelCertificateProcessBtn');
+        const saveProcessModalBtn = document.getElementById('saveCertificateProcessBtn');
+        const processModal = document.getElementById('certificateProcessModal');
+
+        if (closeProcessModalBtn) {
+            closeProcessModalBtn.addEventListener('click', () => this.closeCertificateProcessModal());
+        }
+        if (cancelProcessModalBtn) {
+            cancelProcessModalBtn.addEventListener('click', () => this.closeCertificateProcessModal());
+        }
+        if (saveProcessModalBtn) {
+            saveProcessModalBtn.addEventListener('click', () => this.saveCertificateProcessFromModal());
+        }
+        if (processModal) {
+            processModal.addEventListener('click', (event) => {
+                if (event.target === processModal) {
+                    this.closeCertificateProcessModal();
+                }
+            });
+        }
+
+        const closeStatusModalBtn = document.getElementById('closeCertificateStatusModal');
+        const cancelStatusModalBtn = document.getElementById('cancelCertificateStatusBtn');
+        const saveStatusModalBtn = document.getElementById('saveCertificateStatusBtn');
+        const statusModal = document.getElementById('certificateStatusModal');
+
+        if (closeStatusModalBtn) {
+            closeStatusModalBtn.addEventListener('click', () => this.closeCertificateStatusModal());
+        }
+        if (cancelStatusModalBtn) {
+            cancelStatusModalBtn.addEventListener('click', () => this.closeCertificateStatusModal());
+        }
+        if (saveStatusModalBtn) {
+            saveStatusModalBtn.addEventListener('click', () => this.saveCertificateStatusFromModal());
+        }
+        if (statusModal) {
+            statusModal.addEventListener('click', (event) => {
+                if (event.target === statusModal) {
+                    this.closeCertificateStatusModal();
+                }
+            });
+        }
+
         this.renderCertificates();
     },
 
-    renderCertificates() {
-        const tbody = document.getElementById('certificatesTableBody');
-        if (!tbody) return;
-
-        tbody.innerHTML = '';
-
-        this.certificates.forEach(cert => {
-            const row = document.createElement('tr');
-
-            const statusClass = `status--${cert.status}`;
-            const statusText = this.getStatusText(cert.status);
-            const typeText = this.getTypeText(cert.type);
-
-            row.innerHTML = `
-                <td>${cert.id}</td>
-                <td>${cert.client}</td>
-                <td>${cert.product}</td>
-                <td>${typeText}</td>
-                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                <td>${this.formatDate(cert.date)}</td>
-                <td>
-                    <button class="btn btn--small btn--outline" onclick="AdminPanelManager.viewCertificate('${cert.id}')">👁️ Ver</button>
-                    <button class="btn btn--small btn--primary" onclick="AdminPanelManager.downloadCertificate('${cert.id}')">📥 Descargar</button>
-                </td>
-            `;
-
-            tbody.appendChild(row);
+    setupAdminTabs() {
+        const tabButtons = document.querySelectorAll('[data-admin-tab]');
+        tabButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                this.applyAdminTabState(button.dataset.adminTab || 'acreditados');
+            });
         });
+    },
+
+    applyAdminTabState(tabName, shouldScroll = true) {
+        this.currentViewTab = tabName;
+
+        const tabButtons = document.querySelectorAll('[data-admin-tab]');
+        tabButtons.forEach((button) => {
+            const isActive = button.dataset.adminTab === tabName;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+
+        // Obtener referencias a todas las secciones
+        const certificatesSection = document.getElementById('certificates');
+        const certificatesNoAcreditadosSection = document.getElementById('certificates-no-acreditados');
+        const clientsSection = document.getElementById('clients');
+        const statsSection = document.querySelector('.admin-stats-wrapper');
+        const quickLinkSection = document.querySelector('.admin-quick-link');
+        const reportsAcreditadosSection = document.getElementById('reports-acreditados');
+        const reportsNoAcreditadosSection = document.getElementById('reports-no-acreditados');
+
+        // Ocultar todas las secciones por defecto
+        certificatesSection?.classList.add('is-hidden');
+        certificatesNoAcreditadosSection?.classList.add('is-hidden');
+        clientsSection?.classList.add('is-hidden');
+        statsSection?.classList.add('is-hidden');
+        reportsAcreditadosSection?.classList.add('is-hidden');
+        reportsNoAcreditadosSection?.classList.add('is-hidden');
+        quickLinkSection?.classList.add('is-hidden');
+
+        // Mostrar solo lo necesario según la pestaña
+        if (tabName === 'acreditados') {
+            quickLinkSection?.classList.remove('is-hidden');
+            statsSection?.classList.remove('is-hidden');
+            reportsAcreditadosSection?.classList.remove('is-hidden');
+            certificatesSection?.classList.remove('is-hidden');
+            if (shouldScroll) {
+                quickLinkSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            this.renderCertificates();
+            this.updateStats();
+            this.renderMonthlySummary();
+        } else if (tabName === 'no-acreditados') {
+            quickLinkSection?.classList.remove('is-hidden');
+            reportsNoAcreditadosSection?.classList.remove('is-hidden');
+            certificatesNoAcreditadosSection?.classList.remove('is-hidden');
+            if (shouldScroll) {
+                quickLinkSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            this.renderCertificatesNoAcreditados();
+            this.updateStatsNoAcreditados();
+            this.renderMonthlySummaryNoAcreditados();
+        } else if (tabName === 'clientes') {
+            clientsSection?.classList.remove('is-hidden');
+            if (shouldScroll) {
+                clientsSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+    },
+
+    renderCertificates() {
+        this.filterCertificates();
+        this.filterFinalizedCertificates();
     },
 
     filterCertificates() {
@@ -2712,84 +2894,468 @@ const AdminPanelManager = {
         const statusFilter = document.getElementById('adminFilterStatus')?.value || '';
         const typeFilter = document.getElementById('adminFilterType')?.value || '';
         const dateFilter = document.getElementById('adminFilterDate')?.value || '';
+        const monthFilter = document.getElementById('adminFilterMonth')?.value || '';
+        const tabType = this.currentCertificateTypeTab || '';
 
         const filtered = this.certificates.filter(cert => {
             const matchesSearch = !searchTerm ||
                 cert.id.toLowerCase().includes(searchTerm) ||
                 cert.client.toLowerCase().includes(searchTerm) ||
-                cert.product.toLowerCase().includes(searchTerm);
+                this.getTypeText(cert.type).toLowerCase().includes(searchTerm);
 
+            const matchesTabType = !tabType || cert.type === tabType;
             const matchesStatus = !statusFilter || cert.status === statusFilter;
             const matchesType = !typeFilter || cert.type === typeFilter;
-            const matchesDate = !dateFilter || cert.date === dateFilter;
+            const matchesDate = !dateFilter ||
+                cert.receptionDate === dateFilter ||
+                cert.deliveryDate === dateFilter ||
+                cert.finalizedDate === dateFilter;
 
-            return matchesSearch && matchesStatus && matchesType && matchesDate;
+            const matchesMonth = !monthFilter || (
+                (cert.receptionDate && cert.receptionDate.startsWith(monthFilter)) ||
+                (cert.deliveryDate && cert.deliveryDate.startsWith(monthFilter)) ||
+                (cert.finalizedDate && cert.finalizedDate.startsWith(monthFilter))
+            );
+
+            return matchesSearch && matchesTabType && matchesStatus && matchesType && matchesDate && matchesMonth;
         });
 
         this.renderFilteredCertificates(filtered);
     },
 
+    filterFinalizedCertificates() {
+        const searchTerm = document.getElementById('adminSearchFinalizedCertificates')?.value.toLowerCase() || '';
+        const statusFilter = document.getElementById('adminFilterFinalizedStatus')?.value || '';
+        const typeFilter = document.getElementById('adminFilterFinalizedType')?.value || '';
+        const dateFilter = document.getElementById('adminFilterFinalizedDate')?.value || '';
+        const monthFilter = document.getElementById('adminFilterFinalizedMonth')?.value || '';
+        const tabType = this.currentCertificateTypeTab || '';
+
+        const finalized = this.certificates.filter(cert => cert.status === 'finalizado');
+
+        const filtered = finalized.filter(cert => {
+            const matchesSearch = !searchTerm ||
+                cert.id.toLowerCase().includes(searchTerm) ||
+                cert.client.toLowerCase().includes(searchTerm) ||
+                this.getTypeText(cert.type).toLowerCase().includes(searchTerm);
+
+            const matchesTabType = !tabType || cert.type === tabType;
+            const matchesStatus = !statusFilter || cert.status === statusFilter;
+            const matchesType = !typeFilter || cert.type === typeFilter;
+            const matchesDate = !dateFilter ||
+                cert.receptionDate === dateFilter ||
+                cert.deliveryDate === dateFilter ||
+                cert.finalizedDate === dateFilter;
+
+            const matchesMonth = !monthFilter || (
+                (cert.receptionDate && cert.receptionDate.startsWith(monthFilter)) ||
+                (cert.deliveryDate && cert.deliveryDate.startsWith(monthFilter)) ||
+                (cert.finalizedDate && cert.finalizedDate.startsWith(monthFilter))
+            );
+
+            return matchesSearch && matchesTabType && matchesStatus && matchesType && matchesDate && matchesMonth;
+        });
+
+        this.renderFinalizedCertificates(filtered);
+    },
+
     renderFilteredCertificates(filteredCerts) {
-        const tbody = document.getElementById('certificatesTableBody');
-        if (!tbody) return;
+        const activeTbody = document.getElementById('certificatesTableBody');
+        if (!activeTbody) return;
 
-        tbody.innerHTML = '';
+        activeTbody.innerHTML = '';
 
-        filteredCerts.forEach(cert => {
-            const row = document.createElement('tr');
+        const activeCerts = filteredCerts.filter(cert => cert.status !== 'finalizado');
 
-            const statusClass = `status--${cert.status}`;
-            const statusText = this.getStatusText(cert.status);
-            const typeText = this.getTypeText(cert.type);
+        if (!activeCerts.length) {
+            activeTbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 1rem;">No hay informes activos</td></tr>';
+        }
 
-            row.innerHTML = `
-                <td>${cert.id}</td>
-                <td>${cert.client}</td>
-                <td>${cert.product}</td>
-                <td>${typeText}</td>
-                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                <td>${this.formatDate(cert.date)}</td>
-                <td>
-                    <button class="btn btn--small btn--outline" onclick="AdminPanelManager.viewCertificate('${cert.id}')">👁️ Ver</button>
-                    <button class="btn btn--small btn--primary" onclick="AdminPanelManager.downloadCertificate('${cert.id}')">📥 Descargar</button>
-                </td>
-            `;
-
-            tbody.appendChild(row);
+        activeCerts.forEach(cert => {
+            activeTbody.appendChild(this.buildCertificateRow(cert));
         });
     },
 
-    updateStats() {
-        const total = this.certificates.length;
-        const completed = this.certificates.filter(c => c.status === 'completado').length;
-        const pending = this.certificates.filter(c => c.status === 'pendiente').length;
+    renderFinalizedCertificates(filteredCerts) {
+        const finalizedTbody = document.getElementById('finalizedCertificatesTableBody');
+        if (!finalizedTbody) return;
 
-        document.getElementById('statTotalCerts').textContent = total;
-        document.getElementById('statCompletedCerts').textContent = completed;
-        document.getElementById('statPendingCerts').textContent = pending;
+        finalizedTbody.innerHTML = '';
+
+        if (!filteredCerts.length) {
+            finalizedTbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 1rem;">No hay informes finalizados</td></tr>';
+            return;
+        }
+
+        filteredCerts.forEach(cert => {
+            finalizedTbody.appendChild(this.buildCertificateRow(cert));
+        });
+    },
+
+    buildCertificateRow(cert) {
+        const row = document.createElement('tr');
+
+        const statusClass = `status--${cert.status}`;
+        const statusText = this.getStatusText(cert.status);
+        const typeText = this.getTypeText(cert.type);
+
+        row.innerHTML = `
+            <td>${cert.id}</td>
+            <td>${cert.client}</td>
+            <td>${typeText}</td>
+            <td>
+                <span class="status-badge ${statusClass}">${statusText}</span>
+                <button class="btn btn--small btn--outline" style="margin-left: 0.5rem; padding: 0.25rem 0.5rem;" onclick="AdminPanelManager.editCertificateStatus('${cert.id}')" title="Editar estado">✏️</button>
+            </td>
+            <td>${this.formatDate(cert.receptionDate)}</td>
+            <td>${this.formatDate(cert.deliveryDate)}</td>
+            <td>${this.formatDate(cert.finalizedDate)}</td>
+            <td>
+                <button class="btn btn--small btn--outline" style="padding: 0.25rem 0.5rem;" onclick="AdminPanelManager.editCertificate('${cert.id}')" title="Editar proceso">✏️</button>
+                <button class="btn btn--small btn--error" style="padding: 0.25rem 0.5rem;" onclick="AdminPanelManager.deleteCertificate('${cert.id}')" title="Eliminar">🗑️</button>
+            </td>
+        `;
+
+        return row;
+    },
+
+    getCertificateStatusOptions(currentStatus) {
+        const statuses = [
+            'recepcion',
+            'lavado',
+            'en-proceso-de-ensayo',
+            'entrega-cliente',
+            'informe-de-ensayo',
+            'finalizado'
+        ];
+
+        return statuses.map((status) => {
+            const selected = status === currentStatus ? 'selected' : '';
+            return `<option value="${status}" ${selected}>${this.getStatusText(status)}</option>`;
+        }).join('');
+    },
+
+    changeCertificateStatus(certId, newStatus) {
+        const cert = this.certificates.find((item) => item.id === certId);
+        if (!cert) return;
+
+        cert.status = newStatus;
+
+        if (!cert.receptionDate) {
+            cert.receptionDate = this.getTodayISO();
+        }
+
+        if (newStatus === 'entrega-cliente' && !cert.deliveryDate) {
+            cert.deliveryDate = this.getTodayISO();
+        }
+
+        if (newStatus === 'finalizado' && !cert.finalizedDate) {
+            cert.finalizedDate = this.getTodayISO();
+        }
+
+        // Renderizar correctamente según el tipo de certificado
+        if (cert.type === 'acreditado') {
+            this.renderCertificates();
+            this.updateStats();
+        } else if (cert.type === 'no-acreditado') {
+            this.renderCertificatesNoAcreditados();
+            this.updateStatsNoAcreditados();
+        }
+    },
+
+    editCertificate(certId) {
+        const cert = this.certificates.find((item) => item.id === certId);
+        if (!cert) return;
+
+        this.populateCertificateClientOptions(cert.client);
+
+        const title = document.getElementById('certificateProcessModalTitle');
+        const editId = document.getElementById('processEditId');
+        const processNumber = document.getElementById('processNumber');
+        const client = document.getElementById('processClientSelect');
+        const type = document.getElementById('processTypeSelect');
+        const status = document.getElementById('processStatusSelect');
+        const receptionDate = document.getElementById('processReceptionDate');
+        const deliveryDate = document.getElementById('processDeliveryDate');
+        const finalizedDate = document.getElementById('processFinalizedDate');
+
+        if (!title || !editId || !processNumber || !client || !type || !status || !receptionDate || !deliveryDate || !finalizedDate) return;
+
+        title.textContent = `Editar Proceso ${cert.id}`;
+        editId.value = cert.id;
+        processNumber.value = cert.id;
+        client.value = cert.client;
+        type.value = cert.type;
+        status.value = cert.status;
+        receptionDate.value = cert.receptionDate || '';
+        deliveryDate.value = cert.deliveryDate || '';
+        finalizedDate.value = cert.finalizedDate || '';
+
+        this.openCertificateProcessModal();
+    },
+
+    editCertificateStatus(certId) {
+        const cert = this.certificates.find((item) => item.id === certId);
+        if (!cert) return;
+
+        const editId = document.getElementById('statusEditId');
+        const processCode = document.getElementById('statusProcessCode');
+        const status = document.getElementById('statusProcessSelect');
+        if (!editId || !processCode || !status) return;
+
+        editId.value = cert.id;
+        processCode.value = `${cert.id} - ${cert.client}`;
+        status.value = cert.status;
+
+        this.openCertificateStatusModal();
+    },
+
+    deleteCertificate(certId) {
+        const cert = this.certificates.find((item) => item.id === certId);
+        if (!cert) return;
+
+        if (!confirm(`¿Eliminar el informe ${cert.id} de ${cert.client}?`)) {
+            return;
+        }
+
+        this.certificates = this.certificates.filter((item) => item.id !== certId);
+        // Renderizar correctamente según el tipo de certificado eliminado
+        if (cert.type === 'acreditado') {
+            this.renderCertificates();
+            this.updateStats();
+        } else if (cert.type === 'no-acreditado') {
+            this.renderCertificatesNoAcreditados();
+            this.updateStatsNoAcreditados();
+        }
+    },
+
+    updateStats() {
+        const statsMonthFilter = document.getElementById('statsMonthFilter');
+        const statsPeriodLabel = document.getElementById('statsPeriodLabel');
+        const monthFilter = statsMonthFilter?.value || '';
+        const tabType = this.currentCertificateTypeTab || '';
+        const scopedCertificates = monthFilter
+            ? this.certificates.filter((cert) => (
+                (!tabType || cert.type === tabType) && (
+                    (cert.receptionDate && cert.receptionDate.startsWith(monthFilter)) ||
+                    (cert.deliveryDate && cert.deliveryDate.startsWith(monthFilter)) ||
+                    (cert.finalizedDate && cert.finalizedDate.startsWith(monthFilter))
+                )
+            ))
+            : this.certificates.filter((cert) => !tabType || cert.type === tabType);
+
+        const total = scopedCertificates.length;
+        const completed = scopedCertificates.filter(c => c.status === 'finalizado').length;
+        const pending = scopedCertificates.filter(c => c.status !== 'finalizado').length;
+
+        const totalEl = document.getElementById('statTotalCerts');
+        const completedEl = document.getElementById('statCompletedCerts');
+        const pendingEl = document.getElementById('statPendingCerts');
+
+        if (totalEl) totalEl.textContent = total;
+        if (completedEl) completedEl.textContent = completed;
+        if (pendingEl) pendingEl.textContent = pending;
+
+        if (statsPeriodLabel) {
+            statsPeriodLabel.textContent = monthFilter
+                ? `Mostrando resumen de ${monthFilter}`
+                : 'Mostrando totales generales';
+        }
+
+        this.renderReportInsights();
+    },
+
+    renderReportInsights() {
+        this.renderMonthlySummary();
+        this.renderKanbanBoard();
+    },
+
+    renderMonthlySummary() {
+        const container = document.getElementById('monthlySummaryListAcreditados');
+        if (!container) return;
+        const tabType = this.currentCertificateTypeTab || '';
+
+        const monthsMap = new Map();
+        this.certificates.filter((cert) => cert.type === 'acreditado').forEach((cert) => {
+            const baseDate = cert.receptionDate || cert.deliveryDate || cert.finalizedDate;
+            if (!baseDate) return;
+            const monthKey = baseDate.slice(0, 7);
+            if (!monthsMap.has(monthKey)) {
+                monthsMap.set(monthKey, { total: 0, completed: 0, pending: 0 });
+            }
+            const bucket = monthsMap.get(monthKey);
+            bucket.total += 1;
+            if (cert.status === 'finalizado') {
+                bucket.completed += 1;
+            } else {
+                bucket.pending += 1;
+            }
+        });
+
+        const entries = Array.from(monthsMap.entries())
+            .sort(([a], [b]) => b.localeCompare(a))
+            .slice(0, 6);
+
+        if (!entries.length) {
+            container.innerHTML = '<div class="monthly-summary-item">No hay datos suficientes para mostrar resumen por mes.</div>';
+            return;
+        }
+
+        const maxTotal = Math.max(...entries.map(([, data]) => data.total), 1);
+        const monthNames = {
+            '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril', '05': 'Mayo', '06': 'Junio',
+            '07': 'Julio', '08': 'Agosto', '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre'
+        };
+
+        container.innerHTML = entries.map(([monthKey, data]) => {
+            const [year, month] = monthKey.split('-');
+            const label = `${monthNames[month] || month} ${year}`;
+            const percent = Math.max(8, Math.round((data.total / maxTotal) * 100));
+
+            return `
+                <div class="monthly-summary-item">
+                    <div class="monthly-summary-item__top">
+                        <div class="monthly-summary-item__month">${label}</div>
+                        <div class="monthly-summary-item__count">${data.total}</div>
+                    </div>
+                    <div class="monthly-summary-item__bar">
+                        <div class="monthly-summary-item__bar-fill" style="width: ${percent}%;"></div>
+                    </div>
+                    <div class="monthly-summary-item__meta">
+                        <span>Finalizados: ${data.completed}</span>
+                        <span>Pendientes: ${data.pending}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    renderMonthlySummaryNoAcreditados() {
+        const container = document.getElementById('monthlySummaryListNoAcreditados');
+        if (!container) return;
+
+        const monthsMap = new Map();
+        this.certificates.filter((cert) => cert.type === 'no-acreditado').forEach((cert) => {
+            const baseDate = cert.receptionDate || cert.deliveryDate || cert.finalizedDate;
+            if (!baseDate) return;
+            const monthKey = baseDate.slice(0, 7);
+            if (!monthsMap.has(monthKey)) {
+                monthsMap.set(monthKey, { total: 0, completed: 0, pending: 0 });
+            }
+            const bucket = monthsMap.get(monthKey);
+            bucket.total += 1;
+            if (cert.status === 'finalizado') {
+                bucket.completed += 1;
+            } else {
+                bucket.pending += 1;
+            }
+        });
+
+        const entries = Array.from(monthsMap.entries())
+            .sort(([a], [b]) => b.localeCompare(a))
+            .slice(0, 6);
+
+        if (!entries.length) {
+            container.innerHTML = '<div class="monthly-summary-item">No hay datos suficientes para mostrar resumen por mes.</div>';
+            return;
+        }
+
+        const maxTotal = Math.max(...entries.map(([, data]) => data.total), 1);
+        const monthNames = {
+            '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril', '05': 'Mayo', '06': 'Junio',
+            '07': 'Julio', '08': 'Agosto', '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre'
+        };
+
+        container.innerHTML = entries.map(([monthKey, data]) => {
+            const [year, month] = monthKey.split('-');
+            const label = `${monthNames[month] || month} ${year}`;
+            const percent = Math.max(8, Math.round((data.total / maxTotal) * 100));
+
+            return `
+                <div class="monthly-summary-item">
+                    <div class="monthly-summary-item__top">
+                        <div class="monthly-summary-item__month">${label}</div>
+                        <div class="monthly-summary-item__count">${data.total}</div>
+                    </div>
+                    <div class="monthly-summary-item__bar">
+                        <div class="monthly-summary-item__bar-fill" style="width: ${percent}%;"></div>
+                    </div>
+                    <div class="monthly-summary-item__meta">
+                        <span>Finalizados: ${data.completed}</span>
+                        <span>Pendientes: ${data.pending}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+    renderKanbanBoard() {
+        const container = document.getElementById('kanbanBoard');
+        if (!container) return;
+        const tabType = this.currentCertificateTypeTab || '';
+
+        const columns = [
+            { key: 'recepcion', title: 'Recepción' },
+            { key: 'lavado', title: 'Lavado' },
+            { key: 'en-proceso-de-ensayo', title: 'En proceso' },
+            { key: 'entrega-cliente', title: 'Entrega cliente' },
+            { key: 'informe-de-ensayo', title: 'Informe' },
+            { key: 'finalizado', title: 'Finalizado' }
+        ];
+
+        container.innerHTML = columns.map((column) => {
+            const items = this.certificates.filter((cert) => cert.status === column.key && (!tabType || cert.type === tabType));
+            return `
+                <div class="kanban-column">
+                    <div class="kanban-column__header">
+                        <div class="kanban-column__title">${column.title}</div>
+                        <div class="kanban-column__count">${items.length}</div>
+                    </div>
+                    <div class="kanban-cards">
+                        ${items.length ? items.map((cert) => `
+                            <div class="kanban-card">
+                                <div class="kanban-card__id">${cert.id}</div>
+                                <div class="kanban-card__client">${cert.client}</div>
+                                <div class="kanban-card__meta">
+                                    <span>${this.getTypeText(cert.type)}</span>
+                                    <span>${this.formatDate(cert.receptionDate)}</span>
+                                </div>
+                            </div>
+                        `).join('') : '<div class="kanban-card"><div class="kanban-card__client">Sin procesos</div></div>'}
+                    </div>
+                </div>
+            `;
+        }).join('');
     },
 
     getStatusText(status) {
         const statusMap = {
-            'completado': '✅ Completado',
-            'en-proceso': '⏳ En Proceso',
-            'pendiente': '📋 Pendiente',
-            'cancelado': '❌ Cancelado'
+            'recepcion': 'Recepción',
+            'lavado': 'Lavado',
+            'en-proceso-de-ensayo': 'Proceso de ensayo',
+            'entrega-cliente': 'Entrega cliente',
+            'informe-de-ensayo': 'Informe',
+            'finalizado': 'Finalizado'
         };
         return statusMap[status] || status;
     },
 
     getTypeText(type) {
         const typeMap = {
-            'reporte': '📄 Informe de ensayo',
-			'certificado': '🎖️ Informe de verificación'
+            'acreditado': 'Acreditado',
+			'no-acreditado': 'No acreditado'
         };
         return typeMap[type] || type;
     },
 
     formatDate(dateString) {
+        if (!dateString) return '-';
         const date = new Date(dateString);
-        return date.toLocaleDateString('es-ES');
+        if (Number.isNaN(date.getTime())) return '-';
+        return date.toISOString().split('T')[0];
+    },
+
+    getTodayISO() {
+        return new Date().toISOString().split('T')[0];
     },
 
     formatCurrency(amount) {
@@ -2809,7 +3375,173 @@ const AdminPanelManager = {
     },
 
     addNewCertificate() {
-        alert('Funcionalidad para agregar nuevo certificado - próximamente');
+        const title = document.getElementById('certificateProcessModalTitle');
+        const editId = document.getElementById('processEditId');
+        const processNumber = document.getElementById('processNumber');
+        const client = document.getElementById('processClientSelect');
+        const type = document.getElementById('processTypeSelect');
+        const status = document.getElementById('processStatusSelect');
+        const receptionDate = document.getElementById('processReceptionDate');
+        const deliveryDate = document.getElementById('processDeliveryDate');
+        const finalizedDate = document.getElementById('processFinalizedDate');
+
+        if (!title || !editId || !processNumber || !client || !type || !status || !receptionDate || !deliveryDate || !finalizedDate) return;
+
+        this.populateCertificateClientOptions('');
+
+        title.textContent = 'Nuevo Proceso';
+        editId.value = '';
+        processNumber.value = this.generateProcessId();
+        client.value = '';
+        type.value = 'acreditado';
+        status.value = 'recepcion';
+        receptionDate.value = this.getTodayISO();
+        deliveryDate.value = '';
+        finalizedDate.value = '';
+
+        this.openCertificateProcessModal();
+    },
+
+    saveCertificateProcessFromModal() {
+        const editId = document.getElementById('processEditId');
+        const processNumber = document.getElementById('processNumber');
+        const client = document.getElementById('processClientSelect');
+        const type = document.getElementById('processTypeSelect');
+        const status = document.getElementById('processStatusSelect');
+        const receptionDate = document.getElementById('processReceptionDate');
+        const deliveryDate = document.getElementById('processDeliveryDate');
+        const finalizedDate = document.getElementById('processFinalizedDate');
+
+        if (!editId || !processNumber || !client || !type || !status || !receptionDate || !deliveryDate || !finalizedDate) return;
+
+        // Normalizar el valor del tipo
+        const normalizedType = (type.value || '').trim().toLowerCase();
+        
+        // Validar que el tipo sea uno de los valores permitidos
+        if (!normalizedType || !['acreditado', 'no-acreditado'].includes(normalizedType)) {
+            alert('El campo "# Informe" debe ser "acreditado" o "no-acreditado"');
+            type.focus();
+            return;
+        }
+
+        if (!processNumber.value || !client.value || !status.value || !receptionDate.value) {
+            alert('Completa los campos obligatorios: # Proceso, Cliente, # Informe, Estado y Fecha Recepción.');
+            return;
+        }
+
+        const payload = {
+            client: client.value,
+            type: normalizedType,
+            status: status.value,
+            receptionDate: receptionDate.value,
+            deliveryDate: deliveryDate.value,
+            finalizedDate: finalizedDate.value
+        };
+
+        if (editId.value) {
+            const cert = this.certificates.find((item) => item.id === editId.value);
+            if (!cert) return;
+            cert.id = processNumber.value;
+            Object.assign(cert, payload);
+            this.changeCertificateStatus(cert.id, payload.status);
+        } else {
+            const processNum = processNumber.value;
+            this.certificates.unshift({ id: processNum, ...payload, value: 0 });
+            this.changeCertificateStatus(processNum, payload.status);
+        }
+
+        this.closeCertificateProcessModal();
+        // Renderizar correctamente según el tipo de certificado
+        if (normalizedType === 'acreditado') {
+            this.renderCertificates();
+            this.updateStats();
+            this.renderMonthlySummary();
+        } else if (normalizedType === 'no-acreditado') {
+            this.renderCertificatesNoAcreditados();
+            this.updateStatsNoAcreditados();
+            this.renderMonthlySummaryNoAcreditados();
+        }
+    },
+
+    saveCertificateStatusFromModal() {
+        const editId = document.getElementById('statusEditId');
+        const status = document.getElementById('statusProcessSelect');
+        if (!editId || !status || !editId.value) return;
+
+        this.changeCertificateStatus(editId.value, status.value);
+        this.closeCertificateStatusModal();
+    },
+
+    openCertificateProcessModal() {
+        const modal = document.getElementById('certificateProcessModal');
+        if (!modal) return;
+        modal.classList.add('modal--open');
+        modal.setAttribute('aria-hidden', 'false');
+    },
+
+    closeCertificateProcessModal() {
+        const modal = document.getElementById('certificateProcessModal');
+        if (!modal) return;
+        modal.classList.remove('modal--open');
+        modal.setAttribute('aria-hidden', 'true');
+    },
+
+    openCertificateStatusModal() {
+        const modal = document.getElementById('certificateStatusModal');
+        if (!modal) return;
+        modal.classList.add('modal--open');
+        modal.setAttribute('aria-hidden', 'false');
+    },
+
+    closeCertificateStatusModal() {
+        const modal = document.getElementById('certificateStatusModal');
+        if (!modal) return;
+        modal.classList.remove('modal--open');
+        modal.setAttribute('aria-hidden', 'true');
+    },
+
+    populateCertificateClientOptions(selectedValue) {
+        const select = document.getElementById('processClientSelect');
+        if (!select) return;
+
+        const clients = this.clientsCatalog || [];
+        const normalized = new Set();
+        const uniqueClients = [];
+        clients.forEach((item) => {
+            const name = (item && item.nombre_empresa ? String(item.nombre_empresa).trim() : '');
+            if (!name) return;
+            const key = name.toUpperCase();
+            if (normalized.has(key)) return;
+            normalized.add(key);
+            uniqueClients.push(name);
+        });
+
+        select.innerHTML = '<option value="">Seleccione un cliente</option>';
+        uniqueClients.forEach((name) => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            select.appendChild(option);
+        });
+
+        if (selectedValue) {
+            const hasOption = Array.from(select.options).some((option) => option.value === selectedValue);
+            if (!hasOption) {
+                const customOption = document.createElement('option');
+                customOption.value = selectedValue;
+                customOption.textContent = selectedValue;
+                select.appendChild(customOption);
+            }
+            select.value = selectedValue;
+        }
+    },
+
+    generateProcessId() {
+        const lastId = this.certificates[0]?.id || 'HT-R26-0000';
+        const match = lastId.match(/HT-R26-(\d{4})/);
+        const lastNum = match ? parseInt(match[1], 10) : 0;
+        const nextNum = String(lastNum + 1).padStart(4, '0');
+        return `HT-R26-${nextNum}`;
     },
 
     // ===========================
@@ -2818,20 +3550,43 @@ const AdminPanelManager = {
 
     setupClientsManagement() {
         const addClientBtn = document.getElementById('addClientBtn');
-        const cancelClientBtn = document.getElementById('cancelClientBtn');
+        const closeClientModalBtn = document.getElementById('closeClientModal');
+        const cancelClientModalBtn = document.getElementById('cancelClientModalBtn');
+        const saveClientModalBtn = document.getElementById('saveClientModalBtn');
+        const clientModal = document.getElementById('clientModal');
+        const clientModalTitle = document.getElementById('clientModalTitle');
+        const clientEditId = document.getElementById('clientEditId');
         const clientForm = document.getElementById('clientForm');
-        const clientFormContainer = document.getElementById('clientFormContainer');
+        const searchInput = document.getElementById('clientSearchInput');
 
         if (addClientBtn) {
             addClientBtn.addEventListener('click', () => {
-                clientFormContainer.style.display = clientFormContainer.style.display === 'none' ? 'block' : 'none';
+                if (clientModalTitle) clientModalTitle.textContent = 'Nuevo Cliente';
+                if (clientEditId) clientEditId.value = '';
+                if (clientForm) clientForm.reset();
+                this.openClientModal();
             });
         }
 
-        if (cancelClientBtn) {
-            cancelClientBtn.addEventListener('click', () => {
-                clientFormContainer.style.display = 'none';
-                clientForm.reset();
+        if (closeClientModalBtn) {
+            closeClientModalBtn.addEventListener('click', () => this.closeClientModal());
+        }
+
+        if (cancelClientModalBtn) {
+            cancelClientModalBtn.addEventListener('click', () => this.closeClientModal());
+        }
+
+        if (saveClientModalBtn) {
+            saveClientModalBtn.addEventListener('click', async () => {
+                await this.saveClient();
+            });
+        }
+
+        if (clientModal) {
+            clientModal.addEventListener('click', (event) => {
+                if (event.target === clientModal) {
+                    this.closeClientModal();
+                }
             });
         }
 
@@ -2839,6 +3594,12 @@ const AdminPanelManager = {
             clientForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 await this.saveClient();
+            });
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                this.filterClientesTable(searchInput.value.toLowerCase());
             });
         }
 
@@ -2856,16 +3617,21 @@ const AdminPanelManager = {
             const result = await response.json();
             
             if (result.ok && result.clientes) {
+                this.clientsCatalog = result.clientes;
+                this.populateCertificateClientOptions('');
                 this.renderClientesTable(result.clientes);
+            } else {
+                console.error('❌ Error en respuesta:', result);
             }
         } catch (error) {
-            console.error('Error loading clientes:', error);
+            console.error('❌ Error loading clientes:', error);
         }
     },
 
     renderClientesTable(clientes) {
         const tbody = document.getElementById('clientsTableBody');
         if (!tbody) return;
+
         if (!Array.isArray(clientes) || clientes.length === 0) {
             tbody.innerHTML = '<tr class="empty-state"><td colspan="5" style="text-align: center; padding: 2rem;">ℹ️ No hay clientes registrados</td></tr>';
             return;
@@ -2881,7 +3647,7 @@ const AdminPanelManager = {
                 .replace(/'/g, '&#39;');
         };
 
-        tbody.innerHTML = clientes.map(cliente => {
+        tbody.innerHTML = clientes.map((cliente, idx) => {
             const createdRaw = cliente.created_at || cliente.createdAt || '';
             let fecha = '';
             try {
@@ -2911,15 +3677,15 @@ const AdminPanelManager = {
                 <td>${emailEsc}</td>
                 <td>
                     <div class="password-cell">
-                        <input type="password" value="${pwdEsc}" readonly class="password-input-table">
-                        <button type="button" class="password-toggle-small" onclick="AdminPanelManager.toggleTablePasswordVisibility(this)" title="Mostrar/ocultar">👁️</button>
+                        <span class="password-mask" data-password="${pwdEsc}">${pwd ? '*'.repeat(Math.max(6, pwd.length)) : ''}</span>
+                        <button type="button" class="password-toggle-small" onclick="AdminPanelManager.toggleTablePasswordVisibility(this)" title="Ver contraseña">👁️</button>
                     </div>
                 </td>
                 <td>${fecha}</td>
                 <td>
                     <div class="action-buttons">
-                        <button class="btn btn--small btn--outline" onclick="AdminPanelManager.editCliente('${escForOnclick(idEsc)}', '${escForOnclick(cliente.nombre_empresa)}', '${escForOnclick(cliente.email)}', '${escForOnclick(pwd)}')">✏️ Editar</button>
-                        <button class="btn btn--small btn--error" onclick="AdminPanelManager.deleteCliente('${escForOnclick(idEsc)}', '${escForOnclick(cliente.nombre_empresa)}')">🗑️ Eliminar</button>
+                        <button class="btn btn--small btn--outline" onclick="AdminPanelManager.editCliente('${escForOnclick(idEsc)}', '${escForOnclick(cliente.nombre_empresa)}', '${escForOnclick(cliente.email)}', '${escForOnclick(pwd)}')">✏️</button>
+                        <button class="btn btn--small btn--error" onclick="AdminPanelManager.deleteCliente('${escForOnclick(idEsc)}', '${escForOnclick(cliente.nombre_empresa)}')">🗑️</button>
                     </div>
                 </td>
             </tr>
@@ -2927,7 +3693,57 @@ const AdminPanelManager = {
         }).join('');
     },
 
+    filterClientesTable(searchTerm) {
+        const tbody = document.getElementById('clientsTableBody');
+        if (!tbody) return;
+
+        const rows = Array.from(tbody.querySelectorAll('tr')).filter(row => !row.classList.contains('empty-state'));
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            let matches = false;
+
+            // Buscar en todas las celdas (empresa, email, contraseña, fecha)
+            cells.forEach(cell => {
+                const text = cell.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    matches = true;
+                }
+            });
+
+            if (searchTerm === '' || matches) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Mostrar/ocultar mensaje de no hay resultados
+        let emptyRow = tbody.querySelector('.empty-state');
+        if (visibleCount === 0 && searchTerm !== '') {
+            if (!emptyRow) {
+                emptyRow = document.createElement('tr');
+                emptyRow.className = 'empty-state';
+                emptyRow.innerHTML = '<td colspan="5" style="text-align: center; padding: 2rem;">❌ No se encontraron clientes que coincidan con la búsqueda</td>';
+                tbody.appendChild(emptyRow);
+            } else {
+                emptyRow.style.display = '';
+                emptyRow.querySelector('td').textContent = '❌ No se encontraron clientes que coincidan con la búsqueda';
+            }
+        } else if (visibleCount === 0 && searchTerm === '') {
+            if (emptyRow) {
+                emptyRow.style.display = '';
+                emptyRow.querySelector('td').textContent = 'ℹ️ No hay clientes registrados';
+            }
+        } else if (emptyRow) {
+            emptyRow.style.display = 'none';
+        }
+    },
+
     async saveClient() {
+        const editId = document.getElementById('clientEditId')?.value || '';
         let nombre = document.getElementById('clientNombre').value.trim().toUpperCase();
         let email = document.getElementById('clientEmail').value.trim().toLowerCase();
         const password = document.getElementById('clientPassword').value;
@@ -2938,11 +3754,13 @@ const AdminPanelManager = {
         }
 
         try {
+            const action = editId ? 'update_cliente' : 'add_cliente';
             const response = await fetch('/.netlify/functions/conectar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    action: 'add_cliente',
+                    action,
+                    id: editId || undefined,
                     nombre_empresa: nombre,
                     email: email,
                     password: password
@@ -2952,9 +3770,11 @@ const AdminPanelManager = {
             const result = await response.json();
 
             if (result.ok) {
-                alert('✅ Cliente agregado exitosamente');
+                alert(editId ? '✅ Cliente actualizado exitosamente' : '✅ Cliente agregado exitosamente');
                 document.getElementById('clientForm').reset();
-                document.getElementById('clientFormContainer').style.display = 'none';
+                const clientEditIdField = document.getElementById('clientEditId');
+                if (clientEditIdField) clientEditIdField.value = '';
+                this.closeClientModal();
                 await this.loadClientes();
             } else {
                 alert(`❌ Error: ${result.error}`);
@@ -2966,16 +3786,35 @@ const AdminPanelManager = {
     },
 
     editCliente(id, nombre, email, password) {
-        const newNombre = prompt('Nombre de empresa:', nombre);
-        if (newNombre === null) return;
+        const title = document.getElementById('clientModalTitle');
+        const editId = document.getElementById('clientEditId');
+        const nombreInput = document.getElementById('clientNombre');
+        const emailInput = document.getElementById('clientEmail');
+        const passwordInput = document.getElementById('clientPassword');
 
-        const newEmail = prompt('Email:', email);
-        if (newEmail === null) return;
+        if (!title || !editId || !nombreInput || !emailInput || !passwordInput) return;
 
-        const newPassword = prompt('Contraseña:', password);
-        if (newPassword === null) return;
+        title.textContent = 'Editar Cliente';
+        editId.value = id;
+        nombreInput.value = String(nombre || '').toUpperCase();
+        emailInput.value = String(email || '').toLowerCase();
+        passwordInput.value = String(password || '');
 
-        this.updateCliente(id, newNombre.toUpperCase(), newEmail.toLowerCase(), newPassword);
+        this.openClientModal();
+    },
+
+    openClientModal() {
+        const modal = document.getElementById('clientModal');
+        if (!modal) return;
+        modal.classList.add('modal--open');
+        modal.setAttribute('aria-hidden', 'false');
+    },
+
+    closeClientModal() {
+        const modal = document.getElementById('clientModal');
+        if (!modal) return;
+        modal.classList.remove('modal--open');
+        modal.setAttribute('aria-hidden', 'true');
     },
 
     async updateCliente(id, nombre, email, password) {
@@ -3049,20 +3888,168 @@ const AdminPanelManager = {
     },
 
     toggleTablePasswordVisibility(button) {
-        const input = button.previousElementSibling;
-        if (input.type === 'password') {
-            input.type = 'text';
-            button.textContent = '🙈';
-        } else {
-            input.type = 'password';
+        const mask = button.previousElementSibling;
+        if (!mask) return;
+
+        const password = mask.dataset.password || '';
+        const isVisible = mask.dataset.visible === 'true';
+
+        if (isVisible) {
+            // Cambiar a asteriscos (ocultar)
+            mask.textContent = password ? '*'.repeat(Math.max(6, password.length)) : '';
+            mask.dataset.visible = 'false';
             button.textContent = '👁️';
+            button.title = 'Ver contraseña';
+            return;
         }
+
+        // Cambiar a visible
+        mask.textContent = password;
+        mask.dataset.visible = 'true';
+        button.textContent = '🙈';
+        button.title = 'Ocultar contraseña';
     },
 
     logout() {
         if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
             localStorage.removeItem('hightest_user');
             window.location.href = 'index.html';
+        }
+    },
+
+    // ========== MÉTODOS PARA VISTA NO ACREDITADOS ==========
+
+    renderCertificatesNoAcreditados() {
+        this.filterCertificatesNoAcreditados();
+        this.filterFinalizedCertificatesNoAcreditados();
+    },
+
+    filterCertificatesNoAcreditados() {
+        const searchTerm = document.getElementById('adminSearchCertificatesNoAcreditados')?.value.toLowerCase() || '';
+        const statusFilter = document.getElementById('adminFilterStatusNoAcreditados')?.value || '';
+        const monthFilter = document.getElementById('adminFilterMonthNoAcreditados')?.value || '';
+        const dateFilter = document.getElementById('adminFilterDateNoAcreditados')?.value || '';
+
+        const filtered = this.certificates.filter(cert => {
+            const matchesType = cert.type === 'no-acreditado';
+            const matchesSearch = !searchTerm ||
+                cert.id.toLowerCase().includes(searchTerm) ||
+                cert.client.toLowerCase().includes(searchTerm);
+
+            const matchesStatus = !statusFilter || cert.status === statusFilter;
+            const matchesDate = !dateFilter ||
+                cert.receptionDate === dateFilter ||
+                cert.deliveryDate === dateFilter ||
+                cert.finalizedDate === dateFilter;
+
+            const matchesMonth = !monthFilter || (
+                (cert.receptionDate && cert.receptionDate.startsWith(monthFilter)) ||
+                (cert.deliveryDate && cert.deliveryDate.startsWith(monthFilter)) ||
+                (cert.finalizedDate && cert.finalizedDate.startsWith(monthFilter))
+            );
+
+            return matchesType && matchesSearch && matchesStatus && matchesDate && matchesMonth;
+        });
+
+        this.renderFilteredCertificatesNoAcreditados(filtered);
+    },
+
+    filterFinalizedCertificatesNoAcreditados() {
+        const searchTerm = document.getElementById('adminSearchFinalizedCertificatesNoAcreditados')?.value.toLowerCase() || '';
+        const statusFilter = document.getElementById('adminFilterFinalizedStatusNoAcreditados')?.value || '';
+        const monthFilter = document.getElementById('adminFilterFinalizedMonthNoAcreditados')?.value || '';
+        const dateFilter = document.getElementById('adminFilterFinalizedDateNoAcreditados')?.value || '';
+
+        const finalized = this.certificates.filter(cert => cert.type === 'no-acreditado' && cert.status === 'finalizado');
+
+        const filtered = finalized.filter(cert => {
+            const matchesSearch = !searchTerm ||
+                cert.id.toLowerCase().includes(searchTerm) ||
+                cert.client.toLowerCase().includes(searchTerm);
+
+            const matchesStatus = !statusFilter || cert.status === statusFilter;
+            const matchesDate = !dateFilter ||
+                cert.receptionDate === dateFilter ||
+                cert.deliveryDate === dateFilter ||
+                cert.finalizedDate === dateFilter;
+
+            const matchesMonth = !monthFilter || (
+                (cert.receptionDate && cert.receptionDate.startsWith(monthFilter)) ||
+                (cert.deliveryDate && cert.deliveryDate.startsWith(monthFilter)) ||
+                (cert.finalizedDate && cert.finalizedDate.startsWith(monthFilter))
+            );
+
+            return matchesSearch && matchesStatus && matchesDate && matchesMonth;
+        });
+
+        this.renderFinalizedCertificatesNoAcreditados(filtered);
+    },
+
+    renderFilteredCertificatesNoAcreditados(filteredCerts) {
+        const activeTbody = document.getElementById('certificatesTableBodyNoAcreditados');
+        if (!activeTbody) return;
+
+        activeTbody.innerHTML = '';
+
+        const activeCerts = filteredCerts.filter(cert => cert.status !== 'finalizado');
+
+        if (!activeCerts.length) {
+            activeTbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 1rem;">No hay informes activos</td></tr>';
+            return;
+        }
+
+        activeCerts.forEach(cert => {
+            activeTbody.appendChild(this.buildCertificateRow(cert));
+        });
+    },
+
+    renderFinalizedCertificatesNoAcreditados(filteredCerts) {
+        const finalizedTbody = document.getElementById('finalizedCertificatesTableBodyNoAcreditados');
+        if (!finalizedTbody) return;
+
+        finalizedTbody.innerHTML = '';
+
+        if (!filteredCerts.length) {
+            finalizedTbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 1rem;">No hay informes finalizados</td></tr>';
+            return;
+        }
+
+        filteredCerts.forEach(cert => {
+            finalizedTbody.appendChild(this.buildCertificateRow(cert));
+        });
+    },
+
+    updateStatsNoAcreditados() {
+        const statsMonthFilter = document.getElementById('statsMonthFilterNoAcreditados');
+        const statsPeriodLabel = document.getElementById('statsPeriodLabelNoAcreditados');
+        const monthFilter = statsMonthFilter?.value || '';
+        
+        const scopedCertificates = monthFilter
+            ? this.certificates.filter((cert) => (
+                cert.type === 'no-acreditado' && (
+                    (cert.receptionDate && cert.receptionDate.startsWith(monthFilter)) ||
+                    (cert.deliveryDate && cert.deliveryDate.startsWith(monthFilter)) ||
+                    (cert.finalizedDate && cert.finalizedDate.startsWith(monthFilter))
+                )
+            ))
+            : this.certificates.filter((cert) => cert.type === 'no-acreditado');
+
+        const total = scopedCertificates.length;
+        const completed = scopedCertificates.filter(c => c.status === 'finalizado').length;
+        const pending = scopedCertificates.filter(c => c.status !== 'finalizado').length;
+
+        const totalEl = document.getElementById('statTotalCertsNoAcreditados');
+        const completedEl = document.getElementById('statCompletedCertsNoAcreditados');
+        const pendingEl = document.getElementById('statPendingCertsNoAcreditados');
+
+        if (totalEl) totalEl.textContent = total;
+        if (completedEl) completedEl.textContent = completed;
+        if (pendingEl) pendingEl.textContent = pending;
+
+        if (statsPeriodLabel) {
+            statsPeriodLabel.textContent = monthFilter
+                ? `Mostrando resumen de ${monthFilter}`
+                : 'Mostrando totales generales';
         }
     }
 };

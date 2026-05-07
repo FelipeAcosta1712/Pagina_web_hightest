@@ -56,41 +56,13 @@
             <!-- DASHBOARD HEADER -->
             <div class="admin-dashboard__header">
                 <h1 class="admin-dashboard__title">Panel de Administración HIGH TEST</h1>
-                <p class="admin-dashboard__subtitle">Gestión completa de certificados, reportes y operaciones</p>
+                <p class="admin-dashboard__subtitle">Gestión completa de procesos, clientes y formatos</p>
             </div>
-
-            <!-- ESTADÍSTICAS RÁPIDAS -->
-            <section class="admin-section admin-stats-wrapper">
-                <div class="admin-section__header">
-                    <h2 class="admin-section__title">Resumen Operativo</h2>
-                </div>
-                <div class="admin-section__content">
-                    <div class="admin-stats">
-                        <div class="stat-card stat-card--total">
-                            <div class="stat-card__icon">📊</div>
-                            <div class="stat-card__content">
-                                <h3 id="statTotalCerts">0</h3>
-                                <p>Certificados Totales</p>
-                            </div>
-                        </div>
-                        <div class="stat-card stat-card--completed">
-                            <div class="stat-card__icon">✅</div>
-                            <div class="stat-card__content">
-                                <h3 id="statCompletedCerts">0</h3>
-                                <p>Completados</p>
-                            </div>
-                        </div>
-                        <div class="stat-card stat-card--pending">
-                            <div class="stat-card__icon">⏳</div>
-                            <div class="stat-card__content">
-                                <h3 id="statPendingCerts">0</h3>
-                                <p>Pendientes</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
+            <div class="admin-tabs" role="tablist" aria-label="Secciones principales del panel">
+                <button type="button" class="admin-tab is-active" data-admin-tab="acreditados" role="tab" aria-selected="true">Ensayos Acreditados</button>
+                <button type="button" class="admin-tab" data-admin-tab="no-acreditados" role="tab" aria-selected="false">Ensayos No acreditados</button>
+                <button type="button" class="admin-tab" data-admin-tab="clientes" role="tab" aria-selected="false">Gestión clientes</button>
+            </div>
             <!-- ENLACE A RECEPCIÓN DE ÍTEMS -->
             <section class="admin-section admin-quick-link" id="items">
                 <div class="admin-section__header">
@@ -123,19 +95,63 @@
                     <div class="support-card admin-quick-link__card">
                         <div>
                             <h3>📑 Fichas técnicas de ensayo</h3>
-                            <p>Accede a las fichas técnicas de ensayo y visualiza los detalles del FR-7.2 Anexo N.</p>
+                            <p>Accede a las fichas técnicas de ensayo y visualiza los detalles del FR-7.2.1.2 Anexo A al Anexo N.</p>
                         </div>
                         <a href="fichas-tecnicas.html" class="btn btn--primary">Abrir Fichas</a>
                     </div>
                 </div>
             </section>
 
+            <!-- ESTADÍSTICAS RÁPIDAS -->
+            <section class="admin-section admin-stats-wrapper">
+                <div class="admin-section__header">
+                    <div>
+                        <h2 class="admin-section__title">Resumen Operativo</h2>
+                        <p class="admin-section__subtitle" id="statsPeriodLabel">Mostrando totales generales</p>
+                    </div>
+                    <div class="admin-stats__filters">
+                        <label for="statsMonthFilter" class="admin-stats__filters-label">Ver por mes</label>
+                        <div class="admin-stats__filters-row">
+                            <input type="month" id="statsMonthFilter" class="control__input control__input--month" aria-label="Filtrar resumen por mes">
+                            <button type="button" class="btn btn--secondary" id="clearStatsMonthFilter">Total</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="admin-section__content">
+                    <div class="admin-stats">
+                        <div class="stat-card stat-card--total">
+                            <div class="stat-card__icon">📊</div>
+                            <div class="stat-card__content">
+                                <h3 id="statTotalCerts">0</h3>
+                                <p>Procesos Totales</p>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-card--completed">
+                            <div class="stat-card__icon">✅</div>
+                            <div class="stat-card__content">
+                                <h3 id="statCompletedCerts">0</h3>
+                                <p>Completados</p>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-card--pending">
+                            <div class="stat-card__icon">⏳</div>
+                            <div class="stat-card__content">
+                                <h3 id="statPendingCerts">0</h3>
+                                <p>Pendientes</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+           
+
             <!-- GESTIÓN DE CERTIFICADOS -->
             <section class="admin-section admin-certificates" id="certificates">
                 <div class="admin-section__header">
-                    <h2 class="admin-section__title">Gestión de Certificados</h2>
+                    <h2 class="admin-section__title">Gestión de Procesos Acreditados</h2>
                     <button class="btn btn--primary" id="addCertificateBtn">
-                        ➕ Nuevo Certificado
+                        ➕ Nuevo Proceso
                     </button>
                 </div>
 
@@ -147,37 +163,51 @@
                             type="text"
                             id="adminSearchCertificates"
                             class="control__input"
-                            placeholder="🔍 Buscar por número, cliente o producto..."
+                            placeholder="🔍 Buscar por número, cliente o tipo..."
                             aria-label="Buscar certificados"
                         >
                         </div>
                         <div class="control__filters">
                             <select id="adminFilterStatus" class="control__select" aria-label="Filtrar por estado">
                             <option value="">Todos los estados</option>
-                            <option value="completado">✅ Completados</option>
-                            <option value="en-proceso">⏳ En proceso</option>
-                            <option value="pendiente">📋 Pendiente</option>
-                            <option value="cancelado">❌ Cancelado</option>
+                            <option value="recepcion">Recepción</option>
+                            <option value="lavado">Lavado</option>
+                            <option value="en-proceso-de-ensayo">Proceso de ensayo</option>
+                            <option value="entrega-cliente">Entrega cliente</option>
+                            <option value="informe-de-ensayo">Informe</option>
+                            <option value="finalizado">Finalizado</option>
                             </select>
                             <select id="adminFilterType" class="control__select" aria-label="Filtrar por tipo">
                             <option value="">Todos los tipos</option>
-                            <option value="reporte">📄 Informe de ensayo</option>
-                            <option value="certificado">🎖️ Informe de verificación</option>
+                            <option value="acreditado">Acreditado</option>
+                            <option value="no-acreditado">No acreditado</option>
                             </select>
+                            <input type="month" id="adminFilterMonth" class="control__input control__input--month" aria-label="Filtrar por mes">
                             <input type="date" id="adminFilterDate" class="control__input control__input--date">
                         </div>
                     </div>
 
                     <!-- TABLA DE CERTIFICADOS -->
-                    <table class="admin-table certificates-table" id="certificatesTable">
+                    <table class="admin-table admin-table--centered certificates-table" id="certificatesTable">
+                        <colgroup>
+                            <col style="width: 13%;">
+                            <col style="width: 15%;">
+                            <col style="width: 10%;">
+                            <col style="width: 19%;">
+                            <col style="width: 11%;">
+                            <col style="width: 12%;">
+                            <col style="width: 11%;">
+                            <col style="width: 9%;">
+                        </colgroup>
                         <thead>
                             <tr>
-                                <th>Número</th>
+                                <th># Proceso</th>
                                 <th>Cliente</th>
-                                <th>Producto</th>
-                                <th>Tipo</th>
+                                <th># Informe</th>
                                 <th>Estado</th>
-                                <th>Fecha</th>
+                                <th>Fecha Recepción</th>
+                                <th>Fecha Entrega Cliente</th>
+                                <th>Fecha Finalizado</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -185,6 +215,227 @@
                             <!-- Los certificados se cargarán dinámicamente -->
                         </tbody>
                     </table>
+
+                    <div class="certificates-subsection">
+                        <h3 class="certificates-subsection__title">Procesos Finalizados Acreditados</h3>
+                        <div class="admin-filters admin-controls" style="margin-bottom: var(--spacing-md);">
+                            <div class="control__search">
+                                <input
+                                    type="text"
+                                    id="adminSearchFinalizedCertificates"
+                                    class="control__input"
+                                    placeholder="🔍 Buscar finalizados por número, cliente o tipo..."
+                                    aria-label="Buscar procesos finalizados"
+                                >
+                            </div>
+                            <div class="control__filters">
+                                <select id="adminFilterFinalizedStatus" class="control__select" aria-label="Filtrar finalizados por estado">
+                                    <option value="">Todos los estados</option>
+                                    <option value="recepcion">Recepción</option>
+                                    <option value="lavado">Lavado</option>
+                                    <option value="en-proceso-de-ensayo">Proceso de ensayo</option>
+                                    <option value="entrega-cliente">Entrega cliente</option>
+                                    <option value="informe-de-ensayo">Informe</option>
+                                    <option value="finalizado">Finalizado</option>
+                                </select>
+                                <select id="adminFilterFinalizedType" class="control__select" aria-label="Filtrar finalizados por tipo">
+                                    <option value="">Todos los tipos</option>
+                                    <option value="acreditado">Acreditado</option>
+                                    <option value="no-acreditado">No acreditado</option>
+                                </select>
+                                <input type="month" id="adminFilterFinalizedMonth" class="control__input control__input--month" aria-label="Filtrar finalizados por mes">
+                                <input type="date" id="adminFilterFinalizedDate" class="control__input control__input--date">
+                            </div>
+                        </div>
+                        <table class="admin-table admin-table--centered certificates-table certificates-table--finalized" id="finalizedCertificatesTable">
+                            <colgroup>
+                                <col style="width: 14%;">
+                                <col style="width: 15%;">
+                                <col style="width: 10%;">
+                                <col style="width: 16%;">
+                                <col style="width: 12%;">
+                                <col style="width: 12%;">
+                                <col style="width: 12%;">
+                                <col style="width: 9%;">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th># Proceso</th>
+                                    <th>Cliente</th>
+                                    <th># Informe</th>
+                                    <th>Estado</th>
+                                    <th>Fecha Recepción</th>
+                                    <th>Fecha Entrega Cliente</th>
+                                    <th>Fecha Finalizado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="finalizedCertificatesTableBody">
+                                <!-- Los certificados finalizados se cargarán dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- GESTIÓN DE PROCESOS NO ACREDITADOS -->
+            <section class="admin-section admin-certificates" id="certificates-no-acreditados">
+                <div class="admin-section__header">
+                    <div>
+                        <h2 class="admin-section__title">Resumen Operativo - Ensayos No Acreditados</h2>
+                        <p class="admin-section__subtitle" id="statsPeriodLabelNoAcreditados">Mostrando totales generales</p>
+                    </div>
+                    <div class="admin-stats__filters">
+                        <label for="statsMonthFilterNoAcreditados" class="admin-stats__filters-label">Ver por mes</label>
+                        <div class="admin-stats__filters-row">
+                            <input type="month" id="statsMonthFilterNoAcreditados" class="control__input control__input--month" aria-label="Filtrar resumen por mes">
+                            <button type="button" class="btn btn--secondary" id="clearStatsMonthFilterNoAcreditados">Total</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="admin-section__content">
+                    <div class="admin-stats">
+                        <div class="stat-card stat-card--total">
+                            <div class="stat-card__icon">📊</div>
+                            <div class="stat-card__content">
+                                <h3 id="statTotalCertsNoAcreditados">0</h3>
+                                <p>Procesos Totales</p>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-card--completed">
+                            <div class="stat-card__icon">✅</div>
+                            <div class="stat-card__content">
+                                <h3 id="statCompletedCertsNoAcreditados">0</h3>
+                                <p>Completados</p>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-card--pending">
+                            <div class="stat-card__icon">⏳</div>
+                            <div class="stat-card__content">
+                                <h3 id="statPendingCertsNoAcreditados">0</h3>
+                                <p>Pendientes</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-section__header" style="margin-top: var(--spacing-lg);">
+                    <h2 class="admin-section__title">Gestión de Procesos No Acreditados</h2>
+                    <button class="btn btn--primary" id="addCertificateBtn">
+                        ➕ Nuevo Proceso
+                    </button>
+                </div>
+
+                <div class="admin-section__content">
+                    <!-- CONTROLES DE BÚSQUEDA Y FILTROS -->
+                    <div class="admin-filters admin-controls">
+                        <div class="control__search">
+                        <input
+                            type="text"
+                            id="adminSearchCertificatesNoAcreditados"
+                            class="control__input"
+                            placeholder="🔍 Buscar por número, cliente o tipo..."
+                            aria-label="Buscar certificados"
+                        >
+                        </div>
+                        <div class="control__filters">
+                            <select id="adminFilterStatusNoAcreditados" class="control__select" aria-label="Filtrar por estado">
+                            <option value="">Todos los estados</option>
+                            <option value="recepcion">Recepción</option>
+                            <option value="lavado">Lavado</option>
+                            <option value="en-proceso-de-ensayo">Proceso de ensayo</option>
+                            <option value="entrega-cliente">Entrega cliente</option>
+                            <option value="informe-de-ensayo">Informe</option>
+                            <option value="finalizado">Finalizado</option>
+                            </select>
+                            <input type="month" id="adminFilterMonthNoAcreditados" class="control__input control__input--month" aria-label="Filtrar por mes">
+                            <input type="date" id="adminFilterDateNoAcreditados" class="control__input control__input--date">
+                        </div>
+                    </div>
+
+                    <!-- TABLA DE CERTIFICADOS -->
+                    <table class="admin-table admin-table--centered certificates-table" id="certificatesTableNoAcreditados">
+                        <colgroup>
+                            <col style="width: 13%;">
+                            <col style="width: 15%;">
+                            <col style="width: 10%;">
+                            <col style="width: 19%;">
+                            <col style="width: 11%;">
+                            <col style="width: 12%;">
+                            <col style="width: 11%;">
+                            <col style="width: 9%;">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th># Proceso</th>
+                                <th>Cliente</th>
+                                <th># Informe</th>
+                                <th>Estado</th>
+                                <th>Fecha Recepción</th>
+                                <th>Fecha Entrega Cliente</th>
+                                <th>Fecha Finalizado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="certificatesTableBodyNoAcreditados">
+                            <!-- Los certificados se cargarán dinámicamente -->
+                        </tbody>
+                    </table>
+
+                    <div class="certificates-subsection">
+                        <h3 class="certificates-subsection__title">Procesos Finalizados No Acreditados</h3>
+                        <div class="admin-filters admin-controls" style="margin-bottom: var(--spacing-md);">
+                            <div class="control__search">
+                                <input
+                                    type="text"
+                                    id="adminSearchFinalizedCertificatesNoAcreditados"
+                                    class="control__input"
+                                    placeholder="🔍 Buscar finalizados por número, cliente o tipo..."
+                                    aria-label="Buscar procesos finalizados"
+                                >
+                            </div>
+                            <div class="control__filters">
+                                <select id="adminFilterFinalizedStatusNoAcreditados" class="control__select" aria-label="Filtrar finalizados por estado">
+                                    <option value="">Todos los estados</option>
+                                    <option value="recepcion">Recepción</option>
+                                    <option value="lavado">Lavado</option>
+                                    <option value="en-proceso-de-ensayo">Proceso de ensayo</option>
+                                    <option value="entrega-cliente">Entrega cliente</option>
+                                    <option value="informe-de-ensayo">Informe</option>
+                                    <option value="finalizado">Finalizado</option>
+                                </select>
+                                <input type="month" id="adminFilterFinalizedMonthNoAcreditados" class="control__input control__input--month" aria-label="Filtrar finalizados por mes">
+                                <input type="date" id="adminFilterFinalizedDateNoAcreditados" class="control__input control__input--date">
+                            </div>
+                        </div>
+                        <table class="admin-table admin-table--centered certificates-table certificates-table--finalized" id="finalizedCertificatesTableNoAcreditados">
+                            <colgroup>
+                                <col style="width: 14%;">
+                                <col style="width: 15%;">
+                                <col style="width: 10%;">
+                                <col style="width: 16%;">
+                                <col style="width: 12%;">
+                                <col style="width: 12%;">
+                                <col style="width: 12%;">
+                                <col style="width: 9%;">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th># Proceso</th>
+                                    <th>Cliente</th>
+                                    <th># Informe</th>
+                                    <th>Estado</th>
+                                    <th>Fecha Recepción</th>
+                                    <th>Fecha Entrega Cliente</th>
+                                    <th>Fecha Finalizado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="finalizedCertificatesTableBodyNoAcreditados">
+                                <!-- Los certificados finalizados se cargarán dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
 
@@ -198,35 +449,16 @@
                 </div>
 
                 <div class="admin-section__content">
-                    <!-- FORMULARIO DE NUEVO CLIENTE (OCULTO POR DEFECTO) -->
-                    <div class="client-form-container" id="clientFormContainer" style="display: none;">
-                        <form class="client-form" id="clientForm">
-                            <h3>Agregar Nuevo Cliente</h3>
-                            <div class="form-group">
-                                <label for="clientNombre">Nombre Empresa *</label>
-                                <input type="text" id="clientNombre" placeholder="Nombre de la empresa" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="clientEmail">Email *</label>
-                                <input type="email" id="clientEmail" placeholder="correo@empresa.com" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="clientPassword">Contraseña *</label>
-                                <div class="password-input-wrapper">
-                                    <input type="password" id="clientPassword" placeholder="Contraseña segura" required>
-                                    <button type="button" class="password-toggle" onclick="AdminPanelManager.togglePasswordVisibility('clientPassword')" title="Mostrar/ocultar contraseña">👁️</button>
-                                </div>
-                            </div>
-                            <div class="form-actions">
-                                <button type="submit" class="btn btn--primary">Guardar Cliente</button>
-                                <button type="button" class="btn btn--secondary" id="cancelClientBtn">Cancelar</button>
-                            </div>
-                        </form>
+                    <!-- BÚSQUEDA DE CLIENTES -->
+                    <div class="admin-filters admin-controls" style="margin-bottom: var(--spacing-md);">
+                        <div class="control__search">
+                            <input type="text" id="clientSearchInput" class="control__input" placeholder="🔍 Buscar cliente (nombre, email, contraseña)..." aria-label="Buscar clientes">
+                        </div>
                     </div>
 
                     <!-- TABLA DE CLIENTES -->
                     <div class="clients-table-container">
-                        <table class="admin-table clients-table" id="clientsTable">
+                        <table class="admin-table admin-table--centered clients-table" id="clientsTable">
                             <thead>
                                 <tr>
                                     <th>Empresa</th>
@@ -248,25 +480,159 @@
                 </div>
             </section>
 
-            <!-- REPORTES Y ANALÍTICAS -->
-            <section class="admin-section admin-reports" id="reports">
+            <!-- REPORTES Y ANALÍTICAS - ACREDITADOS -->
+            <section class="admin-section admin-reports" id="reports-acreditados">
                 <div class="admin-section__header">
-                    <h2 class="admin-section__title">Reportes y Analíticas</h2>
+                    <h2 class="admin-section__title">Reportes y Analíticas - Ensayos Acreditados</h2>
                 </div>
 
-                <div class="admin-section__content reports-grid">
-                    <div class="report-card">
-                        <h3>Certificados por Mes</h3>
-                        <canvas id="monthlyChart" width="400" height="200"></canvas>
+                <div class="admin-section__content reports-bottom">
+                    <div class="report-card report-card--full">
+                        <div class="report-card__header">
+                            <h3>Resumen por Mes</h3>
+                            <p>Vista compacta de procesos creados y finalizados por periodo.</p>
+                        </div>
+                        <div id="monthlySummaryListAcreditados" class="monthly-summary-list"></div>
                     </div>
-                    <div class="report-card">
-                        <h3>Distribución por Tipo</h3>
-                        <canvas id="typeChart" width="400" height="200"></canvas>
+                </div>
+            </section>
+
+            <!-- REPORTES Y ANALÍTICAS - NO ACREDITADOS -->
+            <section class="admin-section admin-reports" id="reports-no-acreditados">
+                <div class="admin-section__header">
+                    <h2 class="admin-section__title">Reportes y Analíticas - Ensayos No Acreditados</h2>
+                </div>
+
+                <div class="admin-section__content reports-bottom">
+                    <div class="report-card report-card--full">
+                        <div class="report-card__header">
+                            <h3>Resumen por Mes</h3>
+                            <p>Vista compacta de procesos creados y finalizados por periodo.</p>
+                        </div>
+                        <div id="monthlySummaryListNoAcreditados" class="monthly-summary-list"></div>
                     </div>
                 </div>
             </section>
         </div>
     </main>
+
+    <!-- MODAL: NUEVO / EDITAR PROCESO -->
+    <div class="modal" id="certificateProcessModal" aria-hidden="true">
+        <div class="modal__content certificate-modal__content" role="dialog" aria-modal="true" aria-labelledby="certificateProcessModalTitle">
+            <div class="modal__header">
+                <h3 id="certificateProcessModalTitle">Nuevo Proceso</h3>
+                <button type="button" class="modal__close" id="closeCertificateProcessModal" aria-label="Cerrar">✕</button>
+            </div>
+            <form class="modal__body certificate-modal__form" id="certificateProcessForm">
+                <input type="hidden" id="processEditId">
+                <div class="form-group">
+                    <label for="processNumber"># Proceso *</label>
+                    <input type="text" id="processNumber" class="control__input" placeholder="HT-R26-0001" maxlength="12" required>
+                </div>
+                <div class="form-group">
+                    <label for="processClientSelect">Cliente *</label>
+                    <select id="processClientSelect" class="control__select" required>
+                        <option value="">Seleccione un cliente</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="processTypeSelect"># Informe *</label>
+                    <input type="text" id="processTypeSelect" class="control__input" placeholder="acreditado / no-acreditado" required>
+                </div>
+                <div class="form-group">
+                    <label for="processStatusSelect">Estado *</label>
+                    <select id="processStatusSelect" class="control__select" required>
+                        <option value="recepcion">Recepción</option>
+                        <option value="lavado">Lavado</option>
+                        <option value="en-proceso-de-ensayo">Proceso de ensayo</option>
+                        <option value="entrega-cliente">Entrega cliente</option>
+                        <option value="informe-de-ensayo">Informe</option>
+                        <option value="finalizado">Finalizado</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="processReceptionDate">Fecha Recepción *</label>
+                    <input type="date" id="processReceptionDate" class="control__input" required>
+                </div>
+                <div class="form-group">
+                    <label for="processDeliveryDate">Fecha Entrega Cliente</label>
+                    <input type="date" id="processDeliveryDate" class="control__input">
+                </div>
+                <div class="form-group">
+                    <label for="processFinalizedDate">Fecha Finalizado</label>
+                    <input type="date" id="processFinalizedDate" class="control__input">
+                </div>
+            </form>
+            <div class="modal__actions">
+                <button type="button" class="btn btn--secondary" id="cancelCertificateProcessBtn">Cancelar</button>
+                <button type="button" class="btn btn--primary" id="saveCertificateProcessBtn">Guardar Proceso</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: EDITAR ESTADO -->
+    <div class="modal" id="certificateStatusModal" aria-hidden="true">
+        <div class="modal__content certificate-modal__content" role="dialog" aria-modal="true" aria-labelledby="certificateStatusModalTitle">
+            <div class="modal__header">
+                <h3 id="certificateStatusModalTitle">Editar Estado del Proceso</h3>
+                <button type="button" class="modal__close" id="closeCertificateStatusModal" aria-label="Cerrar">✕</button>
+            </div>
+            <form class="modal__body certificate-modal__form" id="certificateStatusForm">
+                <input type="hidden" id="statusEditId">
+                <div class="form-group">
+                    <label for="statusProcessCode">Proceso</label>
+                    <input type="text" id="statusProcessCode" class="control__input" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="statusProcessSelect">Estado *</label>
+                    <select id="statusProcessSelect" class="control__select" required>
+                        <option value="recepcion">Recepción</option>
+                        <option value="lavado">Lavado</option>
+                        <option value="en-proceso-de-ensayo">Proceso de ensayo</option>
+                        <option value="entrega-cliente">Entrega cliente</option>
+                        <option value="informe-de-ensayo">Informe</option>
+                        <option value="finalizado">Finalizado</option>
+                    </select>
+                </div>
+            </form>
+            <div class="modal__actions">
+                <button type="button" class="btn btn--secondary" id="cancelCertificateStatusBtn">Cancelar</button>
+                <button type="button" class="btn btn--primary" id="saveCertificateStatusBtn">Guardar Estado</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: NUEVO / EDITAR CLIENTE -->
+    <div class="modal" id="clientModal" aria-hidden="true">
+        <div class="modal__content certificate-modal__content" role="dialog" aria-modal="true" aria-labelledby="clientModalTitle">
+            <div class="modal__header">
+                <h3 id="clientModalTitle">Nuevo Cliente</h3>
+                <button type="button" class="modal__close" id="closeClientModal" aria-label="Cerrar">✕</button>
+            </div>
+            <form class="modal__body certificate-modal__form" id="clientForm">
+                <input type="hidden" id="clientEditId">
+                <div class="form-group">
+                    <label for="clientNombre">Nombre Empresa *</label>
+                    <input type="text" id="clientNombre" class="control__input" placeholder="Nombre de la empresa" required style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()">
+                </div>
+                <div class="form-group">
+                    <label for="clientEmail">Email *</label>
+                    <input type="email" id="clientEmail" class="control__input" placeholder="correo@empresa.com" required style="text-transform: lowercase;" oninput="this.value = this.value.toLowerCase()">
+                </div>
+                <div class="form-group">
+                    <label for="clientPassword">Contraseña *</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="clientPassword" class="control__input" placeholder="Contraseña segura" required>
+                        <button type="button" class="password-toggle" onclick="AdminPanelManager.togglePasswordVisibility('clientPassword')" title="Mostrar/ocultar contraseña">👁️</button>
+                    </div>
+                </div>
+            </form>
+            <div class="modal__actions">
+                <button type="button" class="btn btn--secondary" id="cancelClientModalBtn">Cancelar</button>
+                <button type="button" class="btn btn--primary" id="saveClientModalBtn">Guardar Cliente</button>
+            </div>
+        </div>
+    </div>
 
     <!-- SCRIPTS -->
     <script src="script-v2.js"></script>

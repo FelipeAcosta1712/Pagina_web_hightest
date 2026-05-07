@@ -138,7 +138,7 @@ exports.handler = async (event) => {
             if (payload.action === 'get_clientes') {
                 const { data, error } = await supabase
                     .from('clientes')
-                    .select('id, nombre_empresa, email, created_at')
+                    .select('id, nombre_empresa, email, password, created_at')
                     .order('created_at', { ascending: false });
 
                 if (error) {
