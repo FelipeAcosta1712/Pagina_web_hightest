@@ -1073,7 +1073,7 @@ const BlogManager = {
 // ===========================
 
 const HeroCarousel = {
-    images: ['image/banner.png', 'image/banner2.png', 'image/banner3.png', 'image/banner4.png'],
+    images: ['image/banner8.png', 'image/banner2.png'],
     currentIndex: 0,
     intervalId: null,
     intervalMs: 7000,
@@ -1136,26 +1136,36 @@ const App = {
     setup() {
         console.log('🚀 HIGH TEST SAS - Inicializando aplicación...');
 
-        // Inicializar módulos
-        MobileMenu.init();
-        StickyHeader.init();
-        ThemeManager.init();
-        FormValidator.init();
-        FormValidatorContact.init();
-        SmoothScroll.init();
-        ScrollAnimations.init();
-        Navigation.init();
-        CertificationsHub.init();
-        AccreditationGallery.init();
-        AuthManager.init();
-        CertificatesManager.init();
-        PublicCertificatesManager.init();
-        CertificatesAuthManager.init();
-        ClientAuth.init();
-        BlogManager.init();
-        HeroCarousel.init();
+        // Inicializar módulos (cada llamada protegida para evitar que un fallo detenga toda la inicialización)
+        try {
+            MobileMenu.init();
+            StickyHeader.init();
+            ThemeManager.init();
+            FormValidator.init();
+            FormValidatorContact.init();
+            SmoothScroll.init();
+            ScrollAnimations.init();
+            Navigation.init();
+            CertificationsHub.init();
+            AccreditationGallery.init();
+            AuthManager.init();
+            CertificatesManager.init();
+            PublicCertificatesManager.init();
+            CertificatesAuthManager.init();
+            ClientAuth.init();
+            BlogManager.init();
+        } catch (err) {
+            console.error('❌ Error inicializando módulos principales:', err);
+        }
 
-        console.log('✅ Aplicación inicializada correctamente');
+        // Inicializar el carrusel por separado (para garantizar ejecución aunque otros módulos fallen)
+        try {
+            HeroCarousel.init();
+        } catch (err) {
+            console.error('❌ Error inicializando HeroCarousel:', err);
+        }
+
+        console.log('✅ Aplicación inicializada correctamente (módulos protegidos)');
 
         // Disparar evento personalizado
         window.dispatchEvent(new CustomEvent('appReady'));

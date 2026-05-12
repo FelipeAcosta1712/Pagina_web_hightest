@@ -27,7 +27,7 @@
                 </button>
                 <ul class="header__menu" id="headerMenu">
                     <li><a href="#inicio" class="header__link">Inicio</a></li>
-                    <li><a href="#servicios" class="header__link">Servicios</a></li>
+                    <li><a href="servicios.html" class="header__link">Servicios</a></li>
                     <li><a href="#acreditacion" class="header__link">Acreditación</a></li>
                     <li><a href="#certificados" class="header__link">Certificados</a></li>
                     <li><a href="#nosotros" class="header__link">Nosotros</a></li>
@@ -212,35 +212,35 @@
             <div class="hero__content">
                 <p class="hero__label">Laboratorio de</p>
                 <h2 class="hero__title">
-                    Ensayos eléctricos para elementos de protección personal bajo estándares técnicos
+                    ENSAYOS<br/>ELÉCTRICOS
                 </h2>
                 <p class="hero__subtitle">
-                    ISO/IEC 17025 acreditado | Seguridad y confiabilidad en cada ensayo
+                    En HIGH TEST SAS nos especializamos en soluciones para la industria y el sector energético, con acreditación ONAC (25-LAB-035), bajo la norma ISO/IEC 17025:2017, garantizando precisión, confiabilidad y altos estándares de calidad.
                 </p>
                 <div class="hero__buttons">
                     <button class="btn btn--primary btn--large" onclick="document.querySelector('#servicios').scrollIntoView({behavior: 'smooth'})">
                         ↓ Conoce más
                     </button>
-                    <a href="https://wa.me/573226197864" target="_blank" rel="noopener" class="btn btn--secondary btn--large">
+                    <!-- <a href="https://wa.me/573226197864" target="_blank" rel="noopener" class="btn btn--secondary btn--large">
                         Contactar WhatsApp
-                    </a>
-                    <div class="hero__verify" aria-label="Verificación de informes de ensayo">
-                        <label for="numeroInforme" class="hero__verify-label">Verificar informe HIGH TEST</label>
-                        <div class="hero__verify-controls">
-                            <input
-                                type="text"
-                                id="numeroInforme"
-                                class="hero__verify-input"
-                                placeholder="Ej: HT-2025-001"
-                                autocomplete="off"
-                            >
-                            <button type="button" class="btn btn--secondary hero__verify-btn" id="verifyReportBtn">
-                                Validar informe
-                            </button>
-                        </div>
-                        <p class="hero__verify-result" id="verifyReportResult" aria-live="polite"></p>
-                    </div>
+                    </a> -->
                 </div>
+            </div>
+            <div class="hero__verify" aria-label="Verificación de informes de ensayo">
+                <label for="numeroInforme" class="hero__verify-label">Verificar informe HIGH TEST</label>
+                <div class="hero__verify-controls">
+                    <input
+                        type="text"
+                        id="numeroInforme"
+                        class="hero__verify-input"
+                        placeholder="Ej: HT - R26 0001"
+                        autocomplete="off"
+                    >
+                    <button type="button" class="btn hero__verify-btn" id="verifyReportBtn">
+                        Validar informe
+                    </button>
+                </div>
+                <p class="hero__verify-result" id="verifyReportResult" aria-live="polite"></p>
             </div>
         </div>
     </section>
@@ -800,7 +800,7 @@
                 <!-- PDF: Seguridad (abre modal) -->
                 <article class="blog__post" data-scroll data-type="pdf" data-pdf="/pdf/seguridad.pdf" data-title="Seguridad y buenas prácticas" data-desc="Guía sobre procedimientos de seguridad, manejo de EPP y control de riesgos aplicados durante los ensayos.">
                     <div class="blog__image">
-                        <img src="/image/banner3.png" alt="Seguridad" class="blog__image-img">
+                        <img src="/image/banner8.png" alt="Seguridad" class="blog__image-img">
                     </div>
                     <div class="blog__content">
                         <h3 class="blog__title">Seguridad y buenas prácticas en alta tensión</h3>
@@ -1371,7 +1371,7 @@
                     <h3 class="contact__info-title">Información de contacto</h3>
                     
                     <div class="contact__info-item">
-                        <strong class="contact__label">Teléfono</strong>
+                        <strong class="contact__label">WhatsApp/Teléfono</strong>
                         <a href="tel:+573226197864" class="contact__link">+57 322 6197864</a>
                     </div>
 
@@ -1380,16 +1380,13 @@
                         <a href="mailto:high.testsas@gmail.com" class="contact__link">high.testsas@gmail.com</a>
                     </div>
 
-                    <div class="contact__info-item">
-                        <strong class="contact__label">WhatsApp</strong>
-                        <a href="https://wa.me/573226197864" target="_blank" rel="noopener" class="contact__link">
-                            Escribir mensaje
-                        </a>
-                    </div>
+                   
 
                     <div class="contact__info-item">
                         <strong class="contact__label">Ubicación</strong>
-                        <p class="contact__text">Bogotá D.C., Colombia</p>
+                        <p class="contact__text">
+                            Cra. 96g # 16H - 6 | Fontibón, Bogotá, D.C. Colombia
+                        </p>
                     </div>
 
                     <div class="contact__info-item">
@@ -1399,6 +1396,24 @@
                             Sábado: 8:00 AM - 12:00 PM<br>
                             Domingo: Cerrado
                         </p>
+                    </div>
+
+                    <div class="contact__map" aria-label="Mapa de la dirección de HIGH TEST SAS">
+                        <iframe
+                            class="contact__map-frame"
+                            title="Mapa de HIGH TEST SAS"
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3976.585747184704!2d-74.14435759999999!3d4.6677042!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e3f9c61d2f41211%3A0x698e38a9bd9ce43e!2zQ3JhLiA5NmcgIyAxNkgtNiwgRm9udGliw7NuLCBCb2dvdMOhLCBELkMuLCBCb2dvdMOhLCBCb2dvdMOhLCBELkMu!5e0!3m2!1ses-419!2sco!4v1778276500046!5m2!1ses-419!2sco"
+                            loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade"
+                        ></iframe>
+                        <a
+                            class="contact__map-link"
+                            href="https://www.google.com/maps/search/?api=1&query=Cra.%2096g%20%23%2016H-6%2C%20Fontib%C3%B3n%2C%20Bogot%C3%A1%2C%20D.C.%2C%20Bogot%C3%A1%2C%20Colombia"
+                            target="_blank"
+                            rel="noopener"
+                        >
+                            Abrir en Google Maps
+                        </a>
                     </div>
                 </div>
             </div>
@@ -1421,7 +1436,7 @@
                     <h3 class="footer__title">Navegación</h3>
                     <nav class="footer__nav">
                         <a href="#inicio" class="footer__link">Inicio</a>
-                        <a href="#servicios" class="footer__link">Servicios</a>
+                        <a href="servicios.html" class="footer__link">Servicios</a>
                         <a href="#acreditacion" class="footer__link">Acreditación</a>
                         <a href="#nosotros" class="footer__link">Nosotros</a>
                         <a href="#contacto" class="footer__link">Contacto</a>
