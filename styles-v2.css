@@ -4119,7 +4119,7 @@ section {
 @media (max-width: 480px) {
     .hero {
         min-height: 530px;
-        padding-top: 80px !important;
+        padding-top: 90px !important;
         padding-bottom: 40px !important;
     }
 
