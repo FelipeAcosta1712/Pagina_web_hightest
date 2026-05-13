@@ -3195,7 +3195,17 @@ section {
     }
 
     /* Agregar padding-top al body para compensar el header fijo */
-   
+    body {
+        padding-top: 80px; /* Altura aproximada del header */
+    }
+
+    body.admin-page {
+        padding-top: 0;
+    }
+
+    body.fichas-page {
+        padding-top: 0;
+    }
 
     .header__container {
         min-height: 60px;
