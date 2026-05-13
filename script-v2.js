@@ -243,12 +243,6 @@ const MobileMenu = {
             });
         });
 
-        // Cerrar al hacer scroll
-        window.addEventListener('scroll', debounce(() => {
-            console.log('📜 Scroll detectado, cerrando menú');
-            this.close();
-        }, 100));
-
         // Cerrar al hacer click en el overlay
         this.menu.addEventListener('click', (e) => {
             if (e.target === this.menu) {
