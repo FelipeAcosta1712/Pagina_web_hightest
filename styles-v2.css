@@ -3349,11 +3349,11 @@ section {
     }
 
     .header__menu-btn--secondary {
-        background: var(--color-secondary);
+        background: var(--color-primary);
     }
 
     .header__menu-btn--secondary:hover {
-        background: var(--color-secondary-dark);
+        background: var(--color-primary-dark);
     }
 
     .header__menu-btn--theme {
@@ -6758,11 +6758,20 @@ textarea:focus-visible {
 
 @media (max-width: 768px) {
     .header--admin {
-        position: static;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        z-index: 100000;
     }
 
     .header--admin .header__nav {
         gap: 0.75rem;
+    }
+
+    body.admin-page {
+        padding-top: 80px;
     }
 
     .admin-dashboard__header,
