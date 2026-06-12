@@ -3291,6 +3291,40 @@ section {
         padding: 0 var(--spacing-lg) !important;
     }
 
+    /* ===== HEADER - TABLET LANDSCAPE ===== */
+    .header__container {
+        min-height: 68px !important;
+        gap: var(--spacing-lg) !important;
+    }
+
+    .header__logo {
+        min-width: 140px !important;
+    }
+
+    .header__logo-link {
+        width: 85px !important;
+        height: 85px !important;
+    }
+
+    .header__logo-image {
+        width: 85px !important;
+    }
+
+    .header__link {
+        font-size: var(--font-size-sm) !important;
+        padding: 8px 12px !important;
+    }
+
+    .header__cta {
+        font-size: 12px !important;
+        padding: 10px 14px !important;
+    }
+
+    .header__user-info {
+        display: flex !important;
+        font-size: var(--font-size-xs) !important;
+    }
+
     /* ===== ADMIN PANEL - TABLET LANDSCAPE ===== */
     .admin-tabs {
         grid-template-columns: repeat(4, 1fr) !important;
@@ -3367,6 +3401,59 @@ section {
 
     .section-title {
         font-size: var(--font-size-2xl) !important;
+    }
+
+    /* ===== HEADER - TABLET PORTRAIT ===== */
+    .header__container {
+        min-height: 65px !important;
+        padding: 4px var(--spacing-md) !important;
+        gap: var(--spacing-md) !important;
+    }
+
+    .header__logo {
+        min-width: 120px !important;
+    }
+
+    .header__logo-link {
+        width: 75px !important;
+        height: 75px !important;
+    }
+
+    .header__logo-image {
+        width: 75px !important;
+    }
+
+    .header__nav {
+        gap: var(--spacing-md) !important;
+    }
+
+    .header__link {
+        font-size: var(--font-size-sm) !important;
+        padding: 6px 10px !important;
+    }
+
+    .header__actions {
+        gap: var(--spacing-sm) !important;
+    }
+
+    .header__cta {
+        font-size: 11px !important;
+        padding: 8px 12px !important;
+        min-height: 40px !important;
+    }
+
+    .header__cta-sub {
+        font-size: 9px !important;
+    }
+
+    .header__icon-btn {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 16px !important;
+    }
+
+    .header__user-info {
+        display: none !important;
     }
 
     .footer__content {
