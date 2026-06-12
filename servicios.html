@@ -1,618 +1,332 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta name="description" content="Vista de servicios HIGH TEST SAS - Experiencia premium con Sticky Scroll y glassmorphism.">
-	<title>Servicios | HIGH TEST SAS</title>
-	<link rel="stylesheet" href="styles-v2.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Servicios de ensayos eléctricos de HIGH TEST SAS - Servicios especializados con normativas IEC, ASTM y NTC.">
+    <title>Servicios | HIGH TEST SAS</title>
+    <link rel="stylesheet" href="styles-v2.css">
+    <style>
+        .services-page {
+            min-height: 100vh;
+            padding: 140px 0 80px;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 50%, #f0f4f8 100%);
+        }
+        .theme-dark .services-page {
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1629 100%);
+        }
+        .services-page__title {
+            text-align: center;
+        }
+        .services-page__subtitle {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+        .theme-dark .services-page__subtitle {
+            color: rgba(255, 255, 255, 0.65);
+        }
+    </style>
 </head>
 <body>
-	<!-- HEADER -->
-	<header class="header" role="banner">
-		<div class="header__container">
-			<div class="header__logo">
-				<a href="index.html#inicio" class="header__logo-link">
-					<img src="/image/logo.png" alt="HIGH TEST SAS - Laboratorio Acreditado" class="header__logo-image">
-				</a>
-			</div>
-					<div class="services-section__right">
-			<nav class="header__nav" role="navigation" aria-label="Navegación principal">
-							<nav class="header__nav" role="navigation" aria-label="Navegación principal">
-				<button class="header__menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">
-					<span></span>
-					<span></span>
-					<span></span>
-				</button>
-				<ul class="header__menu" id="headerMenu">
-					<li><a href="index.html#inicio" class="header__link">Inicio</a></li>
-					<li><a href="servicios.html" class="header__link">Servicios</a></li>
-					<li><a href="index.html#acreditacion" class="header__link">Acreditación</a></li>
-					<li><a href="index.html#certificados" class="header__link">Certificados</a></li>
-					<li><a href="index.html#nosotros" class="header__link">Nosotros</a></li>
-					<li><a href="index.html#contacto" class="header__link">Contacto</a></li>
-				</ul>
-                
+    <!-- HEADER -->
+    <header class="header" role="banner">
+        <div class="header__container">
+            <div class="header__logo">
+                <a href="index.html" class="header__logo-link">
+                    <img src="/image/logo.png" alt="HIGH TEST SAS - Laboratorio Acreditado" class="header__logo-image">
+                </a>
+            </div>
+            <nav class="header__nav" role="navigation" aria-label="Navegación principal">
+                <button class="header__menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul class="header__menu" id="headerMenu">
+                    <li><a href="index.html" class="header__link">Inicio</a></li>
+                    <li><a href="servicios.html" class="header__link">Servicios</a></li>
+                    <li><a href="index.html#acreditacion" class="header__link">Acreditación</a></li>
+                    <li><a href="index.html#certificados" class="header__link">Certificados</a></li>
+                    <li><a href="index.html#nosotros" class="header__link">Nosotros</a></li>
+                    <li><a href="index.html#contacto" class="header__link">Contacto</a></li>
+                    <li class="header__menu-item--action">
+                        <button class="header__menu-btn" id="mobileCertificatesBtn" aria-label="Acceso al portal de cliente y certificados">
+                            📄 Portal Clientes
+                        </button>
+                    </li>
+                    <li class="header__menu-item--action">
+                        <button class="header__menu-btn" id="mobileLoginBtn" aria-label="Acceso HIGH TEST">
+                            🔐 Ingreso HIGH TEST
+                        </button>
+                    </li>
+                </ul>
             </nav>
             <div class="header__actions">
                 <button class="header__icon-btn" id="themeToggleBtn" aria-label="Cambiar tema de color" title="Cambiar tema">
                     🌙
                 </button>
+                <button class="header__cta header__cta--secondary" id="certificatesBtn" aria-label="Acceso al portal de cliente y certificados">
+                    📄 Portal Clientes<br><span class="header__cta-sub">Certificados</span>
+                </button>
+                <button class="header__cta" id="loginBtn" aria-label="Acceso HIGH TEST">🔐 INGRESO<br>HIGH TEST</button>
             </div>
-			</nav>
-		</div>
-	</header>
-
-	<!-- MAIN CONTENT -->
-	<main class="services-section" role="main">
-		<div class="services-section__wrapper">
-			<!-- LEFT STICKY PANEL -->
-			<div class="services-section__left">
-				<div class="services-section__sticky">
-					<h1 class="services-section__title">Ensayos técnicos de clase mundial</h1>
-					<p class="services-section__subtitle">Explore nuestros 16 servicios de ensayo especializados con tecnología de punta</p>
-					<div class="services-section__accent"></div>
-				</div>
-			</div>
-
-			<!-- RIGHT SCROLL CONTENT -->
-				<div class="services-scroll-container">
-				<div class="services-scroll-container">
-					<article class="service-panel" data-service="01">
-						<div class="service-panel__content">
-							<span class="service-panel__number">01</span>
-							<h2 class="service-panel__title">By-pass jumpers</h2>
-							<div class="service-panel__meta">
-								<p><strong>Normas:</strong> IEC 61230, ASTM F855</p>
-								<p><strong>Clases:</strong> Clase A, Clase B</p>
-							</div>
-						</div>
-					</article>
-
-					<article class="service-panel" data-service="02">
-						<div class="service-panel__content">
-							<span class="service-panel__number">02</span>
-							<h2 class="service-panel__title">Calzado dieléctrico</h2>
-							<div class="service-panel__meta">
-								<p><strong>Normas:</strong> ASTM F2413, EN 50321</p>
-								<p><strong>Clases:</strong> Clase 00, Clase 0</p>
-							</div>
-						</div>
-					</article>
-
-					<article class="service-panel" data-service="03">
-						<div class="service-panel__content">
-							<span class="service-panel__number">03</span>
-							<h2 class="service-panel__title">Cascos de seguridad</h2>
-							<div class="service-panel__meta">
-								<p><strong>Normas:</strong> EN 50365, ANSI Z89.1</p>
-								<p><strong>Clases:</strong> Clase E, Clase G</p>
-							</div>
-						</div>
-					</article>
-
-					<article class="service-panel" data-service="04">
-						<div class="service-panel__content">
-							<span class="service-panel__number">04</span>
-							<h2 class="service-panel__title">Cubiertas plásticas</h2>
-							<div class="service-panel__meta">
-								<p><strong>Normas:</strong> ASTM F712, IEC 61479</p>
-								<p><strong>Clases:</strong> Clase 0, Clase 2</p>
-							</div>
-						</div>
-					</article>
-
-					<article class="service-panel" data-service="05">
-						<div class="service-panel__content">
-							<span class="service-panel__number">05</span>
-							<h2 class="service-panel__title">Detectores de tensión</h2>
-							<div class="service-panel__meta">
-								<p><strong>Normas:</strong> IEC 61243-1, IEC 61243-2</p>
-								<p><strong>Clases:</strong> Baja tensión, Media tensión</p>
-							</div>
-						</div>
-					</article>
-
-					<article class="service-panel" data-service="06">
-						<div class="service-panel__content">
-							<span class="service-panel__number">06</span>
-							<h2 class="service-panel__title">Guantes aislantes</h2>
-							<div class="service-panel__meta">
-								<p><strong>Normas:</strong> IEC 60903, ASTM D120, NTC 3892</p>
-								<p><strong>Clases:</strong> 00, 0, 1, 2, 3, 4</p>
-							</div>
-						</div>
-					</article>
-
-					<article class="service-panel" data-service="07">
-						<div class="service-panel__content">
-							<span class="service-panel__number">07</span>
-							<h2 class="service-panel__title">Herramientas aisladas</h2>
-							<div class="service-panel__meta">
-								<p><strong>Normas:</strong> IEC 60900, ASTM F1505</p>
-								<p><strong>Clases:</strong> 1000 V, 1500 V</p>
-							</div>
-						</div>
-					</article>
-
-					<article class="service-panel" data-service="08">
-						<div class="service-panel__content">
-							<span class="service-panel__number">08</span>
-							<h2 class="service-panel__title">Liner interior</h2>
-							<div class="service-panel__meta">
-								<p><strong>Normas:</strong> ASTM F696, EN 420</p>
-								<p><strong>Clases:</strong> Tipo I, Tipo II</p>
-							</div>
-						</div>
-					</article>
-
-					<article class="service-panel" data-service="09">
-						<div class="service-panel__content">
-							<span class="service-panel__number">09</span>
-							<h2 class="service-panel__title">Mangas aislantes</h2>
-							<div class="service-panel__meta">
-								<p><strong>Normas:</strong> IEC 60984, ASTM D1051</p>
-								<p><strong>Clases:</strong> 00, 0, 1, 2, 3, 4</p>
-							</div>
-						</div>
-					</article>
-
-					<article class="service-panel" data-service="10">
-						<div class="service-panel__content">
-							<span class="service-panel__number">10</span>
-							<h2 class="service-panel__title">Mangueras y cubiertas</h2>
-							<div class="service-panel__meta">
-								<p><strong>Normas:</strong> ASTM F478, IEC 61479</p>
-								<p><strong>Clases:</strong> Clase 0, Clase 2, Clase 4</p>
-							</div>
-						</div>
-					</article>
-
-					<article class="service-panel" data-service="11">
-						<div class="service-panel__content">
-							<span class="service-panel__number">11</span>
-							<h2 class="service-panel__title">Mantas dieléctricas</h2>
-							<div class="service-panel__meta">
-								<p><strong>Normas:</strong> IEC 61112, ASTM D1048</p>
-								<p><strong>Clases:</strong> Clase 0, Clase 1, Clase 2</p>
-							</div>
-						</div>
-					</article>
-
-					<article class="service-panel" data-service="12">
-						<div class="service-panel__content">
-							<span class="service-panel__number">12</span>
-							<h2 class="service-panel__title">Pértigas aislantes</h2>
-							<div class="service-panel__meta">
-								<p><strong>Normas:</strong> IEC 60855-1, ASTM F711</p>
-								<p><strong>Clases:</strong> Ligera, Estándar, Reforzada</p>
-							</div>
-						</div>
-					</article>
-
-					<article class="service-panel" data-service="13">
-						<div class="service-panel__content">
-							<span class="service-panel__number">13</span>
-							<h2 class="service-panel__title">Plataformas aisladas</h2>
-							<div class="service-panel__meta">
-								<p><strong>Normas:</strong> ANSI A92.2, IEC 61057</p>
-								<p><strong>Clases:</strong> Clase B, Clase C</p>
-							</div>
-						</div>
-					</article>
-
-					<article class="service-panel" data-service="14">
-						<div class="service-panel__content">
-							<span class="service-panel__number">14</span>
-							<h2 class="service-panel__title">Puentes temporales a tierra</h2>
-							<div class="service-panel__meta">
-								<p><strong>Normas:</strong> IEC 61230, ASTM F855</p>
-								<p><strong>Clases:</strong> 15 kV, 25 kV, 35 kV</p>
-							</div>
-						</div>
-					</article>
-
-					<article class="service-panel" data-service="15">
-						<div class="service-panel__content">
-							<span class="service-panel__number">15</span>
-							<h2 class="service-panel__title">Tapetes aislantes</h2>
-							<div class="service-panel__meta">
-								<p><strong>Normas:</strong> IEC 61111, ASTM D178</p>
-								<p><strong>Clases:</strong> Clase 0, Clase 2, Clase 4</p>
-							</div>
-						</div>
-					</article>
-
-					<article class="service-panel" data-service="16">
-						<div class="service-panel__content">
-							<span class="service-panel__number">16</span>
-							<h2 class="service-panel__title">Vehículos aislados</h2>
-							<div class="service-panel__meta">
-								<p><strong>Normas:</strong> ANSI A92.2, ASTM F914</p>
-								<p><strong>Clases:</strong> Categoría B, Categoría C</p>
-							</div>
-						</div>
-					</article>
-
-					<div class="services-scroll-spacer"></div>
-				</div>
-			</div>
-		</div>
-	</main>
-
-		<div class="services-section__wrapper">
-			<div class="services-section__left">
-				<div class="services-section__sticky">
-					<h1 class="services-section__title">Servicios de Ensayos Especializados</h1>
-					<p class="services-section__subtitle">Exploración interactiva de nuestros 16 servicios técnicos con normativas de seguridad eléctrica certificadas.</p>
-					<div class="services-section__accent"></div>
-				</div>
-			</div>
-			<div class="services-section__right">
-	<style>
-			
-		.services-section {
-			position: relative;
-			min-height: 500vh;
-			background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1629 100%);
-			overflow-x: hidden;
-		}
-
-		.services-section::before {
-			content: "";
-			position: fixed;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 100%;
-			background:
-				radial-gradient(circle at 20% 50%, rgba(253, 183, 26, 0.1) 0%, transparent 50%),
-				radial-gradient(circle at 80% 80%, rgba(0, 82, 163, 0.1) 0%, transparent 50%);
-			pointer-events: none;
-			z-index: 1;
-		}
-
-		.services-section__wrapper {
-			position: relative;
-			display: grid;
-			grid-template-columns: 1fr 1fr;
-			height: 500vh;
-			gap: 60px;
-			padding: 100px 60px;
-			max-width: 1400px;
-			margin: 0 auto;
-			z-index: 2;
-		}
-
-		.services-section__left {
-			position: relative;
-			z-index: 10;
-		}
-
-		.services-section__sticky {
-			position: sticky;
-			top: 120px;
-			height: fit-content;
-		}
-
-		.services-section__title {
-			font-size: clamp(2.5rem, 5vw, 4rem);
-			font-weight: 800;
-			line-height: 1.1;
-			color: #ffffff;
-			margin-bottom: 24px;
-			letter-spacing: -1px;
-		}
-
-		.services-section__subtitle {
-			font-size: clamp(1rem, 2vw, 1.3rem);
-			color: rgba(255, 255, 255, 0.65);
-			line-height: 1.6;
-			margin-bottom: 48px;
-			max-width: 500px;
-		}
-
-		.services-section__accent {
-			width: 100%;
-			height: 4px;
-			background: linear-gradient(90deg, #FDB71A 0%, #0052a3 100%);
-			border-radius: 2px;
-			margin-bottom: 48px;
-			position: relative;
-			overflow: hidden;
-		}
-
-		.services-section__accent::after {
-			content: "";
-			position: absolute;
-			top: 0;
-			left: -100%;
-			width: 100%;
-			height: 100%;
-			background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-			animation: shimmer 2s infinite;
-		}
-
-		@keyframes shimmer {
-			0% { left: -100%; }
-			100% { left: 100%; }
-		}
-
-		.services-section__right {
-			position: relative;
-			padding-right: 40px;
-		}
-
-		.services-scroll-container {
-			display: flex;
-			flex-direction: column;
-			gap: 80px;
-		}
-
-		.services-scroll-spacer {
-			height: 200px;
-		}
-
-		/* SERVICE PANELS - DISEÑO PREMIUM */
-		.service-panel {
-			position: relative;
-			padding: 40px;
-			border-radius: 20px;
-			background: rgba(255, 255, 255, 0.05);
-			backdrop-filter: blur(20px);
-			border: 1px solid rgba(255, 255, 255, 0.1);
-			cursor: pointer;
-			transition: all 0.6s cubic-bezier(0.23, 1, 0.320, 1);
-			opacity: 0;
-			transform: translateX(-40px);
-			overflow: hidden;
-			min-height: 180px;
-		}
-
-		.service-panel::before {
-			content: "";
-			position: absolute;
-			top: 0;
-			left: -100%;
-			width: 100%;
-			height: 100%;
-			background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(253, 183, 26, 0.15), transparent 80%);
-			transition: all 0.3s ease-out;
-			pointer-events: none;
-		}
-
-		.service-panel.reveal {
-			opacity: 1;
-			transform: translateX(0);
-			animation: panelReveal 0.8s cubic-bezier(0.23, 1, 0.320, 1);
-		}
-
-		@keyframes panelReveal {
-			0% {
-				opacity: 0;
-				transform: translateX(-40px);
-			}
-			100% {
-				opacity: 1;
-				transform: translateX(0);
-			}
-		}
-
-		.service-panel:hover,
-		.service-panel.hovered {
-			background: rgba(255, 255, 255, 0.08);
-			border-color: rgba(253, 183, 26, 0.4);
-			transform: translateX(20px);
-			box-shadow: 0 20px 60px rgba(253, 183, 26, 0.15);
-		}
-
-		.service-panel.expanded {
-			background: rgba(255, 255, 255, 0.12);
-			border-color: rgba(253, 183, 26, 0.6);
-			transform: translateX(30px) scale(1.02);
-			box-shadow: 0 30px 80px rgba(253, 183, 26, 0.25);
-			min-height: 280px;
-		}
-
-		.service-panel__content {
-			position: relative;
-			z-index: 2;
-		}
-
-		.service-panel__number {
-			display: inline-block;
-			font-size: 14px;
-			font-weight: 800;
-			color: #FDB71A;
-			text-transform: uppercase;
-			letter-spacing: 2px;
-			margin-bottom: 12px;
-			opacity: 0.8;
-		}
-
-		.service-panel__title {
-			font-size: clamp(1.3rem, 3vw, 1.8rem);
-			font-weight: 700;
-			color: #ffffff;
-			margin-bottom: 20px;
-			line-height: 1.3;
-		}
-
-		.service-panel__meta {
-			display: grid;
-			gap: 12px;
-			opacity: 0;
-			max-height: 0;
-			overflow: hidden;
-			transition: all 0.5s ease-out;
-		}
-
-		.service-panel.hovered .service-panel__meta,
-		.service-panel.expanded .service-panel__meta {
-			opacity: 1;
-			max-height: 200px;
-		}
-
-		.service-panel__meta p {
-			font-size: 14px;
-			color: rgba(255, 255, 255, 0.75);
-			line-height: 1.6;
-		}
-
-		.service-panel__meta strong {
-			color: #FDB71A;
-			font-weight: 700;
-		}
-
-		/* RESPONSIVE MOBILE */
-		@media (max-width: 1024px) {
-			.services-section__wrapper {
-				grid-template-columns: 1fr;
-				height: auto;
-				gap: 40px;
-				padding: 60px 40px;
-			}
-
-			.services-section__sticky {
-				position: relative;
-				top: 0;
-			}
-
-			.services-section__title {
-				font-size: 2.5rem;
-			}
-
-			.services-section__right {
-				padding-right: 0;
-			}
-
-			.services-scroll-container {
-				display: grid;
-				grid-template-columns: 1fr;
-				gap: 20px;
-			}
-
-			.service-panel {
-				min-height: 120px;
-			}
-
-			.service-panel.expanded {
-				min-height: 160px;
-			}
-		}
-
-		@media (max-width: 640px) {
-			.services-section {
-				min-height: auto;
-			}
-
-			.services-section__wrapper {
-				grid-template-columns: 1fr;
-				padding: 40px 20px;
-				gap: 30px;
-			}
-
-			.services-section__title {
-				font-size: 1.8rem;
-			}
-
-			.services-section__subtitle {
-				font-size: 0.95rem;
-			}
-
-			.service-panel {
-				padding: 24px;
-				min-height: 100px;
-				border-radius: 16px;
-			}
-
-			.service-panel__title {
-				font-size: 1.2rem;
-			}
-
-			.service-panel:hover,
-			.service-panel.hovered {
-				transform: translateX(10px);
-			}
-
-			.service-panel.expanded {
-				transform: translateX(10px) scale(1.01);
-			}
-		}
-	</style>
-
-	<script>
-		// STICKY SCROLL + GLASSMORPHISM EFFECTS
-		class StickyScrollServices {
-			constructor() {
-				this.wrapper = document.querySelector('.services-section__wrapper');
-				this.left = document.querySelector('.services-section__left');
-				this.right = document.querySelector('.services-section__right');
-				this.panels = document.querySelectorAll('.service-panel');
-				this.init();
-			}
-
-			init() {
-				if (!this.wrapper) return;
-				this.setupScrollObserver();
-				this.setupPanelInteractions();
-				this.setupMouseSpotlight();
-			}
-
-			setupScrollObserver() {
-				const observer = new IntersectionObserver((entries) => {
-					entries.forEach(entry => {
-						if (entry.isIntersecting) {
-							entry.target.classList.add('reveal');
-						}
-					});
-				}, { threshold: 0.3 });
-
-				this.panels.forEach(panel => observer.observe(panel));
-			}
-
-			setupPanelInteractions() {
-				this.panels.forEach(panel => {
-					panel.addEventListener('click', () => this.expandPanel(panel));
-					panel.addEventListener('mouseenter', () => this.hoverPanel(panel));
-					panel.addEventListener('mouseleave', () => this.unhoverPanel(panel));
-				});
-			}
-
-			expandPanel(panel) {
-				this.panels.forEach(p => p.classList.remove('expanded'));
-				panel.classList.add('expanded');
-			}
-
-			hoverPanel(panel) {
-				panel.classList.add('hovered');
-			}
-
-			unhoverPanel(panel) {
-				if (!panel.classList.contains('expanded')) {
-					panel.classList.remove('hovered');
-				}
-			}
-
-			setupMouseSpotlight() {
-				document.addEventListener('mousemove', (e) => {
-					const panels = document.querySelectorAll('.service-panel');
-					panels.forEach(panel => {
-						const rect = panel.getBoundingClientRect();
-						const x = e.clientX - rect.left;
-						const y = e.clientY - rect.top;
-						panel.style.setProperty('--mouse-x', x + 'px');
-						panel.style.setProperty('--mouse-y', y + 'px');
-					});
-				});
-			}
-		}
-
-		document.addEventListener('DOMContentLoaded', () => {
-			new StickyScrollServices();
-		});
-	</script>
-	    <script src="script-v2.js"></script>
-
+        </div>
+    </header>
+
+    <!-- MODAL LOGIN -->
+    <div class="auth-modal" id="authModal" role="dialog" aria-labelledby="authModalTitle" aria-hidden="true">
+        <div class="auth-modal__content">
+            <button class="auth-modal__close" id="authModalClose" aria-label="Cerrar modal">&times;</button>
+            <div class="auth-modal__tabs">
+                <button class="auth-modal__tab active" data-tab="login" aria-selected="true">Iniciar Sesión</button>
+            </div>
+            <div class="auth-modal__tab-content active" id="loginTab">
+                <h2 id="authModalTitle" class="auth-modal__title">🔐 Acceso al Panel HIGH TEST</h2>
+                <p class="auth-modal__subtitle">Acceso exclusivo para personal autorizado de HIGH TEST SAS</p>
+                <form class="auth-form" id="loginForm">
+                    <div class="form__group">
+                        <label for="loginEmail" class="form__label">Correo Electrónico</label>
+                        <input type="email" id="loginEmail" name="email" class="form__input" required placeholder="usuario@hightest.com">
+                    </div>
+                    <div class="form__group">
+                        <label for="loginPassword" class="form__label">Contraseña</label>
+                        <input type="password" id="loginPassword" name="password" class="form__input" required placeholder="••••••••">
+                    </div>
+                    <div class="auth-form__remember">
+                        <label class="auth-form__checkbox">
+                            <input type="checkbox" name="remember" id="rememberMe">
+                            <span>Recordarme en este dispositivo</span>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--block">🔓 Acceder al Panel</button>
+                    <p class="auth-form__link">
+                        <a href="#" class="auth-form__forgot-password">¿Olvidaste tu contraseña?</a>
+                    </p>
+                </form>
+                <div class="auth-modal__divider">O</div>
+                <button class="auth-form__social-btn auth-form__social-btn--google">
+                    <span>📧 Continuar con Google</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CERTIFICADOS -->
+    <div class="certificates-modal" id="certificatesModal" role="dialog" aria-labelledby="certificatesModalTitle" aria-hidden="true">
+        <div class="certificates-modal__content">
+            <button class="certificates-modal__close" id="certificatesModalClose" aria-label="Cerrar modal">&times;</button>
+            <div class="certificates-modal__header">
+                <h2 id="certificatesModalTitle" class="certificates-modal__title">🔐 Acceso al Portal de Clientes</h2>
+                <p class="certificates-modal__subtitle">Ingrese su correo y contraseña de cliente para acceder a su portal y consultar/descargar sus certificados.</p>
+            </div>
+            <form class="certificates-form" id="clientLoginForm">
+                <div class="form__group">
+                    <label for="certificatesEmail" class="form__label">Correo Electrónico</label>
+                    <input type="email" id="clientEmail" name="email" class="form__input" required placeholder="cliente@empresa.com">
+                </div>
+                <div class="form__group">
+                    <label for="certificatesPassword" class="form__label">Contraseña de Cliente</label>
+                    <input type="password" id="clientPassword" name="password" class="form__input" required placeholder="••••••••">
+                </div>
+                <div class="certificates-form__info">
+                    <div class="info__icon">ℹ️</div>
+                    <div class="info__text">
+                        <p><strong>¿Aún no tiene credenciales de cliente?</strong></p>
+                        <p>Contacte a nuestro equipo para solicitar acceso a su portal y certificados.</p>
+                        <p><a href="https://wa.me/573226197864" target="_blank">📱 WhatsApp: +57 322 619 7864</a></p>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn--primary btn--block">➡️ Ingresar al Portal de Clientes</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN -->
+    <main class="services-page" role="main">
+        <div class="container">
+            <h1 class="section-title services-page__title">Nuestros Servicios</h1>
+            <p class="section-subtitle services-page__subtitle">Servicios de ensayo especializados con normativas internacionales</p>
+
+            <div class="services__grid">
+                <!-- 1. Guantes Aislantes -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="https://www.ansell.com/-/media/projects/ansell/website/header-image/industrial/safety-briefing/guantes-dielectricos-dentro-mayo/guantes-dielectricos-dentro-mayo.ashx?h=576&w=1920&la=es-CO&hash=02A922A2534E03BD566E64E7994A7F74" alt="Guantes Aislantes" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Guantes Aislantes</h3>
+                        <p class="service-card__norma">Norma: ASTM F496</p>
+                    </div>
+                </article>
+
+                <!-- 2. Mangas Aislantes -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQAvO0JUUPIP2ZGAbqY7y2aUEt5Q5XALYSnMtQmfnqDnb0xtTAQ2u0K4P-7&s=10" alt="Mangas Aislantes" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Mangas Aislantes</h3>
+                        <p class="service-card__norma">Norma: ASTM F496</p>
+                    </div>
+                </article>
+
+                <!-- 3. Mantas Aislantes -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTrlnZQ-iLbZajfv45DwH-bvVnRnb0ZGuvUIZnahFkXPrHdhByLzG8HXzE&s=10" alt="Mantas Aislantes" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Mantas Aislantes</h3>
+                        <p class="service-card__norma">Norma: ASTM F479</p>
+                    </div>
+                </article>
+
+                <!-- 4. Tapetes Aislantes -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbaGGauiHpd-2Yxgj6JJ_3QiPY0QjEFBOYIAErhzhOPhZW76EUWoYqsg4&s=10" alt="Tapetes Aislantes" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Tapetes Aislantes</h3>
+                        <p class="service-card__norma">Norma: ASTM D178</p>
+                    </div>
+                </article>
+
+                <!-- 5. Pértigas FRP -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="https://seguridadglobal.com.ar/wp-content/uploads/2017/06/Pertigas-acoplables-para-maniobras-electricas.jpg" alt="Pértigas FRP" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Tubos y varas (pértigas) FRP</h3>
+                        <p class="service-card__norma">Norma: ASTM F711</p>
+                    </div>
+                </article>
+
+                <!-- 6. Puente de conexión a tierra -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR0VTEBvqLiUMRHKkpuIxDb1jYQ8BDFZKMEv4sTyVIypWHsBdNtvy70T8y8&s=10" alt="Puente de conexión a tierra" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Puente de conexión a tierra</h3>
+                        <p class="service-card__norma">Norma: ASTM F2249</p>
+                    </div>
+                </article>
+
+                <!-- 7. Carro canasta y grúa -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="https://testlab.com.co/wp-content/uploads/2022/08/Ensayo-de-vehiculos-levadizos-carro-canasta.jpg" alt="Carro canasta y grúa" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Carro canasta y grúa</h3>
+                        <p class="service-card__norma">Norma: ANSI/SAIA A92.2</p>
+                    </div>
+                </article>
+
+                <!-- 8. Liner aislado -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="https://cloud-1de12d.becdn.net/media/original/8246c41276690a98e392a3c9ebba749d/VASO-LINER-1.png" alt="Liner aislado" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Liner aislado</h3>
+                        <p class="service-card__norma">Norma: ANSI/SAIA A92.2</p>
+                    </div>
+                </article>
+
+                <!-- 9. Detectores de alta tensión -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="https://pbg.com.co/wp-content/uploads/2026/03/detector-por-contacto.jpg" alt="Detectores de alta tensión" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Detectores de alta tensión</h3>
+                        <p class="service-card__norma">Norma: ASTM F1796</p>
+                    </div>
+                </article>
+
+                <!-- 10. Plataformas aislantes -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="https://testlab.com.co/wp-content/uploads/2021/06/Ensayo-plataforma-aislada-.jpg" alt="Plataformas aislantes" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Plataformas aislantes</h3>
+                        <p class="service-card__norma">Norma: ABNT NBR 11855</p>
+                    </div>
+                </article>
+
+                <!-- 11. Cascos de seguridad industrial -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="https://www.sisoluciones.co/wp-content/uploads/2025/04/Casco-Dielectrico-Tipo-I-Clase-E-Armour-10-P03-1.jpg" alt="Cascos de seguridad industrial" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Cascos de seguridad industrial</h3>
+                        <p class="service-card__norma">Norma: NTC 1523</p>
+                    </div>
+                </article>
+
+                <!-- 12. Mangueras y cubiertas de línea -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRodQisB9yjeT7AaxdmSz6uSzdgpyozEq9KEra0630hf9khlYAVQjhviCY&s=10" alt="Mangueras y cubiertas de línea" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Mangueras y cubiertas de línea</h3>
+                        <p class="service-card__norma">Norma: ASTM F478</p>
+                    </div>
+                </article>
+
+                <!-- 13. Cubiertas y protectores plásticos -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="https://i0.wp.com/www.american-electrical.net/wp-content/uploads/2024/02/american-electrical-distributor-cubiertas-de-conductor-aislador-y-amarre.jpg?resize=611%2C596&ssl=1" alt="Cubiertas y protectores plásticos" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Cubiertas y protectores plásticos</h3>
+                        <p class="service-card__norma">Norma: ASTM F712</p>
+                    </div>
+                </article>
+
+                <!-- 14. Herramientas manuales aisladas -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="https://sata.com.co/sites/sata_colombia/files/styles/product_medium/public/pim_images/SAT_ST09262U_IMG-MAIN.jpg?itok=08wORlll" alt="Herramientas manuales aisladas" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Herramientas manuales aisladas</h3>
+                        <p class="service-card__norma">Norma: ASTM F1505</p>
+                    </div>
+                </article>
+
+                <!-- 15. Calzado dieléctrico -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQr0dnP4Kx6lBq9vjTIo0meyLxfmHEtjgSSMorYf40woGcKq2Op6vPGAT2G&s=10" alt="Calzado dieléctrico" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Calzado dieléctrico</h3>
+                        <p class="service-card__norma">Norma: ASTM F1116</p>
+                    </div>
+                </article>
+
+                <!-- 16. Jumpers aislados -->
+                <article class="service-card">
+                    <div class="service-card__image">
+                        <img src="https://www.peruelectriclabsac.com/assets/custom/images/ensayo-jumper-dielectrico.png" alt="Jumpers aislados" class="service-card__img">
+                    </div>
+                    <div class="service-card__header">
+                        <h3 class="service-card__title">Jumpers aislados</h3>
+                        <p class="service-card__norma">Norma: ASTM F2321</p>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </main>
+
+    <script src="script-v2.js"></script>
 </body>
 </html>

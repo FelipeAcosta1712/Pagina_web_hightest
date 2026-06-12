@@ -1287,9 +1287,38 @@ section {
 
 .services__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
     gap: var(--spacing-xl);
     margin-top: var(--spacing-2xl);
+}
+
+.services__footer {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--spacing-2xl);
+}
+
+.services__btn {
+    font-size: 1.1rem;
+    padding: 0.9rem 2.5rem;
+}
+
+@media (max-width: 1200px) {
+    .services__grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .services__grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .services__grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .service-card {
@@ -1329,9 +1358,18 @@ section {
 
 .service-card__header {
     padding: var(--spacing-xl);
+    flex: 1;
     display: flex;
-    align-items: flex-start;
-    gap: var(--spacing-lg);
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--spacing-sm);
+}
+
+.service-card__norma {
+    font-size: var(--font-size-xs);
+    color: #666;
+    margin: 0;
+    line-height: 1.4;
 }
 
 .service-card__icon {
@@ -1565,6 +1603,19 @@ section {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: var(--spacing-xl);
     margin-bottom: var(--spacing-3xl);
+    justify-items: center;
+}
+
+/* Cuando solo hay una tarjeta visible, limitar ancho y centrar */
+.accreditation__grid:has(> a[style*="display: none"]:nth-child(2)) .accreditation__card:not([style*="display: none"]) {
+    max-width: 380px;
+    width: 100%;
+}
+
+/* Si solo queda una tarjeta en el grid, centrarla */
+.accreditation__grid:has(> a[style*="display: none"]:nth-child(2)) {
+    grid-template-columns: 1fr;
+    justify-items: center;
 }
 
 .accreditation__card {

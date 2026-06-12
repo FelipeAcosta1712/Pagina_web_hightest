@@ -1,17 +1,103 @@
-/* Responsive tweaks para dispositivos móviles - añadido por el asistente */
+/* ============================================================
+   RESPONSIVE.CSS - RECEPCIÓN DE ITEMS
+   Ajustes para tablet (portrait y landscape) y móviles
+   ============================================================ */
 
-/* Ajustes generales */
-@media (max-width: 768px) {
+/* ============================================================
+   AJUSTES GENERALES QUE APLICAN A TABLET Y MÓVIL
+   ============================================================ */
+@media (max-width: 1366px) {
+	/* Contenedor principal */
 	.container {
 		margin: 8px;
 		border-radius: 12px;
-		padding: 0;
+		overflow-x: hidden;
 	}
 
 	body {
 		padding: 6px;
 	}
 
+	/* Formularios: grid más flexible */
+	.form-row {
+		gap: 12px !important;
+	}
+
+	/* Formularios dentro de form-row no deben romper el grid */
+	.form-row > form {
+		display: contents;
+	}
+
+	/* Labels con botones al lado: permitir salto de línea */
+	.form-group > div[style*="display: flex"] {
+		flex-wrap: wrap !important;
+		gap: 6px !important;
+	}
+
+	.form-group > div[style*="display: flex"] > label:first-child {
+		flex: 1 1 100% !important;
+		margin-bottom: 4px !important;
+	}
+
+	/* Inputs y selects más compactos */
+	.form-group input,
+	.form-group select,
+	.form-group textarea {
+		padding: 8px 10px !important;
+		font-size: 14px !important;
+		min-height: 38px !important;
+	}
+
+	/* Botones de selección compactos */
+	.btn-selection {
+		font-size: 11px !important;
+		padding: 5px 8px !important;
+		min-height: 30px !important;
+		line-height: 1.1 !important;
+	}
+
+	/* Paginación compacta */
+	.pagination {
+		flex-wrap: wrap;
+		gap: 4px;
+		margin-top: 8px;
+		padding: 8px;
+	}
+
+	.pagination button,
+	.pagination-btn {
+		padding: 5px 8px;
+		font-size: 12px;
+		min-height: 30px;
+		min-width: 30px;
+	}
+
+	/* Tabla de items: scroll horizontal si no cabe */
+	.items-section {
+		overflow-x: auto !important;
+		-webkit-overflow-scrolling: touch !important;
+		padding: 12px !important;
+	}
+
+	/* Header de la tabla sticky */
+	.items-grid.header {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+	}
+
+	/* Vista previa de items guardados */
+	#savedItemsContainer.saved-items-container {
+		max-height: none !important;
+	}
+}
+
+
+/* ============================================================
+   MÓVIL (max-width: 768px)
+   ============================================================ */
+@media (max-width: 768px) {
+	/* Header */
 	.header {
 		flex-direction: column !important;
 		align-items: center !important;
@@ -21,50 +107,50 @@
 
 	.logo { max-width: 110px !important; height: 110px !important; margin-right: 0 !important; }
 	.titulo_princi { font-size: 0.95rem !important; line-height: 1.1 !important; }
+	.titulo_princi h1 { font-size: 1.5em !important; }
 	.p_codigo { font-size: 0.6rem !important; text-align: center; opacity: 0.95; }
 
 	.form-container { padding: 14px !important; }
 	.form-section { margin: 14px 0 !important; padding: 12px !important; }
 
-	/* Formularios: columnas se apilan */
+	/* Formularios: 1 columna */
 	.form-row { grid-template-columns: 1fr !important; }
 
-	/* Firma canvas responsivo */
-	.signature-canvas { 
-		width: 100% !important; 
+	/* Firma canvas */
+	.signature-canvas {
+		width: 100% !important;
 		height: 120px !important;
 		border: 2px solid #ddd !important;
 		border-radius: 8px !important;
 	}
-	
-	/* Controles de firma más grandes */
+
+	/* Controles de firma */
 	.signature-controls button {
 		padding: 10px 16px !important;
 		margin: 4px !important;
 		min-height: 40px !important;
 	}
 
-	/* Campos de entrada más grandes y táctiles */
+	/* Inputs táctiles */
 	input, select, textarea {
 		min-height: 44px !important;
 		padding: 12px !important;
-		font-size: 16px !important; /* Evita zoom en iOS */
+		font-size: 16px !important;
 		border-radius: 8px !important;
 	}
-	
-	/* Labels más claros */
+
+	/* Labels */
 	label {
 		font-size: 14px !important;
 		margin-bottom: 6px !important;
 		color: #333 !important;
 	}
 
-	/* Tablas: convertir a cards apiladas en móvil */
+	/* Tablas: cards apiladas */
 	.table-container { margin: 10px 0; }
-	.table-header { display: none !important; } /* Ocultar header en móvil */
+	.table-header { display: none !important; }
 	.items-grid.header { display: none !important; }
-	
-	/* Cada fila se convierte en una card */
+
 	.table-row, .items-grid:not(.header) {
 		display: block !important;
 		background: white;
@@ -74,8 +160,7 @@
 		border-radius: 8px;
 		box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 	}
-	
-	/* Elementos dentro de cada card */
+
 	.table-row > *, .items-grid:not(.header) > * {
 		display: block !important;
 		margin: 6px 0;
@@ -91,81 +176,36 @@
 		justify-content: flex-start;
 	}
 
+	/* Modales */
 	.unit-modal-panel {
 		padding: 16px;
+		width: 100% !important;
+		max-height: 95vh !important;
 	}
 
 	.unit-modal-summary {
 		grid-template-columns: 1fr;
 	}
 
-	.unit-table-header,
-	.unit-unit-row {
-		grid-template-columns: 1fr;
-	}
-	
-	/* Labels antes de cada input para claridad */
-	.table-row input[type="number"]::before,
-	.items-grid input[type="number"]::before {
-		content: attr(placeholder);
-		display: block;
-		font-weight: bold;
-		font-size: 12px;
-		color: #666;
-		margin-bottom: 4px;
+	.unit-metric-grid {
+		grid-template-columns: repeat(2, 1fr) !important;
+		gap: 8px;
 	}
 
-	/* Filtros: 3 por fila en móvil */
-	.filter-buttons { 
+	.unit-table-header,
+	.unit-unit-row {
+		grid-template-columns: 1fr !important;
+		gap: 8px;
+	}
+
+	/* Filtros móvil */
+	.filter-buttons {
 		display: grid !important;
 		grid-template-columns: repeat(3, 1fr) !important;
 		gap: 6px !important;
 		margin: 10px 0 !important;
 	}
-	
-	.search-and-filter-section {
-		flex-direction: column !important;
-		gap: 12px !important;
-	}
 
-	/* Controles tipo botones: agrandar targets táctiles */
-	.filter-btn, .btn { 
-		padding: 12px 16px !important; 
-		font-size: 14px !important; 
-		min-height: 44px !important;
-		border-radius: 8px !important;
-	}
-
-	/* Botones de selección (Mismo Cliente / Otro / NO REGISTRA) más compactos */
-	.btn-selection {
-		font-size: 12px !important;
-		padding: 6px 10px !important;
-		line-height: 1.1 !important;
-		min-height: 34px !important;
-		border-radius: 6px !important;
-	}
-
-	/* Contenedor de label + botones: permitir salto de línea y que no desborde */
-	.form-group > div[style*="display: flex"] {
-		flex-wrap: wrap !important;
-		gap: 6px !important;
-	}
-
-	/* Asegurar que el label no empuje los botones hacia afuera */
-	.form-group > div[style*="display: flex"] > label {
-		flex: 1 1 100% !important;
-		margin-bottom: 4px !important;
-	}
-
-	/* Inputs debajo ocupan todo el ancho y no se salen */
-	.form-group input[type="text"],
-	.form-group input[type="number"],
-	.form-group select {
-		width: 100% !important;
-		box-sizing: border-box !important;
-	}
-
-	/* Ajustes específicos para filtros: letra más pequeña en móvil */
 	.filter-btn {
 		font-size: 12px !important;
 		padding: 8px 10px !important;
@@ -176,21 +216,35 @@
 		text-align: center;
 	}
 
-	/* Totales y badges apilados */
-	.totals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+	.search-and-filter-section {
+		flex-direction: column !important;
+		gap: 12px !important;
+	}
 
-	/* Firmas: apilar verticalmente en móviles */
+	/* Botones */
+	.filter-btn, .btn {
+		padding: 12px 16px !important;
+		font-size: 14px !important;
+		min-height: 44px !important;
+		border-radius: 8px !important;
+	}
+
+	/* Totales */
+	.totals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+	.total-item { padding: 15px; }
+	.total-item .number { font-size: 2em; }
+
+	/* Firmas */
 	.signatures-row { display: block !important; }
 	.signature-container { width: 100% !important; margin-bottom: 12px; }
 
-	/* Floating action button adjustments */
-	.fab { right: 12px !important; bottom: 12px !important; }
+	/* Acciones */
+	.actions-primary { gap: 8px; }
+	.actions-grid { grid-template-columns: 1fr !important; }
+	.action-group h4 { font-size: 1em; }
 
-	/* Vista Previa: optimizaciones para móvil */
+	/* Vista Previa */
 	.preview-section {
-		background: #f8f9fa !important;
-		border: 1px solid #e9ecef !important;
-		border-radius: 12px !important;
 		padding: 14px !important;
 		margin-top: 12px !important;
 		max-height: 75vh !important;
@@ -201,35 +255,24 @@
 	#previewContent { font-size: 14px !important; line-height: 1.35 !important; }
 	#previewContent p { margin: 6px 0 !important; }
 
-	/* Grids de 2 columnas → 1 columna en móvil para evitar apretujes */
 	#previewContent [style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
 
-	/* Tablas de 7 columnas: permitir scroll horizontal sin romper layout */
-	#previewContent [style*="grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 2fr"],
-	#previewContent [style*="grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 2fr;"] {
-		display: grid !important;
-		overflow-x: auto !important;
-		-webkit-overflow-scrolling: touch !important;
-	}
-
-	/* Firmas: imágenes responsivas al ancho del contenedor */
 	#previewContent img.signature-preview {
 		max-width: 100% !important;
 		height: auto !important;
 		border-radius: 6px !important;
 	}
 
-	/* Vista de elementos guardados: 2 columnas por fila y papelera reubicada */
+	/* Items guardados */
 	#savedItemsContainer.saved-items-container {
 		display: grid !important;
 		grid-template-columns: 1fr 1fr !important;
 		gap: 10px !important;
-		max-height: none !important;
 	}
 
 	.saved-items-left,
 	.saved-items-right {
-		display: contents !important; /* Dejar que las cards fluyan en el grid */
+		display: contents !important;
 	}
 
 	.saved-item-card {
@@ -253,68 +296,94 @@
 		height: 14px !important;
 		padding: 0 !important;
 		border-radius: 6px !important;
-		font-size: 10px !important; /* tamaño del emoji */
-		line-height: 1 !important;   /* evita desbordes verticales */
+		font-size: 10px !important;
+		line-height: 1 !important;
 	}
 
 	.saved-item-name { font-size: 13px !important; }
 	.saved-item-details { font-size: 11px !important; gap: 10px !important; }
+
+	/* FAB */
+	.fab { right: 12px !important; bottom: 12px !important; }
+
+	/* Casos en progreso */
+	#openCasesSelect {
+		width: 100% !important;
+		min-width: auto !important;
+	}
 }
 
-/* Ajustes para tablet portrait (768px - 1024px) */
+
+/* ============================================================
+   TABLET PORTRAIT (769px - 1024px)
+   ============================================================ */
 @media (min-width: 769px) and (max-width: 1024px) {
-	/* Información General: apilar en 1 columna para que no se vea apretado */
+	/* ===== HEADER ===== */
+	.header {
+		padding: 20px !important;
+		gap: 12px;
+	}
+
+	.logo {
+		max-width: 160px !important;
+		height: 140px !important;
+		margin-right: 10px !important;
+	}
+
+	.titulo_princi {
+		font-size: 1rem !important;
+	}
+
+	.titulo_princi h1 {
+		font-size: 1.6em !important;
+	}
+
+	.p_codigo {
+		font-size: 0.75rem !important;
+		white-space: nowrap;
+	}
+
+	.p_codigo h1 {
+		font-size: 0.8em !important;
+	}
+
+	/* ===== CONTENEDOR ===== */
+	.form-container {
+		padding: 20px !important;
+	}
+
+	.form-section {
+		padding: 18px !important;
+		margin: 18px 0 !important;
+	}
+
+	/* ===== CASOS EN PROGRESO ===== */
+	#openCasesSelect {
+		width: 100% !important;
+		min-width: auto !important;
+		flex: 1;
+	}
+
+	/* ===== INFORMACIÓN GENERAL ===== */
+	/* Apilar en 1 columna para que no se vea apretado */
 	.form-row {
 		grid-template-columns: 1fr !important;
 		gap: 12px !important;
 	}
 
-	/* Ajuste específico: filas de 2 campos pueden ir en 2 columnas si hay espacio */
+	/* Filas de 2 campos pueden ir en 2 columnas */
 	.form-row:has(> .form-group:nth-child(2):last-child) {
 		grid-template-columns: 1fr 1fr !important;
 	}
 
-	/* Nº de Recepción: botones debajo del label en tablet */
+	/* Nº de Recepción: botones debajo del label */
 	.form-group > div[style*="display:flex"][style*="align-items:center"] {
 		flex-wrap: wrap !important;
 		gap: 6px !important;
 	}
 
-	/* Botones de selección (Mismo Cliente / Otro / NO REGISTRA) más pequeños */
-	.btn-selection {
-		font-size: 11px !important;
-		padding: 5px 8px !important;
-		min-height: 30px !important;
-		line-height: 1.1 !important;
-	}
-
-	/* Labels con botones al lado: permitir salto de línea */
-	.form-group > div[style*="display: flex"] {
-		flex-wrap: wrap !important;
-		gap: 6px !important;
-	}
-
-	.form-group > div[style*="display: flex"] > label:first-child {
-		flex: 1 1 100% !important;
-		margin-bottom: 4px !important;
-	}
-
-	/* Inputs y selects más compactos en Información General */
-	.form-group input,
-	.form-group select,
-	.form-group textarea {
-		padding: 8px 10px !important;
-		font-size: 14px !important;
-		min-height: 38px !important;
-	}
-
-	/* Formularios dentro de form-row no deben romper el grid */
-	.form-row > form {
-		display: contents;
-	}
-
-	/* === TABLA DE ENSAYOS ALCANCE - TABLET PORTRAIT === */
-	/* Filtros: grid de 4 columnas para que quepan más botones */
+	/* ===== TABLA DE ENSAYOS ALCANCE ===== */
+	/* Filtros: grid de 4 columnas */
 	.filter-buttons {
 		display: grid !important;
 		grid-template-columns: repeat(4, 1fr) !important;
@@ -332,7 +401,7 @@
 		text-align: center;
 	}
 
-	/* Barra de búsqueda y filtros: apilados y ancho completo */
+	/* Barra de búsqueda */
 	.search-and-filter-section {
 		flex-direction: column !important;
 		gap: 10px !important;
@@ -349,14 +418,7 @@
 		margin: 0;
 	}
 
-	/* Contenedor de la tabla: scroll horizontal si no cabe */
-	.items-section {
-		padding: 12px !important;
-		overflow-x: auto !important;
-		-webkit-overflow-scrolling: touch !important;
-	}
-
-	/* Tabla de items: columnas más compactas */
+	/* Tabla de items: columnas compactas */
 	.items-grid {
 		grid-template-columns: 40px minmax(140px, 1fr) minmax(160px, 1fr) minmax(160px, 1fr) minmax(80px, 0.7fr) 110px !important;
 		font-size: 12px !important;
@@ -365,26 +427,43 @@
 		min-width: 700px;
 	}
 
-	/* Header de la tabla sticky para que se mantenga al hacer scroll */
-	.items-grid.header {
-		position: sticky;
-		top: 0;
-		z-index: 1;
+	/* ===== INFORMACIÓN DE LAVADO ===== */
+	.lavado-main-container {
+		grid-template-columns: 1fr !important;
+		gap: 15px !important;
 	}
 
-	/* Paginación más compacta */
-	.pagination {
-		flex-wrap: wrap;
-		gap: 4px;
-		margin-top: 8px;
+	.radio-group-professional {
+		flex-direction: row !important;
+		flex-wrap: wrap !important;
+		justify-content: center !important;
+		gap: 12px !important;
 	}
 
-	.pagination button {
-		padding: 5px 8px;
-		font-size: 12px;
-		min-height: 30px;
+	/* ===== TOTALES ===== */
+	.totals-grid {
+		grid-template-columns: 1fr 1fr !important;
+		gap: 12px !important;
 	}
 
+	.total-item {
+		padding: 16px !important;
+	}
+
+	.total-item .number {
+		font-size: 2em !important;
+	}
+
+	.status-indicator {
+		margin-top: 20px !important;
+	}
+
+	/* ===== OBSERVACIONES ===== */
+	#observaciones {
+		width: 100% !important;
+	}
+
+	/* ===== FIRMAS ===== */
 	.signatures-row {
 		grid-template-columns: 1fr 1fr;
 		gap: 12px;
@@ -401,14 +480,12 @@
 		margin-bottom: 12px;
 	}
 
-	/* Canvas de firma: adaptarse al ancho del contenedor */
 	.signature-canvas {
 		width: 100% !important;
 		max-width: 100%;
 		height: 130px;
 	}
 
-	/* Campos de firma en fila: nombre y cargo */
 	.signature-fields-row {
 		flex-direction: column;
 		gap: 10px;
@@ -419,7 +496,6 @@
 		flex: 1 1 auto;
 	}
 
-	/* Botones de firma más compactos */
 	.signature-controls {
 		gap: 8px;
 		flex-wrap: wrap;
@@ -431,7 +507,7 @@
 		min-height: 36px;
 	}
 
-	/* Consentimientos más compactos */
+	/* Consentimientos */
 	.signature-container .form-section {
 		padding: 10px !important;
 		margin-bottom: 10px !important;
@@ -442,7 +518,7 @@
 		line-height: 1.4 !important;
 	}
 
-	/* HIGH TEST: inputs y selects más compactos */
+	/* HIGH TEST */
 	.signature-info .form-group {
 		margin-bottom: 8px;
 	}
@@ -453,62 +529,147 @@
 		font-size: 14px !important;
 		min-height: 38px !important;
 	}
+
+	/* ===== ACCIONES ===== */
+	.actions-compact {
+		padding: 16px !important;
+	}
+
+	.actions-primary {
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+
+	.actions-primary .btn {
+		padding: 10px 14px !important;
+		font-size: 13px !important;
+		min-height: 40px;
+	}
+
+	.actions-grid {
+		grid-template-columns: repeat(2, 1fr) !important;
+		gap: 8px;
+	}
+
+	/* ===== MODALES ===== */
+	/* Modal de casos terminados */
+	#completedCasesModal > div {
+		max-width: 95% !important;
+		width: 95% !important;
+		padding: 16px !important;
+	}
+
+	/* Modal de fotos */
+	#photosModal > div {
+		max-width: 95% !important;
+		padding: 16px !important;
+	}
+
+	/* Modal de unit manager */
+	.unit-modal-panel {
+		padding: 16px;
+		width: 100% !important;
+		max-height: 95vh !important;
+	}
+
+	.unit-modal-summary {
+		grid-template-columns: repeat(3, 1fr);
+		gap: 10px;
+	}
+
+	.unit-metric-grid {
+		grid-template-columns: repeat(3, 1fr) !important;
+		gap: 10px;
+	}
+
+	.unit-distribution-list-header,
+	.unit-distribution-row {
+		grid-template-columns: 100px 1fr 100px !important;
+		gap: 8px;
+	}
+
+	.unit-table-header,
+	.unit-unit-row {
+		grid-template-columns: 1fr 1fr 1fr 100px !important;
+		gap: 8px;
+		padding: 10px !important;
+	}
+
+	/* ===== VISTA PREVIA ===== */
+	#modalVistaPrevia > div {
+		max-width: 95% !important;
+		margin: 10px auto !important;
+	}
+
+	/* ===== SESIÓN ===== */
+	#sessionWarningModal > div {
+		max-width: 90% !important;
+		padding: 20px !important;
+	}
+
+	#sessionCountdown {
+		font-size: 36px !important;
+	}
 }
 
-/* Ajustes para tablet landscape (1025px - 1366px) */
+
+/* ============================================================
+   TABLET LANDSCAPE (1025px - 1366px)
+   ============================================================ */
 @media (min-width: 1025px) and (max-width: 1366px) {
-	/* Información General: 2 columnas para que no se vea apretado */
+	/* ===== HEADER ===== */
+	.header {
+		padding: 25px !important;
+		gap: 15px;
+	}
+
+	.logo {
+		max-width: 180px !important;
+		height: 155px !important;
+		margin-right: 15px !important;
+	}
+
+	.titulo_princi {
+		font-size: 1.1rem !important;
+	}
+
+	.titulo_princi h1 {
+		font-size: 1.8em !important;
+	}
+
+	.p_codigo {
+		font-size: 0.85rem !important;
+		white-space: nowrap;
+	}
+
+	.p_codigo h1 {
+		font-size: 0.85em !important;
+	}
+
+	/* ===== CONTENEDOR ===== */
+	.form-container {
+		padding: 25px !important;
+	}
+
+	.form-section {
+		padding: 20px !important;
+		margin: 20px 0 !important;
+	}
+
+	/* ===== INFORMACIÓN GENERAL ===== */
+	/* 2 columnas para la mayoría de filas */
 	.form-row {
 		grid-template-columns: 1fr 1fr !important;
 		gap: 14px !important;
 	}
 
-	/* Ajuste específico: filas de 3 campos en 3 columnas si hay espacio */
+	/* Filas de 3 campos en 3 columnas */
 	.form-row:has(> .form-group:nth-child(3)) {
 		grid-template-columns: 1fr 1fr 1fr !important;
 	}
 
-	/* Nº de Recepción: botones debajo del label en tablet landscape */
-	.form-group > div[style*="display:flex"][style*="align-items:center"] {
-		flex-wrap: wrap !important;
-		gap: 6px !important;
-	}
-
-	/* Botones de selección (Mismo Cliente / Otro / NO REGISTRA) más pequeños */
-	.btn-selection {
-		font-size: 11px !important;
-		padding: 5px 8px !important;
-		min-height: 30px !important;
-		line-height: 1.1 !important;
-	}
-
-	/* Labels con botones al lado: permitir salto de línea */
-	.form-group > div[style*="display: flex"] {
-		flex-wrap: wrap !important;
-		gap: 6px !important;
-	}
-
-	.form-group > div[style*="display: flex"] > label:first-child {
-		flex: 1 1 100% !important;
-		margin-bottom: 4px !important;
-	}
-
-	/* Inputs y selects más compactos en Información General */
-	.form-group input,
-	.form-group select,
-	.form-group textarea {
-		padding: 8px 10px !important;
-		font-size: 14px !important;
-		min-height: 38px !important;
-	}
-
-	/* Formularios dentro de form-row no deben romper el grid */
-	.form-row > form {
-		display: contents;
-	}
-
-	/* === TABLA DE ENSAYOS ALCANCE - TABLET LANDSCAPE === */
-	/* Filtros: grid de 5 columnas para que quepan más botones */
+	/* ===== TABLA DE ENSAYOS ALCANCE ===== */
+	/* Filtros: grid de 5 columnas */
 	.filter-buttons {
 		display: grid !important;
 		grid-template-columns: repeat(5, 1fr) !important;
@@ -526,7 +687,7 @@
 		text-align: center;
 	}
 
-	/* Barra de búsqueda y filtros: apilados y ancho completo */
+	/* Barra de búsqueda */
 	.search-and-filter-section {
 		flex-direction: column !important;
 		gap: 10px !important;
@@ -543,13 +704,6 @@
 		margin: 0;
 	}
 
-	/* Contenedor de la tabla: scroll horizontal si no cabe */
-	.items-section {
-		padding: 14px !important;
-		overflow-x: auto !important;
-		-webkit-overflow-scrolling: touch !important;
-	}
-
 	/* Tabla de items: columnas ajustadas */
 	.items-grid {
 		grid-template-columns: 50px minmax(180px, 1fr) minmax(200px, 1fr) minmax(200px, 1fr) minmax(100px, 0.7fr) 130px !important;
@@ -559,26 +713,38 @@
 		min-width: 850px;
 	}
 
-	/* Header de la tabla sticky */
-	.items-grid.header {
-		position: sticky;
-		top: 0;
-		z-index: 1;
+	/* ===== INFORMACIÓN DE LAVADO ===== */
+	.lavado-main-container {
+		grid-template-columns: 1fr 1fr !important;
+		gap: 20px !important;
 	}
 
-	/* Paginación más compacta */
-	.pagination {
-		flex-wrap: wrap;
-		gap: 4px;
-		margin-top: 8px;
+	.radio-group-professional {
+		flex-direction: row !important;
+		flex-wrap: wrap !important;
+		justify-content: flex-start !important;
+		gap: 15px !important;
 	}
 
-	.pagination button {
-		padding: 5px 8px;
-		font-size: 12px;
-		min-height: 30px;
+	/* ===== TOTALES ===== */
+	.totals-grid {
+		grid-template-columns: 1fr 1fr !important;
+		gap: 15px !important;
 	}
 
+	.total-item {
+		padding: 18px !important;
+	}
+
+	.total-item .number {
+		font-size: 2.2em !important;
+	}
+
+	.status-indicator {
+		margin-top: 25px !important;
+	}
+
+	/* ===== FIRMAS ===== */
 	.signatures-row {
 		grid-template-columns: 1fr 1fr;
 		gap: 14px;
@@ -595,14 +761,12 @@
 		margin-bottom: 12px;
 	}
 
-	/* Canvas de firma: adaptarse al ancho del contenedor */
 	.signature-canvas {
 		width: 100% !important;
 		max-width: 100%;
 		height: 140px;
 	}
 
-	/* Campos de firma en fila: nombre y cargo */
 	.signature-fields-row {
 		flex-direction: column;
 		gap: 10px;
@@ -613,7 +777,6 @@
 		flex: 1 1 auto;
 	}
 
-	/* Botones de firma más compactos */
 	.signature-controls {
 		gap: 8px;
 		flex-wrap: wrap;
@@ -625,7 +788,7 @@
 		min-height: 36px;
 	}
 
-	/* Consentimientos más compactos */
+	/* Consentimientos */
 	.signature-container .form-section {
 		padding: 10px !important;
 		margin-bottom: 10px !important;
@@ -636,7 +799,7 @@
 		line-height: 1.4 !important;
 	}
 
-	/* HIGH TEST: inputs y selects más compactos */
+	/* HIGH TEST */
 	.signature-info .form-group {
 		margin-bottom: 8px;
 	}
@@ -647,30 +810,241 @@
 		font-size: 14px !important;
 		min-height: 38px !important;
 	}
+
+	/* ===== ACCIONES ===== */
+	.actions-compact {
+		padding: 18px !important;
+	}
+
+	.actions-primary {
+		flex-wrap: wrap;
+		gap: 10px;
+	}
+
+	.actions-primary .btn {
+		padding: 10px 16px !important;
+		font-size: 14px !important;
+		min-height: 42px;
+	}
+
+	.actions-grid {
+		grid-template-columns: repeat(3, 1fr) !important;
+		gap: 10px;
+	}
+
+	/* ===== MODALES ===== */
+	/* Modal de casos terminados */
+	#completedCasesModal > div {
+		max-width: 90% !important;
+		width: 90% !important;
+		padding: 20px !important;
+	}
+
+	/* Modal de fotos */
+	#photosModal > div {
+		max-width: 90% !important;
+		padding: 20px !important;
+	}
+
+	/* Modal de unit manager */
+	.unit-modal-panel {
+		padding: 18px;
+		width: 100% !important;
+		max-height: 95vh !important;
+	}
+
+	.unit-modal-summary {
+		grid-template-columns: repeat(3, 1fr);
+		gap: 12px;
+	}
+
+	.unit-metric-grid {
+		grid-template-columns: repeat(5, 1fr) !important;
+		gap: 10px;
+	}
+
+	.unit-distribution-list-header,
+	.unit-distribution-row {
+		grid-template-columns: 110px 1fr 120px !important;
+		gap: 10px;
+	}
+
+	.unit-table-header,
+	.unit-unit-row {
+		grid-template-columns: 1fr 1fr 2fr 120px !important;
+		gap: 10px;
+		padding: 12px !important;
+	}
+
+	/* ===== VISTA PREVIA ===== */
+	#modalVistaPrevia > div {
+		max-width: 90% !important;
+		margin: 15px auto !important;
+	}
+
+	/* ===== SESIÓN ===== */
+	#sessionWarningModal > div {
+		max-width: 85% !important;
+		padding: 25px !important;
+	}
+
+	#sessionCountdown {
+		font-size: 40px !important;
+	}
 }
 
-/* Ajustes adicionales para pantallas muy pequeñas */
+
+/* ============================================================
+   PANTALLAS MUY PEQUEÑAS (max-width: 420px)
+   ============================================================ */
 @media (max-width: 420px) {
 	.header h1 { font-size: 0.95rem !important; }
 	.logo { max-width: 80px !important; height: 80px !important; }
-	
-	/* Inputs aún más grandes en pantallas muy pequeñas */
-	input, select, textarea { 
-		font-size: 16px !important; 
+
+	input, select, textarea {
+		font-size: 16px !important;
 		padding: 14px !important;
 		min-height: 48px !important;
 	}
-	
-	/* Botones más grandes */
+
 	.btn, .filter-btn {
 		min-height: 48px !important;
 		padding: 14px 18px !important;
 	}
-	
-	/* Espaciado más generoso */
+
 	.form-container { padding: 10px !important; }
 	.form-section { padding: 10px !important; margin: 10px 0 !important; }
+
+	/* Filtros: 2 por fila en pantallas muy pequeñas */
+	.filter-buttons {
+		grid-template-columns: repeat(2, 1fr) !important;
+	}
+
+	/* Totales */
+	.totals-grid {
+		grid-template-columns: 1fr !important;
+	}
+
+	/* Items guardados: 1 columna */
+	#savedItemsContainer.saved-items-container {
+		grid-template-columns: 1fr !important;
+	}
+
+	/* Acciones */
+	.actions-grid {
+		grid-template-columns: 1fr !important;
+	}
+
+	/* Unit manager */
+	.unit-metric-grid {
+		grid-template-columns: 1fr !important;
+	}
 }
 
-/* No tocar funcionalidades JS: reglas sólo visuales y no alteran IDs ni eventos */
 
+/* ============================================================
+   AJUSTES ESPECÍFICOS DE ORIENTACIÓN (portrait/landscape)
+   ============================================================ */
+
+/* Tablet portrait específico (relación de aspecto portrait) */
+@media (min-width: 769px) and (max-width: 1024px) and (orientation: portrait) {
+	/* Header más compacto */
+	.header {
+		flex-direction: row !important;
+		align-items: center !important;
+		justify-content: space-between !important;
+	}
+
+	.logo {
+		max-width: 140px !important;
+		height: 120px !important;
+	}
+
+	.titulo_princi h1 {
+		font-size: 1.4em !important;
+	}
+
+	/* Tabla de items: scroll horizontal */
+	.items-section {
+		padding: 10px !important;
+	}
+
+	.items-grid {
+		grid-template-columns: 35px minmax(130px, 1fr) minmax(140px, 1fr) minmax(140px, 1fr) minmax(70px, 0.7fr) 100px !important;
+		font-size: 11px !important;
+		gap: 6px !important;
+		padding: 6px !important;
+		min-width: 650px;
+	}
+
+	/* Filtros: 4 columnas */
+	.filter-buttons {
+		grid-template-columns: repeat(4, 1fr) !important;
+	}
+
+	/* Firmas: 2 columnas */
+	.signatures-row {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+/* Tablet landscape específico */
+@media (min-width: 1025px) and (max-width: 1366px) and (orientation: landscape) {
+	/* Header más espacioso */
+	.header {
+		flex-direction: row !important;
+		align-items: center !important;
+		justify-content: space-between !important;
+	}
+
+	/* Información general: 2 o 3 columnas */
+	.form-row {
+		grid-template-columns: 1fr 1fr !important;
+	}
+
+	/* Filtros: 5 columnas */
+	.filter-buttons {
+		grid-template-columns: repeat(5, 1fr) !important;
+	}
+
+	/* Tabla de items: columnas más amplias */
+	.items-grid {
+		grid-template-columns: 45px minmax(170px, 1fr) minmax(190px, 1fr) minmax(190px, 1fr) minmax(90px, 0.7fr) 120px !important;
+		font-size: 12px !important;
+		gap: 8px !important;
+		padding: 8px !important;
+		min-width: 800px;
+	}
+
+	/* Firmas: 2 columnas */
+	.signatures-row {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+
+/* ============================================================
+   SCROLL HORIZONTAL PARA TABLAS QUE NO CABEN
+   ============================================================ */
+@media (max-width: 1366px) {
+	/* Todas las tablas con scroll horizontal */
+	.table-container,
+	.items-section,
+	#completedCasesTable,
+	#unitManagerBody,
+	.unit-table-wrap {
+		overflow-x: auto !important;
+		-webkit-overflow-scrolling: touch !important;
+	}
+
+	/* Asegurar que el header sea sticky */
+	.table-header,
+	.items-grid.header,
+	.unit-table-header {
+		position: sticky;
+		top: 0;
+		z-index: 2;
+	}
+}
+
+/* No tocar funcionalidades JS: reglas sólo visuales */
