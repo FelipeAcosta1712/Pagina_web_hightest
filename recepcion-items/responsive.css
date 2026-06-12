@@ -313,6 +313,78 @@
 		display: contents;
 	}
 
+	/* === TABLA DE ENSAYOS ALCANCE - TABLET PORTRAIT === */
+	/* Filtros: grid de 4 columnas para que quepan más botones */
+	.filter-buttons {
+		display: grid !important;
+		grid-template-columns: repeat(4, 1fr) !important;
+		gap: 6px !important;
+		margin: 8px 0 !important;
+	}
+
+	.filter-btn {
+		font-size: 11px !important;
+		padding: 6px 8px !important;
+		min-height: 34px !important;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		text-align: center;
+	}
+
+	/* Barra de búsqueda y filtros: apilados y ancho completo */
+	.search-and-filter-section {
+		flex-direction: column !important;
+		gap: 10px !important;
+		align-items: stretch !important;
+	}
+
+	.search-bar-center {
+		margin-top: 8px;
+		margin-bottom: 10px;
+	}
+
+	.search-bar-professional {
+		max-width: 100% !important;
+		margin: 0;
+	}
+
+	/* Contenedor de la tabla: scroll horizontal si no cabe */
+	.items-section {
+		padding: 12px !important;
+		overflow-x: auto !important;
+		-webkit-overflow-scrolling: touch !important;
+	}
+
+	/* Tabla de items: columnas más compactas */
+	.items-grid {
+		grid-template-columns: 40px minmax(140px, 1fr) minmax(160px, 1fr) minmax(160px, 1fr) minmax(80px, 0.7fr) 110px !important;
+		font-size: 12px !important;
+		gap: 8px !important;
+		padding: 8px !important;
+		min-width: 700px;
+	}
+
+	/* Header de la tabla sticky para que se mantenga al hacer scroll */
+	.items-grid.header {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+	}
+
+	/* Paginación más compacta */
+	.pagination {
+		flex-wrap: wrap;
+		gap: 4px;
+		margin-top: 8px;
+	}
+
+	.pagination button {
+		padding: 5px 8px;
+		font-size: 12px;
+		min-height: 30px;
+	}
+
 	.signatures-row {
 		grid-template-columns: 1fr 1fr;
 		gap: 12px;
@@ -433,6 +505,78 @@
 	/* Formularios dentro de form-row no deben romper el grid */
 	.form-row > form {
 		display: contents;
+	}
+
+	/* === TABLA DE ENSAYOS ALCANCE - TABLET LANDSCAPE === */
+	/* Filtros: grid de 5 columnas para que quepan más botones */
+	.filter-buttons {
+		display: grid !important;
+		grid-template-columns: repeat(5, 1fr) !important;
+		gap: 6px !important;
+		margin: 8px 0 !important;
+	}
+
+	.filter-btn {
+		font-size: 11px !important;
+		padding: 6px 8px !important;
+		min-height: 34px !important;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		text-align: center;
+	}
+
+	/* Barra de búsqueda y filtros: apilados y ancho completo */
+	.search-and-filter-section {
+		flex-direction: column !important;
+		gap: 10px !important;
+		align-items: stretch !important;
+	}
+
+	.search-bar-center {
+		margin-top: 8px;
+		margin-bottom: 10px;
+	}
+
+	.search-bar-professional {
+		max-width: 100% !important;
+		margin: 0;
+	}
+
+	/* Contenedor de la tabla: scroll horizontal si no cabe */
+	.items-section {
+		padding: 14px !important;
+		overflow-x: auto !important;
+		-webkit-overflow-scrolling: touch !important;
+	}
+
+	/* Tabla de items: columnas ajustadas */
+	.items-grid {
+		grid-template-columns: 50px minmax(180px, 1fr) minmax(200px, 1fr) minmax(200px, 1fr) minmax(100px, 0.7fr) 130px !important;
+		font-size: 13px !important;
+		gap: 10px !important;
+		padding: 10px !important;
+		min-width: 850px;
+	}
+
+	/* Header de la tabla sticky */
+	.items-grid.header {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+	}
+
+	/* Paginación más compacta */
+	.pagination {
+		flex-wrap: wrap;
+		gap: 4px;
+		margin-top: 8px;
+	}
+
+	.pagination button {
+		padding: 5px 8px;
+		font-size: 12px;
+		min-height: 30px;
 	}
 
 	.signatures-row {
