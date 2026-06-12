@@ -1,0 +1,66 @@
+[
+    {
+        "ID": 1,
+        "EMPRESA": "ABL CAPITAL SAS",
+        "CORREO": "camila@abl-capital.com",
+        "NIT": "900822829-0"
+    },
+    {
+        "ID": 2,
+        "EMPRESA": "FUSSAND SAS",
+        "CORREO": "VENTAS1@FUSSAND.COM"
+    },
+    {
+        "ID": 3,
+        "EMPRESA": "GRUAS Y CANASTAS SAS",
+        "CORREO": "compras@gcdielectricas.com"
+    },
+    {
+        "ID": 4,
+        "EMPRESA": "GRUAS Y PROYECTOS SAS",
+        "CORREO": "direccion.ogp@gmail.com"
+    },
+    {
+        "ID": 5,
+        "EMPRESA": "HIGH TEST SAS",
+        "CORREO": "high.testsas@gmail.com",
+        "NIT": "901.950.971-0"
+    },
+    {
+        "ID": 6,
+        "EMPRESA": "IMPORTADORA DE HERRAMIENTAS SAS",
+        "CORREO": "ventas@impoherrlecsas.com"
+    },
+    {
+        "ID": 7,
+        "EMPRESA": "INNMAC SAS",
+        "CORREO": "coordinadorshq@innmac.co"
+    },
+    {
+        "ID": 8,
+        "EMPRESA": "INVERDRON JGW",
+        "CORREO": "ingenieria.1@inverdronjgw.com"
+    },
+    {
+        "ID": 10,
+        "EMPRESA": "MEKK SAS",
+        "CORREO": "comprasydespachos@mekksas.com"
+    },
+    {
+        "ID": 9,
+        "EMPRESA": "ONAC",
+        "CORREO": "onac@onac.org.co",
+        "NIT": "900.190.680-7"
+    },
+    {
+        "ID": 18,
+        "EMPRESA": "OCA GLOBAL SAS",
+        "CORREO": "angelica.bernal@ocaglobal.com"
+    },
+    {
+        "ID": 20,
+        "EMPRESA": "SE&SO SAS",
+        "CORREO": "john.bastidas@seisoelectric.com"
+    }
+   
+]

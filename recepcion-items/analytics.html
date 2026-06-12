@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#022859">
+    <title>Reportes & Análisis - HIGH TEST SAS</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="pagination-styles.css">
+    <link rel="stylesheet" href="table-styles.css">
+    <link rel="stylesheet" href="responsive.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .dashboard-header {
+            background: linear-gradient(135deg, #022859 0%, #034d7d 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .dashboard-header h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+        }
+        .dashboard-header p {
+            margin: 0;
+            opacity: 0.9;
+        }
+        .btn-volver {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background: #022859;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        .btn-volver:hover {
+            background: #034d7d;
+        }
+        .access-denied {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 40px;
+        }
+        .access-denied h2 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        .access-denied p {
+            color: #856404;
+            margin-bottom: 20px;
+        }
+        /* Mejoras visuales para tablas y botones en Reportes */
+        .report-tab table { width: 100%; border-collapse: collapse; font-size: 14px; color: #222; }
+        .report-tab thead th {
+            background-color: #f1f5f9;
+            color: #222;
+            font-weight: 600;
+            padding: 12px;
+            border: 1px solid #e6eef6;
+            text-align: left;
+        }
+        .report-tab tbody td {
+            padding: 10px 12px;
+            border: 1px solid #eef4fb;
+            vertical-align: middle;
+            color: #222;
+        }
+        .report-tab tbody tr:nth-child(even) { background: #ffffff; }
+        .report-tab tbody tr:nth-child(odd) { background: #fbfdff; }
+        .report-tab tbody tr:hover { background: #f3fbff; }
+        #historialContainer, #resultadosBusquedaContainer { padding: 6px 0; }
+        .btn-small { padding: 6px 10px; font-size: 13px; border-radius: 6px; border: 1px solid #d1dbe6; background: #fff; cursor: pointer; }
+        .btn-small:hover { box-shadow: 0 1px 4px rgba(2,40,89,0.08); }
+        .badge { display: inline-block; padding: 6px 10px; border-radius: 14px; font-size: 13px; color: #fff; }
+        .badge-recepcion { background: #ff9800; }
+        .badge-completado { background: #28a745; }
+        /* Ajustes específicos de columnas para mejorar lectura */
+        th[data-col="num"] { width: 12%; }
+        th[data-col="cliente"] { width: 24%; }
+        th[data-col="empresa"] { width: 24%; }
+        th[data-col="fecha"] { width: 14%; }
+        th[data-col="items"] { width: 8%; text-align: center; }
+        th[data-col="estado"] { width: 10%; text-align: center; }
+        th[data-col="acciones"] { width: 14%; text-align: center; }
+        .report-tab tbody td:last-child { white-space: nowrap; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Botón Volver -->
+        <a href="recepcion-items.html" class="btn-volver">⬅️ Volver al Formulario</a>
+
+        <!-- Encabezado del Dashboard -->
+        <div class="dashboard-header">
+            <h1>📊 Reportes & Análisis</h1>
+            <p>Visualiza estadísticas, historial y realiza búsquedas avanzadas de casos</p>
+            <p style="font-size: 12px; margin-top: 10px;">Usuario: <strong id="currentUserDisplay">-</strong></p>
+        </div>
+
+        <!-- Contenido Principal -->
+        <div id="dashboardContent" style="display: none;">
+            <!-- Pestañas de navegación -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                <button type="button" class="btn btn-primary" onclick="showReportsTab('historial')" id="tabHistorial">
+                    📋 Historial Completo
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="showReportsTab('estadisticas')" id="tabEstadisticas">
+                    📈 Estadísticas
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="showReportsTab('busqueda')" id="tabBusqueda">
+                    🔍 Búsqueda Avanzada
+                </button>
+            </div>
+
+            <!-- TAB 1: HISTORIAL COMPLETO -->
+            <div id="tabContentHistorial" class="report-tab" style="display: block; background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3>📋 Historial de Transacciones</h3>
+                
+                <div style="margin-bottom: 15px;">
+                    <input type="text" id="searchHistorial" placeholder="🔍 Buscar rápido (cliente, número, empresa)..." 
+                           style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;">
+                </div>
+
+                <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-success" onclick="exportarJSON()">
+                        📥 Exportar JSON
+                    </button>
+                    <button type="button" class="btn btn-info" onclick="importarJSON()">
+                        📤 Importar JSON
+                    </button>
+                    <button type="button" class="btn btn-warning" onclick="refrescarHistorial()">
+                        🔄 Refrescar
+                    </button>
+                </div>
+
+                <div id="historialContainer" style="overflow-x: auto;">
+                    <table id="historialTable" style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                        <thead style="background-color: #f5f5f5; border-bottom: 2px solid #022859;">
+                            <tr>
+                                <th data-col="num">Nº Recepción</th>
+                                <th data-col="cliente">Cliente</th>
+                                <th data-col="empresa">Informe a Nombre de</th>
+                                <th data-col="fecha">Fecha Recepción</th>
+                                <th data-col="fecha">Fecha Entrega</th>
+                                <th data-col="items">Items</th>
+                                <th data-col="estado">Estado</th>
+                                <th data-col="acciones">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historialTableBody">
+                            <!-- Se llenará dinámicamente con JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 2: ESTADÍSTICAS -->
+            <div id="tabContentEstadisticas" class="report-tab" style="display: none; background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3>📈 Estadísticas de Recepción/Entrega</h3>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                    <div style="background: #e8f4f8; padding: 15px; border-radius: 8px; border-left: 4px solid #022859;">
+                        <h4 style="margin: 0; color: #022859;">Total de Casos</h4>
+                        <div style="font-size: 28px; font-weight: bold; color: #022859;" id="stat-totalCasos">0</div>
+                    </div>
+                    <div style="background: #e8f8f0; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745;">
+                        <h4 style="margin: 0; color: #28a745;">Casos Completados</h4>
+                        <div style="font-size: 28px; font-weight: bold; color: #28a745;" id="stat-completados">0</div>
+                    </div>
+                    <div style="background: #fff3e0; padding: 15px; border-radius: 8px; border-left: 4px solid #ff9800;">
+                        <h4 style="margin: 0; color: #ff9800;">En Progreso</h4>
+                        <div style="font-size: 28px; font-weight: bold; color: #ff9800;" id="stat-enProgreso">0</div>
+                    </div>
+                    <div style="background: #fce4ec; padding: 15px; border-radius: 8px; border-left: 4px solid #e91e63;">
+                        <h4 style="margin: 0; color: #e91e63;">Discrepancias</h4>
+                        <div style="font-size: 28px; font-weight: bold; color: #e91e63;" id="stat-discrepancias">0</div>
+                    </div>
+                </div>
+
+                <h4>Resumen por Caso</h4>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                        <thead style="background-color: #f5f5f5;">
+                            <tr>
+                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Nº Recepción</th>
+                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Cliente</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Items</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Recibidos Total</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Entregados Total</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Discrepancia</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="estadisticasCasoTableBody">
+                            <!-- Se llenará dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 3: BÚSQUEDA AVANZADA -->
+            <div id="tabContentBusqueda" class="report-tab" style="display: none; background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3>🔍 Búsqueda Avanzada</h3>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Número de Recepción:</label>
+                        <input type="text" id="filtroNumRecepcion" placeholder="Ej: R26 0001" 
+                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Cliente:</label>
+                        <input type="text" id="filtroCliente" placeholder="Nombre del cliente"
+                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Empresa:</label>
+                        <select id="filtroEmpresa" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                            <option value="">Todas las empresas</option>
+                        </select>
+                    </div>
+                    <!-- 'Tipo de Ensayo' eliminado por simplificación -->
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Fecha Desde:</label>
+                        <input type="date" id="filtroFechaDesde" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Fecha Hasta:</label>
+                        <input type="date" id="filtroFechaHasta" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <button type="button" class="btn btn-primary" onclick="ejecutarBusquedaAvanzada()">
+                        🔎 Buscar
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="limpiarFiltros()">
+                        🔄 Limpiar Filtros
+                    </button>
+                </div>
+
+                <div id="resultadosBusquedaContainer" style="overflow-x: auto;">
+                    <table id="resultadosBusquedaTable" style="width: 100%; border-collapse: collapse;">
+                        <thead style="background-color: #f5f5f5;">
+                            <tr>
+                                <th data-col="num">Nº Recepción</th>
+                                <th data-col="cliente">Cliente</th>
+                                <th data-col="empresa">Empresa</th>
+                                <th data-col="fecha">Fecha</th>
+                                <th data-col="items">Items</th>
+                                <th data-col="estado">Estado</th>
+                                <th data-col="acciones">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultadosBusquedaBody">
+                            <!-- Se llenará dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Acceso Denegado -->
+        <div id="accessDenied" class="access-denied" style="display: none;">
+            <h2>🔒 Acceso Denegado</h2>
+            <p>Solo administradores y directores técnicos pueden acceder a esta sección de reportes.</p>
+            <p>Por favor, <a href="index.html">vuelve al formulario</a>.</p>
+        </div>
+    </div>
+
+    <!-- Modal Vista Previa -->
+    <div id="modalVistaPrevia" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
+        <div style="background: white; margin: 20px auto; max-width: 900px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+            <div style="padding: 20px; border-bottom: 2px solid #022859; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0;">👁️ Vista Previa del Caso</h2>
+                <button type="button" style="background: none; border: none; font-size: 24px; cursor: pointer;" onclick="cerrarVistaPrevia()">✕</button>
+            </div>
+            <div id="modalPreviewContent" style="padding: 20px; max-height: 70vh; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <!-- Modal Detalles de Estadísticas por Caso -->
+    <div id="modalEstadisticasDetalle" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
+        <div style="background: white; margin: 20px auto; max-width: 800px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+            <div style="padding: 20px; border-bottom: 2px solid #022859; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0;">📊 Detalles por Caso - <span id="modalDetalleCotizacion">-</span></h2>
+                <button type="button" style="background: none; border: none; font-size: 24px; cursor: pointer;" onclick="cerrarModalEstadisticasDetalle()">✕</button>
+            </div>
+            <div style="padding: 20px;">
+                <p><strong>Cliente:</strong> <span id="modalDetalleCliente">-</span></p>
+                <div style="overflow-x: auto; margin-top: 15px;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead style="background-color: #f5f5f5;">
+                            <tr>
+                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Elemento</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Cant. Recibida</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Cant. Entregada</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Diferencia</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalDetalleItemsBody">
+                            <!-- Se llenará dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Validar acceso al cargar la página
+        function validateAccessToAnalytics() {
+            const session = JSON.parse(localStorage.getItem('hightest_session') || '{}');
+            // Soportar sesión simple { rol: 'administrador', nombre: '...' }
+            // y sesión compleja guardada por `auth.js`: { user: { rol: 'administrador', nombre: '...' }, ... }
+            const userRole = (session && session.user && session.user.rol) ? session.user.rol : session.rol;
+            const displayName = (session && session.user && (session.user.nombre || session.user.email)) ? (session.user.nombre || session.user.email) : (session.nombre || session.email || 'Desconocido');
+
+            const permittedRoles = ['administrador', 'director_tecnico'];
+
+            if (!userRole || !permittedRoles.includes(userRole)) {
+                document.getElementById('dashboardContent').style.display = 'none';
+                document.getElementById('accessDenied').style.display = 'block';
+                return false;
+            }
+
+            document.getElementById('dashboardContent').style.display = 'block';
+            document.getElementById('accessDenied').style.display = 'none';
+            document.getElementById('currentUserDisplay').textContent = displayName;
+            
+            // Cargar datos iniciales: TODOS los casos
+            refrescarHistorial();
+            
+            return true;
+        }
+
+        // Validar acceso al cargar
+        document.addEventListener('DOMContentLoaded', function() {
+            validateAccessToAnalytics();
+            
+            // Event listener para búsqueda rápida
+            const searchInput = document.getElementById('searchHistorial');
+            if (searchInput) {
+                searchInput.addEventListener('keyup', refrescarHistorial);
+            }
+        });
+    </script>
+</body>
+</html>

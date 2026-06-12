@@ -132,6 +132,527 @@ const isValidPhone = (phone) => {
 };
 
 /**
+ * Helper genérico para llamar al Netlify Function `conectar`.
+ * Devuelve el JSON parseado o lanza un Error si falla.
+ */
+async function fetchFromDatabase(action, params = {}) {
+    const body = Object.assign({ action }, params);
+    const res = await fetch('/.netlify/functions/conectar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+        throw new Error('Network response was not ok: ' + res.status);
+    }
+
+    const data = await res.json();
+    if (!data || typeof data !== 'object') throw new Error('Invalid JSON response from server');
+    return data;
+}
+
+/**
+ * Obtener procesos acreditados desde la función `conectar`.
+ * filters: { limit, offset, estado, fecha_inicio, fecha_fin, cliente }
+ */
+async function getProcesosAcreditados(filters = {}) {
+    const payload = await fetchFromDatabase('get_procesos_acreditados', filters);
+    if (!payload.ok) {
+        throw new Error(payload.error || 'Error al obtener procesos_acreditados');
+    }
+    return payload.procesos || payload.data || [];
+}
+
+const PROCESOS_STORE = {
+    loaded: false,
+    all: [],
+    filtered: {
+        active: [],
+        finalized: [],
+    },
+    pagination: {
+        page: 1,
+        pageSize: null,
+    },
+};
+
+/**
+ * Devuelve una etiqueta legible para el estado
+ */
+function formatStatusLabel(status) {
+    if (!status) return '';
+    const map = {
+        'recepcion': 'Recepción',
+        'lavado': 'Lavado',
+        'en-proceso-de-ensayo': 'Proceso de ensayo',
+        'entrega-cliente': 'Entrega cliente',
+        'informe-de-ensayo': 'Informe',
+        'finalizado': 'Finalizado'
+    };
+    const key = String(status).trim().toLowerCase();
+    return map[key] || status;
+}
+
+function normalizeStatusKey(status) {
+    if (!status) return '';
+    const raw = String(status).trim().toLowerCase();
+    const compact = raw
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[_\s]+/g, '-');
+
+    const aliases = {
+        recepcion: 'recepcion',
+        lavado: 'lavado',
+        'proceso-de-ensayo': 'en-proceso-de-ensayo',
+        'en-proceso-de-ensayo': 'en-proceso-de-ensayo',
+        'entrega-cliente': 'entrega-cliente',
+        informe: 'informe-de-ensayo',
+        'informe-de-ensayo': 'informe-de-ensayo',
+        finalizado: 'finalizado'
+    };
+
+    return aliases[compact] || compact;
+}
+
+/**
+ * Renderiza filas en la tabla de certificados (Ensayos Acreditados)
+ */
+function renderProcesosAcreditadosRows(rows = []) {
+    renderProcesosToTable('certificatesTableBody', rows);
+}
+
+/**
+ * Renderiza un listado de procesos dentro del tbody indicado.
+ */
+function renderProcesosToTable(tbodyId, rows = []) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    const sortedRows = sortProcesosByNumeroDesc(rows);
+
+    if (!Array.isArray(sortedRows) || sortedRows.length === 0) {
+        const tr = document.createElement('tr');
+        tr.className = 'empty-state';
+        tr.innerHTML = `<td colspan="8" style="text-align:center; padding:1rem;">ℹ️ No hay procesos</td>`;
+        tbody.appendChild(tr);
+        return;
+    }
+
+    sortedRows.forEach(row => {
+        const numero = row.numero_proceso || row.proceso_numero || row.numero || row.id || row.proceso || row.nro_proceso || '';
+        const cliente = row.cliente || row.empresa || row.nombre_cliente || row.client || '';
+        const informe = row.n_informe || row.informe_numero || row.nro_informe || row.informe || '';
+        const estado = row.estado || row.status || '';
+        const estadoKey = normalizeStatusKey(estado) || (estado || '').toString().trim().toLowerCase();
+        const fechaRecepcion = row.fecha_recepcion || row.fecha_recepcion_iso || row.recepcion || row.fecha_rec || '';
+        const fechaEntrega = row.fecha_entrega_cliente || row.fecha_entrega || row.entrega_cliente || '';
+        const fechaFinalizado = row.fecha_finalizado || row.fecha_finalizacion || row.finalizado || '';
+
+        const tr = document.createElement('tr');
+        const statusLabel = formatStatusLabel(estadoKey || estado);
+        tr.innerHTML = `
+            <td>${escapeHtml(numero)}</td>
+            <td>${escapeHtml(cliente)}</td>
+            <td>${escapeHtml(informe)}</td>
+            <td>
+                <span class="status-badge status--${escapeHtml(estadoKey || (estado||'').toString().replace(/\s+/g,'-'))}">${escapeHtml(String(statusLabel).toUpperCase())}</span>
+                <button class="btn btn--small change-status-btn" data-id="${escapeHtml(numero)}" title="Cambiar estado">✏️</button>
+            </td>
+            <td>${escapeHtml(formatDateShort(fechaRecepcion))}</td>
+            <td>${escapeHtml(formatDateShort(fechaEntrega))}</td>
+            <td>${escapeHtml(formatDateShort(fechaFinalizado))}</td>
+            <td>
+                <button class="btn btn--small btn--outline edit-process-btn" data-id="${escapeHtml(numero)}" title="Editar proceso">✏️</button>
+                <button class="btn btn--small btn--error delete-process-btn" data-id="${escapeHtml(numero)}" title="Eliminar proceso">🗑️</button>
+            </td>
+        `;
+
+        tbody.appendChild(tr);
+    });
+}
+
+function sortProcesosByNumeroDesc(rows = []) {
+    if (!Array.isArray(rows)) return [];
+
+    return [...rows].sort((left, right) => {
+        const leftValue = getProcessSortValue(left);
+        const rightValue = getProcessSortValue(right);
+
+        if (leftValue.numeric !== null && rightValue.numeric !== null && leftValue.numeric !== rightValue.numeric) {
+            return rightValue.numeric - leftValue.numeric;
+        }
+
+        return rightValue.text.localeCompare(leftValue.text, 'es', {
+            numeric: true,
+            sensitivity: 'base'
+        });
+    });
+}
+
+function getProcessSortValue(row) {
+    const raw = row?.numero_proceso || row?.proceso_numero || row?.numero || row?.id || row?.proceso || row?.nro_proceso || '';
+    const text = String(raw).trim();
+    const match = text.match(/(\d+)\s*$/);
+
+    return {
+        text,
+        numeric: match ? Number.parseInt(match[1], 10) : null,
+    };
+}
+
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function formatDateShort(value) {
+    if (!value) return '';
+    // Normalizar a YYYY-MM-DD
+    // Si viene en formato YYYY-MM-DD ya, devolver tal cual
+    const s = String(value).trim();
+    const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+    // intentar parsear fecha
+    const d = new Date(s);
+    if (!isFinite(d)) return s;
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+function getProcessDateValues(row) {
+    return [
+        row?.fecha_recepcion,
+        row?.fecha_recepcion_iso,
+        row?.recepcion,
+        row?.fecha_rec,
+        row?.fecha_entrega_cliente,
+        row?.fecha_entrega,
+        row?.entrega_cliente,
+        row?.fecha_finalizado,
+        row?.fecha_finalizacion,
+        row?.finalizado,
+    ].filter(Boolean).map((value) => formatDateShort(value));
+}
+
+function getProcessSearchBlob(row) {
+    const numero = row?.numero_proceso || row?.proceso_numero || row?.numero || row?.id || row?.proceso || row?.nro_proceso || '';
+    const cliente = row?.cliente || row?.empresa || row?.nombre_cliente || row?.client || '';
+    const informe = row?.n_informe || row?.informe_numero || row?.nro_informe || row?.informe || '';
+    const estado = row?.estado || row?.status || '';
+    return `${numero} ${cliente} ${informe} ${formatStatusLabel(estado)}`.toLowerCase();
+}
+
+function getProcesoFiltersFromDom() {
+    return {
+        status: document.getElementById('adminFilterStatus')?.value || '',
+        client: document.getElementById('adminFilterType')?.value?.trim().toLowerCase() || '',
+        month: document.getElementById('adminFilterMonth')?.value || document.getElementById('statsMonthFilter')?.value || '',
+        date: document.getElementById('adminFilterDate')?.value || '',
+        search: document.getElementById('adminSearchCertificates')?.value?.trim().toLowerCase() || '',
+    };
+}
+
+function getFinalizedProcesoFiltersFromDom() {
+    return {
+        status: document.getElementById('adminFilterFinalizedStatus')?.value || '',
+        client: document.getElementById('adminFilterFinalizedType')?.value?.trim().toLowerCase() || '',
+        month: document.getElementById('adminFilterFinalizedMonth')?.value || '',
+        date: document.getElementById('adminFilterFinalizedDate')?.value || '',
+        search: document.getElementById('adminSearchFinalizedCertificates')?.value?.trim().toLowerCase() || '',
+    };
+}
+
+function populateClientFilterOptions() {
+    const mainSelect = document.getElementById('adminFilterType');
+    const finalizedSelect = document.getElementById('adminFilterFinalizedType');
+    const selects = [mainSelect, finalizedSelect].filter(Boolean);
+    if (!selects.length) return;
+
+    const selectedValues = new Map(selects.map((el) => [el.id, (el.value || '').toLowerCase()]));
+    const clients = Array.from(new Set(
+        (PROCESOS_STORE.all || [])
+            .map((row) => (row?.cliente || row?.empresa || row?.nombre_cliente || row?.client || '').toString().trim())
+            .filter(Boolean)
+    )).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+    selects.forEach((select) => {
+        const defaultLabel = select.id === 'adminFilterFinalizedType' ? 'Todos los clientes' : 'Todos los clientes';
+        select.innerHTML = `<option value="">${defaultLabel}</option>`;
+        clients.forEach((clientName) => {
+            const option = document.createElement('option');
+            option.value = clientName;
+            option.textContent = clientName;
+            select.appendChild(option);
+        });
+
+        const prevValue = selectedValues.get(select.id);
+        if (prevValue) {
+            const found = clients.find((clientName) => clientName.toLowerCase() === prevValue);
+            select.value = found || '';
+        }
+    });
+}
+
+function matchesProcesoFilters(row, filters) {
+    const estadoRaw = row?.estado || row?.status || '';
+    const estadoKey = normalizeStatusKey(estadoRaw);
+    const clienteRaw = (row?.cliente || row?.empresa || row?.nombre_cliente || row?.client || '').toString().toLowerCase();
+    const searchBlob = getProcessSearchBlob(row);
+    const allDates = getProcessDateValues(row);
+
+    const matchesStatus = !filters.status || estadoKey === normalizeStatusKey(filters.status);
+    const matchesClient = !filters.client || clienteRaw === filters.client;
+    const matchesSearch = !filters.search || searchBlob.includes(filters.search);
+    const matchesMonth = !filters.month || allDates.some((value) => value.startsWith(filters.month));
+    const matchesDate = !filters.date || allDates.includes(filters.date);
+
+    return matchesStatus && matchesClient && matchesSearch && matchesMonth && matchesDate;
+}
+
+function applyProcesoPagination(rows = []) {
+    const pageSize = Number(PROCESOS_STORE.pagination.pageSize);
+    if (!pageSize || pageSize <= 0) return rows;
+
+    const page = Math.max(1, Number(PROCESOS_STORE.pagination.page) || 1);
+    const start = (page - 1) * pageSize;
+    return rows.slice(start, start + pageSize);
+}
+
+function renderTabla() {
+    const activeRows = sortProcesosByNumeroDesc(PROCESOS_STORE.filtered.active || []);
+    const finalizedRows = sortProcesosByNumeroDesc(PROCESOS_STORE.filtered.finalized || []);
+
+    const activeVisible = applyProcesoPagination(activeRows);
+    const finalizedVisible = applyProcesoPagination(finalizedRows);
+
+    renderProcesosToTable('certificatesTableBody', activeVisible);
+    renderProcesosToTable('finalizedCertificatesTableBody', finalizedVisible);
+
+    const totalEl = document.getElementById('statTotalCerts');
+    const completedEl = document.getElementById('statCompletedCerts');
+    const pendingEl = document.getElementById('statPendingCerts');
+    if (totalEl) totalEl.textContent = String(activeRows.length + finalizedRows.length);
+    if (completedEl) completedEl.textContent = String(finalizedRows.length);
+    if (pendingEl) pendingEl.textContent = String(activeRows.length);
+
+    // Actualizar resúmenes mensuales ahora que las tablas están renderizadas
+    try {
+        if (window.AdminPanelManager && typeof window.AdminPanelManager.renderMonthlySummary === 'function') {
+            window.AdminPanelManager.renderMonthlySummary();
+        }
+        if (window.AdminPanelManager && typeof window.AdminPanelManager.renderMonthlySummaryNoAcreditados === 'function') {
+            window.AdminPanelManager.renderMonthlySummaryNoAcreditados();
+        }
+    } catch (err) {
+        console.warn('Error actualizando resúmenes mensuales:', err);
+    }
+}
+
+function filtrarProcesos() {
+    const mainFilters = getProcesoFiltersFromDom();
+    const finalizedFilters = getFinalizedProcesoFiltersFromDom();
+
+    const activeSource = PROCESOS_STORE.all.filter(
+        (row) => !((row.estado || row.status || '').toString().toLowerCase().includes('finalizado'))
+    );
+    const finalizedSource = PROCESOS_STORE.all.filter(
+        (row) => ((row.estado || row.status || '').toString().toLowerCase().includes('finalizado'))
+    );
+
+    PROCESOS_STORE.filtered.active = activeSource.filter((row) => matchesProcesoFilters(row, mainFilters));
+    PROCESOS_STORE.filtered.finalized = finalizedSource.filter((row) => matchesProcesoFilters(row, finalizedFilters));
+
+    renderTabla();
+}
+
+async function cargarProcesos() {
+    try {
+        const rows = await getProcesosAcreditados({});
+        PROCESOS_STORE.all = sortProcesosByNumeroDesc(rows);
+        PROCESOS_STORE.loaded = true;
+        PROCESOS_STORE.pagination.page = 1;
+        populateClientFilterOptions();
+        filtrarProcesos();
+    } catch (err) {
+        console.error('Error cargando procesos acreditados', err);
+        Toast.show({ title: 'Error', message: err.message || 'No se pudieron cargar los procesos', variant: 'error' });
+    }
+}
+
+async function loadAndRenderProcesos() {
+    if (!PROCESOS_STORE.loaded) {
+        await cargarProcesos();
+        return;
+    }
+    filtrarProcesos();
+}
+
+// Debounce para filtros locales
+const debouncedLoadProcesos = debounce(filtrarProcesos, 220);
+
+// Inicializar listeners para filtros y buscar
+document.addEventListener('DOMContentLoaded', () => {
+    // cargar inicialmente
+    cargarProcesos();
+
+    // eventos de filtro
+    const inputs = [
+        document.getElementById('adminFilterStatus'),
+        document.getElementById('adminFilterType'),
+        document.getElementById('adminFilterMonth'),
+        document.getElementById('adminFilterDate'),
+        document.getElementById('adminSearchCertificates'),
+        document.getElementById('adminFilterFinalizedStatus'),
+        document.getElementById('adminFilterFinalizedType'),
+        document.getElementById('adminFilterFinalizedMonth'),
+        document.getElementById('adminFilterFinalizedDate'),
+        document.getElementById('adminSearchFinalizedCertificates'),
+        document.getElementById('statsMonthFilter')
+    ];
+
+    inputs.forEach(el => {
+        if (!el) return;
+        const ev = el.tagName.toLowerCase() === 'input' && el.type === 'text' ? 'input' : 'change';
+        el.addEventListener(ev, debouncedLoadProcesos);
+    });
+
+    const resetMainFiltersBtn = document.getElementById('resetAcreditadosFiltersBtn');
+    if (resetMainFiltersBtn) {
+        resetMainFiltersBtn.addEventListener('click', () => {
+            const status = document.getElementById('adminFilterStatus');
+            const client = document.getElementById('adminFilterType');
+            const month = document.getElementById('adminFilterMonth');
+            const date = document.getElementById('adminFilterDate');
+            const search = document.getElementById('adminSearchCertificates');
+            if (status) status.value = '';
+            if (client) client.value = '';
+            if (month) month.value = '';
+            if (date) date.value = '';
+            if (search) search.value = '';
+            filtrarProcesos();
+        });
+    }
+
+    const resetFinalizedFiltersBtn = document.getElementById('resetFinalizedAcreditadosFiltersBtn');
+    if (resetFinalizedFiltersBtn) {
+        resetFinalizedFiltersBtn.addEventListener('click', () => {
+            const status = document.getElementById('adminFilterFinalizedStatus');
+            const client = document.getElementById('adminFilterFinalizedType');
+            const month = document.getElementById('adminFilterFinalizedMonth');
+            const date = document.getElementById('adminFilterFinalizedDate');
+            const search = document.getElementById('adminSearchFinalizedCertificates');
+            if (status) status.value = '';
+            if (client) client.value = '';
+            if (month) month.value = '';
+            if (date) date.value = '';
+            if (search) search.value = '';
+            filtrarProcesos();
+        });
+    }
+
+    // delegación para botones de acciones (ver/editar) — soporta tablas principal y finalizados
+    const bindTableActions = (tableId) => {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        table.addEventListener('click', (e) => {
+            const editBtn = e.target.closest('.edit-process-btn');
+            const deleteBtn = e.target.closest('.delete-process-btn');
+            const changeStatusBtn = e.target.closest('.change-status-btn');
+            if (editBtn) {
+                const id = editBtn.dataset.id;
+                openEditProcessModal(id);
+            }
+            if (deleteBtn) {
+                const id = deleteBtn.dataset.id;
+                if (!id) return;
+                if (confirm(`Eliminar proceso ${id}? Esta acción no se puede deshacer.`)) {
+                    (async () => {
+                        try {
+                            const res = await fetchFromDatabase('delete_proceso', { numero_proceso: id });
+                            if (res.ok) {
+                                Toast.show({ title: 'Eliminado', message: `Proceso ${id} eliminado`, variant: 'success' });
+                                cargarProcesos();
+                            } else {
+                                throw new Error(res.error || 'No se pudo eliminar');
+                            }
+                        } catch (err) {
+                            console.error('Error eliminando proceso', err);
+                            Toast.show({ title: 'Error', message: err.message || 'No se pudo eliminar', variant: 'error' });
+                        }
+                    })();
+                }
+            }
+            if (changeStatusBtn) {
+                const id = changeStatusBtn.dataset.id;
+                if (!id) return;
+                AdminPanelManager.editCertificateStatus(id);
+            }
+        });
+    };
+
+    bindTableActions('certificatesTable');
+    bindTableActions('finalizedCertificatesTable');
+
+    // Abrir modal de edición buscando datos desde backend
+    async function openEditProcessModal(numero) {
+        try {
+            const res = await fetchFromDatabase('get_proceso', { numero_proceso: numero });
+            if (!res.ok) throw new Error(res.error || 'No se encontró proceso');
+            const p = res.proceso;
+
+            const title = document.getElementById('certificateProcessModalTitle');
+            const editId = document.getElementById('processEditId');
+            const tipo = document.getElementById('processTipo');
+            const processNumber = document.getElementById('processNumber');
+            const client = document.getElementById('processClientSelect');
+            const status = document.getElementById('processStatusSelect');
+            const receptionDate = document.getElementById('processReceptionDate');
+            const deliveryDate = document.getElementById('processDeliveryDate');
+            const finalizedDate = document.getElementById('processFinalizedDate');
+            const nInforme = document.getElementById('processNInforme');
+            const valor = document.getElementById('processValor');
+            const obs = document.getElementById('processObservaciones');
+
+            title.textContent = `Editar Proceso ${p.numero_proceso}`;
+            editId.value = p.numero_proceso;
+            processNumber.value = p.numero_proceso || '';
+            if (client) client.value = p.cliente || p.cliente_id || '';
+            if (tipo) tipo.value = p.tipo || 'acreditado';
+            if (status) status.value = normalizeStatusKey(p.estado) || p.estado || 'recepcion';
+            if (receptionDate) receptionDate.value = p.fecha_recepcion ? p.fecha_recepcion.split('T')[0] : '';
+            if (deliveryDate) deliveryDate.value = p.fecha_entrega_cliente ? p.fecha_entrega_cliente.split('T')[0] : '';
+            if (finalizedDate) finalizedDate.value = p.fecha_finalizado ? p.fecha_finalizado.split('T')[0] : '';
+            if (nInforme) nInforme.value = p.n_informe || '';
+            if (valor) valor.value = p.valor || '';
+            if (obs) obs.value = p.observaciones || '';
+
+            // Abrir modal
+            const modal = document.getElementById('certificateProcessModal');
+            if (modal) {
+                modal.classList.add('modal--open');
+                modal.setAttribute('aria-hidden', 'false');
+            }
+        } catch (err) {
+            console.error('Error abriendo modal edición', err);
+            Toast.show({ title: 'Error', message: err.message || 'No se pudo cargar proceso', variant: 'error' });
+        }
+    }
+
+    
+});
+
+/**
  * Notificaciones tipo Toast (sin dependencias)
  */
 const Toast = {
@@ -1869,7 +2390,7 @@ const CertificatesAuthManager = {
 
             const storedClient = localStorage.getItem('hightest_client');
             if (storedClient) {
-                window.location.href = 'client-portal.html';
+                window.location.href = 'Portal cliente/client-portal.html';
                 return;
             }
 
@@ -1893,7 +2414,7 @@ const CertificatesAuthManager = {
 
                 const storedClient = localStorage.getItem('hightest_client');
                 if (storedClient) {
-                    window.location.href = 'client-portal.html';
+                    window.location.href = 'Portal cliente/client-portal.html';
                     // Cerrar menú móvil después de redireccionar
                     MobileMenu.close();
                     return;
@@ -2076,7 +2597,7 @@ const CertificatesAuthManager = {
             // Cerrar modal y redirigir después de pequeña pausa
             setTimeout(() => {
                 this.closeCertificatesModal();
-                window.location.href = 'client-portal.html';
+                window.location.href = 'Portal cliente/client-portal.html';
             }, 900);
         } catch (err) {
             console.error('CertificatesAuthManager: error conectando al servidor', err);
@@ -2340,7 +2861,7 @@ function bindCertificatesBtnFallback() {
         const storedClient = localStorage.getItem('hightest_client');
         if (storedClient) {
             console.log('➡️ Fallback: cliente logueado, redirigiendo');
-            window.location.href = 'client-portal.html';
+            window.location.href = 'Portal cliente/client-portal.html';
             return;
         }
 
@@ -2482,7 +3003,7 @@ const ClientAuth = {
             setFeedback(`Todo listo, ${client.name}. Estamos entrando a tu portal de cliente.`, false);
 
             setTimeout(() => {
-                window.location.href = 'client-portal.html';
+                window.location.href = 'Portal cliente/client-portal.html';
             }, 800);
         } catch (err) {
             console.error('ClientAuth error:', err);
@@ -2517,11 +3038,12 @@ const AdminPanelManager = {
         }
 
         this.setupUI();
-        this.loadMockData();
+        // no cargar datos mock por defecto — usamos la fuente real `procesos_acreditados`
         this.setupEventListeners();
         this.setupClientsManagement();
         this.setupAdminTabs();
         this.applyAdminTabState('acreditados', false);
+        window.CommercialQuotesModule?.init?.();
         this.updateStats();
         this.renderReportInsights();
     },
@@ -2603,7 +3125,7 @@ const AdminPanelManager = {
         // Datos simulados de certificados
         this.certificates = [
             {
-                id: 'HT-R26-0001',
+                id: 'R26 0001',
                 client: 'Empresa 1 SAS',
                 type: 'acreditado',
                 status: 'recepcion',
@@ -2613,7 +3135,7 @@ const AdminPanelManager = {
                 value: 2500000
             },
             {
-                id: 'HT-R26-0002',
+                id: 'R26 0002',
                 client: 'Empresa 2 Ltda',
                 type: 'no-acreditado',
                 status: 'lavado',
@@ -2623,7 +3145,7 @@ const AdminPanelManager = {
                 value: 1800000
             },
             {
-                id: 'HT-R26-0003',
+                id: 'R26 0003',
                 client: 'Empresa 3 S.A.',
                 type: 'acreditado',
                 status: 'en-proceso-de-ensayo',
@@ -2633,7 +3155,7 @@ const AdminPanelManager = {
                 value: 950000
             },
             {
-                id: 'HT-R26-0004',
+                id: 'R26 0004',
                 client: 'Cliente Demo',
                 type: 'no-acreditado',
                 status: 'finalizado',
@@ -2679,44 +3201,52 @@ const AdminPanelManager = {
         const clearStatsMonthFilter = document.getElementById('clearStatsMonthFilter');
 
         if (searchInput) {
-            searchInput.addEventListener('input', () => this.filterCertificates());
+            searchInput.addEventListener('input', debouncedLoadProcesos);
         }
         if (statusFilter) {
-            statusFilter.addEventListener('change', () => this.filterCertificates());
+            statusFilter.addEventListener('change', debouncedLoadProcesos);
         }
         if (typeFilter) {
-            typeFilter.addEventListener('change', () => this.filterCertificates());
+            typeFilter.addEventListener('input', debouncedLoadProcesos);
         }
         if (monthFilter) {
-            monthFilter.addEventListener('change', () => this.filterCertificates());
+            monthFilter.addEventListener('change', debouncedLoadProcesos);
         }
         if (dateFilter) {
-            dateFilter.addEventListener('change', () => this.filterCertificates());
+            dateFilter.addEventListener('change', debouncedLoadProcesos);
         }
         if (finalizedSearchInput) {
-            finalizedSearchInput.addEventListener('input', () => this.filterFinalizedCertificates());
+            finalizedSearchInput.addEventListener('input', debouncedLoadProcesos);
         }
         if (finalizedStatusFilter) {
-            finalizedStatusFilter.addEventListener('change', () => this.filterFinalizedCertificates());
+            finalizedStatusFilter.addEventListener('change', debouncedLoadProcesos);
         }
         if (finalizedTypeFilter) {
-            finalizedTypeFilter.addEventListener('change', () => this.filterFinalizedCertificates());
+            finalizedTypeFilter.addEventListener('input', debouncedLoadProcesos);
         }
         if (finalizedMonthFilter) {
-            finalizedMonthFilter.addEventListener('change', () => this.filterFinalizedCertificates());
+            finalizedMonthFilter.addEventListener('change', debouncedLoadProcesos);
         }
         if (finalizedDateFilter) {
-            finalizedDateFilter.addEventListener('change', () => this.filterFinalizedCertificates());
+            finalizedDateFilter.addEventListener('change', debouncedLoadProcesos);
         }
         if (statsMonthFilter) {
-            statsMonthFilter.addEventListener('change', () => this.updateStats());
+            statsMonthFilter.addEventListener('change', () => {
+                const month = statsMonthFilter.value || '';
+                this.syncGlobalMonthFilters(month);
+                filtrarProcesos();
+                this.renderCertificatesNoAcreditados();
+                this.updateStats();
+                this.updateStatsNoAcreditados();
+            });
         }
         if (clearStatsMonthFilter) {
-            clearStatsMonthFilter.addEventListener('click', () => {
-                if (statsMonthFilter) {
-                    statsMonthFilter.value = '';
-                }
+            clearStatsMonthFilter.addEventListener('click', async () => {
+                this.resetProcesoFilters();
+                filtrarProcesos();
+                this.renderCertificatesNoAcreditados();
                 this.updateStats();
+                this.updateStatsNoAcreditados();
             });
         }
 
@@ -2778,6 +3308,9 @@ const AdminPanelManager = {
         const cancelProcessModalBtn = document.getElementById('cancelCertificateProcessBtn');
         const saveProcessModalBtn = document.getElementById('saveCertificateProcessBtn');
         const processModal = document.getElementById('certificateProcessModal');
+        const closeDuplicateProcessModalBtn = document.getElementById('closeDuplicateProcessModal');
+        const duplicateProcessOkBtn = document.getElementById('duplicateProcessOkBtn');
+        const duplicateProcessModal = document.getElementById('duplicateProcessModal');
 
         if (closeProcessModalBtn) {
             closeProcessModalBtn.addEventListener('click', () => this.closeCertificateProcessModal());
@@ -2792,6 +3325,19 @@ const AdminPanelManager = {
             processModal.addEventListener('click', (event) => {
                 if (event.target === processModal) {
                     this.closeCertificateProcessModal();
+                }
+            });
+        }
+        if (closeDuplicateProcessModalBtn) {
+            closeDuplicateProcessModalBtn.addEventListener('click', () => this.closeDuplicateProcessModal());
+        }
+        if (duplicateProcessOkBtn) {
+            duplicateProcessOkBtn.addEventListener('click', () => this.closeDuplicateProcessModal());
+        }
+        if (duplicateProcessModal) {
+            duplicateProcessModal.addEventListener('click', (event) => {
+                if (event.target === duplicateProcessModal) {
+                    this.closeDuplicateProcessModal();
                 }
             });
         }
@@ -2818,7 +3364,7 @@ const AdminPanelManager = {
             });
         }
 
-        this.renderCertificates();
+        // renderCertificates() se omite para permitir que la carga desde `procesos_acreditados` controle la tabla
     },
 
     setupAdminTabs() {
@@ -2844,6 +3390,7 @@ const AdminPanelManager = {
         const certificatesSection = document.getElementById('certificates');
         const certificatesNoAcreditadosSection = document.getElementById('certificates-no-acreditados');
         const clientsSection = document.getElementById('clients');
+        const commercialSection = document.getElementById('gestion-comercial');
         const statsSection = document.querySelector('.admin-stats-wrapper');
         const quickLinkSection = document.querySelector('.admin-quick-link');
         const reportsAcreditadosSection = document.getElementById('reports-acreditados');
@@ -2853,10 +3400,15 @@ const AdminPanelManager = {
         certificatesSection?.classList.add('is-hidden');
         certificatesNoAcreditadosSection?.classList.add('is-hidden');
         clientsSection?.classList.add('is-hidden');
+        commercialSection?.classList.add('is-hidden');
         statsSection?.classList.add('is-hidden');
         reportsAcreditadosSection?.classList.add('is-hidden');
         reportsNoAcreditadosSection?.classList.add('is-hidden');
         quickLinkSection?.classList.add('is-hidden');
+
+        if (commercialSection) {
+            commercialSection.hidden = true;
+        }
 
         // Mostrar solo lo necesario según la pestaña
         if (tabName === 'acreditados') {
@@ -2885,6 +3437,14 @@ const AdminPanelManager = {
             if (shouldScroll) {
                 clientsSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
+        } else if (tabName === 'gestion-comercial') {
+            commercialSection?.classList.remove('is-hidden');
+            if (commercialSection) {
+                commercialSection.hidden = false;
+            }
+            if (shouldScroll) {
+                commercialSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         }
     },
 
@@ -2896,7 +3456,7 @@ const AdminPanelManager = {
     filterCertificates() {
         const searchTerm = document.getElementById('adminSearchCertificates')?.value.toLowerCase() || '';
         const statusFilter = document.getElementById('adminFilterStatus')?.value || '';
-        const typeFilter = document.getElementById('adminFilterType')?.value || '';
+        const clientFilter = document.getElementById('adminFilterType')?.value.toLowerCase() || '';
         const dateFilter = document.getElementById('adminFilterDate')?.value || '';
         const monthFilter = document.getElementById('adminFilterMonth')?.value || '';
         const tabType = this.currentCertificateTypeTab || '';
@@ -2909,7 +3469,7 @@ const AdminPanelManager = {
 
             const matchesTabType = !tabType || cert.type === tabType;
             const matchesStatus = !statusFilter || cert.status === statusFilter;
-            const matchesType = !typeFilter || cert.type === typeFilter;
+            const matchesClient = !clientFilter || cert.client.toLowerCase().includes(clientFilter);
             const matchesDate = !dateFilter ||
                 cert.receptionDate === dateFilter ||
                 cert.deliveryDate === dateFilter ||
@@ -2921,7 +3481,7 @@ const AdminPanelManager = {
                 (cert.finalizedDate && cert.finalizedDate.startsWith(monthFilter))
             );
 
-            return matchesSearch && matchesTabType && matchesStatus && matchesType && matchesDate && matchesMonth;
+            return matchesSearch && matchesTabType && matchesStatus && matchesClient && matchesDate && matchesMonth;
         });
 
         this.renderFilteredCertificates(filtered);
@@ -2930,7 +3490,7 @@ const AdminPanelManager = {
     filterFinalizedCertificates() {
         const searchTerm = document.getElementById('adminSearchFinalizedCertificates')?.value.toLowerCase() || '';
         const statusFilter = document.getElementById('adminFilterFinalizedStatus')?.value || '';
-        const typeFilter = document.getElementById('adminFilterFinalizedType')?.value || '';
+        const clientFilter = document.getElementById('adminFilterFinalizedType')?.value.toLowerCase() || '';
         const dateFilter = document.getElementById('adminFilterFinalizedDate')?.value || '';
         const monthFilter = document.getElementById('adminFilterFinalizedMonth')?.value || '';
         const tabType = this.currentCertificateTypeTab || '';
@@ -2945,7 +3505,7 @@ const AdminPanelManager = {
 
             const matchesTabType = !tabType || cert.type === tabType;
             const matchesStatus = !statusFilter || cert.status === statusFilter;
-            const matchesType = !typeFilter || cert.type === typeFilter;
+            const matchesClient = !clientFilter || cert.client.toLowerCase().includes(clientFilter);
             const matchesDate = !dateFilter ||
                 cert.receptionDate === dateFilter ||
                 cert.deliveryDate === dateFilter ||
@@ -2957,7 +3517,7 @@ const AdminPanelManager = {
                 (cert.finalizedDate && cert.finalizedDate.startsWith(monthFilter))
             );
 
-            return matchesSearch && matchesTabType && matchesStatus && matchesType && matchesDate && matchesMonth;
+            return matchesSearch && matchesTabType && matchesStatus && matchesClient && matchesDate && matchesMonth;
         });
 
         this.renderFinalizedCertificates(filtered);
@@ -2999,8 +3559,9 @@ const AdminPanelManager = {
     buildCertificateRow(cert) {
         const row = document.createElement('tr');
 
-        const statusClass = `status--${cert.status}`;
-        const statusText = this.getStatusText(cert.status);
+        const statusKey = normalizeStatusKey(cert.status);
+        const statusClass = `status--${statusKey || cert.status}`;
+        const statusText = this.getStatusText(statusKey || cert.status);
         const typeText = this.getTypeText(cert.type);
 
         row.innerHTML = `
@@ -3009,14 +3570,14 @@ const AdminPanelManager = {
             <td>${typeText}</td>
             <td>
                 <span class="status-badge ${statusClass}">${statusText}</span>
-                <button class="btn btn--small btn--outline" style="margin-left: 0.5rem; padding: 0.25rem 0.5rem;" onclick="AdminPanelManager.editCertificateStatus('${cert.id}')" title="Editar estado">✏️</button>
+                <button type="button" class="btn btn--small btn--outline change-status-btn" style="margin-left: 0.5rem; padding: 0.25rem 0.5rem;" data-id="${cert.id}" title="Editar estado">✏️</button>
             </td>
             <td>${this.formatDate(cert.receptionDate)}</td>
             <td>${this.formatDate(cert.deliveryDate)}</td>
             <td>${this.formatDate(cert.finalizedDate)}</td>
             <td>
-                <button class="btn btn--small btn--outline" style="padding: 0.25rem 0.5rem;" onclick="AdminPanelManager.editCertificate('${cert.id}')" title="Editar proceso">✏️</button>
-                <button class="btn btn--small btn--error" style="padding: 0.25rem 0.5rem;" onclick="AdminPanelManager.deleteCertificate('${cert.id}')" title="Eliminar">🗑️</button>
+                <button type="button" class="btn btn--small btn--outline" style="padding: 0.25rem 0.5rem;" onclick="AdminPanelManager.editCertificate('${cert.id}')" title="Editar proceso">✏️</button>
+                <button type="button" class="btn btn--small btn--error" style="padding: 0.25rem 0.5rem;" onclick="AdminPanelManager.deleteCertificate('${cert.id}')" title="Eliminar">🗑️</button>
             </td>
         `;
 
@@ -3075,21 +3636,23 @@ const AdminPanelManager = {
 
         const title = document.getElementById('certificateProcessModalTitle');
         const editId = document.getElementById('processEditId');
+        const tipo = document.getElementById('processTipo');
         const processNumber = document.getElementById('processNumber');
         const client = document.getElementById('processClientSelect');
-        const type = document.getElementById('processTypeSelect');
+        const nInforme = document.getElementById('processNInforme');
         const status = document.getElementById('processStatusSelect');
         const receptionDate = document.getElementById('processReceptionDate');
         const deliveryDate = document.getElementById('processDeliveryDate');
         const finalizedDate = document.getElementById('processFinalizedDate');
 
-        if (!title || !editId || !processNumber || !client || !type || !status || !receptionDate || !deliveryDate || !finalizedDate) return;
+        if (!title || !editId || !processNumber || !client || !nInforme || !status || !receptionDate || !deliveryDate || !finalizedDate) return;
 
         title.textContent = `Editar Proceso ${cert.id}`;
         editId.value = cert.id;
         processNumber.value = cert.id;
         client.value = cert.client;
-        type.value = cert.type;
+        if (tipo) tipo.value = cert.type || 'acreditado';
+        nInforme.value = cert.n_informe || '';
         status.value = cert.status;
         receptionDate.value = cert.receptionDate || '';
         deliveryDate.value = cert.deliveryDate || '';
@@ -3098,20 +3661,26 @@ const AdminPanelManager = {
         this.openCertificateProcessModal();
     },
 
-    editCertificateStatus(certId) {
-        const cert = this.certificates.find((item) => item.id === certId);
-        if (!cert) return;
-
+    async editCertificateStatus(certId) {
         const editId = document.getElementById('statusEditId');
         const processCode = document.getElementById('statusProcessCode');
         const status = document.getElementById('statusProcessSelect');
         if (!editId || !processCode || !status) return;
 
-        editId.value = cert.id;
-        processCode.value = `${cert.id} - ${cert.client}`;
-        status.value = cert.status;
-
-        this.openCertificateStatusModal();
+        try {
+            const response = await fetchFromDatabase('get_proceso', { numero_proceso: certId });
+            const cert = response?.ok ? response.proceso : null;
+            editId.value = cert?.numero_proceso || certId;
+            processCode.value = cert ? `${cert.numero_proceso || certId} - ${cert.cliente || ''}`.trim() : certId;
+            status.value = normalizeStatusKey(cert?.estado) || 'recepcion';
+            this.openCertificateStatusModal();
+        } catch (err) {
+            console.error('Error cargando proceso para editar estado', err);
+            editId.value = certId;
+            processCode.value = certId;
+            status.value = 'recepcion';
+            this.openCertificateStatusModal();
+        }
     },
 
     deleteCertificate(certId) {
@@ -3137,20 +3706,31 @@ const AdminPanelManager = {
         const statsMonthFilter = document.getElementById('statsMonthFilter');
         const statsPeriodLabel = document.getElementById('statsPeriodLabel');
         const monthFilter = statsMonthFilter?.value || '';
-        const tabType = this.currentCertificateTypeTab || '';
-        const scopedCertificates = monthFilter
-            ? this.certificates.filter((cert) => (
-                (!tabType || cert.type === tabType) && (
-                    (cert.receptionDate && cert.receptionDate.startsWith(monthFilter)) ||
-                    (cert.deliveryDate && cert.deliveryDate.startsWith(monthFilter)) ||
-                    (cert.finalizedDate && cert.finalizedDate.startsWith(monthFilter))
-                )
-            ))
-            : this.certificates.filter((cert) => !tabType || cert.type === tabType);
+        const tableBodyIds = ['certificatesTableBody', 'finalizedCertificatesTableBody'];
+        const scopedRows = [];
 
-        const total = scopedCertificates.length;
-        const completed = scopedCertificates.filter(c => c.status === 'finalizado').length;
-        const pending = scopedCertificates.filter(c => c.status !== 'finalizado').length;
+        tableBodyIds.forEach((tbodyId) => {
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+
+            Array.from(tbody.querySelectorAll('tr')).forEach((row) => {
+                if (row.classList.contains('empty-state') || !row.cells || row.cells.length < 7) return;
+
+                if (monthFilter) {
+                    const dateValues = [row.cells[4]?.textContent || '', row.cells[5]?.textContent || '', row.cells[6]?.textContent || '']
+                        .map((value) => String(value).trim())
+                        .filter((value) => value && value !== '-');
+                    const matchesMonth = dateValues.some((value) => value.startsWith(monthFilter));
+                    if (!matchesMonth) return;
+                }
+
+                scopedRows.push(row);
+            });
+        });
+
+        const total = scopedRows.length;
+        const completed = scopedRows.filter((row) => (row.cells[3]?.textContent || '').toLowerCase().includes('finalizado')).length;
+        const pending = total - completed;
 
         const totalEl = document.getElementById('statTotalCerts');
         const completedEl = document.getElementById('statCompletedCerts');
@@ -3169,90 +3749,105 @@ const AdminPanelManager = {
         this.renderReportInsights();
     },
 
+    resetProcesoFilters() {
+        const filterStatus = document.getElementById('adminFilterStatus');
+        const filterType = document.getElementById('adminFilterType');
+        const filterMonth = document.getElementById('adminFilterMonth');
+        const filterDate = document.getElementById('adminFilterDate');
+        const searchInput = document.getElementById('adminSearchCertificates');
+        const finalizedFilterStatus = document.getElementById('adminFilterFinalizedStatus');
+        const finalizedFilterType = document.getElementById('adminFilterFinalizedType');
+        const finalizedFilterMonth = document.getElementById('adminFilterFinalizedMonth');
+        const finalizedFilterDate = document.getElementById('adminFilterFinalizedDate');
+        const searchFinalizedInput = document.getElementById('adminSearchFinalizedCertificates');
+        const filterMonthNoAcreditados = document.getElementById('adminFilterMonthNoAcreditados');
+        const finalizedFilterMonthNoAcreditados = document.getElementById('adminFilterFinalizedMonthNoAcreditados');
+        const searchInputNoAcreditados = document.getElementById('adminSearchCertificatesNoAcreditados');
+        const searchFinalizedInputNoAcreditados = document.getElementById('adminSearchFinalizedCertificatesNoAcreditados');
+        const statsMonthFilter = document.getElementById('statsMonthFilter');
+        const statsMonthFilterNoAcreditados = document.getElementById('statsMonthFilterNoAcreditados');
+
+        if (filterStatus) filterStatus.value = '';
+        if (filterType) filterType.value = '';
+        if (filterMonth) filterMonth.value = '';
+        if (filterDate) filterDate.value = '';
+        if (searchInput) searchInput.value = '';
+        if (finalizedFilterStatus) finalizedFilterStatus.value = '';
+        if (finalizedFilterType) finalizedFilterType.value = '';
+        if (finalizedFilterMonth) finalizedFilterMonth.value = '';
+        if (finalizedFilterDate) finalizedFilterDate.value = '';
+        if (searchFinalizedInput) searchFinalizedInput.value = '';
+        if (filterMonthNoAcreditados) filterMonthNoAcreditados.value = '';
+        if (finalizedFilterMonthNoAcreditados) finalizedFilterMonthNoAcreditados.value = '';
+        if (searchInputNoAcreditados) searchInputNoAcreditados.value = '';
+        if (searchFinalizedInputNoAcreditados) searchFinalizedInputNoAcreditados.value = '';
+        if (statsMonthFilter) statsMonthFilter.value = '';
+        if (statsMonthFilterNoAcreditados) statsMonthFilterNoAcreditados.value = '';
+    },
+
     renderReportInsights() {
         this.renderMonthlySummary();
+        this.renderMonthlySummaryNoAcreditados();
         this.renderKanbanBoard();
     },
 
     renderMonthlySummary() {
-        const container = document.getElementById('monthlySummaryListAcreditados');
-        if (!container) return;
-        const tabType = this.currentCertificateTypeTab || '';
-
-        const monthsMap = new Map();
-        this.certificates.filter((cert) => cert.type === 'acreditado').forEach((cert) => {
-            const baseDate = cert.receptionDate || cert.deliveryDate || cert.finalizedDate;
-            if (!baseDate) return;
-            const monthKey = baseDate.slice(0, 7);
-            if (!monthsMap.has(monthKey)) {
-                monthsMap.set(monthKey, { total: 0, completed: 0, pending: 0 });
-            }
-            const bucket = monthsMap.get(monthKey);
-            bucket.total += 1;
-            if (cert.status === 'finalizado') {
-                bucket.completed += 1;
-            } else {
-                bucket.pending += 1;
-            }
-        });
-
-        const entries = Array.from(monthsMap.entries())
-            .sort(([a], [b]) => b.localeCompare(a))
-            .slice(0, 6);
-
-        if (!entries.length) {
-            container.innerHTML = '<div class="monthly-summary-item">No hay datos suficientes para mostrar resumen por mes.</div>';
-            return;
-        }
-
-        const maxTotal = Math.max(...entries.map(([, data]) => data.total), 1);
-        const monthNames = {
-            '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril', '05': 'Mayo', '06': 'Junio',
-            '07': 'Julio', '08': 'Agosto', '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre'
-        };
-
-        container.innerHTML = entries.map(([monthKey, data]) => {
-            const [year, month] = monthKey.split('-');
-            const label = `${monthNames[month] || month} ${year}`;
-            const percent = Math.max(8, Math.round((data.total / maxTotal) * 100));
-
-            return `
-                <div class="monthly-summary-item">
-                    <div class="monthly-summary-item__top">
-                        <div class="monthly-summary-item__month">${label}</div>
-                        <div class="monthly-summary-item__count">${data.total}</div>
-                    </div>
-                    <div class="monthly-summary-item__bar">
-                        <div class="monthly-summary-item__bar-fill" style="width: ${percent}%;"></div>
-                    </div>
-                    <div class="monthly-summary-item__meta">
-                        <span>Finalizados: ${data.completed}</span>
-                        <span>Pendientes: ${data.pending}</span>
-                    </div>
-                </div>
-            `;
-        }).join('');
+        this.renderMonthlySummaryByType('monthlySummaryListAcreditados', [
+            'certificatesTableBody',
+            'finalizedCertificatesTableBody'
+        ]);
     },
 
     renderMonthlySummaryNoAcreditados() {
-        const container = document.getElementById('monthlySummaryListNoAcreditados');
+        this.renderMonthlySummaryByType('monthlySummaryListNoAcreditados', [
+            'certificatesTableBodyNoAcreditados',
+            'finalizedCertificatesTableBodyNoAcreditados'
+        ]);
+    },
+
+    renderMonthlySummaryByType(containerId, tableBodyIds = [], emptyMessage = 'No hay datos suficientes para mostrar resumen por mes.') {
+        const container = document.getElementById(containerId);
         if (!container) return;
 
+        const monthNames = {
+            '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril', '05': 'Mayo', '06': 'Junio',
+            '07': 'Julio', '08': 'Agosto', '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre'
+        };
         const monthsMap = new Map();
-        this.certificates.filter((cert) => cert.type === 'no-acreditado').forEach((cert) => {
-            const baseDate = cert.receptionDate || cert.deliveryDate || cert.finalizedDate;
-            if (!baseDate) return;
-            const monthKey = baseDate.slice(0, 7);
-            if (!monthsMap.has(monthKey)) {
-                monthsMap.set(monthKey, { total: 0, completed: 0, pending: 0 });
-            }
-            const bucket = monthsMap.get(monthKey);
-            bucket.total += 1;
-            if (cert.status === 'finalizado') {
-                bucket.completed += 1;
-            } else {
-                bucket.pending += 1;
-            }
+
+        tableBodyIds.forEach((tbodyId) => {
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+
+            Array.from(tbody.querySelectorAll('tr')).forEach((row) => {
+                if (row.classList.contains('empty-state')) return;
+                if (!row.cells || row.cells.length < 7) return;
+
+                const statusText = (row.cells[3]?.textContent || '').toLowerCase();
+                const dateValues = [
+                    row.cells[4]?.textContent || '',
+                    row.cells[5]?.textContent || '',
+                    row.cells[6]?.textContent || ''
+                ]
+                    .map((value) => String(value).trim())
+                    .filter((value) => value && value !== '-');
+
+                const baseDate = dateValues.find((value) => /^\d{4}-\d{2}-\d{2}/.test(value));
+                if (!baseDate) return;
+
+                const monthKey = baseDate.slice(0, 7);
+                if (!monthsMap.has(monthKey)) {
+                    monthsMap.set(monthKey, { total: 0, completed: 0, pending: 0 });
+                }
+
+                const bucket = monthsMap.get(monthKey);
+                bucket.total += 1;
+                if (statusText.includes('finalizado')) {
+                    bucket.completed += 1;
+                } else {
+                    bucket.pending += 1;
+                }
+            });
         });
 
         const entries = Array.from(monthsMap.entries())
@@ -3260,16 +3855,11 @@ const AdminPanelManager = {
             .slice(0, 6);
 
         if (!entries.length) {
-            container.innerHTML = '<div class="monthly-summary-item">No hay datos suficientes para mostrar resumen por mes.</div>';
+            container.innerHTML = `<div class="monthly-summary-item">${emptyMessage}</div>`;
             return;
         }
 
         const maxTotal = Math.max(...entries.map(([, data]) => data.total), 1);
-        const monthNames = {
-            '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril', '05': 'Mayo', '06': 'Junio',
-            '07': 'Julio', '08': 'Agosto', '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre'
-        };
-
         container.innerHTML = entries.map(([monthKey, data]) => {
             const [year, month] = monthKey.split('-');
             const label = `${monthNames[month] || month} ${year}`;
@@ -3292,6 +3882,7 @@ const AdminPanelManager = {
             `;
         }).join('');
     },
+
     renderKanbanBoard() {
         const container = document.getElementById('kanbanBoard');
         if (!container) return;
@@ -3340,7 +3931,8 @@ const AdminPanelManager = {
             'informe-de-ensayo': 'Informe',
             'finalizado': 'Finalizado'
         };
-        return statusMap[status] || status;
+        const key = normalizeStatusKey(status);
+        return statusMap[key] || status;
     },
 
     getTypeText(type) {
@@ -3381,23 +3973,25 @@ const AdminPanelManager = {
     addNewCertificate() {
         const title = document.getElementById('certificateProcessModalTitle');
         const editId = document.getElementById('processEditId');
+        const tipo = document.getElementById('processTipo');
         const processNumber = document.getElementById('processNumber');
         const client = document.getElementById('processClientSelect');
-        const type = document.getElementById('processTypeSelect');
+        const nInforme = document.getElementById('processNInforme');
         const status = document.getElementById('processStatusSelect');
         const receptionDate = document.getElementById('processReceptionDate');
         const deliveryDate = document.getElementById('processDeliveryDate');
         const finalizedDate = document.getElementById('processFinalizedDate');
 
-        if (!title || !editId || !processNumber || !client || !type || !status || !receptionDate || !deliveryDate || !finalizedDate) return;
+        if (!title || !editId || !processNumber || !client || !nInforme || !status || !receptionDate || !deliveryDate || !finalizedDate) return;
 
         this.populateCertificateClientOptions('');
 
         title.textContent = 'Nuevo Proceso';
         editId.value = '';
-        processNumber.value = this.generateProcessId();
+        if (tipo) tipo.value = 'acreditado';
+        processNumber.value = '';
         client.value = '';
-        type.value = 'acreditado';
+        nInforme.value = '';
         status.value = 'recepcion';
         receptionDate.value = this.getTodayISO();
         deliveryDate.value = '';
@@ -3406,74 +4000,112 @@ const AdminPanelManager = {
         this.openCertificateProcessModal();
     },
 
-    saveCertificateProcessFromModal() {
+    async saveCertificateProcessFromModal() {
         const editId = document.getElementById('processEditId');
         const processNumber = document.getElementById('processNumber');
         const client = document.getElementById('processClientSelect');
-        const type = document.getElementById('processTypeSelect');
+        const nInforme = document.getElementById('processNInforme');
         const status = document.getElementById('processStatusSelect');
         const receptionDate = document.getElementById('processReceptionDate');
         const deliveryDate = document.getElementById('processDeliveryDate');
         const finalizedDate = document.getElementById('processFinalizedDate');
 
-        if (!editId || !processNumber || !client || !type || !status || !receptionDate || !deliveryDate || !finalizedDate) return;
+        if (!processNumber || !client || !status || !receptionDate) return;
 
-        // Normalizar el valor del tipo
-        const normalizedType = (type.value || '').trim().toLowerCase();
+        const numero = editId?.value || processNumber.value;
+        const isEdit = Boolean(editId && editId.value);
+
+        const normalizedNumero = String(processNumber.value || '').trim();
+        if (!normalizedNumero) return;
+
+        const allProcesos = Array.isArray(PROCESOS_STORE.all) ? PROCESOS_STORE.all : [];
+        const duplicateProcess = Array.isArray(allProcesos)
+            ? allProcesos.find((row) => {
+                const existingNumero = String(row.numero_proceso || row.proceso_numero || row.numero || row.id || row.proceso || row.nro_proceso || '').trim();
+                if (!existingNumero) return false;
+                if (isEdit && existingNumero === String(numero).trim()) return false;
+                return existingNumero.toLowerCase() === normalizedNumero.toLowerCase();
+            })
+            : null;
+
+        if (duplicateProcess) {
+            this.openDuplicateProcessModal(normalizedNumero);
+            return;
+        }
         
-        // Validar que el tipo sea uno de los valores permitidos
-        if (!normalizedType || !['acreditado', 'no-acreditado'].includes(normalizedType)) {
-            alert('El campo "# Informe" debe ser "acreditado" o "no-acreditado"');
-            type.focus();
-            return;
-        }
-
-        if (!processNumber.value || !client.value || !status.value || !receptionDate.value) {
-            alert('Completa los campos obligatorios: # Proceso, Cliente, # Informe, Estado y Fecha Recepción.');
-            return;
-        }
-
-        const payload = {
-            client: client.value,
-            type: normalizedType,
-            status: status.value,
-            receptionDate: receptionDate.value,
-            deliveryDate: deliveryDate.value,
-            finalizedDate: finalizedDate.value
+        // Validar que el número de proceso no exista ya (para nuevos procesos)
+        const insertData = {
+            numero_proceso: processNumber.value,
+            cliente: client.value,
+            estado: status.value,
+            fecha_recepcion: receptionDate.value || null,
+            fecha_entrega_cliente: deliveryDate?.value || null,
+            fecha_finalizado: finalizedDate?.value || null,
         };
 
-        if (editId.value) {
-            const cert = this.certificates.find((item) => item.id === editId.value);
-            if (!cert) return;
-            cert.id = processNumber.value;
-            Object.assign(cert, payload);
-            this.changeCertificateStatus(cert.id, payload.status);
-        } else {
-            const processNum = processNumber.value;
-            this.certificates.unshift({ id: processNum, ...payload, value: 0 });
-            this.changeCertificateStatus(processNum, payload.status);
-        }
+        // Solo agregar campos opcionales si tienen valor
+        const informeValue = (nInforme?.value || '').trim();
+        if (informeValue) insertData.n_informe = informeValue;
 
-        this.closeCertificateProcessModal();
-        // Renderizar correctamente según el tipo de certificado
-        if (normalizedType === 'acreditado') {
-            this.renderCertificates();
-            this.updateStats();
-            this.renderMonthlySummary();
-        } else if (normalizedType === 'no-acreditado') {
-            this.renderCertificatesNoAcreditados();
-            this.updateStatsNoAcreditados();
-            this.renderMonthlySummaryNoAcreditados();
+        try {
+            if (editId && editId.value) {
+                const res = await fetchFromDatabase('update_proceso', {
+                    numero_proceso: numero,
+                    numero_proceso_nuevo: processNumber.value,
+                    cliente: client.value,
+                    estado: status.value,
+                    fecha_recepcion: receptionDate.value || null,
+                    fecha_entrega_cliente: deliveryDate?.value || null,
+                    fecha_finalizado: finalizedDate?.value || null,
+                    ...(informeValue ? { n_informe: informeValue } : {})
+                });
+                if (!res.ok) throw new Error(res.error || 'Error al actualizar proceso');
+                Toast.show({ title: 'Actualizado', message: `Proceso ${numero} actualizado`, variant: 'success' });
+            } else {
+                const res = await fetchFromDatabase('add_proceso', { insert: insertData });
+                if (!res.ok) throw new Error(res.error || 'Error al crear proceso');
+                Toast.show({ title: 'Creado', message: `Proceso ${insertData.numero_proceso} creado`, variant: 'success' });
+            }
+
+            this.closeCertificateProcessModal();
+            await cargarProcesos();
+        } catch (err) {
+            console.error('Error guardando proceso en servidor', err);
+            Toast.show({ title: 'Error', message: err.message || 'No se pudo guardar', variant: 'error' });
         }
     },
 
-    saveCertificateStatusFromModal() {
+    async saveCertificateStatusFromModal() {
         const editId = document.getElementById('statusEditId');
         const status = document.getElementById('statusProcessSelect');
         if (!editId || !status || !editId.value) return;
 
-        this.changeCertificateStatus(editId.value, status.value);
-        this.closeCertificateStatusModal();
+        try {
+            const response = await fetchFromDatabase('update_proceso_status', {
+                numero_proceso: editId.value,
+                estado: status.value,
+            });
+
+            if (!response.ok) {
+                throw new Error(response.error || 'No se pudo actualizar el estado');
+            }
+
+            Toast.show({
+                title: 'Actualizado',
+                message: 'Estado actualizado correctamente',
+                variant: 'success'
+            });
+
+            this.closeCertificateStatusModal();
+            await cargarProcesos();
+        } catch (err) {
+            console.error('Error actualizando estado desde modal', err);
+            Toast.show({
+                title: 'Error',
+                message: err.message || 'No se pudo actualizar el estado',
+                variant: 'error'
+            });
+        }
     },
 
     openCertificateProcessModal() {
@@ -3499,6 +4131,24 @@ const AdminPanelManager = {
 
     closeCertificateStatusModal() {
         const modal = document.getElementById('certificateStatusModal');
+        if (!modal) return;
+        modal.classList.remove('modal--open');
+        modal.setAttribute('aria-hidden', 'true');
+    },
+
+    openDuplicateProcessModal(processNumber) {
+        const modal = document.getElementById('duplicateProcessModal');
+        const message = document.getElementById('duplicateProcessModalMessage');
+        if (!modal) return;
+        if (message) {
+            message.textContent = `El proceso ${processNumber} ya existe en la tabla. Usa otro número para continuar.`;
+        }
+        modal.classList.add('modal--open');
+        modal.setAttribute('aria-hidden', 'false');
+    },
+
+    closeDuplicateProcessModal() {
+        const modal = document.getElementById('duplicateProcessModal');
         if (!modal) return;
         modal.classList.remove('modal--open');
         modal.setAttribute('aria-hidden', 'true');
@@ -3541,11 +4191,11 @@ const AdminPanelManager = {
     },
 
     generateProcessId() {
-        const lastId = this.certificates[0]?.id || 'HT-R26-0000';
-        const match = lastId.match(/HT-R26-(\d{4})/);
+        const lastId = this.certificates[0]?.id || 'R26 0000';
+        const match = lastId.match(/R26 (\d{4})/);
         const lastNum = match ? parseInt(match[1], 10) : 0;
         const nextNum = String(lastNum + 1).padStart(4, '0');
-        return `HT-R26-${nextNum}`;
+        return `R26 ${nextNum}`;
     },
 
     // ===========================
@@ -3637,7 +4287,7 @@ const AdminPanelManager = {
         if (!tbody) return;
 
         if (!Array.isArray(clientes) || clientes.length === 0) {
-            tbody.innerHTML = '<tr class="empty-state"><td colspan="5" style="text-align: center; padding: 2rem;">ℹ️ No hay clientes registrados</td></tr>';
+            tbody.innerHTML = '<tr class="empty-state"><td colspan="6" style="text-align: center; padding: 2rem;">ℹ️ No hay clientes registrados</td></tr>';
             return;
         }
 
@@ -3667,6 +4317,13 @@ const AdminPanelManager = {
             }
 
             const nombreEsc = escapeHtml(cliente.nombre_empresa);
+            const nitEsc = escapeHtml(
+                cliente.nit ||
+                cliente.nit_empresa ||
+                cliente.numero_nit ||
+                cliente.identificacion_tributaria ||
+                ''
+            );
             const emailEsc = escapeHtml(cliente.email);
             const pwd = cliente.password ? String(cliente.password) : '';
             const pwdEsc = escapeHtml(pwd);
@@ -3678,6 +4335,7 @@ const AdminPanelManager = {
             return `
             <tr>
                 <td><strong>${nombreEsc}</strong></td>
+                <td>${nitEsc || '-'}</td>
                 <td>${emailEsc}</td>
                 <td>
                     <div class="password-cell">
@@ -3688,7 +4346,7 @@ const AdminPanelManager = {
                 <td>${fecha}</td>
                 <td>
                     <div class="action-buttons">
-                        <button class="btn btn--small btn--outline" onclick="AdminPanelManager.editCliente('${escForOnclick(idEsc)}', '${escForOnclick(cliente.nombre_empresa)}', '${escForOnclick(cliente.email)}', '${escForOnclick(pwd)}')">✏️</button>
+                        <button class="btn btn--small btn--outline" onclick="AdminPanelManager.editCliente('${escForOnclick(idEsc)}', '${escForOnclick(cliente.nombre_empresa)}', '${escForOnclick(nitEsc)}', '${escForOnclick(cliente.email)}', '${escForOnclick(pwd)}')">✏️</button>
                         <button class="btn btn--small btn--error" onclick="AdminPanelManager.deleteCliente('${escForOnclick(idEsc)}', '${escForOnclick(cliente.nombre_empresa)}')">🗑️</button>
                     </div>
                 </td>
@@ -3749,10 +4407,11 @@ const AdminPanelManager = {
     async saveClient() {
         const editId = document.getElementById('clientEditId')?.value || '';
         let nombre = document.getElementById('clientNombre').value.trim().toUpperCase();
+        const nit = document.getElementById('clientNit')?.value.trim();
         let email = document.getElementById('clientEmail').value.trim().toLowerCase();
         const password = document.getElementById('clientPassword').value;
 
-        if (!nombre || !email || !password) {
+        if (!nombre || !nit || !email || !password) {
             alert('Por favor completa todos los campos');
             return;
         }
@@ -3766,6 +4425,7 @@ const AdminPanelManager = {
                     action,
                     id: editId || undefined,
                     nombre_empresa: nombre,
+                    nit,
                     email: email,
                     password: password
                 })
@@ -3789,18 +4449,20 @@ const AdminPanelManager = {
         }
     },
 
-    editCliente(id, nombre, email, password) {
+    editCliente(id, nombre, nit, email, password) {
         const title = document.getElementById('clientModalTitle');
         const editId = document.getElementById('clientEditId');
         const nombreInput = document.getElementById('clientNombre');
+        const nitInput = document.getElementById('clientNit');
         const emailInput = document.getElementById('clientEmail');
         const passwordInput = document.getElementById('clientPassword');
 
-        if (!title || !editId || !nombreInput || !emailInput || !passwordInput) return;
+        if (!title || !editId || !nombreInput || !nitInput || !emailInput || !passwordInput) return;
 
         title.textContent = 'Editar Cliente';
         editId.value = id;
         nombreInput.value = String(nombre || '').toUpperCase();
+        nitInput.value = String(nit || '');
         emailInput.value = String(email || '').toLowerCase();
         passwordInput.value = String(password || '');
 
@@ -3821,7 +4483,7 @@ const AdminPanelManager = {
         modal.setAttribute('aria-hidden', 'true');
     },
 
-    async updateCliente(id, nombre, email, password) {
+    async updateCliente(id, nombre, nit, email, password) {
         try {
             const response = await fetch('/.netlify/functions/conectar', {
                 method: 'POST',
@@ -3830,6 +4492,7 @@ const AdminPanelManager = {
                     action: 'update_cliente',
                     id: id,
                     nombre_empresa: nombre,
+                    nit: nit,
                     email: email,
                     password: password
                 })
@@ -4027,20 +4690,31 @@ const AdminPanelManager = {
         const statsMonthFilter = document.getElementById('statsMonthFilterNoAcreditados');
         const statsPeriodLabel = document.getElementById('statsPeriodLabelNoAcreditados');
         const monthFilter = statsMonthFilter?.value || '';
-        
-        const scopedCertificates = monthFilter
-            ? this.certificates.filter((cert) => (
-                cert.type === 'no-acreditado' && (
-                    (cert.receptionDate && cert.receptionDate.startsWith(monthFilter)) ||
-                    (cert.deliveryDate && cert.deliveryDate.startsWith(monthFilter)) ||
-                    (cert.finalizedDate && cert.finalizedDate.startsWith(monthFilter))
-                )
-            ))
-            : this.certificates.filter((cert) => cert.type === 'no-acreditado');
+        const tableBodyIds = ['certificatesTableBodyNoAcreditados', 'finalizedCertificatesTableBodyNoAcreditados'];
+        const scopedRows = [];
 
-        const total = scopedCertificates.length;
-        const completed = scopedCertificates.filter(c => c.status === 'finalizado').length;
-        const pending = scopedCertificates.filter(c => c.status !== 'finalizado').length;
+        tableBodyIds.forEach((tbodyId) => {
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+
+            Array.from(tbody.querySelectorAll('tr')).forEach((row) => {
+                if (row.classList.contains('empty-state') || !row.cells || row.cells.length < 7) return;
+
+                if (monthFilter) {
+                    const dateValues = [row.cells[4]?.textContent || '', row.cells[5]?.textContent || '', row.cells[6]?.textContent || '']
+                        .map((value) => String(value).trim())
+                        .filter((value) => value && value !== '-');
+                    const matchesMonth = dateValues.some((value) => value.startsWith(monthFilter));
+                    if (!matchesMonth) return;
+                }
+
+                scopedRows.push(row);
+            });
+        });
+
+        const total = scopedRows.length;
+        const completed = scopedRows.filter((row) => (row.cells[3]?.textContent || '').toLowerCase().includes('finalizado')).length;
+        const pending = total - completed;
 
         const totalEl = document.getElementById('statTotalCertsNoAcreditados');
         const completedEl = document.getElementById('statCompletedCertsNoAcreditados');
@@ -4055,6 +4729,24 @@ const AdminPanelManager = {
                 ? `Mostrando resumen de ${monthFilter}`
                 : 'Mostrando totales generales';
         }
+    },
+
+    syncGlobalMonthFilters(month = '') {
+        const monthFields = [
+            'statsMonthFilter',
+            'statsMonthFilterNoAcreditados',
+            'adminFilterMonth',
+            'adminFilterFinalizedMonth',
+            'adminFilterMonthNoAcreditados',
+            'adminFilterFinalizedMonthNoAcreditados'
+        ];
+
+        monthFields.forEach((fieldId) => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.value = month;
+            }
+        });
     }
 };
 
@@ -4066,6 +4758,7 @@ const ClientPortalManager = {
     currentClient: null,
     certificates: [],
     requests: [],
+    reports: [],
 
     init() {
         this.loadClientFromStorage();
@@ -4078,6 +4771,7 @@ const ClientPortalManager = {
         this.setupUI();
         this.loadMockData();
         this.setupEventListeners();
+        this.loadReportsFromAdmin();
     },
 
     loadClientFromStorage() {
@@ -4093,11 +4787,24 @@ const ClientPortalManager = {
         const userCompanyEl = document.getElementById('clientUserCompany');
         const welcomeNameEl = document.getElementById('clientWelcomeName');
         const welcomeCompanyEl = document.getElementById('clientWelcomeCompany');
+        const sidebarNameEl = document.getElementById('clientSidebarName');
+        const sidebarCompanyEl = document.getElementById('clientSidebarCompany');
+        const portalDateEl = document.getElementById('clientPortalDate');
 
         if (userNameEl) userNameEl.textContent = this.currentClient.name;
         if (userCompanyEl) userCompanyEl.textContent = this.currentClient.company;
         if (welcomeNameEl) welcomeNameEl.textContent = this.currentClient.name;
         if (welcomeCompanyEl) welcomeCompanyEl.textContent = this.currentClient.company;
+        if (sidebarNameEl) sidebarNameEl.textContent = this.currentClient.name;
+        if (sidebarCompanyEl) sidebarCompanyEl.textContent = this.currentClient.company;
+        if (portalDateEl) {
+            portalDateEl.textContent = new Intl.DateTimeFormat('es-CO', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            }).format(new Date());
+        }
 
         // Información de la empresa
         this.renderCompanyInfo();
@@ -4163,6 +4870,11 @@ const ClientPortalManager = {
             logoutBtn.addEventListener('click', () => this.logout());
         }
 
+        const sidebarLogoutBtn = document.getElementById('clientSidebarLogoutBtn');
+        if (sidebarLogoutBtn) {
+            sidebarLogoutBtn.addEventListener('click', () => this.logout());
+        }
+
         // Logout desde menú móvil
         const mobileLogoutBtn = document.getElementById('clientLogoutMobileBtn');
         if (mobileLogoutBtn) {
@@ -4174,9 +4886,105 @@ const ClientPortalManager = {
             });
         }
 
+        const reportSearchInput = document.getElementById('clientReportSearchInput');
+        const reportFilterBtn = document.getElementById('clientReportFilterBtn');
+        if (reportSearchInput) {
+            reportSearchInput.addEventListener('input', () => this.renderReports());
+        }
+        if (reportFilterBtn) {
+            reportFilterBtn.addEventListener('click', () => this.renderReports());
+        }
+
         this.renderCertificates();
         this.renderHistory();
         this.renderRequests();
+        this.updateDashboardStats();
+        this.renderReports();
+    },
+
+    async loadReportsFromAdmin() {
+        try {
+            const rows = await getProcesosAcreditados({});
+            const companyKey = (this.currentClient?.company || '').toString().trim().toLowerCase();
+            const nameKey = (this.currentClient?.name || '').toString().trim().toLowerCase();
+
+            this.reports = (Array.isArray(rows) ? rows : [])
+                .filter((row) => {
+                    const clientValue = (row.cliente || row.empresa || row.client || '').toString().trim().toLowerCase();
+                    if (!clientValue) return true;
+                    if (!companyKey && !nameKey) return true;
+                    return clientValue.includes(companyKey) || companyKey.includes(clientValue) || clientValue.includes(nameKey) || nameKey.includes(clientValue);
+                })
+                .map((row) => ({
+                    id: row.n_informe || row.numero_proceso || row.id || '-',
+                    date: row.fecha_finalizado || row.fecha_entrega_cliente || row.fecha_recepcion || row.created_at || '',
+                    project: row.cliente || row.empresa || row.client || 'Proyecto',
+                    type: row.tipo || row.categoria || 'Informe de ensayo',
+                    raw: row
+                }));
+
+            this.renderReports();
+        } catch (error) {
+            console.warn('No se pudieron cargar los informes desde el panel admin:', error);
+            this.reports = [];
+            this.renderReports();
+        }
+    },
+
+    updateDashboardStats() {
+        const totalEl = document.getElementById('clientTotalCertificates');
+        const activeEl = document.getElementById('clientActiveServices');
+        const rateEl = document.getElementById('clientCompletionRate');
+
+        const totalCertificates = this.certificates.filter((cert) => cert.type !== 'historial').length;
+        const completedCertificates = this.certificates.filter((cert) => cert.status === 'completado').length;
+        const activeServices = this.requests.filter((request) => request.status !== 'finalizado').length;
+        const completionRate = totalCertificates > 0 ? Math.round((completedCertificates / totalCertificates) * 100) : 0;
+
+        if (totalEl) totalEl.textContent = String(totalCertificates);
+        if (activeEl) activeEl.textContent = String(activeServices);
+        if (rateEl) rateEl.textContent = `${completionRate}%`;
+    },
+
+    getFilteredReports() {
+        const searchTerm = (document.getElementById('clientReportSearchInput')?.value || '').trim().toLowerCase();
+
+        return this.reports.filter((report) => {
+            if (!searchTerm) return true;
+
+            return [report.id, report.project, report.type]
+                .join(' ')
+                .toLowerCase()
+                .includes(searchTerm);
+        });
+    },
+
+    renderReports() {
+        const tbody = document.getElementById('clientReportsTableBody');
+        if (!tbody) return;
+
+        const filteredReports = this.getFilteredReports();
+
+        if (!filteredReports.length) {
+            tbody.innerHTML = `
+                <tr class="empty-state">
+                    <td colspan="5" style="text-align:center; padding: 1.5rem;">No hay informes disponibles</td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = filteredReports.map((report) => `
+            <tr>
+                <td><strong>${report.id}</strong></td>
+                <td>${this.formatDate(report.date)}</td>
+                <td>${report.project}</td>
+                <td>${report.type}</td>
+                <td>
+                    <button type="button" class="btn btn--small btn--primary" onclick="ClientPortalManager.downloadReport('${report.id}')">PDF</button>
+                </td>
+            </tr>
+        `).join('');
     },
 
     renderCertificates() {
@@ -4273,6 +5081,10 @@ const ClientPortalManager = {
         alert(`Descargando ${certId}...`);
     },
 
+    downloadReport(reportId) {
+        alert(`Descargando PDF del informe ${reportId}...`);
+    },
+
     getStatusText(status) {
         const statusMap = {
             'completado': '✅ Completado',
@@ -4294,6 +5106,1166 @@ const ClientPortalManager = {
         }
     }
 };
+
+if (typeof window !== 'undefined') {
+    window.AdminPanelManager = AdminPanelManager;
+}
+
+// ===========================
+// MÓDULO COMERCIAL - COTIZACIONES
+// ===========================
+
+const CommercialQuotesModule = {
+    storageKey: 'hightest_commercial_quotes',
+    pageSize: 6,
+    taxRate: 0.19,
+    currentPage: 1,
+    currentQuoteId: null,
+    drawerMode: 'new',
+    quotes: [],
+    filteredQuotes: [],
+    initialized: false,
+
+    init() {
+        const section = document.getElementById('gestion-comercial');
+        if (!section || this.initialized) {
+            return;
+        }
+
+        this.section = section;
+        this.cacheElements();
+        this.loadData();
+        this.bindEvents();
+        this.populateClientSelect();
+        this.render();
+        this.initialized = true;
+    },
+
+    cacheElements() {
+        this.searchInput = document.getElementById('commercialSearchInput');
+        this.statusFilter = document.getElementById('commercialStatusFilter');
+        this.clientFilter = document.getElementById('commercialClientFilter');
+        this.monthFilter = document.getElementById('commercialMonthFilter');
+        this.sortFilter = document.getElementById('commercialSortFilter');
+        this.statsGrid = document.getElementById('commercialStatsGrid');
+        this.resultsCount = document.getElementById('commercialResultsCount');
+        this.tableBody = document.getElementById('commercialQuotesTableBody');
+        this.mobileList = document.getElementById('commercialMobileList');
+        this.pagination = document.getElementById('commercialPagination');
+        this.drawer = document.getElementById('commercialDrawer');
+        this.drawerBackdrop = document.getElementById('commercialDrawerBackdrop');
+        this.drawerModeEl = document.getElementById('commercialDrawerMode');
+        this.drawerTitleEl = document.getElementById('commercialDrawerTitle');
+        this.drawerSubtitleEl = document.getElementById('commercialDrawerSubtitle');
+        this.quoteIdEl = document.getElementById('commercialQuoteId');
+        this.quoteDateEl = document.getElementById('commercialQuoteDate');
+        this.clientSelectEl = document.getElementById('commercialClientSelect');
+        this.quoteNameEl = document.getElementById('commercialQuoteName');
+        this.quoteCompanyEl = document.getElementById('commercialQuoteCompany');
+        this.quoteEmailEl = document.getElementById('commercialQuoteEmail');
+        this.quotePhoneEl = document.getElementById('commercialQuotePhone');
+        this.quoteResponsibleEl = document.getElementById('commercialQuoteResponsible');
+        this.quoteStatusEl = document.getElementById('commercialQuoteStatus');
+        this.itemsBodyEl = document.getElementById('commercialItemsTableBody');
+        this.subtotalEl = document.getElementById('commercialSubtotal');
+        this.taxEl = document.getElementById('commercialTax');
+        this.totalEl = document.getElementById('commercialTotal');
+        this.historyEl = document.getElementById('commercialHistoryList');
+        this.previewNameEl = document.getElementById('commercialPreviewName');
+        this.previewCompanyEl = document.getElementById('commercialPreviewCompany');
+        this.previewEmailEl = document.getElementById('commercialPreviewEmail');
+        this.previewPhoneEl = document.getElementById('commercialPreviewPhone');
+        this.previewBadgeEl = document.getElementById('commercialClientPreviewBadge');
+    },
+
+    bindEvents() {
+        if (this.bound) {
+            return;
+        }
+
+        this.bound = true;
+
+        this.searchInput?.addEventListener('input', () => this.resetAndRender());
+        this.statusFilter?.addEventListener('change', () => this.resetAndRender());
+        this.clientFilter?.addEventListener('change', () => this.resetAndRender());
+        this.monthFilter?.addEventListener('change', () => this.resetAndRender());
+        this.sortFilter?.addEventListener('change', () => this.resetAndRender());
+
+        document.getElementById('commercialNewQuoteBtn')?.addEventListener('click', () => this.openDrawerForNewQuote());
+        document.getElementById('commercialCloseDrawerBtn')?.addEventListener('click', () => this.closeDrawer());
+        this.drawerBackdrop?.addEventListener('click', () => this.closeDrawer());
+        document.getElementById('commercialAddItemBtn')?.addEventListener('click', () => this.addItemRow());
+        document.getElementById('commercialSaveDraftBtn')?.addEventListener('click', () => this.saveDraft());
+        document.getElementById('commercialGeneratePdfBtn')?.addEventListener('click', () => this.downloadPdf());
+        document.getElementById('commercialSendBtn')?.addEventListener('click', () => this.sendQuote());
+        document.getElementById('commercialApproveBtn')?.addEventListener('click', () => this.approveQuote());
+        document.getElementById('commercialRejectBtn')?.addEventListener('click', () => this.rejectQuote());
+
+        this.clientSelectEl?.addEventListener('change', () => this.syncClientSelection());
+
+        [
+            this.quoteNameEl,
+            this.quoteCompanyEl,
+            this.quoteEmailEl,
+            this.quotePhoneEl,
+            this.quoteResponsibleEl,
+            this.quoteDateEl,
+            this.quoteStatusEl,
+        ].forEach((element) => {
+            element?.addEventListener('input', () => this.updatePreview());
+            element?.addEventListener('change', () => this.updatePreview());
+        });
+
+        this.itemsBodyEl?.addEventListener('input', (event) => {
+            const target = event.target;
+            if (!target.closest('.commercial-items-row')) {
+                return;
+            }
+
+            this.updateItemFromInput(target);
+        });
+
+        this.itemsBodyEl?.addEventListener('click', (event) => {
+            const removeButton = event.target.closest('[data-remove-item]');
+            if (!removeButton) {
+                return;
+            }
+
+            const row = removeButton.closest('.commercial-items-row');
+            if (!row) {
+                return;
+            }
+
+            const itemIndex = Number.parseInt(row.dataset.itemIndex || '0', 10);
+            this.removeItemRow(itemIndex);
+        });
+
+        this.tableBody?.addEventListener('click', (event) => this.handleAction(event));
+        this.mobileList?.addEventListener('click', (event) => this.handleAction(event));
+        this.pagination?.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-page]');
+            if (!button) {
+                return;
+            }
+
+            const nextPage = Number.parseInt(button.dataset.page || '1', 10);
+            if (!Number.isNaN(nextPage)) {
+                this.currentPage = nextPage;
+                this.renderTableAndCards();
+            }
+        });
+    },
+
+    loadData() {
+        try {
+            const stored = localStorage.getItem(this.storageKey);
+            if (stored) {
+                this.quotes = JSON.parse(stored);
+                return;
+            }
+        } catch (error) {
+            console.error('No se pudo cargar el módulo comercial desde localStorage:', error);
+        }
+
+        this.quotes = this.getSeedQuotes();
+        this.saveData();
+    },
+
+    saveData() {
+        try {
+            localStorage.setItem(this.storageKey, JSON.stringify(this.quotes));
+        } catch (error) {
+            console.error('No se pudo guardar el módulo comercial:', error);
+        }
+    },
+
+    getSeedQuotes() {
+        const today = new Date();
+        const day = (offset) => new Date(today.getTime() - offset * 86400000).toISOString().slice(0, 10);
+
+        return [
+            {
+                id: 'COT-2026-001',
+                date: day(1),
+                status: 'pendiente',
+                responsible: 'Laura Gómez',
+                contactName: 'Andrés Ruiz',
+                company: 'Industrias Atlas SAS',
+                email: 'compras@atlas.com',
+                phone: '+57 300 555 1122',
+                clientId: 'atlas-sas',
+                items: [
+                    { description: 'Diagnóstico técnico de equipos', quantity: 1, price: 1450000 },
+                    { description: 'Mantenimiento preventivo premium', quantity: 2, price: 620000 },
+                ],
+                history: [
+                    { date: day(1), title: 'Cotización creada', detail: 'Generada desde el panel comercial.' },
+                ],
+            },
+            {
+                id: 'COT-2026-002',
+                date: day(3),
+                status: 'en-revision',
+                responsible: 'Carlos Peña',
+                contactName: 'Marta Salcedo',
+                company: 'Energia Nova Ltda',
+                email: 'marta.salcedo@novaltda.com',
+                phone: '+57 310 888 4300',
+                clientId: 'energia-nova-ltda',
+                items: [
+                    { description: 'Inspección de seguridad', quantity: 4, price: 380000 },
+                    { description: 'Informe ejecutivo', quantity: 1, price: 780000 },
+                ],
+                history: [
+                    { date: day(3), title: 'Cotización creada', detail: 'Lista para validación del cliente.' },
+                    { date: day(2), title: 'Enviada a revisión', detail: 'Se notificó al equipo de compras.' },
+                ],
+            },
+            {
+                id: 'COT-2026-003',
+                date: day(6),
+                status: 'aprobada',
+                responsible: 'Laura Gómez',
+                contactName: 'Javier Álvarez',
+                company: 'Grupo Orbita S.A.S.',
+                email: 'javier@orbita.com',
+                phone: '+57 320 202 1000',
+                clientId: 'grupo-orbita-sas',
+                items: [
+                    { description: 'Capacitación especializada', quantity: 1, price: 2450000 },
+                    { description: 'Soporte remoto', quantity: 6, price: 180000 },
+                ],
+                history: [
+                    { date: day(6), title: 'Cotización creada', detail: 'Documento inicial preparado.' },
+                    { date: day(4), title: 'Aprobada', detail: 'Cliente aprobó el alcance y presupuesto.' },
+                ],
+            },
+            {
+                id: 'COT-2026-004',
+                date: day(8),
+                status: 'rechazada',
+                responsible: 'Sofía Torres',
+                contactName: 'Daniel Ospina',
+                company: 'Red Técnica Andina',
+                email: 'daniel@reda.com',
+                phone: '+57 311 654 9870',
+                clientId: 'red-tecnica-andina',
+                items: [
+                    { description: 'Auditoría de proceso', quantity: 2, price: 1350000 },
+                ],
+                history: [
+                    { date: day(8), title: 'Cotización creada', detail: 'Se compartió la propuesta inicial.' },
+                    { date: day(7), title: 'Rechazada', detail: 'El cliente pidió ajustar condiciones comerciales.' },
+                ],
+            },
+            {
+                id: 'COT-2026-005',
+                date: day(10),
+                status: 'pendiente',
+                responsible: 'Carlos Peña',
+                contactName: 'Paola Duarte',
+                company: 'Soluciones Delta S.A.',
+                email: 'paola@delta.com',
+                phone: '+57 315 700 7788',
+                clientId: 'soluciones-delta-sa',
+                items: [
+                    { description: 'Verificación de documentación', quantity: 1, price: 690000 },
+                    { description: 'Acompañamiento comercial', quantity: 3, price: 240000 },
+                ],
+                history: [
+                    { date: day(10), title: 'Cotización creada', detail: 'En espera de revisión interna.' },
+                ],
+            },
+            {
+                id: 'COT-2026-006',
+                date: day(14),
+                status: 'en-revision',
+                responsible: 'Laura Gómez',
+                contactName: 'Camila Rojas',
+                company: 'Norte Industrial Group',
+                email: 'camilar@norteindustrial.com',
+                phone: '+57 301 222 3344',
+                clientId: 'norte-industrial-group',
+                items: [
+                    { description: 'Paquete de consultoría', quantity: 2, price: 1850000 },
+                ],
+                history: [
+                    { date: day(14), title: 'Cotización creada', detail: 'Consolidada para aprobación interna.' },
+                    { date: day(13), title: 'En revisión', detail: 'Pendiente de observaciones del cliente.' },
+                ],
+            },
+        ];
+    },
+
+    getClientCatalog() {
+        const catalog = Array.isArray(window.AdminPanelManager?.clientsCatalog) ? window.AdminPanelManager.clientsCatalog : [];
+        const fromCatalog = catalog
+            .map((client, index) => ({
+                id: client.id || client.slug || client.email || `client-${index + 1}`,
+                name: client.nombre_empresa || client.company || client.name || client.nombre || 'Cliente',
+                company: client.nombre_empresa || client.company || client.name || client.nombre || 'Cliente',
+                email: client.email || '',
+                phone: client.phone || client.telefono || '',
+            }))
+            .filter((client) => client.company);
+
+        if (fromCatalog.length) {
+            return fromCatalog;
+        }
+
+        const uniqueCompanies = Array.from(new Map(this.quotes.map((quote) => [quote.company, quote])).keys());
+        return uniqueCompanies.map((company) => ({
+            id: company.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+            name: company,
+            company,
+            email: '',
+            phone: '',
+        }));
+    },
+
+    populateClientSelect() {
+        if (!this.clientSelectEl) {
+            return;
+        }
+
+        const currentValue = this.clientSelectEl.value || this.currentQuote?.clientId || '';
+        const clients = this.getClientCatalog();
+        const filterClientSelect = this.clientFilter;
+
+        this.clientSelectEl.innerHTML = '<option value="">Seleccionar cliente</option>';
+        if (filterClientSelect) {
+            const filterValue = filterClientSelect.value || '';
+            filterClientSelect.innerHTML = '<option value="">Todos los clientes</option>';
+            clients.forEach((client) => {
+                const option = document.createElement('option');
+                option.value = client.id;
+                option.textContent = client.company;
+                filterClientSelect.appendChild(option);
+            });
+            filterClientSelect.value = filterValue;
+        }
+
+        clients.forEach((client) => {
+            const option = document.createElement('option');
+            option.value = client.id;
+            option.textContent = client.company;
+            this.clientSelectEl.appendChild(option);
+        });
+
+        this.clientSelectEl.value = currentValue;
+    },
+
+    formatMoney(value) {
+        return new Intl.NumberFormat('es-CO', {
+            style: 'currency',
+            currency: 'COP',
+            maximumFractionDigits: 0,
+        }).format(Number(value || 0));
+    },
+
+    normalizeStatus(status) {
+        const raw = String(status || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const map = {
+            pendiente: 'pendiente',
+            enrevision: 'en-revision',
+            'en-revision': 'en-revision',
+            revision: 'en-revision',
+            aprobada: 'aprobada',
+            rechazada: 'rechazada',
+        };
+
+        return map[raw.replace(/[_\s]+/g, '-')] || map[raw.replace(/[-_\s]+/g, '')] || raw;
+    },
+
+    getStatusLabel(status) {
+        const normalized = this.normalizeStatus(status);
+        const labels = {
+            pendiente: 'Pendiente',
+            'en-revision': 'En revisión',
+            aprobada: 'Aprobada',
+            rechazada: 'Rechazada',
+        };
+        return labels[normalized] || 'Pendiente';
+    },
+
+    getStatusClass(status) {
+        return `commercial-status-badge--${this.normalizeStatus(status)}`;
+    },
+
+    getClientById(clientId) {
+        return this.getClientCatalog().find((client) => client.id === clientId) || null;
+    },
+
+    getNextQuoteId() {
+        const maxSequence = this.quotes.reduce((max, quote) => {
+            const match = String(quote.id || '').match(/(\d+)$/);
+            const value = match ? Number.parseInt(match[1], 10) : 0;
+            return Number.isNaN(value) ? max : Math.max(max, value);
+        }, 0);
+
+        return `COT-2026-${String(maxSequence + 1).padStart(3, '0')}`;
+    },
+
+    getActiveQuoteTemplate() {
+        const today = new Date().toISOString().slice(0, 10);
+        const defaultResponsible = window.AdminPanelManager?.getAdminDisplayName?.() || 'Asesor comercial';
+        return {
+            id: this.getNextQuoteId(),
+            date: today,
+            status: 'pendiente',
+            responsible: defaultResponsible,
+            contactName: '',
+            company: '',
+            email: '',
+            phone: '',
+            clientId: '',
+            items: [
+                { description: '', quantity: 1, price: 0 },
+            ],
+            history: [
+                { date: today, title: 'Borrador listo', detail: 'Se inició una nueva cotización.' },
+            ],
+        };
+    },
+
+    resetAndRender() {
+        this.currentPage = 1;
+        this.render();
+    },
+
+    getFilteredQuotes() {
+        const searchTerm = (this.searchInput?.value || '').trim().toLowerCase();
+        const statusFilter = this.normalizeStatus(this.statusFilter?.value || '');
+        const clientFilter = this.clientFilter?.value || '';
+        const monthFilter = this.monthFilter?.value || '';
+
+        const filtered = this.quotes.filter((quote) => {
+            const blob = [
+                quote.id,
+                quote.contactName,
+                quote.company,
+                quote.email,
+                quote.phone,
+                quote.responsible,
+                quote.status,
+            ].join(' ').toLowerCase();
+
+            const matchesSearch = !searchTerm || blob.includes(searchTerm);
+            const matchesStatus = !statusFilter || this.normalizeStatus(quote.status) === statusFilter;
+            const matchesClient = !clientFilter || quote.clientId === clientFilter;
+            const matchesMonth = !monthFilter || String(quote.date || '').startsWith(monthFilter);
+
+            return matchesSearch && matchesStatus && matchesClient && matchesMonth;
+        });
+
+        const sortMode = this.sortFilter?.value || 'recent';
+        return filtered.sort((left, right) => {
+            if (sortMode === 'total-desc') {
+                return this.getQuoteTotal(right) - this.getQuoteTotal(left);
+            }
+            if (sortMode === 'total-asc') {
+                return this.getQuoteTotal(left) - this.getQuoteTotal(right);
+            }
+            if (sortMode === 'client-az') {
+                return String(left.company).localeCompare(String(right.company), 'es', { sensitivity: 'base' });
+            }
+
+            const leftDate = String(left.date || '');
+            const rightDate = String(right.date || '');
+            return sortMode === 'oldest'
+                ? leftDate.localeCompare(rightDate)
+                : rightDate.localeCompare(leftDate);
+        });
+    },
+
+    getQuoteTotals(quote) {
+        const subtotal = (quote.items || []).reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.price) || 0), 0);
+        const tax = Math.round(subtotal * this.taxRate);
+        return {
+            subtotal,
+            tax,
+            total: subtotal + tax,
+        };
+    },
+
+    getQuoteTotal(quote) {
+        return this.getQuoteTotals(quote).total;
+    },
+
+    render() {
+        this.populateClientSelect();
+        this.filteredQuotes = this.getFilteredQuotes();
+        this.renderStats();
+        this.renderTableAndCards();
+        this.renderPagination();
+        this.updateResultsCount();
+        this.renderCurrentQuote();
+    },
+
+    renderStats() {
+        if (!this.statsGrid) {
+            return;
+        }
+
+        const activeCount = this.quotes.filter((quote) => ['pendiente', 'en-revision'].includes(this.normalizeStatus(quote.status))).length;
+        const pendingCount = this.quotes.filter((quote) => this.normalizeStatus(quote.status) === 'pendiente').length;
+        const approvedCount = this.quotes.filter((quote) => this.normalizeStatus(quote.status) === 'aprobada').length;
+        const rejectedCount = this.quotes.filter((quote) => this.normalizeStatus(quote.status) === 'rechazada').length;
+        const totalValue = this.quotes.reduce((sum, quote) => sum + this.getQuoteTotal(quote), 0);
+
+        const cards = [
+            { icon: '✨', growth: '+12%', label: 'Cotizaciones activas', value: activeCount },
+            { icon: '⏳', growth: '+8%', label: 'Pendientes', value: pendingCount },
+            { icon: '✅', growth: '+15%', label: 'Aprobadas', value: approvedCount },
+            { icon: '⛔', growth: '-4%', label: 'Rechazadas', value: rejectedCount },
+            { icon: '💠', growth: '↑', label: 'Valor total cotizado', value: this.formatMoney(totalValue) },
+        ];
+
+        this.statsGrid.innerHTML = cards
+            .map((card) => `
+                <article class="commercial-stat-card">
+                    <div class="commercial-stat-card__top">
+                        <div class="commercial-stat-card__icon">${card.icon}</div>
+                        <span class="commercial-stat-card__growth">${card.growth}</span>
+                    </div>
+                    <p class="commercial-stat-card__value">${escapeHtml(String(card.value))}</p>
+                    <p class="commercial-stat-card__label">${escapeHtml(card.label)}</p>
+                </article>
+            `)
+            .join('');
+    },
+
+    renderTableAndCards() {
+        const start = (this.currentPage - 1) * this.pageSize;
+        const pagedQuotes = this.filteredQuotes.slice(start, start + this.pageSize);
+
+        if (this.tableBody) {
+            this.tableBody.innerHTML = pagedQuotes.length
+                ? pagedQuotes.map((quote) => this.renderTableRow(quote)).join('')
+                : `<tr><td colspan="7" class="commercial-empty-state">No hay cotizaciones que coincidan con los filtros.</td></tr>`;
+        }
+
+        if (this.mobileList) {
+            this.mobileList.innerHTML = pagedQuotes.length
+                ? pagedQuotes.map((quote) => this.renderMobileCard(quote)).join('')
+                : `<div class="commercial-empty-state">No hay cotizaciones que coincidan con los filtros.</div>`;
+        }
+    },
+
+    renderTableRow(quote) {
+        const totals = this.getQuoteTotals(quote);
+        return `
+            <tr>
+                <td><strong>${escapeHtml(quote.id)}</strong></td>
+                <td>
+                    <div>${escapeHtml(quote.company)}</div>
+                    <small>${escapeHtml(quote.email || '')}</small>
+                </td>
+                <td>${escapeHtml(formatDateShort(quote.date))}</td>
+                <td><span class="commercial-status-badge ${this.getStatusClass(quote.status)}">${escapeHtml(this.getStatusLabel(quote.status))}</span></td>
+                <td><strong>${escapeHtml(this.formatMoney(totals.total))}</strong></td>
+                <td>${escapeHtml(quote.responsible || '')}</td>
+                <td>
+                    <div class="commercial-action-buttons">
+                        <button type="button" class="commercial-action-button" data-action="view" data-id="${escapeHtml(quote.id)}">Ver</button>
+                        <button type="button" class="commercial-action-button" data-action="edit" data-id="${escapeHtml(quote.id)}">Editar</button>
+                        <button type="button" class="commercial-action-button" data-action="pdf" data-id="${escapeHtml(quote.id)}">PDF</button>
+                        <button type="button" class="commercial-action-button" data-action="send" data-id="${escapeHtml(quote.id)}">Enviar</button>
+                        <button type="button" class="commercial-action-button" data-action="duplicate" data-id="${escapeHtml(quote.id)}">Duplicar</button>
+                        <button type="button" class="commercial-action-button commercial-action-button--danger" data-action="delete" data-id="${escapeHtml(quote.id)}">Eliminar</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    },
+
+    renderMobileCard(quote) {
+        const totals = this.getQuoteTotals(quote);
+        return `
+            <article class="commercial-mobile-card">
+                <div class="commercial-mobile-card__top">
+                    <div>
+                        <div class="commercial-mobile-card__id">${escapeHtml(quote.id)}</div>
+                        <div>${escapeHtml(quote.company)}</div>
+                    </div>
+                    <span class="commercial-status-badge ${this.getStatusClass(quote.status)}">${escapeHtml(this.getStatusLabel(quote.status))}</span>
+                </div>
+                <div class="commercial-mobile-card__meta">
+                    <div><strong>Fecha:</strong> ${escapeHtml(formatDateShort(quote.date))}</div>
+                    <div><strong>Total:</strong> ${escapeHtml(this.formatMoney(totals.total))}</div>
+                    <div><strong>Responsable:</strong> ${escapeHtml(quote.responsible || '')}</div>
+                    <div><strong>Correo:</strong> ${escapeHtml(quote.email || '')}</div>
+                </div>
+                <div class="commercial-mobile-card__actions">
+                    <button type="button" class="commercial-action-button" data-action="view" data-id="${escapeHtml(quote.id)}">Ver</button>
+                    <button type="button" class="commercial-action-button" data-action="edit" data-id="${escapeHtml(quote.id)}">Editar</button>
+                    <button type="button" class="commercial-action-button" data-action="pdf" data-id="${escapeHtml(quote.id)}">PDF</button>
+                    <button type="button" class="commercial-action-button" data-action="send" data-id="${escapeHtml(quote.id)}">Enviar</button>
+                    <button type="button" class="commercial-action-button" data-action="duplicate" data-id="${escapeHtml(quote.id)}">Duplicar</button>
+                </div>
+            </article>
+        `;
+    },
+
+    renderPagination() {
+        if (!this.pagination) {
+            return;
+        }
+
+        const totalPages = Math.max(1, Math.ceil(this.filteredQuotes.length / this.pageSize));
+        this.currentPage = Math.min(this.currentPage, totalPages);
+
+        this.pagination.innerHTML = `
+            <div class="commercial-pagination__info">Página ${this.currentPage} de ${totalPages}</div>
+            <div class="commercial-pagination__controls">
+                <button type="button" class="commercial-pagination__button" data-page="${Math.max(1, this.currentPage - 1)}" ${this.currentPage === 1 ? 'disabled' : ''}>Anterior</button>
+                <button type="button" class="commercial-pagination__button" data-page="${Math.min(totalPages, this.currentPage + 1)}" ${this.currentPage === totalPages ? 'disabled' : ''}>Siguiente</button>
+            </div>
+        `;
+    },
+
+    updateResultsCount() {
+        if (this.resultsCount) {
+            this.resultsCount.textContent = `${this.filteredQuotes.length} cotizaciones`;
+        }
+    },
+
+    handleAction(event) {
+        const button = event.target.closest('[data-action]');
+        if (!button) {
+            return;
+        }
+
+        const quoteId = button.dataset.id || '';
+        const action = button.dataset.action || '';
+
+        if (action === 'view' || action === 'edit') {
+            this.openDrawer(quoteId, action === 'view' ? 'view' : 'edit');
+            return;
+        }
+
+        if (action === 'pdf') {
+            this.downloadPdf(quoteId);
+            return;
+        }
+
+        if (action === 'send') {
+            this.updateQuoteStatus(quoteId, 'en-revision', 'Cotización enviada para revisión.');
+            return;
+        }
+
+        if (action === 'duplicate') {
+            this.duplicateQuote(quoteId);
+            return;
+        }
+
+        if (action === 'delete') {
+            this.deleteQuote(quoteId);
+        }
+    },
+
+    openDrawerForNewQuote() {
+        this.currentQuoteId = null;
+        this.drawerMode = 'new';
+        this.currentQuote = this.getActiveQuoteTemplate();
+        this.showDrawer();
+        this.populateDrawer();
+    },
+
+    openDrawer(quoteId, mode = 'edit') {
+        const quote = this.quotes.find((item) => item.id === quoteId);
+        if (!quote) {
+            return;
+        }
+
+        this.currentQuoteId = quoteId;
+        this.drawerMode = mode;
+        this.currentQuote = JSON.parse(JSON.stringify(quote));
+        this.showDrawer();
+        this.populateDrawer();
+    },
+
+    showDrawer() {
+        if (!this.drawer) {
+            return;
+        }
+
+        this.drawer.hidden = false;
+        requestAnimationFrame(() => {
+            this.drawer.classList.add('is-open');
+            this.drawer.setAttribute('aria-hidden', 'false');
+        });
+    },
+
+    closeDrawer() {
+        if (!this.drawer) {
+            return;
+        }
+
+        this.drawer.classList.remove('is-open');
+        this.drawer.setAttribute('aria-hidden', 'true');
+        window.setTimeout(() => {
+            if (!this.drawer?.classList.contains('is-open')) {
+                this.drawer.hidden = true;
+            }
+        }, 260);
+    },
+
+    populateDrawer() {
+        if (!this.currentQuote) {
+            return;
+        }
+
+        const quote = this.currentQuote;
+        if (this.drawerModeEl) {
+            this.drawerModeEl.textContent = this.drawerMode === 'view' ? 'Vista detallada' : this.drawerMode === 'edit' ? 'Editar cotización' : 'Nueva cotización';
+        }
+        if (this.drawerTitleEl) {
+            this.drawerTitleEl.textContent = quote.id;
+        }
+        if (this.drawerSubtitleEl) {
+            this.drawerSubtitleEl.textContent = this.drawerMode === 'view'
+                ? 'Consulta el historial, los productos y el estado comercial de esta cotización.'
+                : 'Edita la cotización, ajusta importes y controla su estado comercial.';
+        }
+
+        if (this.quoteIdEl) this.quoteIdEl.value = quote.id || '';
+        if (this.quoteDateEl) this.quoteDateEl.value = quote.date || '';
+        if (this.quoteStatusEl) this.quoteStatusEl.value = this.normalizeStatus(quote.status);
+        if (this.quoteNameEl) this.quoteNameEl.value = quote.contactName || '';
+        if (this.quoteCompanyEl) this.quoteCompanyEl.value = quote.company || '';
+        if (this.quoteEmailEl) this.quoteEmailEl.value = quote.email || '';
+        if (this.quotePhoneEl) this.quotePhoneEl.value = quote.phone || '';
+        if (this.quoteResponsibleEl) this.quoteResponsibleEl.value = quote.responsible || '';
+
+        const selectedClient = this.getClientCatalog().find((client) => client.id === quote.clientId) || null;
+        if (this.clientSelectEl) {
+            this.clientSelectEl.value = quote.clientId || '';
+        }
+
+        this.renderItemRows();
+        this.renderHistory(quote);
+        this.updatePreview(selectedClient);
+        this.recalculateTotals();
+    },
+
+    renderCurrentQuote() {
+        if (!this.currentQuote) {
+            return;
+        }
+
+        this.updatePreview();
+        this.renderHistory(this.currentQuote);
+        this.recalculateTotals();
+    },
+
+    syncClientSelection() {
+        if (!this.currentQuote) {
+            this.currentQuote = this.getActiveQuoteTemplate();
+        }
+
+        const selectedClient = this.getClientById(this.clientSelectEl?.value || '');
+        if (!selectedClient) {
+            this.updatePreview(null);
+            return;
+        }
+
+        this.currentQuote.clientId = selectedClient.id;
+        this.currentQuote.company = selectedClient.company;
+        this.currentQuote.email = selectedClient.email || this.currentQuote.email;
+        this.currentQuote.phone = selectedClient.phone || this.currentQuote.phone;
+        if (this.quoteCompanyEl) this.quoteCompanyEl.value = selectedClient.company;
+        if (this.quoteEmailEl && selectedClient.email) this.quoteEmailEl.value = selectedClient.email;
+        if (this.quotePhoneEl && selectedClient.phone) this.quotePhoneEl.value = selectedClient.phone;
+        this.updatePreview(selectedClient);
+    },
+
+    updatePreview(clientOverride = null) {
+        const quote = this.currentQuote || this.getActiveQuoteTemplate();
+        const selectedClient = clientOverride || this.getClientById(this.clientSelectEl?.value || '') || null;
+
+        if (selectedClient) {
+            if (this.previewNameEl) this.previewNameEl.textContent = selectedClient.name || quote.contactName || '-';
+            if (this.previewCompanyEl) this.previewCompanyEl.textContent = selectedClient.company || quote.company || '-';
+            if (this.previewEmailEl) this.previewEmailEl.textContent = selectedClient.email || quote.email || '-';
+            if (this.previewPhoneEl) this.previewPhoneEl.textContent = selectedClient.phone || quote.phone || '-';
+        } else {
+            if (this.previewNameEl) this.previewNameEl.textContent = quote.contactName || '-';
+            if (this.previewCompanyEl) this.previewCompanyEl.textContent = quote.company || '-';
+            if (this.previewEmailEl) this.previewEmailEl.textContent = quote.email || '-';
+            if (this.previewPhoneEl) this.previewPhoneEl.textContent = quote.phone || '-';
+        }
+
+        if (this.previewBadgeEl) {
+            this.previewBadgeEl.textContent = this.getStatusLabel(quote.status);
+        }
+    },
+
+    renderHistory(quote) {
+        if (!this.historyEl) {
+            return;
+        }
+
+        const history = Array.isArray(quote?.history) ? [...quote.history].reverse() : [];
+        this.historyEl.innerHTML = history.length
+            ? history.map((entry) => `
+                <article class="commercial-history-item">
+                    <strong>${escapeHtml(entry.title || 'Movimiento')}</strong>
+                    <span>${escapeHtml(formatDateShort(entry.date || ''))}${entry.detail ? ` · ${escapeHtml(entry.detail)}` : ''}</span>
+                </article>
+            `).join('')
+            : '<div class="commercial-empty-state">Sin historial disponible.</div>';
+    },
+
+    renderItemRows() {
+        if (!this.itemsBodyEl || !this.currentQuote) {
+            return;
+        }
+
+        const items = Array.isArray(this.currentQuote.items) ? this.currentQuote.items : [];
+        this.itemsBodyEl.innerHTML = items.length
+            ? items.map((item, index) => `
+                <tr class="commercial-items-row" data-item-index="${index}">
+                    <td><input type="text" class="control__input" data-item-field="description" value="${escapeHtml(item.description || '')}" placeholder="Descripción"></td>
+                    <td><input type="number" min="1" step="1" class="control__input" data-item-field="quantity" value="${Number(item.quantity) || 1}"></td>
+                    <td><input type="number" min="0" step="1000" class="control__input" data-item-field="price" value="${Number(item.price) || 0}"></td>
+                    <td><span class="commercial-items-row__subtotal">${escapeHtml(this.formatMoney((Number(item.quantity) || 0) * (Number(item.price) || 0)))} </span></td>
+                    <td><button type="button" class="commercial-items-row__remove" data-remove-item>Eliminar</button></td>
+                </tr>
+            `).join('')
+            : '<tr><td colspan="5" class="commercial-empty-state">Agrega al menos un producto o servicio.</td></tr>';
+    },
+
+    addItemRow() {
+        if (!this.currentQuote) {
+            this.currentQuote = this.getActiveQuoteTemplate();
+        }
+
+        this.currentQuote.items = Array.isArray(this.currentQuote.items) ? this.currentQuote.items : [];
+        this.currentQuote.items.push({ description: '', quantity: 1, price: 0 });
+        this.renderItemRows();
+        this.recalculateTotals();
+    },
+
+    removeItemRow(itemIndex) {
+        if (!this.currentQuote?.items) {
+            return;
+        }
+
+        this.currentQuote.items.splice(itemIndex, 1);
+        if (!this.currentQuote.items.length) {
+            this.currentQuote.items.push({ description: '', quantity: 1, price: 0 });
+        }
+        this.renderItemRows();
+        this.recalculateTotals();
+    },
+
+    updateItemFromInput(target) {
+        if (!this.currentQuote?.items) {
+            return;
+        }
+
+        const row = target.closest('.commercial-items-row');
+        if (!row) {
+            return;
+        }
+
+        const itemIndex = Number.parseInt(row.dataset.itemIndex || '0', 10);
+        const field = target.dataset.itemField;
+        const item = this.currentQuote.items[itemIndex];
+        if (!item || !field) {
+            return;
+        }
+
+        if (field === 'description') {
+            item.description = target.value;
+        } else if (field === 'quantity') {
+            item.quantity = Math.max(1, Number(target.value) || 1);
+        } else if (field === 'price') {
+            item.price = Math.max(0, Number(target.value) || 0);
+        }
+
+        const subtotalCell = row.querySelector('.commercial-items-row__subtotal');
+        if (subtotalCell) {
+            subtotalCell.textContent = this.formatMoney((Number(item.quantity) || 0) * (Number(item.price) || 0));
+        }
+
+        this.recalculateTotals();
+    },
+
+    recalculateTotals() {
+        if (!this.currentQuote) {
+            return;
+        }
+
+        const totals = this.getQuoteTotals(this.currentQuote);
+        if (this.subtotalEl) this.subtotalEl.value = this.formatMoney(totals.subtotal);
+        if (this.taxEl) this.taxEl.value = this.formatMoney(totals.tax);
+        if (this.totalEl) this.totalEl.value = this.formatMoney(totals.total);
+    },
+
+    syncQuoteFromForm() {
+        if (!this.currentQuote) {
+            this.currentQuote = this.getActiveQuoteTemplate();
+        }
+
+        this.currentQuote.id = this.quoteIdEl?.value || this.currentQuote.id;
+        this.currentQuote.date = this.quoteDateEl?.value || this.currentQuote.date;
+        this.currentQuote.clientId = this.clientSelectEl?.value || this.currentQuote.clientId || '';
+        this.currentQuote.contactName = this.quoteNameEl?.value.trim() || this.currentQuote.contactName;
+        this.currentQuote.company = this.quoteCompanyEl?.value.trim() || this.currentQuote.company;
+        this.currentQuote.email = this.quoteEmailEl?.value.trim() || this.currentQuote.email;
+        this.currentQuote.phone = this.quotePhoneEl?.value.trim() || this.currentQuote.phone;
+        this.currentQuote.responsible = this.quoteResponsibleEl?.value.trim() || this.currentQuote.responsible;
+        this.currentQuote.status = this.normalizeStatus(this.quoteStatusEl?.value || this.currentQuote.status);
+    },
+
+    persistQuote() {
+        this.syncQuoteFromForm();
+        const quote = JSON.parse(JSON.stringify(this.currentQuote));
+        const totals = this.getQuoteTotals(quote);
+        quote.total = totals.total;
+        quote.items = Array.isArray(quote.items) ? quote.items : [{ description: '', quantity: 1, price: 0 }];
+
+        const targetIndex = this.quotes.findIndex((item) => item.id === this.currentQuoteId || item.id === quote.id);
+
+        if (targetIndex >= 0) {
+            this.quotes[targetIndex] = quote;
+        } else {
+            this.quotes.unshift(quote);
+        }
+
+        this.currentQuoteId = quote.id;
+        this.currentQuote = JSON.parse(JSON.stringify(quote));
+        this.saveData();
+        this.populateClientSelect();
+        this.render();
+    },
+
+    addHistoryEntry(quote, title, detail) {
+        const today = new Date().toISOString().slice(0, 10);
+        quote.history = Array.isArray(quote.history) ? quote.history : [];
+        quote.history.push({ date: today, title, detail });
+    },
+
+    saveDraft() {
+        this.syncQuoteFromForm();
+        this.currentQuote.status = 'pendiente';
+        this.addHistoryEntry(this.currentQuote, 'Borrador guardado', 'La cotización se actualizó desde el panel comercial.');
+        this.persistQuote();
+        this.populateDrawer();
+    },
+
+    sendQuote() {
+        this.syncQuoteFromForm();
+        this.currentQuote.status = 'en-revision';
+        this.addHistoryEntry(this.currentQuote, 'Cotización enviada', 'Se marcó para revisión del cliente.');
+        this.persistQuote();
+        this.populateDrawer();
+    },
+
+    approveQuote() {
+        this.syncQuoteFromForm();
+        this.currentQuote.status = 'aprobada';
+        this.addHistoryEntry(this.currentQuote, 'Cotización aprobada', 'El documento fue aprobado comercialmente.');
+        this.persistQuote();
+        this.populateDrawer();
+    },
+
+    rejectQuote() {
+        this.syncQuoteFromForm();
+        this.currentQuote.status = 'rechazada';
+        this.addHistoryEntry(this.currentQuote, 'Cotización rechazada', 'El cliente o el equipo comercial marcó rechazo.');
+        this.persistQuote();
+        this.populateDrawer();
+    },
+
+    updateQuoteStatus(quoteId, status, detail) {
+        const quote = this.quotes.find((item) => item.id === quoteId);
+        if (!quote) {
+            return;
+        }
+
+        quote.status = this.normalizeStatus(status);
+        this.addHistoryEntry(quote, this.getStatusLabel(quote.status), detail);
+        this.saveData();
+        if (this.currentQuoteId === quoteId) {
+            this.currentQuote = JSON.parse(JSON.stringify(quote));
+            this.populateDrawer();
+        }
+        this.render();
+    },
+
+    duplicateQuote(quoteId) {
+        const quote = this.quotes.find((item) => item.id === quoteId);
+        if (!quote) {
+            return;
+        }
+
+        const cloned = JSON.parse(JSON.stringify(quote));
+        const today = new Date().toISOString().slice(0, 10);
+        cloned.id = this.getNextQuoteId();
+        cloned.date = today;
+        cloned.status = 'pendiente';
+        cloned.history = [{ date: today, title: 'Cotización duplicada', detail: `Copiada desde ${quote.id}.` }];
+        this.quotes.unshift(cloned);
+        this.saveData();
+        this.render();
+    },
+
+    deleteQuote(quoteId) {
+        const quote = this.quotes.find((item) => item.id === quoteId);
+        if (!quote) {
+            return;
+        }
+
+        const confirmed = window.confirm(`¿Eliminar la cotización ${quoteId}?`);
+        if (!confirmed) {
+            return;
+        }
+
+        this.quotes = this.quotes.filter((item) => item.id !== quoteId);
+        if (this.currentQuoteId === quoteId) {
+            this.currentQuoteId = null;
+            this.closeDrawer();
+        }
+        this.saveData();
+        this.render();
+    },
+
+    downloadPdf(quoteId = null) {
+        this.syncQuoteFromForm();
+        const quote = quoteId ? this.quotes.find((item) => item.id === quoteId) : this.currentQuote;
+        if (!quote) {
+            return;
+        }
+
+        const totals = this.getQuoteTotals(quote);
+        const pdfApi = window.jspdf?.jsPDF;
+
+        if (!pdfApi) {
+            this.openPrintView(quote, totals);
+            return;
+        }
+
+        const pdf = new pdfApi({ unit: 'pt', format: 'a4' });
+        const marginX = 40;
+        let cursorY = 48;
+
+        pdf.setFillColor(0, 58, 128);
+        pdf.rect(0, 0, 595, 90, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(20);
+        pdf.text('Gestión de Cotizaciones - HIGH TEST', marginX, 34);
+        pdf.setFontSize(11);
+        pdf.text(`Cotización ${quote.id}`, marginX, 55);
+        pdf.text(`Fecha: ${formatDateShort(quote.date)}`, marginX, 72);
+
+        pdf.setTextColor(20, 27, 41);
+        cursorY = 120;
+        pdf.setFontSize(14);
+        pdf.text('Cliente', marginX, cursorY);
+        pdf.setFontSize(11);
+        cursorY += 18;
+        pdf.text(`Empresa: ${quote.company || ''}`, marginX, cursorY);
+        cursorY += 16;
+        pdf.text(`Contacto: ${quote.contactName || ''}`, marginX, cursorY);
+        cursorY += 16;
+        pdf.text(`Correo: ${quote.email || ''}`, marginX, cursorY);
+        cursorY += 16;
+        pdf.text(`Teléfono: ${quote.phone || ''}`, marginX, cursorY);
+
+        cursorY += 28;
+        pdf.setFontSize(14);
+        pdf.text('Detalle de ítems', marginX, cursorY);
+        cursorY += 16;
+        pdf.setFontSize(10);
+        pdf.text('Descripción', marginX, cursorY);
+        pdf.text('Cant.', 320, cursorY, { align: 'right' });
+        pdf.text('Precio', 420, cursorY, { align: 'right' });
+        pdf.text('Subtotal', 520, cursorY, { align: 'right' });
+        cursorY += 10;
+        pdf.line(marginX, cursorY, 555, cursorY);
+        cursorY += 16;
+
+        (quote.items || []).forEach((item) => {
+            const itemSubtotal = (Number(item.quantity) || 0) * (Number(item.price) || 0);
+            const description = String(item.description || '').slice(0, 60);
+            pdf.text(description, marginX, cursorY);
+            pdf.text(String(Number(item.quantity) || 0), 320, cursorY, { align: 'right' });
+            pdf.text(this.formatMoney(item.price), 420, cursorY, { align: 'right' });
+            pdf.text(this.formatMoney(itemSubtotal), 520, cursorY, { align: 'right' });
+            cursorY += 16;
+        });
+
+        cursorY += 12;
+        pdf.line(marginX, cursorY, 555, cursorY);
+        cursorY += 20;
+        pdf.setFontSize(11);
+        pdf.text(`Subtotal: ${this.formatMoney(totals.subtotal)}`, 420, cursorY, { align: 'right' });
+        cursorY += 16;
+        pdf.text(`IVA (19%): ${this.formatMoney(totals.tax)}`, 420, cursorY, { align: 'right' });
+        cursorY += 16;
+        pdf.setFontSize(13);
+        pdf.text(`Total: ${this.formatMoney(totals.total)}`, 420, cursorY, { align: 'right' });
+
+        pdf.save(`${quote.id}.pdf`);
+    },
+
+    openPrintView(quote, totals) {
+        const printWindow = window.open('', '_blank', 'width=1200,height=800');
+        if (!printWindow) {
+            return;
+        }
+
+        const rows = (quote.items || []).map((item) => `
+            <tr>
+                <td>${escapeHtml(item.description || '')}</td>
+                <td>${escapeHtml(String(item.quantity || 0))}</td>
+                <td>${escapeHtml(this.formatMoney(item.price || 0))}</td>
+                <td>${escapeHtml(this.formatMoney((Number(item.quantity) || 0) * (Number(item.price) || 0)))}</td>
+            </tr>
+        `).join('');
+
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="utf-8">
+                <title>${escapeHtml(quote.id)}</title>
+                <style>
+                    body{font-family:Arial,sans-serif;padding:32px;color:#111827}
+                    h1{margin:0 0 8px}
+                    table{width:100%;border-collapse:collapse;margin-top:18px}
+                    th,td{border:1px solid #d1d5db;padding:10px;text-align:left}
+                    th{background:#eef4ff}
+                </style>
+            </head>
+            <body>
+                <h1>Gestión de Cotizaciones - HIGH TEST</h1>
+                <p><strong>Cotización:</strong> ${escapeHtml(quote.id)}</p>
+                <p><strong>Cliente:</strong> ${escapeHtml(quote.company || '')}</p>
+                <p><strong>Fecha:</strong> ${escapeHtml(formatDateShort(quote.date))}</p>
+                <table>
+                    <thead>
+                        <tr><th>Descripción</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th></tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                <p><strong>Subtotal:</strong> ${escapeHtml(this.formatMoney(totals.subtotal))}</p>
+                <p><strong>IVA:</strong> ${escapeHtml(this.formatMoney(totals.tax))}</p>
+                <p><strong>Total:</strong> ${escapeHtml(this.formatMoney(totals.total))}</p>
+                <script>window.onload = function(){ window.print(); }</script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    },
+};
+
+if (typeof window !== 'undefined') {
+    window.CommercialQuotesModule = CommercialQuotesModule;
+}
 
 // ===========================
 // GESTOR DE LISTA DE CHEQUEO (ADMIN)

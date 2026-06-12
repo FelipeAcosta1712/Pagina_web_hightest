@@ -1,0 +1,288 @@
+/* Responsive tweaks para dispositivos móviles - añadido por el asistente */
+
+/* Ajustes generales */
+@media (max-width: 768px) {
+	.container {
+		margin: 8px;
+		border-radius: 12px;
+		padding: 0;
+	}
+
+	body {
+		padding: 6px;
+	}
+
+	.header {
+		flex-direction: column !important;
+		align-items: center !important;
+		padding: 15px !important;
+		gap: 8px;
+	}
+
+	.logo { max-width: 110px !important; height: 110px !important; margin-right: 0 !important; }
+	.titulo_princi { font-size: 0.95rem !important; line-height: 1.1 !important; }
+	.p_codigo { font-size: 0.6rem !important; text-align: center; opacity: 0.95; }
+
+	.form-container { padding: 14px !important; }
+	.form-section { margin: 14px 0 !important; padding: 12px !important; }
+
+	/* Formularios: columnas se apilan */
+	.form-row { grid-template-columns: 1fr !important; }
+
+	/* Firma canvas responsivo */
+	.signature-canvas { 
+		width: 100% !important; 
+		height: 120px !important;
+		border: 2px solid #ddd !important;
+		border-radius: 8px !important;
+	}
+	
+	/* Controles de firma más grandes */
+	.signature-controls button {
+		padding: 10px 16px !important;
+		margin: 4px !important;
+		min-height: 40px !important;
+	}
+
+	/* Campos de entrada más grandes y táctiles */
+	input, select, textarea {
+		min-height: 44px !important;
+		padding: 12px !important;
+		font-size: 16px !important; /* Evita zoom en iOS */
+		border-radius: 8px !important;
+	}
+	
+	/* Labels más claros */
+	label {
+		font-size: 14px !important;
+		margin-bottom: 6px !important;
+		color: #333 !important;
+	}
+
+	/* Tablas: convertir a cards apiladas en móvil */
+	.table-container { margin: 10px 0; }
+	.table-header { display: none !important; } /* Ocultar header en móvil */
+	.items-grid.header { display: none !important; }
+	
+	/* Cada fila se convierte en una card */
+	.table-row, .items-grid:not(.header) {
+		display: block !important;
+		background: white;
+		margin: 8px 0;
+		padding: 12px;
+		border: 1px solid #ddd;
+		border-radius: 8px;
+		box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+	}
+	
+	/* Elementos dentro de cada card */
+	.table-row > *, .items-grid:not(.header) > * {
+		display: block !important;
+		margin: 6px 0;
+		width: 100% !important;
+	}
+
+	.items-grid:not(.header) {
+		text-align: left;
+	}
+
+	.item-actions-cell,
+	.unit-row-actions {
+		justify-content: flex-start;
+	}
+
+	.unit-modal-panel {
+		padding: 16px;
+	}
+
+	.unit-modal-summary {
+		grid-template-columns: 1fr;
+	}
+
+	.unit-table-header,
+	.unit-unit-row {
+		grid-template-columns: 1fr;
+	}
+	
+	/* Labels antes de cada input para claridad */
+	.table-row input[type="number"]::before,
+	.items-grid input[type="number"]::before {
+		content: attr(placeholder);
+		display: block;
+		font-weight: bold;
+		font-size: 12px;
+		color: #666;
+		margin-bottom: 4px;
+	}
+
+	/* Filtros: 3 por fila en móvil */
+	.filter-buttons { 
+		display: grid !important;
+		grid-template-columns: repeat(3, 1fr) !important;
+		gap: 6px !important;
+		margin: 10px 0 !important;
+	}
+	
+	.search-and-filter-section {
+		flex-direction: column !important;
+		gap: 12px !important;
+	}
+
+	/* Controles tipo botones: agrandar targets táctiles */
+	.filter-btn, .btn { 
+		padding: 12px 16px !important; 
+		font-size: 14px !important; 
+		min-height: 44px !important;
+		border-radius: 8px !important;
+	}
+
+	/* Botones de selección (Mismo Cliente / Otro / NO REGISTRA) más compactos */
+	.btn-selection {
+		font-size: 12px !important;
+		padding: 6px 10px !important;
+		line-height: 1.1 !important;
+		min-height: 34px !important;
+		border-radius: 6px !important;
+	}
+
+	/* Contenedor de label + botones: permitir salto de línea y que no desborde */
+	.form-group > div[style*="display: flex"] {
+		flex-wrap: wrap !important;
+		gap: 6px !important;
+	}
+
+	/* Asegurar que el label no empuje los botones hacia afuera */
+	.form-group > div[style*="display: flex"] > label {
+		flex: 1 1 100% !important;
+		margin-bottom: 4px !important;
+	}
+
+	/* Inputs debajo ocupan todo el ancho y no se salen */
+	.form-group input[type="text"],
+	.form-group input[type="number"],
+	.form-group select {
+		width: 100% !important;
+		box-sizing: border-box !important;
+	}
+
+	/* Ajustes específicos para filtros: letra más pequeña en móvil */
+	.filter-btn {
+		font-size: 12px !important;
+		padding: 8px 10px !important;
+		min-height: 40px !important;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		text-align: center;
+	}
+
+	/* Totales y badges apilados */
+	.totals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+	/* Firmas: apilar verticalmente en móviles */
+	.signatures-row { display: block !important; }
+	.signature-container { width: 100% !important; margin-bottom: 12px; }
+
+	/* Floating action button adjustments */
+	.fab { right: 12px !important; bottom: 12px !important; }
+
+	/* Vista Previa: optimizaciones para móvil */
+	.preview-section {
+		background: #f8f9fa !important;
+		border: 1px solid #e9ecef !important;
+		border-radius: 12px !important;
+		padding: 14px !important;
+		margin-top: 12px !important;
+		max-height: 75vh !important;
+		overflow: auto !important;
+	}
+
+	.preview-section h3 { font-size: 16px !important; margin-bottom: 10px !important; }
+	#previewContent { font-size: 14px !important; line-height: 1.35 !important; }
+	#previewContent p { margin: 6px 0 !important; }
+
+	/* Grids de 2 columnas → 1 columna en móvil para evitar apretujes */
+	#previewContent [style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
+
+	/* Tablas de 7 columnas: permitir scroll horizontal sin romper layout */
+	#previewContent [style*="grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 2fr"],
+	#previewContent [style*="grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 2fr;"] {
+		display: grid !important;
+		overflow-x: auto !important;
+		-webkit-overflow-scrolling: touch !important;
+	}
+
+	/* Firmas: imágenes responsivas al ancho del contenedor */
+	#previewContent img.signature-preview {
+		max-width: 100% !important;
+		height: auto !important;
+		border-radius: 6px !important;
+	}
+
+	/* Vista de elementos guardados: 2 columnas por fila y papelera reubicada */
+	#savedItemsContainer.saved-items-container {
+		display: grid !important;
+		grid-template-columns: 1fr 1fr !important;
+		gap: 10px !important;
+		max-height: none !important;
+	}
+
+	.saved-items-left,
+	.saved-items-right {
+		display: contents !important; /* Dejar que las cards fluyan en el grid */
+	}
+
+	.saved-item-card {
+		border: 1px solid #e9ecef !important;
+		border-radius: 10px !important;
+		padding: 10px !important;
+		background: #fff !important;
+		grid-template-columns: 1fr !important;
+		position: relative !important;
+	}
+
+	.saved-item-actions {
+		position: absolute !important;
+		top: 8px !important;
+		right: 8px !important;
+		gap: 6px !important;
+	}
+
+	.reset-saved-btn {
+		width: 14px !important;
+		height: 14px !important;
+		padding: 0 !important;
+		border-radius: 6px !important;
+		font-size: 10px !important; /* tamaño del emoji */
+		line-height: 1 !important;   /* evita desbordes verticales */
+	}
+
+	.saved-item-name { font-size: 13px !important; }
+	.saved-item-details { font-size: 11px !important; gap: 10px !important; }
+}
+
+/* Ajustes adicionales para pantallas muy pequeñas */
+@media (max-width: 420px) {
+	.header h1 { font-size: 0.95rem !important; }
+	.logo { max-width: 80px !important; height: 80px !important; }
+	
+	/* Inputs aún más grandes en pantallas muy pequeñas */
+	input, select, textarea { 
+		font-size: 16px !important; 
+		padding: 14px !important;
+		min-height: 48px !important;
+	}
+	
+	/* Botones más grandes */
+	.btn, .filter-btn {
+		min-height: 48px !important;
+		padding: 14px 18px !important;
+	}
+	
+	/* Espaciado más generoso */
+	.form-container { padding: 10px !important; }
+	.form-section { padding: 10px !important; margin: 10px 0 !important; }
+}
+
+/* No tocar funcionalidades JS: reglas sólo visuales y no alteran IDs ni eventos */
+

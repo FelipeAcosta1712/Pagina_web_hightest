@@ -1,0 +1,21 @@
+{
+  "name": "restricted-numbers-server",
+  "version": "1.0.0",
+  "description": "Servidor para sincronizar números restringidos entre navegadores",
+  "main": "server-restricted.js",
+  "scripts": {
+    "start": "node server-restricted.js",
+    "dev": "node server-restricted.js"
+  },
+  "keywords": [
+    "restricted",
+    "numbers",
+    "sync"
+  ],
+  "author": "High Test",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  }
+}

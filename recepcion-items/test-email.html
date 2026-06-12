@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Sistema Email - HIGH TEST</title>
+    <script src="https://cdn.emailjs.com/dist/email.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .test-container { background: white; padding: 30px; border-radius: 10px; max-width: 800px; margin: 0 auto; }
+        .button { background: #28a745; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 10px 5px; }
+        .button:hover { background: #218838; }
+        .status { margin-top: 20px; padding: 15px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test Sistema Email Integrado</h1>
+        <p>Este es un test para verificar que el sistema de email funcione correctamente con los datos de la vista previa.</p>
+        
+        <h3>📋 Datos de Prueba:</h3>
+        <ul>
+            <li>Cotización: HT-2025-001</li>
+            <li>Cliente: EMPRESA DE PRUEBA S.A.S</li>
+            <li>Fecha Recepción: 2025-01-24</li>
+            <li>Elementos: 3 elementos de prueba</li>
+        </ul>
+
+        <div>
+            <h3>🚀 Pruebas del Sistema:</h3>
+            <button class="button" onclick="testEmailRecepcion()">📄 Test Email Recepción</button>
+            <button class="button" onclick="testEmailCompleto()">📋 Test Email Completo</button>
+            <button class="button" onclick="testExtraccionDatos()">🔍 Test Extracción Datos</button>
+        </div>
+
+        <div id="status-area"></div>
+    </div>
+
+    <!-- Simulación de datos para testing -->
+    <script>
+        // Simulando la función collectFormData para testing
+        function collectFormData() {
+            return {
+                cotizacion: 'HT-2025-TEST-001',
+                fechaRecepcion: '2025-01-24',
+                fechaEntrega: '2025-01-31',
+                cliente: 'EMPRESA DE PRUEBA S.A.S',
+                nitEmpresa: '900123456-7',
+                facturar: 'REM-001',
+                informeNombre: 'EMPRESA DE PRUEBA S.A.S',
+                facturarNombre: 'EMPRESA DE PRUEBA S.A.S',
+                observaciones: 'Elementos recibidos en buen estado para testing del sistema.',
+                clienteEmail: 'test@empresa.com',
+                empresaEmail: 'contacto@empresa.com',
+                copiaEmail: 'copia@empresa.com',
+                lavado: 'Sí',
+                elementosLavados: '2',
+                responsableLavado: 'Juan Pérez',
+                clienteRecepcionNombre: 'María García',
+                clienteRecepcionCedula: '12345678',
+                clienteRecepcionCargo: 'Coordinadora de Calidad',
+                fechaFirmaRecepcion: '2025-01-24 10:30',
+                highTestRecepcionNombre: 'Carlos Rodríguez',
+                highTestRecepcionCargo: 'Técnico de Laboratorio',
+                items: [
+                    {
+                        name: 'Válvula de Seguridad PSV-001',
+                        quantity: 2,
+                        quantity2: 2,
+                        quantity3: 0,
+                        quantity4: 2,
+                        status: 1,
+                        type: 'Ensayos Alcance',
+                        observaciones: 'En perfecto estado'
+                    },
+                    {
+                        name: 'Manómetro Digital MGD-100',
+                        quantity: 1,
+                        quantity2: 1,
+                        quantity3: 0,
+                        quantity4: 1,
+                        status: 1,
+                        type: 'Ensayos No Acreditados',
+                        observaciones: 'Calibración requerida'
+                    },
+                    {
+                        name: 'Termocupla Tipo K',
+                        quantity: 3,
+                        quantity2: 3,
+                        quantity3: 0,
+                        quantity4: 3,
+                        status: 0,
+                        type: 'Ensayos Alcance',
+                        observaciones: 'Sin novedad'
+                    }
+                ]
+            };
+        }
+
+        // Simulando signatureData para testing
+        const signatureData = {
+            signatureCanvasRecepcion: null,
+            signatureCanvasEntrega: null
+        };
+        
+        // Variables globales simuladas
+        const savedRowsData = {
+            ensayos_acreditados: {},
+            ensayos_no_acreditados: {}
+        };
+    </script>
+    
+    <!-- Incluir el script de email actualizado -->
+    <script src="email-completo.js"></script>
+
+    <script>
+        // Inicializar EmailJS
+        emailjs.init('yyiS3YE3H7fqKdzkB');
+
+        function showStatus(message, type) {
+            const statusArea = document.getElementById('status-area');
+            statusArea.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function testEmailRecepcion() {
+            showStatus('🔄 Probando sistema de email para reporte de recepción...', 'info');
+            
+            try {
+                const info = extraerInformacionVistaPrevia(true); // true = solo recepción
+                const reporte = generarReporteRecepcion(info);
+                
+                console.log('✅ Datos extraídos:', info);
+                console.log('✅ Reporte generado:', reporte.substring(0, 200) + '...');
+                
+                showStatus(`✅ Test exitoso! Reporte de recepción generado con ${info.items ? info.items.length : 0} elementos.`, 'success');
+            } catch (error) {
+                console.error('❌ Error en test:', error);
+                showStatus(`❌ Error en test: ${error.message}`, 'error');
+            }
+        }
+
+        function testEmailCompleto() {
+            showStatus('🔄 Probando sistema de email para reporte completo...', 'info');
+            
+            try {
+                const info = extraerInformacionVistaPrevia(false); // false = completo
+                const reporte = generarReporteCompleto(info);
+                
+                console.log('✅ Datos extraídos completos:', info);
+                console.log('✅ Reporte completo generado:', reporte.substring(0, 200) + '...');
+                
+                showStatus(`✅ Test exitoso! Reporte completo generado con ${info.items ? info.items.length : 0} elementos.`, 'success');
+            } catch (error) {
+                console.error('❌ Error en test:', error);
+                showStatus(`❌ Error en test: ${error.message}`, 'error');
+            }
+        }
+
+        function testExtraccionDatos() {
+            showStatus('🔄 Probando extracción de datos de vista previa...', 'info');
+            
+            try {
+                const datosCompletos = extraerInformacionVistaPrevia(false);
+                const datosRecepcion = extraerInformacionVistaPrevia(true);
+                
+                console.log('📋 Datos completos:', datosCompletos);
+                console.log('📄 Datos recepción:', datosRecepcion);
+                
+                let mensaje = `✅ Extracción exitosa!\n`;
+                mensaje += `• Datos completos: ${datosCompletos.items ? datosCompletos.items.length : 0} elementos\n`;
+                mensaje += `• Datos recepción: ${datosRecepcion.items ? datosRecepcion.items.length : 0} elementos\n`;
+                mensaje += `• Cliente: ${datosCompletos.cliente}\n`;
+                mensaje += `• Cotización: ${datosCompletos.cotizacion}`;
+                
+                showStatus(mensaje, 'success');
+            } catch (error) {
+                console.error('❌ Error en extracción:', error);
+                showStatus(`❌ Error en extracción: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-test al cargar
+        document.addEventListener('DOMContentLoaded', function() {
+            showStatus('🚀 Sistema de email cargado. Listo para pruebas.', 'success');
+        });
+    </script>
+</body>
+</html>

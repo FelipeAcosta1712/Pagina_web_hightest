@@ -1,0 +1,111 @@
+{
+  "ensayos_acreditados": [
+    {
+      "id": 1,
+      "nombre": "Cubridor De Pin CL2",
+      "categoria": "Cubridores",
+      "descripcion": "Cubridor de pin clase 2",
+      "disponible": true
+    },
+    {
+      "id": 2,
+      "nombre": "Cubridor De Pin CL3",
+      "categoria": "Cubridores",
+      "descripcion": "Cubridor de pin clase 3",
+      "disponible": true
+    },
+    {
+      "id": 3,
+      "nombre": "Cubridor De Pin CL4",
+      "categoria": "Cubridores",
+      "descripcion": "Cubridor de pin clase 4",
+      "disponible": true
+    },
+    {
+      "id": 4,
+      "nombre": "Cubridor De Cadena Rigido CL2",
+      "categoria": "Rigidos",
+      "descripcion": "Cubridor de cadena rígido clase 2",
+      "disponible": true
+    },
+    {
+      "id": 5,
+      "nombre": "Cubridor De Punta De Poste CL4",
+      "categoria": "Cubridores",
+      "descripcion": "Cubridor de punta de poste clase 4",
+      "disponible": true
+    },
+    {
+      "id": 6,
+      "nombre": "Manguera De 90cm Con Conector CL2",
+      "categoria": "Mangueras",
+      "descripcion": "Manguera de 90cm con conector clase 2",
+      "disponible": true
+    },
+    {
+      "id": 7,
+      "nombre": "Jumper Dielectrico de 35kV",
+      "categoria": "Jumpers",
+      "descripcion": "Jumper dieléctrico de 35kV",
+      "disponible": true
+    }
+  ],
+  "ensayos_no_acreditados": [
+    {
+      "id": 6,
+      "nombre": "Aislador de Vidrio 15kV",
+      "categoria": "Aisladores",
+      "descripcion": "Aislador de vidrio para 15kV",
+      "disponible": true
+    },
+    {
+      "id": 7,
+      "nombre": "Aislador de Porcelana 25kV",
+      "categoria": "Aisladores",
+      "descripcion": "Aislador de porcelana para 25kV",
+      "disponible": true
+    },
+    {
+      "id": 8,
+      "nombre": "Conductor ACSR 4/0",
+      "categoria": "Conductores",
+      "descripcion": "Conductor ACSR calibre 4/0",
+      "disponible": true
+    },
+    {
+      "id": 9,
+      "nombre": "Conductor ACSR 336 MCM",
+      "categoria": "Conductores",
+      "descripcion": "Conductor ACSR calibre 336 MCM",
+      "disponible": true
+    },
+    {
+      "id": 10,
+      "nombre": "Fusible Cutout 15kV",
+      "categoria": "Protecciones",
+      "descripcion": "Fusible cutout para 15kV",
+      "disponible": true
+    },
+    {
+      "id": 11,
+      "nombre": "Pararrayos 12kV",
+      "categoria": "Protecciones",
+      "descripcion": "Pararrayos de 12kV",
+      "disponible": true
+    },
+    {
+      "id": 12,
+      "nombre": "Cruceta de Madera",
+      "categoria": "Estructuras",
+      "descripcion": "Cruceta de madera para postes",
+      "disponible": true
+    },
+    {
+      "id": 13,
+      "nombre": "Herraje de Anclaje",
+      "categoria": "Herrajes",
+      "descripcion": "Herraje de anclaje para conductores",
+      "disponible": true
+    }
+  ]
+}

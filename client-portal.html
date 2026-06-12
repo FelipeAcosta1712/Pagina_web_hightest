@@ -53,29 +53,101 @@
 
     <!-- PORTAL DE CLIENTE -->
     <main id="clientPortal" class="client-portal client-main" role="main">
-        <div class="container">
-            <!-- WELCOME SECTION -->
-            <section class="client-welcome">
-                <div class="welcome-hero">
-                    <h1 class="welcome-hero__title">🏢 Bienvenido, <span id="clientWelcomeName">Cliente</span></h1>
-                    <p class="welcome-hero__subtitle">
-                        Este es su Portal de Clientes HIGH TEST para <span id="clientWelcomeCompany">su empresa</span>.
-                        Consulte y descargue sus certificados de ensayo, revise el historial de servicios y realice seguimientos en un solo lugar.
-                    </p>
+        <div class="client-dashboard-shell">
+            <aside class="client-sidebar" aria-label="Navegación del cliente">
+                <div class="client-sidebar__brand">
+                    <div class="client-sidebar__logo">⚡</div>
+                    <div>
+                        <strong>HIGH TEST</strong>
+                        <span>LabPortal</span>
+                    </div>
                 </div>
-            </section>
 
-            <!-- GRID PRINCIPAL: CERTIFICADOS + EMPRESA -->
-            <div class="client-grid">
-                <!-- ACCESO DIRECTO A CERTIFICADOS -->
-                <section class="client-section client-quick-access" id="certificates">
-                    <div class="client-section__header">
-                        <h2 class="client-section__title">📄 Sus Certificados de Ensayo</h2>
-                        <p class="client-section__subtitle">Documentos oficiales emitidos por HIGH TEST para sus equipos y elementos de protección.</p>
+                <nav class="client-sidebar__nav">
+                    <p class="client-sidebar__section-title">Principal</p>
+                    <a href="#reports" class="client-sidebar__link is-active">Informes de Ensayos</a>
+                    <a href="#history" class="client-sidebar__link">Historial</a>
+                    <a href="#requests" class="client-sidebar__link">Solicitudes</a>
+                    <a href="#support" class="client-sidebar__link">Soporte</a>
+
+                    <p class="client-sidebar__section-title">Administración</p>
+                    <a href="#company" class="client-sidebar__link">Perfil de Empresa</a>
+                    <a href="#history" class="client-sidebar__link">Historial de Servicios</a>
+                </nav>
+
+                <div class="client-sidebar__footer">
+                    <div class="client-sidebar__client">
+                        <span class="client-sidebar__avatar">👤</span>
+                        <div>
+                            <strong id="clientSidebarName">Cliente</strong>
+                            <span id="clientSidebarCompany">Empresa</span>
+                        </div>
+                    </div>
+                    <button type="button" class="client-sidebar__logout" id="clientSidebarLogoutBtn">Cerrar Sesión</button>
+                </div>
+            </aside>
+
+            <div class="client-dashboard-content">
+                <!-- WELCOME SECTION -->
+                <section class="client-welcome">
+                    <div class="welcome-hero">
+                        <p class="welcome-hero__eyebrow" id="clientPortalDate">Portal de cliente</p>
+                        <h1 class="welcome-hero__title">Bienvenido, <span id="clientWelcomeName">Cliente</span></h1>
+                        <p class="welcome-hero__subtitle">
+                            Este es su Portal de Clientes HIGH TEST para <span id="clientWelcomeCompany">su empresa</span>.
+                            Consulte y descargue sus certificados de ensayo, revise el historial de servicios y realice seguimientos en un solo lugar.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- RESUMEN OPERATIVO -->
+                <section class="client-stats" aria-label="Resumen operativo del cliente" hidden>
+                    <div class="client-stat-card client-stat-card--primary">
+                        <span class="client-stat-card__label">Volumen histórico</span>
+                        <strong class="client-stat-card__value" id="clientTotalCertificates">0</strong>
+                        <small class="client-stat-card__hint">Certificados y servicios registrados</small>
+                    </div>
+                    <div class="client-stat-card client-stat-card--success">
+                        <span class="client-stat-card__label">Servicios activos</span>
+                        <strong class="client-stat-card__value" id="clientActiveServices">0</strong>
+                        <small class="client-stat-card__hint">En proceso de revisión</small>
+                    </div>
+                    <div class="client-stat-card client-stat-card--accent">
+                        <span class="client-stat-card__label">Tasa de cumplimiento</span>
+                        <strong class="client-stat-card__value" id="clientCompletionRate">0%</strong>
+                        <small class="client-stat-card__hint">Procesos completados</small>
+                    </div>
+                </section>
+
+                <!-- INFORMES DE ENSAYOS -->
+                <section class="client-section client-reports" id="reports">
+                    <div class="client-section__header client-reports__header">
+                        <div>
+                            <h2 class="client-section__title">Informes de Ensayos</h2>
+                            <p class="client-section__subtitle">Descargue los resultados oficiales de sus solicitudes.</p>
+                        </div>
+                        <div class="client-reports__controls">
+                            <label class="client-report-search" for="clientReportSearchInput">
+                                <span class="client-report-search__icon">⌕</span>
+                                <input type="search" id="clientReportSearchInput" class="control__input client-report-search__input" placeholder="Buscar por ID o proyecto..." aria-label="Buscar informes">
+                            </label>
+                            <button type="button" class="btn btn--secondary" id="clientReportFilterBtn">Filtrar</button>
+                        </div>
                     </div>
                     <div class="client-section__content">
-                        <div class="certificates-grid" id="clientCertificates">
-                            <!-- Los certificados se cargarán dinámicamente -->
+                        <div class="client-reports__table-shell">
+                            <table class="admin-table client-reports__table">
+                                <thead>
+                                    <tr>
+                                        <th>ID INFORME</th>
+                                        <th>FECHA</th>
+                                        <th>PROYECTO</th>
+                                        <th>TIPO DE ENSAYO</th>
+                                        <th>ACCIÓN</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="clientReportsTableBody"></tbody>
+                            </table>
                         </div>
                     </div>
                 </section>
@@ -91,64 +163,64 @@
                         </div>
                     </div>
                 </section>
-            </div>
 
-            <!-- GRID SECUNDARIO: HISTORIAL + SOLICITUDES -->
-            <div class="client-grid">
-                <!-- HISTORIAL DE ENSAYOS -->
-                <section class="client-section client-history" id="history">
+                <!-- GRID SECUNDARIO: HISTORIAL + SOLICITUDES -->
+                <div class="client-grid">
+                    <!-- HISTORIAL DE ENSAYOS -->
+                    <section class="client-section client-history" id="history">
+                        <div class="client-section__header">
+                            <h2 class="client-section__title">📚 Historial de Servicios</h2>
+                        </div>
+                        <div class="client-section__content">
+                            <div class="history-timeline" id="clientHistory">
+                                <!-- El historial se cargará dinámicamente -->
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- ESTADO DE SOLICITUDES -->
+                    <section class="client-section client-requests" id="requests">
+                        <div class="client-section__header">
+                            <h2 class="client-section__title">📋 Estado de Solicitudes</h2>
+                        </div>
+                        <div class="client-section__content">
+                            <div class="requests-list" id="clientRequests">
+                                <!-- Las solicitudes se cargarán dinámicamente -->
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- SOPORTE Y CONTACTO -->
+                <section class="client-section client-support" id="support">
                     <div class="client-section__header">
-                        <h2 class="client-section__title">📚 Historial de Servicios</h2>
+                        <h2 class="client-section__title">🆘 Centro de Soporte HIGH TEST</h2>
+                        <p class="client-section__subtitle">Estamos para ayudarle: elija el canal de atención que prefiera.</p>
                     </div>
                     <div class="client-section__content">
-                        <div class="history-timeline" id="clientHistory">
-                            <!-- El historial se cargará dinámicamente -->
+                        <div class="support__grid">
+                            <div class="support-card">
+                                <div class="support-card__icon">📧</div>
+                                <h3>Correo Electrónico</h3>
+                                <p>Soporte técnico especializado</p>
+                                <a href="mailto:soporte@hightest.com" class="btn btn--outline">Enviar Consulta</a>
+                            </div>
+                            <div class="support-card">
+                                <div class="support-card__icon">📱</div>
+                                <h3>WhatsApp</h3>
+                                <p>Asistencia inmediata</p>
+                                <a href="https://wa.me/573226197864" target="_blank" class="btn btn--outline">Contactar</a>
+                            </div>
+                            <div class="support-card">
+                                <div class="support-card__icon">📞</div>
+                                <h3>Teléfono</h3>
+                                <p>Línea directa de atención</p>
+                                <a href="tel:+573226197864" class="btn btn--outline">Llamar</a>
+                            </div>
                         </div>
                     </div>
                 </section>
-
-                <!-- ESTADO DE SOLICITUDES -->
-                <section class="client-section client-requests" id="requests">
-                    <div class="client-section__header">
-                        <h2 class="client-section__title">📋 Estado de Solicitudes</h2>
-                    </div>
-                    <div class="client-section__content">
-                        <div class="requests-list" id="clientRequests">
-                            <!-- Las solicitudes se cargarán dinámicamente -->
-                        </div>
-                    </div>
-                </section>
             </div>
-
-            <!-- SOPORTE Y CONTACTO -->
-            <section class="client-section client-support" id="support">
-                <div class="client-section__header">
-                    <h2 class="client-section__title">🆘 Centro de Soporte HIGH TEST</h2>
-                    <p class="client-section__subtitle">Estamos para ayudarle: elija el canal de atención que prefiera.</p>
-                </div>
-                <div class="client-section__content">
-                    <div class="support__grid">
-                        <div class="support-card">
-                            <div class="support-card__icon">📧</div>
-                            <h3>Correo Electrónico</h3>
-                            <p>Soporte técnico especializado</p>
-                            <a href="mailto:soporte@hightest.com" class="btn btn--outline">Enviar Consulta</a>
-                        </div>
-                        <div class="support-card">
-                            <div class="support-card__icon">📱</div>
-                            <h3>WhatsApp</h3>
-                            <p>Asistencia inmediata</p>
-                            <a href="https://wa.me/573226197864" target="_blank" class="btn btn--outline">Contactar</a>
-                        </div>
-                        <div class="support-card">
-                            <div class="support-card__icon">📞</div>
-                            <h3>Teléfono</h3>
-                            <p>Línea directa de atención</p>
-                            <a href="tel:+573226197864" class="btn btn--outline">Llamar</a>
-                        </div>
-                    </div>
-                </div>
-            </section>
         </div>
     </main>
 

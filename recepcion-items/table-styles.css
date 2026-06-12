@@ -1,0 +1,123 @@
+.table-container {
+    margin: 20px auto;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow-x: auto;
+    width: 100%;
+    max-width: 1400px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.table-header, .table-row {
+    display: grid;
+    grid-template-columns: 60px 2fr 1fr 1fr 1fr 1fr 1fr 2fr 0fr;
+    gap: 10px;
+    padding: 12px;
+    align-items: center;
+}
+
+.table-header {
+    background-color: #022859;
+    color: white;
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.table-header > div {
+    padding: 10px;
+    text-align: center;
+}
+
+.table-row {
+    border-bottom: 1px solid #eee;
+    background-color: white;
+}
+
+.table-row:hover {
+    background-color: #f8f9fa;
+}
+
+.col-numero {
+    width: 60px;
+    text-align: center;
+}
+
+.col-elemento {
+    min-width: 200px;
+}
+
+.col-cantidad {
+    width: 120px;
+}
+
+.col-observaciones {
+    min-width: 200px;
+}
+
+.cantidad-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.observaciones-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Estilo para inputs numéricos */
+input[type="number"] {
+    -moz-appearance: number-input;
+    appearance: auto;
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: center;
+    background-color: #fff;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: auto; /* Visualidad de las flechas de incremento/decremento */
+    margin: 0;
+}
+
+
+#tablaGuardada {
+  margin-top: 20px;
+  padding: 15px;
+  background: #f9f9f9;
+  border-top: 2px solid #ccc;
+}
+
+.resumen-fila {
+  margin-bottom: 8px;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  background: #fff;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .table-container {
+        max-width: 100%;
+        margin: 10px;
+    }
+    
+    .table-header, .table-row {
+        grid-template-columns: 60px 2fr repeat(5, 1fr) 2fr;
+        font-size: 14px;
+    }
+}

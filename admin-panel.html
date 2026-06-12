@@ -28,7 +28,7 @@
                 <ul class="header__menu" id="adminHeaderMenu">
                     <li><a href="#certificates" class="header__link">Certificados</a></li>
                     <li><a href="#clients" class="header__link">Clientes</a></li>
-                    <li><a href="#reports" class="header__link">Reportes</a></li>
+                    <li><a href="#reports-acreditados" class="header__link">Reportes</a></li>
                     <!-- Acción especial menú móvil: salir -->
                     <li class="header__menu-item--action">
                         <button class="header__menu-btn header__menu-btn--secondary" id="adminLogoutMobileBtn" aria-label="Cerrar sesión">
@@ -61,6 +61,7 @@
             <div class="admin-tabs" role="tablist" aria-label="Secciones principales del panel">
                 <button type="button" class="admin-tab is-active" data-admin-tab="acreditados" role="tab" aria-selected="true">Ensayos Acreditados</button>
                 <button type="button" class="admin-tab" data-admin-tab="no-acreditados" role="tab" aria-selected="false">Ensayos No acreditados</button>
+                <button type="button" class="admin-tab" data-admin-tab="gestion-comercial" role="tab" aria-selected="false">Gestión Comercial</button>
                 <button type="button" class="admin-tab" data-admin-tab="clientes" role="tab" aria-selected="false">Gestión clientes</button>
             </div>
             <!-- ENLACE A RECEPCIÓN DE ÍTEMS -->
@@ -71,15 +72,15 @@
                 <div class="admin-section__content">
                     <div class="support-card admin-quick-link__card">
                         <div>
-                            <h3>📦 Sistema de Recepción de Ítems</h3>
-                            <p>Acceda a la plataforma dedicada para el ingreso y entrega de equipos.</p>
+                            <h3>📦 FR-7.4.1 - FORMATO DE RECEPCIÓN Y ENTREGA DE ITEMS</h3>
+                            <p>Acceda a la plataforma dedicada para el ingreso y entrega de elementos.</p>
                         </div>
-                        <a href="https://fr-7-4-1-ft-recepcion-entrega-items.netlify.app/" target="_blank" rel="noopener noreferrer" class="btn btn--primary">Abrir Recepción</a>
+                        <a href="/recepcion-items/recepcion-items.html" target="_blank" rel="noopener noreferrer" class="btn btn--primary">Abrir FT Recepción</a>
                     </div>
 
                     <div class="support-card admin-quick-link__card">
                         <div>
-                            <h3>📝 Lista de Chequeo en Sitio</h3>
+                            <h3>📝 FR-7.2 - LISTA DE CHEQUEO EN SITIO</h3>
                             <p>Abra el formato FR-7.2 para la lista de chequeo de ensayos eléctricos en sitio.</p>
                         </div>
                         <a href="admin-checklist-ensayos.html" class="btn btn--secondary">Abrir Checklist</a>
@@ -87,14 +88,14 @@
 
                     <div class="support-card admin-quick-link__card">
                         <div>
-                            <h3>📄 Informe de Ensayos Eléctricos</h3>
+                            <h3>📄 FR-7.8 - INFORME DE ENSAYOS ELÉCTRICOS</h3>
                             <p>Abra el formato FR-7.8 para elaborar el informe de ensayos eléctricos.</p>
                         </div>
                         <a href="admin-informe-ensayos.html" class="btn btn--secondary">Abrir Informe</a>
                     </div>
                     <div class="support-card admin-quick-link__card">
                         <div>
-                            <h3>📑 Fichas técnicas de ensayo</h3>
+                            <h3>📑 FR-7.2.1.2 - FICHAS TÉCNICAS DE ENSAYO</h3>
                             <p>Accede a las fichas técnicas de ensayo y visualiza los detalles del FR-7.2.1.2 Anexo A al Anexo N.</p>
                         </div>
                         <a href="fichas-tecnicas.html" class="btn btn--primary">Abrir Fichas</a>
@@ -149,7 +150,7 @@
             <!-- GESTIÓN DE CERTIFICADOS -->
             <section class="admin-section admin-certificates" id="certificates">
                 <div class="admin-section__header">
-                    <h2 class="admin-section__title">Gestión de Procesos Acreditados</h2>
+                    <h2 class="admin-section__title">Procesos En ejecución Acreditados</h2>
                     <button class="btn btn--primary" id="addCertificateBtn">
                         ➕ Nuevo Proceso
                     </button>
@@ -163,7 +164,7 @@
                             type="text"
                             id="adminSearchCertificates"
                             class="control__input"
-                            placeholder="🔍 Buscar por número, cliente o tipo..."
+                            placeholder="🔍 Buscar por número o cliente..."
                             aria-label="Buscar certificados"
                         >
                         </div>
@@ -177,13 +178,12 @@
                             <option value="informe-de-ensayo">Informe</option>
                             <option value="finalizado">Finalizado</option>
                             </select>
-                            <select id="adminFilterType" class="control__select" aria-label="Filtrar por tipo">
-                            <option value="">Todos los tipos</option>
-                            <option value="acreditado">Acreditado</option>
-                            <option value="no-acreditado">No acreditado</option>
+                            <select id="adminFilterType" class="control__select" aria-label="Filtrar por cliente">
+                                <option value="">Todos los clientes</option>
                             </select>
                             <input type="month" id="adminFilterMonth" class="control__input control__input--month" aria-label="Filtrar por mes">
                             <input type="date" id="adminFilterDate" class="control__input control__input--date">
+                            <button type="button" class="btn btn--secondary" id="resetAcreditadosFiltersBtn">Reiniciar</button>
                         </div>
                     </div>
 
@@ -224,7 +224,7 @@
                                     type="text"
                                     id="adminSearchFinalizedCertificates"
                                     class="control__input"
-                                    placeholder="🔍 Buscar finalizados por número, cliente o tipo..."
+                                    placeholder="🔍 Buscar finalizados por número o cliente..."
                                     aria-label="Buscar procesos finalizados"
                                 >
                             </div>
@@ -238,13 +238,12 @@
                                     <option value="informe-de-ensayo">Informe</option>
                                     <option value="finalizado">Finalizado</option>
                                 </select>
-                                <select id="adminFilterFinalizedType" class="control__select" aria-label="Filtrar finalizados por tipo">
-                                    <option value="">Todos los tipos</option>
-                                    <option value="acreditado">Acreditado</option>
-                                    <option value="no-acreditado">No acreditado</option>
+                                <select id="adminFilterFinalizedType" class="control__select" aria-label="Filtrar finalizados por cliente">
+                                    <option value="">Todos los clientes</option>
                                 </select>
                                 <input type="month" id="adminFilterFinalizedMonth" class="control__input control__input--month" aria-label="Filtrar finalizados por mes">
                                 <input type="date" id="adminFilterFinalizedDate" class="control__input control__input--date">
+                                <button type="button" class="btn btn--secondary" id="resetFinalizedAcreditadosFiltersBtn">Reiniciar</button>
                             </div>
                         </div>
                         <table class="admin-table admin-table--centered certificates-table certificates-table--finalized" id="finalizedCertificatesTable">
@@ -334,7 +333,7 @@
                             type="text"
                             id="adminSearchCertificatesNoAcreditados"
                             class="control__input"
-                            placeholder="🔍 Buscar por número, cliente o tipo..."
+                            placeholder="🔍 Buscar por número o cliente..."
                             aria-label="Buscar certificados"
                         >
                         </div>
@@ -390,7 +389,7 @@
                                     type="text"
                                     id="adminSearchFinalizedCertificatesNoAcreditados"
                                     class="control__input"
-                                    placeholder="🔍 Buscar finalizados por número, cliente o tipo..."
+                                    placeholder="🔍 Buscar finalizados por número o cliente..."
                                     aria-label="Buscar procesos finalizados"
                                 >
                             </div>
@@ -439,6 +438,232 @@
                 </div>
             </section>
 
+            <!-- GESTIÓN COMERCIAL -->
+            <section class="admin-section admin-commercial" id="gestion-comercial" hidden>
+                <div class="commercial-dashboard">
+                    <header class="commercial-hero">
+                        <div class="commercial-hero__copy">
+                            <span class="commercial-hero__eyebrow">ERP comercial inteligente</span>
+                            <h2 class="commercial-hero__title">Gestión de Cotizaciones</h2>
+                            <p class="commercial-hero__subtitle">Administra, crea y controla todas las cotizaciones de forma inteligente.</p>
+                        </div>
+                        <div class="commercial-hero__toolbar">
+                            <label class="commercial-search" for="commercialSearchInput">
+                                <span class="commercial-search__icon">⌕</span>
+                                <input type="search" id="commercialSearchInput" class="commercial-search__input" placeholder="Buscar cotización, cliente, responsable o total..." aria-label="Buscar cotizaciones">
+                            </label>
+                            <div class="commercial-hero__actions">
+                                <button type="button" class="btn btn--primary commercial-new-btn" id="commercialNewQuoteBtn">+ Nueva Cotización</button>
+                                <button type="button" class="commercial-icon-btn" id="commercialNotificationsBtn" aria-label="Notificaciones" title="Notificaciones">🔔</button>
+                                <button type="button" class="commercial-icon-btn" id="commercialUserShortcutBtn" aria-label="Usuario" title="Usuario">👤</button>
+                            </div>
+                        </div>
+                    </header>
+
+                    <section class="commercial-stats" id="commercialStatsGrid" aria-label="Resumen de cotizaciones"></section>
+
+                    <section class="commercial-toolbar" aria-label="Filtros de cotizaciones">
+                        <div class="admin-filters commercial-filters">
+                            <div class="control__filters commercial-filters__row">
+                                <select id="commercialStatusFilter" class="control__select" aria-label="Filtrar por estado">
+                                    <option value="">Todos los estados</option>
+                                    <option value="pendiente">Pendiente</option>
+                                    <option value="en-revision">En revisión</option>
+                                    <option value="aprobada">Aprobada</option>
+                                    <option value="rechazada">Rechazada</option>
+                                </select>
+                                <select id="commercialClientFilter" class="control__select" aria-label="Filtrar por cliente">
+                                    <option value="">Todos los clientes</option>
+                                </select>
+                                <input type="month" id="commercialMonthFilter" class="control__input control__input--month" aria-label="Filtrar por mes">
+                                <select id="commercialSortFilter" class="control__select" aria-label="Ordenar cotizaciones">
+                                    <option value="recent">Más recientes</option>
+                                    <option value="oldest">Más antiguas</option>
+                                    <option value="total-desc">Mayor valor</option>
+                                    <option value="total-asc">Menor valor</option>
+                                    <option value="client-az">Cliente A-Z</option>
+                                </select>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="commercial-layout">
+                        <div class="commercial-table-card">
+                            <div class="commercial-table-card__header">
+                                <div>
+                                    <h3>Panel de Cotizaciones</h3>
+                                    <p>Filtra, revisa, aprueba y descarga cada cotización desde una vista premium.</p>
+                                </div>
+                                <div class="commercial-table-card__meta">
+                                    <span id="commercialResultsCount">0 cotizaciones</span>
+                                </div>
+                            </div>
+
+                            <div class="commercial-table-shell">
+                                <div class="commercial-table-scroll">
+                                    <table class="admin-table commercial-table">
+                                        <thead>
+                                            <tr>
+                                                <th>ID Cotización</th>
+                                                <th>Cliente</th>
+                                                <th>Fecha</th>
+                                                <th>Estado</th>
+                                                <th>Total</th>
+                                                <th>Responsable</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="commercialQuotesTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="commercial-mobile-list" id="commercialMobileList"></div>
+
+                            <div class="commercial-pagination" id="commercialPagination"></div>
+                        </div>
+
+                        <aside class="commercial-drawer" id="commercialDrawer" aria-hidden="true" hidden>
+                            <div class="commercial-drawer__backdrop" id="commercialDrawerBackdrop"></div>
+                            <div class="commercial-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="commercialDrawerTitle">
+                                <div class="commercial-drawer__header">
+                                    <div>
+                                        <span class="commercial-drawer__eyebrow" id="commercialDrawerMode">Nueva cotización</span>
+                                        <h3 class="commercial-drawer__title" id="commercialDrawerTitle">Cotización</h3>
+                                        <p class="commercial-drawer__subtitle" id="commercialDrawerSubtitle">Gestiona la información, productos y seguimiento del documento.</p>
+                                    </div>
+                                    <button type="button" class="commercial-drawer__close" id="commercialCloseDrawerBtn" aria-label="Cerrar panel">✕</button>
+                                </div>
+
+                                <div class="commercial-drawer__body">
+                                    <section class="commercial-drawer__section commercial-client-preview">
+                                        <div class="commercial-client-preview__header">
+                                            <div>
+                                                <h4>Información del cliente</h4>
+                                                <p>Visualización rápida del contacto y su contexto comercial.</p>
+                                            </div>
+                                            <span class="commercial-status-pill" id="commercialClientPreviewBadge">Activo</span>
+                                        </div>
+                                        <div class="commercial-client-preview__grid">
+                                            <div>
+                                                <span>Nombre</span>
+                                                <strong id="commercialPreviewName">-</strong>
+                                            </div>
+                                            <div>
+                                                <span>Empresa</span>
+                                                <strong id="commercialPreviewCompany">-</strong>
+                                            </div>
+                                            <div>
+                                                <span>Correo</span>
+                                                <strong id="commercialPreviewEmail">-</strong>
+                                            </div>
+                                            <div>
+                                                <span>Teléfono</span>
+                                                <strong id="commercialPreviewPhone">-</strong>
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <section class="commercial-drawer__section">
+                                        <h4>Datos generales</h4>
+                                        <div class="commercial-form-grid">
+                                            <label class="commercial-form-field">
+                                                <span>ID Cotización</span>
+                                                <input type="text" id="commercialQuoteId" class="control__input" readonly>
+                                            </label>
+                                            <label class="commercial-form-field">
+                                                <span>Fecha</span>
+                                                <input type="date" id="commercialQuoteDate" class="control__input">
+                                            </label>
+                                            <label class="commercial-form-field commercial-form-field--wide">
+                                                <span>Cliente</span>
+                                                <select id="commercialClientSelect" class="control__select"></select>
+                                            </label>
+                                            <label class="commercial-form-field">
+                                                <span>Nombre contacto</span>
+                                                <input type="text" id="commercialQuoteName" class="control__input" placeholder="Nombre del contacto">
+                                            </label>
+                                            <label class="commercial-form-field">
+                                                <span>Empresa</span>
+                                                <input type="text" id="commercialQuoteCompany" class="control__input" placeholder="Nombre de la empresa">
+                                            </label>
+                                            <label class="commercial-form-field">
+                                                <span>Correo</span>
+                                                <input type="email" id="commercialQuoteEmail" class="control__input" placeholder="correo@empresa.com">
+                                            </label>
+                                            <label class="commercial-form-field">
+                                                <span>Teléfono</span>
+                                                <input type="text" id="commercialQuotePhone" class="control__input" placeholder="+57 300 000 0000">
+                                            </label>
+                                            <label class="commercial-form-field">
+                                                <span>Responsable</span>
+                                                <input type="text" id="commercialQuoteResponsible" class="control__input" placeholder="Asesor comercial">
+                                            </label>
+                                            <label class="commercial-form-field">
+                                                <span>Estado</span>
+                                                <select id="commercialQuoteStatus" class="control__select">
+                                                    <option value="pendiente">Pendiente</option>
+                                                    <option value="en-revision">En revisión</option>
+                                                    <option value="aprobada">Aprobada</option>
+                                                    <option value="rechazada">Rechazada</option>
+                                                </select>
+                                            </label>
+                                        </div>
+                                    </section>
+
+                                    <section class="commercial-drawer__section">
+                                        <div class="commercial-section-head">
+                                            <div>
+                                                <h4>Productos / Servicios</h4>
+                                                <p>Tabla editable con cálculo automático de subtotal, IVA y total.</p>
+                                            </div>
+                                            <button type="button" class="btn btn--secondary commercial-add-item-btn" id="commercialAddItemBtn">+ Agregar ítem</button>
+                                        </div>
+                                        <div class="commercial-items-shell">
+                                            <table class="commercial-items-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Descripción</th>
+                                                        <th>Cantidad</th>
+                                                        <th>Precio</th>
+                                                        <th>Subtotal</th>
+                                                        <th>Acciones</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="commercialItemsTableBody"></tbody>
+                                            </table>
+                                        </div>
+                                    </section>
+
+                                    <section class="commercial-drawer__section commercial-summary-history">
+                                        <div class="commercial-summary-card">
+                                            <h4>Resumen económico</h4>
+                                            <div class="commercial-summary-grid">
+                                                <label><span>Subtotal</span><input type="text" id="commercialSubtotal" class="control__input" readonly></label>
+                                                <label><span>IVA</span><input type="text" id="commercialTax" class="control__input" readonly></label>
+                                                <label><span>Total</span><input type="text" id="commercialTotal" class="control__input commercial-summary-total" readonly></label>
+                                            </div>
+                                        </div>
+                                        <div class="commercial-history-card">
+                                            <h4>Historial</h4>
+                                            <div class="commercial-history-list" id="commercialHistoryList"></div>
+                                        </div>
+                                    </section>
+                                </div>
+
+                                <div class="commercial-drawer__footer">
+                                    <button type="button" class="btn btn--secondary" id="commercialSaveDraftBtn">Guardar borrador</button>
+                                    <button type="button" class="btn btn--secondary" id="commercialGeneratePdfBtn">Generar PDF</button>
+                                    <button type="button" class="btn btn--secondary" id="commercialSendBtn">Enviar cotización</button>
+                                    <button type="button" class="btn btn--primary" id="commercialApproveBtn">Aprobar</button>
+                                    <button type="button" class="btn btn--secondary" id="commercialRejectBtn">Rechazar</button>
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+                </div>
+            </section>
+
             <!-- GESTIÓN DE CLIENTES -->
             <section class="admin-section admin-clients" id="clients">
                 <div class="admin-section__header">
@@ -452,7 +677,7 @@
                     <!-- BÚSQUEDA DE CLIENTES -->
                     <div class="admin-filters admin-controls" style="margin-bottom: var(--spacing-md);">
                         <div class="control__search">
-                            <input type="text" id="clientSearchInput" class="control__input" placeholder="🔍 Buscar cliente (nombre, email, contraseña)..." aria-label="Buscar clientes">
+                            <input type="text" id="clientSearchInput" class="control__input" placeholder="🔍 Buscar cliente (nombre, NIT, email, contraseña)..." aria-label="Buscar clientes">
                         </div>
                     </div>
 
@@ -462,6 +687,7 @@
                             <thead>
                                 <tr>
                                     <th>Empresa</th>
+                                    <th>NIT</th>
                                     <th>Email</th>
                                     <th>Contraseña</th>
                                     <th>Fecha Registro</th>
@@ -470,7 +696,7 @@
                             </thead>
                             <tbody id="clientsTableBody">
                                 <tr class="empty-state">
-                                    <td colspan="5" style="text-align: center; padding: 2rem;">
+                                    <td colspan="6" style="text-align: center; padding: 2rem;">
                                         ℹ️ No hay clientes registrados
                                     </td>
                                 </tr>
@@ -525,9 +751,10 @@
             </div>
             <form class="modal__body certificate-modal__form" id="certificateProcessForm">
                 <input type="hidden" id="processEditId">
+                <input type="hidden" id="processTipo">
                 <div class="form-group">
                     <label for="processNumber"># Proceso *</label>
-                    <input type="text" id="processNumber" class="control__input" placeholder="HT-R26-0001" maxlength="12" required>
+                    <input type="text" id="processNumber" class="control__input" placeholder="R26 00XX" maxlength="12" required>
                 </div>
                 <div class="form-group">
                     <label for="processClientSelect">Cliente *</label>
@@ -536,8 +763,8 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="processTypeSelect"># Informe *</label>
-                    <input type="text" id="processTypeSelect" class="control__input" placeholder="acreditado / no-acreditado" required>
+                    <label for="processNInforme"># Informe</label>
+                    <input type="text" id="processNInforme" class="control__input" readonly aria-readonly="true" placeholder="Se carga automáticamente">
                 </div>
                 <div class="form-group">
                     <label for="processStatusSelect">Estado *</label>
@@ -566,6 +793,35 @@
             <div class="modal__actions">
                 <button type="button" class="btn btn--secondary" id="cancelCertificateProcessBtn">Cancelar</button>
                 <button type="button" class="btn btn--primary" id="saveCertificateProcessBtn">Guardar Proceso</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADVERTENCIA PROCESO DUPLICADO -->
+    <div class="modal" id="duplicateProcessModal" aria-hidden="true">
+        <div class="modal__content certificate-modal__content" role="dialog" aria-modal="true" aria-labelledby="duplicateProcessModalTitle">
+            <div class="modal__header">
+                <h3 id="duplicateProcessModalTitle" class="duplicate-modal__title">
+                    <span class="duplicate-modal__title-icon" aria-hidden="true">⚠️</span>
+                    Proceso duplicado
+                </h3>
+                <button type="button" class="modal__close" id="closeDuplicateProcessModal" aria-label="Cerrar">✕</button>
+            </div>
+            <div class="modal__body certificate-modal__form duplicate-modal__body">
+                <div class="duplicate-modal__card">
+                    <div class="duplicate-modal__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+                            <path d="M12 2L1 21h22L12 2zm0 6c.55 0 1 .45 1 1v5a1 1 0 1 1-2 0V9c0-.55.45-1 1-1zm0 11a1.25 1.25 0 1 1 0-2.5A1.25 1.25 0 0 1 12 19z"></path>
+                        </svg>
+                    </div>
+                    <div class="duplicate-modal__text">
+                        <p id="duplicateProcessModalMessage" class="certificate-modal__message">El número de proceso ya existe.</p>
+                        <p class="duplicate-modal__hint">Revisa el número o usa otro consecutivo para continuar.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal__actions">
+                <button type="button" class="btn btn--primary" id="duplicateProcessOkBtn">Entendido</button>
             </div>
         </div>
     </div>
@@ -616,6 +872,10 @@
                     <input type="text" id="clientNombre" class="control__input" placeholder="Nombre de la empresa" required style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()">
                 </div>
                 <div class="form-group">
+                    <label for="clientNit">NIT *</label>
+                    <input type="text" id="clientNit" class="control__input" placeholder="900123456-7" required>
+                </div>
+                <div class="form-group">
                     <label for="clientEmail">Email *</label>
                     <input type="email" id="clientEmail" class="control__input" placeholder="correo@empresa.com" required style="text-transform: lowercase;" oninput="this.value = this.value.toLowerCase()">
                 </div>
@@ -635,6 +895,7 @@
     </div>
 
     <!-- SCRIPTS -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="script-v2.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="admin.js"></script>

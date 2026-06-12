@@ -1,0 +1,2675 @@
+/* =========================================
+   RESETEO GENERAL Y CONFIGURACIONES BASE
+========================================= */
+/* Aplica un reseteo básico a todos los elementos (*) */
+* {
+  margin: 0; /* Elimina el margen predeterminado de todos los elementos */
+  padding: 0; /* Elimina el padding predeterminado de todos los elementos */
+  box-sizing: border-box; /* box-sizing: border-box; asegura que el padding y el borde se incluyan dentro del ancho y alto total de un elemento,
+     facilitando el control del diseño y evitando que los elementos se desborden inesperadamente. */
+}
+
+/* Estilos para el cuerpo de la página (body) */
+body {
+  font-family: 'Arial', sans-serif; /* Define la fuente principal para todo el texto */
+  background: linear-gradient(135deg, #b3bef0 0%, #f2bb13 100%);   /* Aplica un gradiente lineal como fondo, yendo de un azul claro a un amarillo */
+  min-height: 100vh; /* Asegura que el cuerpo ocupe al menos el 100% de la altura de la ventana (viewport height) */
+  padding: 10px; /* Añade un padding alrededor de todo el contenido del cuerpo */
+}
+
+/* =========================================
+   CONTENEDOR PRINCIPAL
+========================================= */
+/* Estilos para el contenedor principal de la aplicación */
+.container {
+  max-width: 1500px; /* Establece un ancho máximo para el contenedor */
+  margin: 0 auto; /* Centra el contenedor horizontalmente en la página */
+  background: white; /* Define un fondo blanco para el contenedor */
+  border-radius: 20px; /* Redondea las esquinas del contenedor */
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);   /* Aplica una sombra suave para darle profundidad al contenedor */
+  overflow: hidden; /* Oculta cualquier contenido que se desborde del contenedor */
+}
+
+/* =========================================
+   ENCABEZADO (HEADER) - ESTILO ORIGINAL PROTEGIDO
+========================================= */
+/* Estilos para la sección del encabezado - Con mayor especificidad para evitar sobrescritura */
+
+.header {
+  background: linear-gradient(135deg, #022859 0%, #022859 100%) !important;   /* Aplica un gradiente lineal oscuro como fondo del encabezado */
+  color: white !important; /* Define el color del texto dentro del encabezado como blanco */
+  padding: 50px !important; /* Añade padding alrededor del contenido del encabezado */
+  text-align: center !important; /* Centra el texto horizontalmente */
+  display: flex !important; /* Habilita Flexbox para alinear elementos internos */
+  justify-content: space-between !important; /* Distribuye el espacio entre los elementos internos */
+  align-items: center !important; /* Centra los elementos internos verticalmente */
+  padding-top: 30px !important; /* Ajuste específico del padding superior */
+  padding-bottom: 15px !important; /* Ajuste específico del padding inferior */
+  min-height: auto !important; /* Anular cualquier min-height del responsive */
+  box-shadow: none !important; /* Quitar sombras que puedan venir del responsive */
+}
+
+/* Pseudo-elemento ::before para añadir un efecto decorativo al encabezado */
+
+
+/* Define la animación 'rotate' */
+@keyframes rotate {
+  0% { transform: rotate(0deg); } /* Al inicio, no hay rotación */
+  100% { transform: rotate(300deg); } /* Al final, rota 300 grados */
+}
+
+/* =========================================
+   LOGO - ESTILO ORIGINAL PROTEGIDO
+========================================= */
+/* Estilos para el contenedor del logo */
+
+.logo {
+  max-width: 240px !important; /* Ancho máximo del logo */
+  height: 185px !important; /* Altura fija del logo */
+  object-fit: contain !important; /* Asegura que la imagen se ajuste dentro del contenedor sin recortarse */
+  background-color: #fff !important; /* Fondo blanco para el área del logo */
+  border-radius: 100% !important; /* Hace el contenedor circular */
+  display: flex !important; /* Habilita Flexbox para centrar la imagen */
+  align-items: center !important; /* Centra la imagen verticalmente */
+  justify-content: center !important; /* Centra la imagen horizontalmente */
+  margin-right: 20px !important; /* Margen a la derecha del logo */
+  cursor: pointer !important; /* Cambia el cursor a una mano, indicando que es interactivo */
+  overflow: hidden !important; /* Oculta cualquier parte de la imagen que se salga del círculo */
+  width: auto !important; /* Anular cualquier width del responsive */
+  flex-shrink: 0 !important; /* No permitir que se encoja */
+}
+
+/* Estilos para la imagen dentro del logo */
+.logo img {
+  width: 100% !important; /* La imagen ocupa el 100% del ancho de su contenedor */
+  height: auto !important; /* La altura se ajusta automáticamente para mantener la proporción */
+  object-fit: contain !important; /* Asegura que la imagen se ajuste sin recortarse */
+}
+
+/* =========================================
+   TITULOS - ESTILO ORIGINAL PROTEGIDO
+========================================= */
+/* Estilos para el título principal del documento */
+
+.titulo_princi {
+  text-align: center !important; /* Centra el texto */
+  font-size: 15px !important; /* Tamaño de fuente del título */
+}
+
+/* Estilos para el código y versión del documento */
+.p_codigo {
+  font-weight: normal !important; /* Define el peso de la fuente como normal */
+  font-size: 8px !important; /* Tamaño de fuente para el código */
+}
+
+/* Estilos para todos los h1 dentro del encabezado */
+.header h1 {
+  font-size: 2.5em !important; /* Tamaño de fuente relativo al elemento padre */
+  margin-bottom: 10px !important; /* Margen inferior */
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3) !important; /* Sombra para el texto */
+  margin: 0 !important; /* Anular márgenes que puedan venir del responsive */
+  flex: none !important; /* No permitir que flex altere el tamaño */
+}
+
+/* =========================================
+   SECCIONES DEL FORMULARIO
+========================================= */
+/* Padding interno para el contenedor del formulario */
+
+.form-container {
+  padding: 40px;
+}
+
+/* Estilos generales para cada sección del formulario */
+.form-section {
+  margin: 30px 0; /* Margen superior e inferior para separar las secciones */
+  padding: 25px 25px 25px 25px; /* Padding interno para cada sección */
+  background: #f8f9fa; /* Color de fondo ligeramente gris */
+  border-radius: 15px; /* Bordes redondeados */
+  border-left: 5px solid #4facfe; /* Borde izquierdo de color azul, como un acento */
+}
+
+/* Estilos para los títulos h3 dentro de las secciones del formulario */
+.form-section h3 {
+  color: #333; /* Color de texto oscuro */
+  margin-bottom: 20px; /* Margen inferior */
+  font-size: 1.3em; /* Tamaño de fuente */
+}
+
+/* =========================================
+   FILAS Y GRUPOS DE FORMULARIO
+========================================= */
+/* Estilos para organizar los campos en filas usando Grid */
+.form-row {
+  display: grid; /* Habilita Grid para organizar los elementos */
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));   /* Define columnas que se ajustan automáticamente, con un tamaño mínimo de 300px */
+  gap: 20px; /* Espacio entre las celdas de la cuadrícula */
+  margin-bottom: 10px; /* Margen inferior para separar filas */
+}
+
+/* Estilos para cada grupo de formulario (label + input) */
+.form-group,
+.form-group1 {
+  display: flex; /* Habilita Flexbox */
+  flex-direction: column; /* Organiza los elementos en una columna */
+}
+
+/* Ancho específico para el grupo de formulario 1 (podría ser para una columna diferente) */
+.form-group1 {
+  width: 342px;
+}
+
+/* Estilos para las etiquetas (labels) de los campos */
+label {
+  font-weight: bold; /* Texto en negrita */
+  margin-bottom: 13px; /* Margen inferior */
+  color: #555; /* Color de texto gris oscuro */
+}
+
+/* Estilos para los campos de entrada de texto, selectores y áreas de texto */
+input, select, textarea {
+  padding: 12px; /* Padding interno */
+  border: 2px solid #e0e0e0; /* Borde sólido gris claro */
+  border-radius: 8px; /* Bordes redondeados */
+  font-size: 16px; /* Tamaño de fuente */
+  transition: all 0.3s ease; /* Transición suave para todos los cambios de estilo */
+}
+
+/* Estilo específico para el selector de número de recepción en negrita */
+#quoteNumber {
+  font-weight: bold; /* Texto en negrita */
+}
+
+/* =========================================
+   SECCIÓN DE LAVADO MEJORADA
+========================================= */
+/* Contenedor principal con dos columnas */
+.lavado-main-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* Contenedor para la pregunta principal de lavado */
+.lavado-question-container {
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #17a2b8;
+}
+
+/* Etiqueta principal de la pregunta de lavado */
+.lavado-main-label {
+  font-weight: bold;
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 10px;
+  display: block;
+}
+
+/* Columna de campos de lavado - una sola columna vertical */
+.lavado-fields-column {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #28a745;
+}
+
+/* Campos de lavado inicialmente ocultos */
+#lavadoFields {
+  display: none;
+}
+
+/* Cuando se activa el lavado, mostrar los campos */
+#lavadoFields.active {
+  display: flex;
+}
+
+/* Responsive: En pantallas pequeñas, apilar en una columna */
+@media (max-width: 768px) {
+  .lavado-main-container {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+}
+
+/* Estilos cuando un input, select o textarea está en foco (seleccionado) */
+input:focus, select:focus, textarea:focus {
+  outline: none; /* Elimina el contorno predeterminado del navegador */
+  border-color: #4facfe; /* Cambia el color del borde a azul */
+  box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1); /* Añade una sombra suave para indicar el foco */
+}
+
+/* =========================================
+   ELEMENTOS Y ARTICULOS
+========================================= */
+/* Estilos para la sección que lista los elementos o artículos */
+
+/* Estilos para la tabla de elementos */
+.table-container {
+    overflow-x: auto;
+    margin: 20px 0;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.table-header {
+    display: grid;
+    background: #022859;
+    color: white;
+    padding: 15px;
+    font-weight: bold;
+    text-align: center;
+    gap: 74px;
+}
+
+.table-body {
+    background: white;
+}
+
+.table-row {
+    display: grid;
+    grid-template-columns: 50px 2fr 1fr 1fr 1fr 1fr 2fr;
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    align-items: center;
+    gap: 10px;
+}
+
+.table-row:hover {
+    background-color: #f8f9fa;
+}
+
+.table-row input[type="number"] {
+  width: 80px;
+  padding: 8px;
+  border: 3px solid #d1cfdd;
+  border-radius: 4px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.table-row .checkbox-cell input[type="number"] {
+  width: 80px;
+  padding: 8px;
+  border: 1px solid #dddddd00;
+  border-radius: 4px;
+  text-align: center;
+  font-weight: bold;
+}
+
+
+
+.table-row input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+}
+
+.table-row select.estado-uso {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* Ajuste específico: columna acciones en reportes/análisis */
+th[data-col="acciones"],
+#completedCasesTable th:last-child {
+    width: 14%;
+    max-width: 220px;
+    text-align: center;
+}
+#completedCasesTable td:last-child,
+.report-tab tbody td:last-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+.table-row select.estado-uso:focus {
+    border-color: #4facfe;
+    box-shadow: 0 0 0 2px rgba(79, 172, 254, 0.1);
+    outline: none;
+}
+
+.table-row textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    min-height: 60px;
+    resize: vertical;
+}
+
+.search-and-filter-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 30px;
+  width: 100%;
+  justify-content: center; /* Centra el contenido */
+  flex-wrap: wrap; /* Permite que los elementos se envuelvan en pantallas pequeñas */
+}
+
+.search-bar {
+  position: relative;
+  flex-grow: 1; /* Permite que la barra de búsqueda crezca */
+  max-width: 400px; /* Ancho máximo para la barra de búsqueda */
+}
+
+.search-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888;
+  font-size: 1.2em;
+}
+
+#searchInput {
+  width: 100%;
+  padding: 12px 12px 12px 45px; /* Más padding a la izquierda para el icono */
+  border: 1px solid #ccc;
+  border-radius: 25px;
+  font-size: 1em;
+  box-shadow: 0 2px 5px rgba(173, 44, 44, 0.1);
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+#searchInput:focus {
+  border-color: #6a5acd;
+  box-shadow: 0 2px 8px rgba(106, 90, 205, 0.2);
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap; /* Para que los botones se envuelvan */
+  justify-content: center; /* CENTRA horizontalmente */
+  gap: 5px; /* espacio entre botones */
+}
+
+.filter-btn {
+    background-color: #e0e0e0;
+    color: #555;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.3s, color 0.3s, transform 0.2s;
+    white-space: nowrap; /* Evita que el texto del botón se rompa */
+}
+
+.filter-btn:hover {
+    background-color: #d0d0d0;
+}
+
+.filter-btn.active {
+    background-color: #6a5acd; /* Un color morado similar al de la imagen */
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.filter-btn.active:hover {
+  background-color: #5d4bad;
+}
+
+/* =========================================
+   ESTILOS PROFESIONALES DE BÚSQUEDA
+========================================= */
+
+/* Contenedor centrado para la barra de búsqueda */
+.search-bar-center {
+  display: flex;
+  justify-content: center;
+  margin-top: 15px; /* Espacio entre filtros y búsqueda */
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+/* Barra de búsqueda profesional */
+.search-bar-professional {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 450px; /* Ancho máximo para mantener el diseño profesional */
+  background: white;
+  border: 2px solid #d1d9e6;
+  border-radius: 25px;
+  box-shadow: 0 8px 25px rgba(2, 40, 89, 0.712), 0 2px 8px rgba(0, 0, 0, 0.575);
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.search-bar-professional:hover {
+  border-color: #022859;
+  box-shadow: 0 12px 35px rgba(2, 40, 89, 0.25), 0 4px 12px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.search-bar-professional:focus-within {
+  border-color: #022859;
+  box-shadow: 0 15px 40px rgba(2, 40, 89, 0.3), 0 6px 15px rgba(0, 0, 0, 0.15);
+  transform: translateY(-3px);
+}
+
+/* Icono de búsqueda */
+.search-bar-professional .search-icon {
+  position: absolute;
+  left: 18px;
+  color: #6c757d;
+  font-size: 16px;
+  z-index: 2;
+  transition: color 0.3s ease;
+}
+
+.search-bar-professional:focus-within .search-icon {
+  color: #022859;
+}
+
+/* Campo de entrada de búsqueda */
+.search-bar-professional input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 14px 50px 14px 50px; /* Espacio para icono y botón */
+  font-size: 15px;
+  font-weight: 400;
+  color: #2d3748;
+  background: transparent;
+  line-height: 1.4;
+}
+
+.search-bar-professional input::placeholder {
+  color: #a0aec0;
+  font-weight: 400;
+  transition: color 0.3s ease;
+}
+
+.search-bar-professional:focus-within input::placeholder {
+  color: #6c757d;
+}
+
+/* Botón para limpiar búsqueda */
+.clear-search-btn {
+  position: absolute;
+  right: 12px;
+  background: #f8f9fa;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #6c757d;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+  opacity: 0;
+  transform: scale(0.8);
+  z-index: 3;
+}
+
+.search-bar-professional:hover .clear-search-btn,
+.search-bar-professional:focus-within .clear-search-btn {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.clear-search-btn:hover {
+  background: #e9ecef;
+  color: #495057;
+  transform: scale(1.1);
+}
+
+/* Responsive para pantallas móviles */
+@media (max-width: 768px) {
+  .search-bar-center {
+    margin-top: 10px;
+    margin-bottom: 15px;
+  }
+  
+  .search-bar-professional {
+    max-width: 100%;
+    margin: 0 10px;
+  }
+  
+  .search-bar-professional input {
+    padding: 12px 45px 12px 45px;
+    font-size: 14px;
+  }
+}
+
+/* Tabla */
+.table-container {
+  width: 100%;
+  max-width: 1000px; /* Misma anchura que la sección de búsqueda */
+  border-radius: 10px;
+  overflow: hidden; /* Asegura que las esquinas redondeadas se apliquen */
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.table-header {
+  display: grid;
+  /* Define 8 columnas con proporciones ajustadas */
+  grid-template-columns: 0.5fr 2fr 1fr 1fr 2fr 0.8fr 2fr;
+  background: linear-gradient(90deg, #3016d8 0%, #2417db 100%); /* Gradiente morado */
+  color: white;
+  font-weight: bold;
+  text-align: center;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+  align-items: center;
+  border-radius: 10px 10px 0 0;
+  position: sticky;
+  top: 0;
+}
+
+.table-body {
+  background-color: #fff;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 0.5fr 1fr 1fr 1fr 2fr 0.8fr 2fr;
+  padding: 8px 0;
+  text-align: center;
+  border-bottom: 1px solid #eee;
+  align-items: center;
+  transition: background-color 0.2s;
+}
+
+.table-row:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.table-row:hover {
+    background-color: #f0f0f0;
+}
+
+.table-row div {
+  padding: 5px;
+}
+
+/* Estilos para los checkboxes en las columnas USADO/NO USADO */
+.table-row .checkbox-cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.table-row input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    margin: 0 5px; /* Espacio entre los checkboxes si hay varios */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .search-and-filter-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-bar {
+        max-width: 100%;
+    }
+
+    .filter-buttons {
+        justify-content: center;
+    }
+
+    .table-header,
+    .table-row {
+        /* Reduce el número de columnas o ajusta sus tamaños para pantallas pequeñas */
+        grid-template-columns: 1fr 2fr 1fr 1fr; /* Ejemplo: Ocultar algunas columnas para simplificar */
+        font-size: 0.9em;
+    }
+
+    /* Ocultar algunas columnas en móviles si es necesario */
+    .table-header div:nth-child(5), /* USADO */
+    .table-header div:nth-child(6), /* NO USADO */
+    .table-header div:nth-child(7), /* CARACTERÍSTICAS */
+    .table-header div:nth-child(8), /* OBSERVACIONES */
+    .table-row > div:nth-child(5),
+    .table-row > div:nth-child(6),
+    .table-row > div:nth-child(7),
+    .table-row > div:nth-child(8) {
+        display: none; /* Oculta estas columnas */
+    }
+}
+
+@media (max-width: 480px) {
+    .filter-buttons {
+        gap: 5px;
+    }
+
+    .filter-btn {
+        padding: 8px 15px;
+        font-size: 0.8em;
+    }
+}
+
+
+
+
+.items-section {
+  background: #fff; /* Fondo blanco */
+  border: 2px solid #e0e0e0; /* Borde gris claro */
+  border-radius: 15px; /* Bordes redondeados */
+  padding: 20px; /* Padding interno */
+  margin-bottom: 20px; /* Margen inferior */
+}
+
+/* Estilos para la cuadrícula de cada elemento listado (nombre, cantidad, estado) */
+.items-grid {
+  display: grid; /* Habilita Grid */
+  grid-template-columns: 60px minmax(220px, 1.2fr) minmax(240px, 1.05fr) minmax(260px, 1.1fr) minmax(140px, 0.7fr) 170px;  /* Vista resumida y limpia */
+  gap: 10px; /* Espacio entre las celdas de la cuadrícula */
+  align-items: center; /* Centra los elementos verticalmente en cada celda */
+  justify-items: center;
+  margin-bottom: 10px; /* Margen inferior */
+  padding: 12px; /* Padding interno */
+  background: #f8f9fa; /* Fondo ligeramente gris */
+  border-radius: 8px; /* Bordes redondeados */
+  text-align: center;
+  
+}
+
+/* Estilos específicos para la fila de encabezado de la cuadrícula de ítems */
+.items-grid.header {
+  background: #0a62af; /* Fondo azul */
+  color: white; /* Texto blanco */
+  font-weight: bold; /* Texto en negrita */
+}
+
+.items-grid.row-saved:not(.header) {
+  background: linear-gradient(135deg, #eef7ff 0%, #e3f0ff 100%);
+  border-left: 4px solid #0d6efd;
+}
+
+.items-grid:not(.header) {
+  box-shadow: 0 8px 18px rgba(2, 40, 89, 0.06);
+  border: 1px solid rgba(2, 40, 89, 0.08);
+}
+
+.item-name-cell {
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.item-name-main {
+  display: block;
+  font-weight: 700;
+  color: #022859;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.item-name-subtle {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.unit-count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #022859 0%, #0a62af 100%);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: .2px;
+  box-shadow: 0 8px 16px rgba(2, 40, 89, 0.18);
+}
+
+.brand-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  width: 100%;
+}
+
+.wash-chip {
+  justify-self: center;
+  min-width: 120px;
+}
+
+.brand-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #eef4fb;
+  color: #022859;
+  border: 1px solid rgba(2, 40, 89, 0.12);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.brand-chip .brand-chip-count {
+  background: #022859;
+  color: white;
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-size: 11px;
+}
+
+.item-actions-cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.manage-units-btn {
+  border: none;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, #022859 0%, #0d6efd 100%);
+  box-shadow: 0 10px 20px rgba(2, 40, 89, 0.18);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.manage-units-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 24px rgba(2, 40, 89, 0.22);
+}
+
+.manage-units-btn.secondary {
+  background: #eef4fb;
+  color: #022859;
+  box-shadow: none;
+  border: 1px solid rgba(2, 40, 89, 0.12);
+}
+
+.unit-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 15, 35, 0.64);
+  backdrop-filter: blur(8px);
+  z-index: 10004;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.unit-modal-overlay[hidden] {
+  display: none !important;
+}
+
+.unit-modal-panel {
+  width: min(1180px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 28px 80px rgba(2, 20, 46, 0.35);
+  padding: 20px;
+}
+
+.unit-modal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.unit-modal-kicker {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: #0d6efd;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.unit-modal-header h3 {
+  margin: 0;
+  color: #022859;
+  font-size: 24px;
+}
+
+.unit-modal-header p {
+  margin: 6px 0 0;
+  color: #5f6b7a;
+}
+
+.unit-modal-close {
+  border: none;
+  background: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(2, 40, 89, 0.12);
+  font-size: 18px;
+  cursor: pointer;
+  color: #022859;
+}
+
+.unit-modal-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.unit-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.unit-metric-card {
+  background: #fff;
+  border: 1px solid rgba(2, 40, 89, 0.08);
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: 0 10px 20px rgba(2, 40, 89, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.unit-metric-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  background: linear-gradient(180deg, #022859 0%, #0d6efd 100%);
+}
+
+.unit-metric-card-received::before { background: linear-gradient(180deg, #0d6efd 0%, #4da3ff 100%); }
+.unit-metric-card-delivered::before { background: linear-gradient(180deg, #198754 0%, #65c18c 100%); }
+.unit-metric-card-unused::before { background: linear-gradient(180deg, #f59e0b 0%, #fbbf24 100%); }
+.unit-metric-card-used::before { background: linear-gradient(180deg, #7c3aed 0%, #a78bfa 100%); }
+.unit-metric-card-washed::before { background: linear-gradient(180deg, #0f766e 0%, #2dd4bf 100%); }
+
+.unit-metric-card label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #6c757d;
+  font-weight: 700;
+}
+
+.unit-metric-card input {
+  border: 1px solid rgba(2, 40, 89, 0.14);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #022859;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.unit-distribution-card {
+  background: #fff;
+  border: 1px solid rgba(2, 40, 89, 0.08);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 10px 20px rgba(2, 40, 89, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.unit-distribution-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.unit-distribution-card label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #6c757d;
+  font-weight: 700;
+}
+
+.unit-distribution-card textarea {
+  width: 100%;
+  border: 1px solid rgba(2, 40, 89, 0.14);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #022859;
+  resize: vertical;
+  min-height: 68px;
+}
+
+.unit-distribution-card small {
+  color: #5f6b7a;
+  line-height: 1.35;
+}
+
+.unit-distribution-list-header,
+.unit-distribution-row {
+  display: grid;
+  grid-template-columns: 110px minmax(220px, 1fr) 120px;
+  gap: 10px;
+  align-items: center;
+}
+
+.unit-distribution-list-header {
+  margin-top: 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #6c757d;
+  font-weight: 800;
+}
+
+.unit-distribution-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.unit-distribution-row {
+  background: #f8fbff;
+  border: 1px solid rgba(2, 40, 89, 0.08);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.unit-distribution-row input {
+  width: 100%;
+  border: 1px solid rgba(2, 40, 89, 0.14);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #022859;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.quantity-summary-stack {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+.quantity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  box-shadow: 0 10px 18px rgba(2, 40, 89, 0.12);
+  border: 1px solid rgba(2, 40, 89, 0.08);
+}
+
+.quantity-chip .quantity-chip-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.92);
+  color: inherit;
+  font-weight: 900;
+}
+
+.quantity-chip.received {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #0b4aa2;
+}
+
+.quantity-chip.delivered {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #146c43;
+}
+
+.quantity-chip.secondary {
+  background: linear-gradient(135deg, #eef4fb 0%, #e2e8f0 100%);
+  color: #022859;
+}
+
+.unit-distribution-row .unit-icon-btn {
+  justify-self: end;
+}
+
+.unit-summary-card {
+  background: #fff;
+  border: 1px solid rgba(2, 40, 89, 0.08);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 10px 20px rgba(2, 40, 89, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.unit-summary-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #6c757d;
+  font-weight: 700;
+}
+
+.unit-summary-card strong {
+  color: #022859;
+  font-size: 17px;
+}
+
+.unit-modal-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.unit-batch-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: #eef4fb;
+  border: 1px solid rgba(2, 40, 89, 0.08);
+  padding: 10px 12px;
+  border-radius: 14px;
+}
+
+.unit-batch-group label {
+  font-weight: 700;
+  color: #022859;
+}
+
+.unit-batch-group input {
+  width: 92px;
+  border: 1px solid rgba(2, 40, 89, 0.14);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-weight: 700;
+  color: #022859;
+}
+
+.unit-table-wrap {
+  border: 1px solid rgba(2, 40, 89, 0.08);
+  border-radius: 18px;
+  overflow: hidden;
+  background: white;
+}
+
+.unit-table-header,
+.unit-unit-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(180px, 0.9fr) minmax(260px, 1.6fr) 120px;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+}
+
+.unit-table-header {
+  background: #022859;
+  color: white;
+  font-weight: 700;
+}
+
+.unit-table-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.unit-unit-row {
+  border-top: 1px solid rgba(2, 40, 89, 0.08);
+  background: #fff;
+}
+
+.unit-unit-row:nth-child(even) {
+  background: #fbfdff;
+}
+
+.unit-code {
+  font-weight: 800;
+  color: #022859;
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.unit-brand-input,
+.unit-observations-input {
+  width: 100%;
+  border: 1px solid rgba(2, 40, 89, 0.14);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.unit-observations-input {
+  min-height: 46px;
+  resize: vertical;
+}
+
+.unit-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.unit-icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(2, 40, 89, 0.12);
+  background: #fff;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.unit-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+.unit-empty-state {
+  padding: 22px;
+  text-align: center;
+  color: #5f6b7a;
+  background: #fff;
+  border-top: 1px dashed rgba(2, 40, 89, 0.14);
+}
+
+/* =========================================
+   INFORMACION DE LAVADO
+========================================= */
+/* Estilos para la sección de información de lavado */
+.info-section {
+  background: #f8f9fa; /* Fondo ligeramente gris */
+  padding: 20px; /* Padding interno */
+  margin-bottom: 25px; /* Margen inferior */
+  border-radius: 8px; /* Bordes redondeados */
+  border-left: 4px solid #3498db; /* Borde izquierdo azul para acento */
+}
+
+/* Cuadrícula para organizar los elementos dentro de la sección de lavado */
+.info-grid {
+  display: grid; /* Habilita Grid */
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));   /* Columnas que se ajustan automáticamente, con un mínimo de 250px de ancho */
+  gap: 20px; /* Espacio entre las celdas */
+  margin-bottom: 20px; /* Margen inferior */
+}
+
+/* Estilos para el grupo de checkboxes (radio buttons en este caso) */
+.checkbox-group {
+  display: flex; /* Habilita Flexbox */
+  gap: 15px; /* Espacio entre los radio buttons */
+  justify-content: center; /* Centra los elementos horizontalmente */
+  align-items: center; /* Centra los elementos verticalmente */
+}
+
+/* =========================================
+   TOTALES Y ESTADÍSTICAS
+========================================= */
+/* Cuadrícula para organizar los totales de elementos */
+.totals-grid {
+  display: grid; /* Habilita Grid */
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));   /* Columnas que se ajustan automáticamente, con un mínimo de 200px de ancho */
+  gap: 20px; /* Espacio entre las celdas */
+  text-align: center; /* Centra el texto dentro de cada celda */
+  margin-bottom: 30px;
+}
+
+/* Estilos para cada caja individual de total */
+.total-item {
+  background: white; /* Fondo blanco */
+  padding: 20px; /* Padding interno */
+  border-radius: 10px; /* Bordes redondeados */
+  border: 2px solid #17a2b8; /* Borde de color turquesa */
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.total-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+}
+
+/* Estilos para el título de cada total */
+.total-item h4 {
+  color: #0c5460; /* Color de texto oscuro */
+  margin-bottom: 15px; /* Margen inferior */
+  font-size: 1.2em;
+}
+
+/* Estilos para el número grande que muestra el total */
+.total-item .number {
+  font-size: 2.5em; /* Tamaño de fuente grande */
+  font-weight: bold; /* Texto en negrita */
+  color: #17a2b8; /* Color turquesa para el número */
+}
+
+/* Indicador de estado general */
+.status-indicator {
+  text-align: center;
+  margin-top: 30px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 30px;
+  border-radius: 25px;
+  font-weight: bold;
+  font-size: 1.1em;
+  transition: all 0.3s ease;
+}
+
+.status-pending {
+  background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);
+  color: white;
+}
+
+.status-complete {
+  background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+  color: white;
+}
+
+.status-warning {
+  background: linear-gradient(135deg, #fd7e14 0%, #e63946 100%);
+  color: white;
+}
+
+/* =========================================
+   CONTROL DE CALIDAD
+========================================= */
+.quality-section {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-left: 5px solid #0066cc;
+}
+
+.quality-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.quality-grid .full-width {
+  grid-column: 1 / -1;
+}
+
+/* =========================================
+   FIRMAS DIGITALES MEJORADAS
+========================================= */
+.signatures-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.signature-container {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 15px;
+  padding: 25px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.signature-container.half-width {
+  margin-bottom: 0;
+  padding: 20px;
+}
+
+.signature-container h4 {
+  color: #022859;
+  margin-bottom: 20px;
+  font-size: 1.1em;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 10px;
+  text-align: center;
+}
+
+/* Layout para los campos de firma - modificado para nueva estructura */
+.signature-info {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 5px;
+}
+
+.signature-info .form-group {
+  margin-bottom: 0;
+}
+
+/* Mantenemos compatibilidad con half-width */
+.signature-container.half-width .signature-info {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.signature-container.half-width .signature-info .form-group {
+  margin-bottom: 0;
+}
+
+.signature-section {
+  background: #fafafa;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.signature-canvas {
+  border: 3px dashed #4facfe;
+  border-radius: 10px;
+  cursor: crosshair;
+  margin: 20px auto;
+  display: block;
+  background: white;
+  transition: border-color 0.3s ease;
+}
+
+.signature-canvas:hover {
+  border-color: #0056b3;
+}
+
+.signature-controls {
+  margin-top: 15px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+/* Responsive para firmas */
+@media (max-width: 768px) {
+  .signatures-row {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .signature-container.half-width {
+    margin-bottom: 20px;
+  }
+
+  /* Layout de campos de firma responsive - mantener 2x2 en móviles */
+  .signature-info {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    font-size: 0.9em;
+  }
+  
+  .signature-container.half-width .signature-info {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  
+  .signature-canvas {
+    width: 100%;
+    max-width: 350px;
+    height: 120px;
+  }
+  
+  .signature-controls {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .signature-controls .btn {
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+}
+
+/* =========================================
+   FIRMAS DIGITALES
+========================================= */
+/* Estilos para la sección que contiene el canvas de firma */
+.signature-section {
+  background: #fff; /* Fondo blanco */
+  border: 2px solid #e0e0e0; /* Borde gris claro */
+  border-radius: 15px; /* Bordes redondeados */
+  padding: 20px; /* Padding interno */
+  text-align: center; /* Centra el texto y el canvas */
+}
+
+/* Estilos para el elemento canvas donde se dibuja la firma */
+.signature-canvas {
+  border: 2px dashed #4facfe; /* Borde punteado azul para indicar área de firma */
+  border-radius: 10px; /* Bordes redondeados */
+  cursor: crosshair; /* Cambia el cursor a una cruz al pasar sobre el canvas */
+  margin: 20px auto; /* Margen superior/inferior y centrado horizontal */
+  display: block; /* Asegura que el canvas sea un bloque y pueda centrarse con margin: auto */
+  background: #fafafa; /* Fondo ligeramente gris para el canvas */
+}
+
+/* Estilos para la caja que contiene los campos de nombre/cédula asociados a la firma */
+.signature-box {
+  background: white; /* Fondo blanco */
+  padding: 15px; /* Padding interno */
+  border-radius: 5px; /* Bordes ligeramente redondeados */
+}
+
+/* Estilos para el contenedor de los botones de control de la firma */
+.signature-controls {
+  margin-top: 15px; /* Margen superior */
+}
+
+/* Estilos para la vista previa de la firma (imagen) */
+.signature-preview {
+  max-width: 300px; /* Ancho máximo de la imagen de firma */
+  max-height: 150px; /* Altura máxima de la imagen de firma */
+  border: 1px solid #ddd; /* Borde ligero */
+  border-radius: 5px; /* Bordes redondeados */
+  margin: 10px auto; /* Margen y centrado */
+  display: block; /* Asegura que la imagen sea un bloque */
+}
+
+/* =========================================
+   BOTONES
+========================================= */
+/* Estilos generales para todos los botones */
+.btn {
+  padding: 12px 24px; /* Padding interno para el tamaño del botón */
+  border: none; /* Sin borde */
+  border-radius: 8px; /* Bordes redondeados */
+  font-size: 16px; /* Tamaño de fuente */
+  cursor: pointer; /* Cambia el cursor a una mano */
+  transition: all 0.3s ease; /* Transición suave para todos los cambios de estilo */
+  margin: 5px; /* Margen alrededor de cada botón */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+/* Estilos para botones de acción principal (azul) */
+.btn-primary {
+  background: linear-gradient(135deg, #6f4ffe 0%, #00f2fe 100%); /* Gradiente de azul */
+  color: white; /* Texto blanco */
+  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3); /* Sombra para dar efecto 3D */
+}
+
+/* Efecto al pasar el ratón sobre los botones primarios */
+.btn-primary:hover {
+  transform: translateY(-2px); /* Ligeramente levanta el botón */
+  box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4); /* Aumenta la sombra */
+}
+
+/* Estilos para botón PDF Recepción (naranja-rojizo) */
+.btn-pdf-recepcion {
+  background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); /* Gradiente naranja-rojizo */
+  color: white; /* Texto blanco */
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3); /* Sombra naranja */
+}
+
+/* Efecto al pasar el ratón sobre el botón PDF Recepción */
+.btn-pdf-recepcion:hover {
+  transform: translateY(-2px); /* Ligeramente levanta el botón */
+  box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4); /* Aumenta la sombra naranja */
+}
+
+/* Estilos para botones de Email */
+.btn-email {
+  background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 13px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+}
+
+.btn-email:hover {
+  background: linear-gradient(135deg, #1565c0 0%, #0a3d91 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(25, 118, 210, 0.4);
+  color: white;
+}
+
+.btn-email-complete {
+  background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 13px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(56, 142, 60, 0.3);
+}
+
+.btn-email-complete:hover {
+  background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(56, 142, 60, 0.4);
+  color: white;
+}
+
+.btn-email:active, .btn-email-complete:active {
+  transform: translateY(0);
+}
+
+/* Estilos para botones secundarios (gris) */
+.btn-secondary {
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%); /* Color de fondo gris */
+  color: white; /* Texto blanco */
+  box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+}
+
+/* Efecto al pasar el ratón sobre los botones secundarios */
+.btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+}
+
+/* Estilos para botones de éxito (verde) */
+.btn-success {
+  background: linear-gradient(135deg, #2e1dcc 0%, #1c9fd3 100%); /* Gradiente de verde */
+  color: white; /* Texto blanco */
+  box-shadow: 0 4px 15px rgba(86, 171, 47, 0.3); /* Sombra para dar efecto 3D */
+}
+
+/* Efecto al pasar el ratón sobre los botones de éxito */
+.btn-success:hover {
+  transform: translateY(-2px); /* Ligeramente levanta el botón */
+  box-shadow: 0 6px 20px rgba(86, 171, 47, 0.4); /* Aumenta la sombra */
+}
+
+/* Estilos para botones de información (azul claro) */
+.btn-info {
+  background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);
+}
+
+.btn-info:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(23, 162, 184, 0.4);
+}
+
+/* Estilos para botones de advertencia (amarillo/naranja) */
+.btn-warning {
+  background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+}
+
+.btn-warning:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4);
+}
+
+/* Estilos para botones de peligro (rojo) */
+.btn-danger {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ffa8a8 100%); /* Gradiente de rojo */
+  color: white; /* Texto blanco */
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+}
+
+/* Efecto al pasar el ratón sobre los botones de peligro */
+.btn-danger:hover {
+  transform: translateY(-2px); /* Ligeramente levanta el botón */
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+}
+
+/* Estilos para el contenedor de los botones de acción */
+.actions {
+  background: #f8f9fa;
+  border-radius: 15px;
+  padding: 30px;
+  margin-top: 30px;
+  border: 1px solid #e0e0e0;
+}
+
+/* Versión compacta */
+.actions-compact {
+  padding: 18px 20px;
+}
+.actions-title {
+  margin: 0 0 12px;
+  color: #022859;
+  font-size: 1.2em;
+  font-weight: 700;
+}
+.actions-primary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.actions-compact .btn {
+  padding: 10px 16px;
+  font-size: 14px;
+  margin: 4px 0;
+}
+.actions-secondary {
+  margin-top: 10px;
+}
+.actions-secondary summary {
+  cursor: pointer;
+  color: #022859;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.action-group {
+  margin-bottom: 25px;
+  text-align: center;
+}
+
+.action-group h4 {
+  color: #022859;
+  margin-bottom: 15px;
+  font-size: 1.1em;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 8px;
+  display: inline-block;
+}
+
+.action-group:last-child {
+  margin-bottom: 0;
+}
+
+/* =========================================
+   VISTA PREVIA
+========================================= */
+/* Estilos para la sección de vista previa del documento (inicialmente oculta) */
+.preview-section {
+  background: #f8f9fa; /* Fondo ligeramente gris */
+  border-radius: 15px; /* Bordes redondeados */
+  padding: 20px; /* Padding interno */
+  margin-top: 20px; /* Margen superior */
+  display: none; /* Por defecto, la sección está oculta */
+}
+
+/* =========================================
+   RESPONSIVE (ADAPTACIÓN A DIFERENTES TAMAÑOS DE PANTALLA)
+========================================= */
+/* Media query para pantallas con un ancho máximo de 768px (tabletas y móviles) */
+@media (max-width: 768px) {
+  /* En pantallas pequeñas, las filas del formulario se convierten en una sola columna */
+  .form-row {
+    grid-template-columns: 1fr; /* Una sola columna que ocupa todo el ancho disponible */
+  }
+
+  /* Ajusta el tamaño de las columnas de la cuadrícula de ítems para pantallas pequeñas */
+  .items-grid {
+    grid-template-columns: 1fr 80px 80px; /* Ajusta el ancho de las columnas fijas */
+    font-size: 14px; /* Reduce el tamaño de fuente de los ítems */
+  }
+
+  /* El canvas de la firma ocupa todo el ancho disponible en pantallas pequeñas */
+  .signature-canvas {
+    width: 100%; /* El canvas ocupa el 100% del ancho del padre */
+    height: 200px; /* Altura fija */
+  }
+
+  /* Ajustes para los totales en móviles */
+  .totals-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+  }
+
+  .total-item {
+    padding: 15px;
+  }
+
+  .total-item .number {
+    font-size: 2em;
+  }
+
+  /* Ajustes para botones en móviles */
+  .action-group {
+    margin-bottom: 20px;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    margin: 3px;
+  }
+
+  /* Ajustes para firmas en móviles */
+  .signature-container {
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+
+  .signature-controls {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* Ajustes para quality section */
+  .quality-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .filter-buttons {
+    gap: 5px;
+  }
+
+  .filter-btn {
+    padding: 8px 15px;
+    font-size: 0.8em;
+  }
+
+  .header {
+    padding: 20px;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .logo {
+    max-width: 150px;
+    height: 120px;
+    margin-right: 0;
+  }
+
+  .titulo_princi h1 {
+    font-size: 1.5em;
+  }
+
+  .p_codigo h1 {
+    font-size: 0.8em;
+  }
+
+  .form-container {
+    padding: 20px;
+  }
+
+  .totals-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    padding: 20px;
+  }
+  .actions-primary { gap: 8px; }
+  .actions-grid { grid-template-columns: 1fr; }
+
+  .action-group h4 {
+    font-size: 1em;
+  }
+}
+
+/* =========================================
+   ESTILOS PARA SECCIÓN DE LAVADO PROFESIONAL
+========================================= */
+
+.lavado-section {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.lavado-section h3 {
+  background: linear-gradient(135deg, #022859 0%, #0056b3 100%);
+  color: white;
+  margin: 0;
+  padding: 12px 20px; /* Reducido de 16px 24px */
+  font-size: 1.1em; /* Reducido de 1.2em */
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lavado-container, .lavado-container-compact {
+  padding: 16px; /* Reducido de 24px */
+}
+
+.lavado-question, .lavado-question-compact {
+  margin-bottom: 16px; /* Reducido de 24px */
+}
+
+/* Alinear la pregunta a la izquierda en la fila */
+.lavado-left {
+  text-align: left;
+}
+
+.lavado-label, .lavado-label-compact {
+  display: block;
+  font-size: 1em; /* Reducido de 1.1em */
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 12px; /* Reducido de 16px */
+}
+
+.radio-group-professional {
+  display: flex;
+  justify-content: flex-start; /* alineado a la izquierda */
+  gap: 20px; /* Reducido de 24px */
+  flex-wrap: wrap;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 10px 16px; /* Reducido de 12px 20px */
+  background: white;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  user-select: none;
+  font-weight: 500;
+}
+
+.radio-option:hover {
+  border-color: #022859;
+  box-shadow: 0 2px 8px rgba(2, 40, 89, 0.1);
+  transform: translateY(-1px);
+}
+
+.radio-option input[type="radio"] {
+  display: none;
+}
+
+.radio-custom {
+  width: 18px; /* Reducido de 20px */
+  height: 18px; /* Reducido de 20px */
+  border: 2px solid #dee2e6;
+  border-radius: 50%;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.radio-option input[type="radio"]:checked + .radio-custom {
+  border-color: #022859;
+  background: #022859;
+}
+
+.radio-option input[type="radio"]:checked + .radio-custom::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px; /* Reducido de 8px */
+  height: 6px; /* Reducido de 8px */
+  background: white;
+  border-radius: 50%;
+}
+
+.radio-option input[type="radio"]:checked ~ .radio-text {
+  color: #022859;
+  font-weight: 600;
+}
+
+.lavado-fields, .lavado-fields-compact {
+  padding: 16px; /* Reducido de 20px */
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.field-row, .field-row-compact {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* fila 1: pregunta izquierda, cantidad derecha */
+  gap: 16px; /* Reducido de 20px */
+  margin-bottom: 0; /* Eliminado margen inferior */
+}
+
+.form-group-pro {
+  display: flex;
+  flex-direction: column;
+  gap: 6px; /* Reducido de 8px */
+}
+
+.form-group-pro.full-width {
+  grid-column: 1 / -1;
+}
+
+.label-pro, .label-pro-compact {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.9em; /* Reducido de 0.95em */
+  display: flex;
+  align-items: center;
+  gap: 6px; /* Reducido de 8px */
+}
+
+.label-pro i, .label-pro-compact i {
+  color: #022859;
+  width: 14px; /* Reducido de 16px */
+}
+
+.input-pro, .input-pro-compact, .textarea-pro {
+  padding: 10px 14px; /* Reducido de 12px 16px */
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 0.9em; /* Reducido de 0.95em */
+  transition: all 0.3s ease;
+  background: #fafbfc;
+}
+
+.input-pro:focus, .input-pro-compact:focus, .textarea-pro:focus {
+  outline: none;
+  border-color: #022859;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(2, 40, 89, 0.1);
+}
+
+.input-pro:disabled, .input-pro-compact:disabled, .textarea-pro:disabled {
+  background: #f8f9fa;
+  color: #6c757d;
+  cursor: not-allowed;
+  border-color: #dee2e6;
+}
+
+.input-pro:read-only, .input-pro-compact:read-only {
+  padding: 10px 14px; /* Reducido de 12px 16px */
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 0.9em; /* Reducido de 0.95em */
+  transition: all 0.3s ease;
+  background: #fafbfc;
+  
+}
+
+/* =========================================
+   FILTROS ESPECÍFICOS POR TABLA
+========================================= */
+
+/* Estilos específicos para los filtros de la Tabla 1 (Ensayos Alcance) */
+#menu1 .filter-btn-1 {
+  background: linear-gradient(135deg, #35c2c7, #a6a1d3);
+  border: 2px solid #fcfcfc;
+  color: rgb(43, 41, 41);
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+#menu1 .filter-btn-1:hover {
+  background: linear-gradient(135deg, #21f32c, #a0b4c9);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+}
+
+#menu1 .filter-btn-1.active {
+  background: linear-gradient(135deg, #21f32c, #a0b4c9);
+  border-color: #f0f321;
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+}
+
+/* Estilos específicos para los filtros de la Tabla 2 (Ensayos No Acreditados) */
+#menu2 .filter-btn-2 {
+  background: linear-gradient(135deg, #b2cfd3, #ddf500);
+  border: 2px solid #FF9800;
+  color: black;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+#menu2 .filter-btn-2:hover {
+  background: linear-gradient(135deg, #F57C00, #FF9800);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(255, 152, 0, 0.3);
+}
+
+#menu2 .filter-btn-2.active {
+  background: linear-gradient(135deg, #b4949f, #C2185B);
+  border-color: #E91E63;
+  box-shadow: 0 4px 12px rgba(233, 30, 99, 0.4);
+}
+
+/* Estilo variante para el filtro 'Con cantidades' (misma forma, color diferente) */
+/* Variante para el filtro 'Con cantidades' con bordes redondeados y letra negra */
+#menu1 .filter-btn-1.btn-con-cantidades {
+  background: linear-gradient(135deg, #007BFF, #66B2FF);
+  border: 2px solid #e6f0ff;
+  color: #000; /* letra negra */
+  border-radius: 8px;
+  padding: 8px 18px; /* un poco más ancho */
+  min-width: 120px;
+}
+#menu1 .filter-btn-1.btn-con-cantidades:hover {
+  background: linear-gradient(135deg, #0056d6, #4da6ff);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.25);
+}
+#menu1 .filter-btn-1.btn-con-cantidades.active {
+  background: linear-gradient(135deg, #0056d6, #4da6ff);
+  border-color: #003f9a;
+  box-shadow: 0 4px 12px rgba(0, 86, 214, 0.4);
+}
+
+#menu2 .filter-btn-2.btn-con-cantidades {
+  background: linear-gradient(135deg, #8BC34A, #C5E1A5);
+  border: 2px solid #eaf6df;
+  color: #000; /* letra negra */
+  border-radius: 8px;
+  padding: 8px 18px; /* un poco más ancho */
+  min-width: 120px;
+}
+#menu2 .filter-btn-2.btn-con-cantidades:hover {
+  background: linear-gradient(135deg, #6aa22f, #bde092);
+  box-shadow: 0 4px 8px rgba(139, 195, 74, 0.25);
+}
+#menu2 .filter-btn-2.btn-con-cantidades.active {
+  background: linear-gradient(135deg, #6aa22f, #bde092);
+  border-color: #4d7a1f;
+  box-shadow: 0 4px 12px rgba(106, 162, 47, 0.4);
+}
+
+/* Identificación visual de las tablas */
+#menu1 {
+  
+  background: rgba(76, 175, 80, 0.02);
+  margin-bottom: 20px;
+}
+
+#menu2 {
+ 
+  background: rgba(255, 152, 0, 0.02);
+  margin-bottom: 20px;
+}
+
+/* Estilos para cuando se muestran ambas tablas */
+.container.ambas-tablas-activas .menu-opcion {
+  width: 48%;
+  display: inline-block;
+  vertical-align: top;
+  margin-right: 2%;
+}
+
+.container.ambas-tablas-activas #menu2 {
+  margin-right: 0;
+}
+
+/* Ajustes responsive para ambas tablas */
+@media (max-width: 1200px) {
+  .container.ambas-tablas-activas .menu-opcion {
+    width: 100%;
+    display: block;
+    margin-right: 0;
+    margin-bottom: 30px;
+  }
+}
+
+.textarea-pro {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Estados de los campos según la selección */
+.lavado-fields.disabled, .lavado-fields-compact.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.lavado-fields.disabled .input-pro,
+.lavado-fields.disabled .input-pro-compact,
+.lavado-fields.disabled .textarea-pro,
+.lavado-fields-compact.disabled .input-pro,
+.lavado-fields-compact.disabled .input-pro-compact,
+.lavado-fields-compact.disabled .textarea-pro {
+  background: #f8f9fa;
+  color: #6c757d;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .radio-group-professional {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .field-row, .field-row-compact {
+    grid-template-columns: 1fr;
+  }
+  
+  .lavado-container, .lavado-container-compact {
+    padding: 12px; /* Reducido para móviles */
+  }
+}
+
+/* =========================================
+   BOTONES DE SELECCIÓN PERSONALIZADA
+========================================= */
+.btn-selection {
+  padding: 2px 6px;
+  border: 1px solid #ddd;
+  background: white;
+  color: #666;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 400;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.btn-selection:hover {
+  border-color: #022859;
+  color: #022859;
+  background: #f8f9fa;
+}
+
+.btn-selection.active {
+  background: #022859;
+  color: white;
+  border-color: #022859;
+}
+
+.btn-selection.active:hover {
+  background: #033a6b;
+  border-color: #033a6b;
+}
+
+/* =========================================
+   SISTEMA DE GUARDADO DE FILAS
+========================================= */
+
+/* Botón de guardar/editar fila */
+.guardar-fila-btn {
+  background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+  color: white;
+  border: none;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 102, 204, 0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 35px;
+  margin-right: 5px;
+}
+
+.guardar-fila-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 102, 204, 0.4);
+  background: linear-gradient(135deg, #0052a3 0%, #003366 100%);
+}
+
+.guardar-fila-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 102, 204, 0.3);
+}
+
+/* Botón de editar fila */
+.editar-fila-btn {
+  background: linear-gradient(135deg, #eeea15 0%, #97bcc4 100%);
+  color: white;
+  border: none;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(253, 126, 20, 0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 35px;
+}
+
+.editar-fila-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(253, 126, 20, 0.4);
+  background: linear-gradient(135deg, #4eb8ca 0%, #6c7e7d 100%);
+}
+
+.editar-fila-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(253, 126, 20, 0.3);
+}
+
+/* Estado guardado del botón */
+.guardar-fila-btn.saved {
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  box-shadow: 0 2px 4px rgba(108, 117, 125, 0.3);
+  cursor: not-allowed;
+}
+
+.guardar-fila-btn.saved:hover {
+  background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.4);
+  transform: none;
+}
+
+/* Estilos para filas guardadas */
+.row-saved {
+  background: #4ffe9d !important;
+  border-left: 4px solid #0d6efd;
+}
+
+.row-saved td {
+  border-color: rgba(13, 110, 253, 0.25);
+}
+
+/* Estilos para filas deshabilitadas */
+.row-disabled {
+  background-color: rgba(108, 117, 125, 0.05) !important;
+  border-left: 4px solid #6c757d;
+}
+
+.row-disabled input,
+.row-disabled select,
+.row-disabled textarea {
+  background-color: #f8f9fa !important;
+  color: #6c757d !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+.row-disabled .guardar-fila-btn {
+  display: none !important;
+}
+
+.row-disabled .editar-fila-btn {
+  display: inline-flex !important;
+}
+
+/* Animación para cambios de estado */
+.row-saved, .row-disabled {
+  transition: all 0.3s ease;
+}
+
+/* Responsive para botones de guardar y editar */
+@media (max-width: 768px) {
+  .guardar-fila-btn,
+  .editar-fila-btn {
+    font-size: 12px;
+    padding: 6px 8px;
+    min-width: 30px;
+  }
+}
+
+/* =========================================
+   VISTA PREVIA DE ELEMENTOS GUARDADOS
+========================================= */
+
+.saved-items-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: 15px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 10px;
+  border-left: 5px solid #022859;
+}
+
+.saved-items-header h3 {
+  margin: 0;
+  color: #022859;
+  font-size: 18px;
+}
+
+.saved-items-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.toggle-saved-btn {
+  background: linear-gradient(135deg, #022859 0%, #033a6b 100%);
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(2, 40, 89, 0.3);
+}
+
+.toggle-saved-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(2, 40, 89, 0.4);
+  background: linear-gradient(135deg, #033a6b 0%, #044d8a 100%);
+}
+
+.saved-count {
+  background: #022859;
+  color: white;
+  padding: 5px 12px;
+  border-radius: 15px;
+  font-size: 12px;
+  font-weight: 600;
+  
+}
+
+.saved-items-container {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 2px solid #d1d9e6;
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  gap: 15px;
+  padding: 10px;
+}
+
+/* Columnas dentro del contenedor */
+.saved-items-left,
+.saved-items-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Separador visual entre columnas */
+.saved-items-left {
+  border-right: 1px solid #e9ecef;
+  padding-right: 10px;
+}
+
+.saved-items-right {
+  padding-left: 10px;
+}
+
+/* Responsive: una columna en pantallas pequeñas */
+@media (max-width: 768px) {
+  .saved-items-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .saved-items-left {
+    border-right: none;
+    border-bottom: 1px solid #e9ecef;
+    padding-right: 0;
+    padding-bottom: 10px;
+  }
+  
+  .saved-items-right {
+    padding-left: 0;
+    padding-top: 10px;
+  }
+}
+
+/* Columnas individuales para distribuir elementos */
+.saved-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.saved-item-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 15px;
+  align-items: center;
+  padding: 12px 15px;
+  border-bottom: 1px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.saved-item-card:last-child {
+  border-bottom: none;
+}
+
+.saved-item-card:hover {
+  background-color: #f8f9fa;
+}
+
+.saved-item-number {
+  background: #022859;
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: none; /* Ocultar los números */
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.saved-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.saved-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.saved-item-name {
+  font-weight: 600;
+  color: #022859;
+  font-size: 14px;
+  flex: 1;
+}
+
+.saved-item-details {
+  display: flex;
+  gap: 15px;
+  font-size: 12px;
+  color: #6c757d;
+  flex-wrap: wrap;
+}
+
+.saved-item-detail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.saved-item-table-type {
+  background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+  color: white;
+  padding: 3px 6px;
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.saved-item-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.preview-saved-btn {
+  background: linear-gradient(135deg, #022859 0%, #0d6efd 100%);
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.preview-saved-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(13, 110, 253, 0.4);
+}
+
+.reset-saved-btn {
+  background: linear-gradient(135deg, #f06f7a 0%, #da989d 100%); /* azul que combina con el emoji 🗑️ */
+  color: #ffffff;
+  border: none;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 12px; /* un poco más grande para que el emoji se vea nítido */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reset-saved-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(14, 98, 194, 0.35);
+}
+
+.edit-saved-btn {
+  background: linear-gradient(135deg, #fd7e14 0%, #e55100 100%);
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.edit-saved-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(253, 126, 20, 0.4);
+}
+
+.remove-saved-btn {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.remove-saved-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(220, 53, 69, 0.4);
+}
+
+.no-saved-items {
+  text-align: center;
+  padding: 30px;
+  color: #6c757d;
+  font-style: italic;
+  width: 100%;
+  border: 1px dashed #dee2e6;
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+/* Responsive para vista previa */
+@media (max-width: 768px) {
+  .saved-items-header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+  
+  .saved-items-controls {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .saved-item-card {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    text-align: center;
+  }
+  
+  .saved-item-details {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+}
+
+/* =========================================
+   LAYOUT DE CAMPOS DE FIRMA
+========================================= */
+/* Organiza los campos de las firmas: 2 arriba (nombre y cargo), 1 abajo (cédula) */
+.signature-fields-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.signature-fields-row .form-group {
+  flex: 1;
+}
+
+/* Centrado específico para campos de cédula */
+#clienteRecepcionCedula,
+#clienteEntregaCedula {
+  text-align: center;
+}
