@@ -420,54 +420,97 @@
 
 	/* Tabla de items: columnas compactas */
 	.items-grid {
-		grid-template-columns: 36px minmax(160px, 1.2fr) minmax(130px, 1fr) minmax(120px, 0.8fr) minmax(70px, 0.6fr) 100px !important;
-		font-size: 11px !important;
-		gap: 6px !important;
-		padding: 6px !important;
-		min-width: 650px;
+		grid-template-columns: 30px minmax(120px, 1.1fr) minmax(110px, 0.9fr) minmax(90px, 0.7fr) minmax(55px, 0.5fr) 85px !important;
+		font-size: 10px !important;
+		gap: 4px !important;
+		padding: 5px !important;
+		min-width: 520px;
+		align-items: start !important;
 	}
 
 	/* Evitar que el texto de la columna Elemento se desborde */
 	.item-name-main {
-		font-size: 12px !important;
+		font-size: 11px !important;
 		overflow: hidden !important;
 		text-overflow: ellipsis !important;
 		display: -webkit-box !important;
 		-webkit-line-clamp: 2 !important;
 		-webkit-box-orient: vertical !important;
 		word-break: break-word !important;
+		line-height: 1.2 !important;
 	}
 
 	.item-name-subtle {
-		font-size: 10px !important;
+		font-size: 9px !important;
 		overflow: hidden !important;
 		text-overflow: ellipsis !important;
 		white-space: nowrap !important;
+		margin-top: 2px !important;
 	}
 
 	.item-name-cell {
 		overflow: hidden !important;
 		min-width: 0 !important;
+		text-align: left !important;
+		align-items: flex-start !important;
 	}
 
-	/* Chips de cantidad y marca más compactos */
+	/* Uploader de imágenes más compacto */
+	.item-name-cell input[type="file"] {
+		width: 100px !important;
+		font-size: 9px !important;
+	}
+
+	.item-name-cell [id^="imgPreview_"] {
+		max-width: 100px !important;
+	}
+
+	/* Chips de cantidad: apilados verticalmente más compactos */
+	.quantity-summary-stack {
+		display: flex !important;
+		flex-direction: column !important;
+		gap: 2px !important;
+	}
+
 	.quantity-chip {
-		font-size: 10px !important;
-		padding: 3px 6px !important;
+		font-size: 9px !important;
+		padding: 2px 4px !important;
+		white-space: nowrap !important;
 	}
 
-	.brand-chip-list {
+	.quantity-chip-value {
 		font-size: 10px !important;
+	}
+
+	/* Brand chips: una sola línea con ellipsis */
+	.brand-chip-list {
+		font-size: 9px !important;
 		overflow: hidden !important;
 		text-overflow: ellipsis !important;
+		white-space: nowrap !important;
+		max-width: 100% !important;
+	}
+
+	/* Lavado chip compacto */
+	.wash-chip {
+		font-size: 9px !important;
+		padding: 2px 4px !important;
+		white-space: nowrap !important;
 	}
 
 	/* Botón gestionar unidades más compacto */
+	.item-actions-cell {
+		text-align: center !important;
+	}
+
 	.manage-units-btn {
-		font-size: 10px !important;
-		padding: 4px 6px !important;
-		min-height: 28px !important;
+		font-size: 9px !important;
+		padding: 3px 5px !important;
+		min-height: 24px !important;
 		white-space: nowrap !important;
+		overflow: hidden !important;
+		text-overflow: ellipsis !important;
+		max-width: 85px !important;
 	}
 
 	/* ===== INFORMACIÓN DE LAVADO ===== */
@@ -1013,33 +1056,67 @@
 	}
 
 	.items-grid {
-		grid-template-columns: 36px minmax(160px, 1.2fr) minmax(130px, 1fr) minmax(120px, 0.8fr) minmax(70px, 0.6fr) 100px !important;
-		font-size: 11px !important;
-		gap: 6px !important;
-		padding: 6px !important;
-		min-width: 650px;
+		grid-template-columns: 30px minmax(120px, 1.1fr) minmax(110px, 0.9fr) minmax(90px, 0.7fr) minmax(55px, 0.5fr) 85px !important;
+		font-size: 10px !important;
+		gap: 4px !important;
+		padding: 5px !important;
+		min-width: 520px;
+		align-items: start !important;
 	}
 
 	.items-grid .item-name-main {
-		font-size: 12px !important;
+		font-size: 11px !important;
 		overflow: hidden !important;
 		text-overflow: ellipsis !important;
 		display: -webkit-box !important;
 		-webkit-line-clamp: 2 !important;
 		-webkit-box-orient: vertical !important;
 		word-break: break-word !important;
+		line-height: 1.2 !important;
 	}
 
 	.items-grid .item-name-subtle {
-		font-size: 10px !important;
+		font-size: 9px !important;
 		overflow: hidden !important;
 		text-overflow: ellipsis !important;
 		white-space: nowrap !important;
+		margin-top: 2px !important;
 	}
 
 	.items-grid .item-name-cell {
 		overflow: hidden !important;
 		min-width: 0 !important;
+		text-align: left !important;
+		align-items: flex-start !important;
+	}
+
+	.items-grid .quantity-summary-stack {
+		display: flex !important;
+		flex-direction: column !important;
+		gap: 2px !important;
+	}
+
+	.items-grid .quantity-chip {
+		font-size: 9px !important;
+		padding: 2px 4px !important;
+		white-space: nowrap !important;
+	}
+
+	.items-grid .brand-chip-list {
+		font-size: 9px !important;
+		overflow: hidden !important;
+		text-overflow: ellipsis !important;
+		white-space: nowrap !important;
+	}
+
+	.items-grid .manage-units-btn {
+		font-size: 9px !important;
+		padding: 3px 5px !important;
+		min-height: 24px !important;
+		white-space: nowrap !important;
+		overflow: hidden !important;
+		text-overflow: ellipsis !important;
+		max-width: 85px !important;
 	}
 
 	/* Filtros: 4 columnas */
