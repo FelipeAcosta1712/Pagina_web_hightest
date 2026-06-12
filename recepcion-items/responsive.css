@@ -420,11 +420,54 @@
 
 	/* Tabla de items: columnas compactas */
 	.items-grid {
-		grid-template-columns: 40px minmax(140px, 1fr) minmax(160px, 1fr) minmax(160px, 1fr) minmax(80px, 0.7fr) 110px !important;
+		grid-template-columns: 36px minmax(160px, 1.2fr) minmax(130px, 1fr) minmax(120px, 0.8fr) minmax(70px, 0.6fr) 100px !important;
+		font-size: 11px !important;
+		gap: 6px !important;
+		padding: 6px !important;
+		min-width: 650px;
+	}
+
+	/* Evitar que el texto de la columna Elemento se desborde */
+	.item-name-main {
 		font-size: 12px !important;
-		gap: 8px !important;
-		padding: 8px !important;
-		min-width: 700px;
+		overflow: hidden !important;
+		text-overflow: ellipsis !important;
+		display: -webkit-box !important;
+		-webkit-line-clamp: 2 !important;
+		-webkit-box-orient: vertical !important;
+		word-break: break-word !important;
+	}
+
+	.item-name-subtle {
+		font-size: 10px !important;
+		overflow: hidden !important;
+		text-overflow: ellipsis !important;
+		white-space: nowrap !important;
+	}
+
+	.item-name-cell {
+		overflow: hidden !important;
+		min-width: 0 !important;
+	}
+
+	/* Chips de cantidad y marca más compactos */
+	.quantity-chip {
+		font-size: 10px !important;
+		padding: 3px 6px !important;
+	}
+
+	.brand-chip-list {
+		font-size: 10px !important;
+		overflow: hidden !important;
+		text-overflow: ellipsis !important;
+	}
+
+	/* Botón gestionar unidades más compacto */
+	.manage-units-btn {
+		font-size: 10px !important;
+		padding: 4px 6px !important;
+		min-height: 28px !important;
+		white-space: nowrap !important;
 	}
 
 	/* ===== INFORMACIÓN DE LAVADO ===== */
@@ -970,11 +1013,33 @@
 	}
 
 	.items-grid {
-		grid-template-columns: 35px minmax(130px, 1fr) minmax(140px, 1fr) minmax(140px, 1fr) minmax(70px, 0.7fr) 100px !important;
+		grid-template-columns: 36px minmax(160px, 1.2fr) minmax(130px, 1fr) minmax(120px, 0.8fr) minmax(70px, 0.6fr) 100px !important;
 		font-size: 11px !important;
 		gap: 6px !important;
 		padding: 6px !important;
 		min-width: 650px;
+	}
+
+	.items-grid .item-name-main {
+		font-size: 12px !important;
+		overflow: hidden !important;
+		text-overflow: ellipsis !important;
+		display: -webkit-box !important;
+		-webkit-line-clamp: 2 !important;
+		-webkit-box-orient: vertical !important;
+		word-break: break-word !important;
+	}
+
+	.items-grid .item-name-subtle {
+		font-size: 10px !important;
+		overflow: hidden !important;
+		text-overflow: ellipsis !important;
+		white-space: nowrap !important;
+	}
+
+	.items-grid .item-name-cell {
+		overflow: hidden !important;
+		min-width: 0 !important;
 	}
 
 	/* Filtros: 4 columnas */
