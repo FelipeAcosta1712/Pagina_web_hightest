@@ -15,7 +15,7 @@
 <body class="bg-slate-50 font-sans text-slate-900 h-screen flex overflow-hidden">
 
     <!-- ===================== CONTENIDO DEL PORTAL ===================== -->
-    <div id="portalApp" style="width:100%;height:100%;">
+    <div id="portalApp" style="width:100%;height:100%;display:flex;flex-direction:column;">
 
         <!-- HEADER CLIENTE -->
         <header class="header header--client" role="banner">
@@ -387,12 +387,61 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
+        /* ===== DARK MODE ===== */
+        body.theme-dark { background-color: #0f172a; color: #e2e8f0; }
+        .theme-dark .header { background: rgba(15, 23, 42, 0.96); border-color: #1e293b; }
+        .theme-dark .header__link { color: #e2e8f0; }
+        .theme-dark .header__link:hover { color: #facc15; }
+        .theme-dark .header__user-info .user-info__name { color: #e2e8f0; }
+        .theme-dark .header__user-info .user-info__company { color: #94a3b8; }
+        .theme-dark #sidebar { background: #1e293b; border-color: #334155; }
+        .theme-dark #sidebar .nav-btn { color: #94a3b8; }
+        .theme-dark #sidebar .nav-btn:hover { background: #334155; color: #e2e8f0; }
+        .theme-dark #sidebar .nav-btn.bg-blue-50 { background: #1e3a5f; color: #93c5fd; }
+        .theme-dark #sidebar .nav-btn.bg-blue-50 .nav-icon { color: #60a5fa; }
+        .theme-dark #sidebar p { color: #e2e8f0; }
+        .theme-dark main { background: #0f172a; }
+        .theme-dark main > header { background: #1e293b; border-color: #334155; }
+        .theme-dark #scroll-container { scrollbar-color: #475569 #1e293b; }
+        .theme-dark #scroll-container::-webkit-scrollbar-track { background: #1e293b; }
+        .theme-dark #scroll-container::-webkit-scrollbar-thumb { background: #475569; }
+        .theme-dark .bg-white { background-color: #1e293b; }
+        .theme-dark .bg-slate-50 { background-color: #1e293b; }
+        .theme-dark .text-slate-800, .theme-dark .text-slate-900 { color: #e2e8f0; }
+        .theme-dark .text-slate-500, .theme-dark .text-slate-600 { color: #94a3b8; }
+        .theme-dark .text-slate-700 { color: #cbd5e1; }
+        .theme-dark .border-slate-200 { border-color: #334155; }
+        .theme-dark .border-slate-100 { border-color: #1e293b; }
+        .theme-dark .hover\:bg-slate-50:hover { background-color: #334155; }
+        .theme-dark .hover\:shadow-md:hover { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.4); }
+        .theme-dark .bg-slate-50 { background-color: #1e293b; }
+        .theme-dark .bg-blue-50 { background-color: #1e3a5f; }
+        .theme-dark .text-blue-600 { color: #60a5fa; }
+        .theme-dark .border-blue-100 { border-color: #1e3a5f; }
+        .theme-dark .bg-green-50 { background-color: #14532d; }
+        .theme-dark .text-green-600 { color: #4ade80; }
+        .theme-dark .border-green-100 { border-color: #14532d; }
+        .theme-dark .bg-amber-50 { background-color: #451a03; }
+        .theme-dark .text-amber-600 { color: #fbbf24; }
+        .theme-dark .border-amber-100 { border-color: #451a03; }
+        .theme-dark .bg-purple-50 { background-color: #3b0764; }
+        .theme-dark .text-purple-600 { color: #c084fc; }
+        .theme-dark .border-purple-100 { border-color: #3b0764; }
+        .theme-dark .bg-blue-100 { background-color: #1e40af; }
+        .theme-dark .bg-green-100 { background-color: #166534; }
+        .theme-dark .bg-amber-100 { background-color: #92400e; }
+        .theme-dark .bg-purple-100 { background-color: #581c87; }
+        .theme-dark input, .theme-dark select { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+        .theme-dark table { color: #e2e8f0; }
+        .theme-dark thead tr { background: #1e293b; }
+
         /* ===== GRID & FLEX (Tailwind-like) ===== */
         .grid { display: grid; }
         .flex { display: flex; }
         .inline-flex { display: inline-flex; }
         .block { display: block; }
         .hidden { display: none; }
+        .h-screen { height: 100vh; }
 
         .flex-col { flex-direction: column; }
         .flex-row { flex-direction: row; }
@@ -1280,11 +1329,45 @@
             getHistory: function() { return clientData.history; }
         };
 
-        // --- 4. Inicializar ---
+        // --- 4. Tema Día/Noche ---
+        function initTheme() {
+            const stored = localStorage.getItem('hightest_theme');
+            const isDark = stored === 'dark';
+            applyTheme(isDark);
+        }
+
+        function applyTheme(dark) {
+            const body = document.body;
+            if (dark) {
+                body.classList.add('theme-dark');
+                body.classList.remove('theme-light');
+            } else {
+                body.classList.add('theme-light');
+                body.classList.remove('theme-dark');
+            }
+            const btn = document.getElementById('themeToggleBtn');
+            if (btn) {
+                btn.textContent = dark ? '☀️' : '🌙';
+                btn.title = dark ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro';
+            }
+            localStorage.setItem('hightest_theme', dark ? 'dark' : 'light');
+        }
+
+        function toggleTheme() {
+            const isDark = document.body.classList.contains('theme-dark');
+            applyTheme(!isDark);
+        }
+
+        // --- 5. Inicializar ---
         document.addEventListener('DOMContentLoaded', () => {
             loadClientData();
             setTab('dashboard');
             lucide.createIcons();
+            initTheme();
+            const themeBtn = document.getElementById('themeToggleBtn');
+            if (themeBtn) {
+                themeBtn.addEventListener('click', toggleTheme);
+            }
         });
     </script>
 
