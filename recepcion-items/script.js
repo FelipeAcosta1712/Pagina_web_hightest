@@ -6069,6 +6069,8 @@ function deleteSelectedCase() {
     drafts.splice(idx, 1);
     localStorage.setItem('cmr_drafts', JSON.stringify(drafts));
     showNotification('Borrador eliminado', 'success');
+    // Sincronizar con servidor
+    try { saveDraftsToServer(drafts); } catch(e) {}
     // Si el caso eliminado era el que estaba en vista, limpiar indicador
     try { const loadedEl = document.getElementById('loadedReceptionNumber'); if (loadedEl && loadedEl.textContent === (target.cotizacion || '')) loadedEl.textContent = '-'; } catch(e){}
     refreshCasesSelect();
@@ -6095,6 +6097,7 @@ function deleteAllCases() {
     if (!drafts || drafts.length === 0) { showNotification('No hay borradores para eliminar', 'info'); return; }
     if (!confirm(`¿Eliminar ${drafts.length} borrador(es)? Esta acción es irreversible.`)) return;
     localStorage.removeItem('cmr_drafts');
+    try { saveDraftsToServer([]); } catch(e) {}
     showNotification('Todos los borradores eliminados', 'success');
     try { const loadedEl = document.getElementById('loadedReceptionNumber'); if (loadedEl) loadedEl.textContent = '-'; } catch(e){}
     refreshCasesSelect();
@@ -6392,10 +6395,19 @@ function nextImage() {
 
 async function loadDraftsFromServer() {
     try {
-        const resp = await fetch(`${DRAFTS_SERVER_URL}/api/drafts`);
+        const userEmail = getCurrentUserEmail();
+        if (!userEmail) {
+            console.warn('⚠️ No hay usuario logueado, cargando borradores locales');
+            return JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
+        }
+        const resp = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_borradores', usuario_email: userEmail })
+        });
         if (!resp.ok) throw new Error('Error al conectar con servidor');
         const result = await resp.json();
-        if (result && Array.isArray(result.data)) {
+        if (result && result.ok && Array.isArray(result.data)) {
             localStorage.setItem('cmr_drafts', JSON.stringify(result.data));
             try { refreshCasesSelect(); } catch(e){}
             try { showNotification('🔄 Borradores cargados desde servidor', 'info'); } catch(e){}
@@ -6409,14 +6421,19 @@ async function loadDraftsFromServer() {
 
 async function saveDraftsToServer(drafts) {
     try {
-        const resp = await fetch(`${DRAFTS_SERVER_URL}/api/drafts`, {
+        const userEmail = getCurrentUserEmail();
+        if (!userEmail) {
+            console.warn('⚠️ No hay usuario logueado, guardando sólo local');
+            return false;
+        }
+        const resp = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ drafts })
+            body: JSON.stringify({ action: 'save_borradores', usuario_email: userEmail, drafts })
         });
         if (!resp.ok) throw new Error('Error al guardar en servidor');
         const res = await resp.json();
-        if (res && res.success) {
+        if (res && res.ok) {
             console.log('✅ Borradores guardados en servidor');
             return true;
         }
@@ -6426,16 +6443,46 @@ async function saveDraftsToServer(drafts) {
     return false;
 }
 
+async function deleteBorradorFromServer(cotizacion) {
+    try {
+        const userEmail = getCurrentUserEmail();
+        if (!userEmail) return;
+        await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete_borrador', usuario_email: userEmail, cotizacion })
+        });
+    } catch (err) {
+        console.warn('⚠️ No se pudo eliminar borrador del servidor:', err.message || err);
+    }
+}
+
+function getCurrentUserEmail() {
+    try {
+        const session = JSON.parse(localStorage.getItem('hightest_session') || '{}');
+        if (session && session.user && session.user.email) return session.user.email;
+        if (session && session.email) return session.email;
+        if (session && session.user) return session.user;
+        return null;
+    } catch (e) { return null; }
+}
+
 // Auto-sync para borradores
 let syncDraftsIntervalId = null;
 let lastDraftsSyncHash = '';
 
 async function autoSyncDrafts() {
     try {
-        const resp = await fetch(`${DRAFTS_SERVER_URL}/api/drafts`);
+        const userEmail = getCurrentUserEmail();
+        if (!userEmail) return;
+        const resp = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_borradores', usuario_email: userEmail })
+        });
         if (!resp.ok) return;
         const result = await resp.json();
-        if (result && Array.isArray(result.data)) {
+        if (result && result.ok && Array.isArray(result.data)) {
             const serverHash = JSON.stringify(result.data.sort());
             const local = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
             const localHash = JSON.stringify(local.sort());
@@ -6488,6 +6535,8 @@ function newForm() {
 // también habilitar botón "Casos Terminados" según rol
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(refreshCasesSelect, 300);
+    // Cargar borradores desde servidor al iniciar
+    try { loadDraftsFromServer(); } catch(e) { console.log('Error loading drafts from server', e); }
     try {
         if ((typeof hasRole === 'function' && (hasRole('administrador') || hasRole('director_tecnico'))) ||
             (function(){
@@ -7197,6 +7246,9 @@ function saveAsDraft() {
 
     localStorage.setItem('cmr_drafts', JSON.stringify(allDrafts)); // Guarda el array actualizado en el almacenamiento local
 
+    // Sincronizar con servidor
+    try { saveDraftsToServer(allDrafts); } catch(e) { console.log('Sync server error', e); }
+
     // Refrescar selector de casos y notificar al usuario
     setTimeout(refreshCasesSelect, 100);
     showNotification('✅ Borrador guardado - Puedes continuar cuando lo desees', 'success');
@@ -7231,6 +7283,7 @@ function updateDraftStatus(cotizacion, status) {
     }
     
     localStorage.setItem('cmr_drafts', JSON.stringify(drafts));
+    try { saveDraftsToServer(drafts); } catch(e) {}
     setTimeout(refreshCasesSelect, 100);
     return true;
 }
@@ -7283,6 +7336,7 @@ function deleteCaseByReception(num) {
     if (!confirm(`¿Eliminar el caso ${num}? Esta acción no se puede deshacer.`)) return;
     drafts.splice(idx, 1);
     localStorage.setItem('cmr_drafts', JSON.stringify(drafts));
+    try { saveDraftsToServer(drafts); } catch(e) {}
     try { showNotification('✅ Caso eliminado', 'success'); } catch(e){}
     refreshCasesSelect();
 }
@@ -10730,6 +10784,7 @@ function importarJSON() {
             }
 
             localStorage.setItem('cmr_drafts', JSON.stringify(drafts));
+            try { saveDraftsToServer(drafts); } catch(e) {}
 
             try { showNotification(`✅ ${actionReplace ? 'Reemplazados' : 'Fusionados'} ${drafts.length} caso(s)`, 'success'); } catch(e){}
             try { refrescarHistorial(); } catch(e){}

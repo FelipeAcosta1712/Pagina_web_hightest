@@ -685,6 +685,91 @@ exports.handler = async (event) => {
                 return jsonResponse(200, { ok: true, message: 'Cliente eliminado exitosamente' });
             }
 
+            // ============================================
+            // BORRADORES (Casos en Progreso) - Sync Server
+            // ============================================
+
+            if (payload.action === 'get_borradores') {
+                const { data, error } = await supabase
+                    .from('borradores')
+                    .select('datos')
+                    .order('created_at', { ascending: false });
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al obtener borradores', detail: error.message });
+                }
+                // Unir todos los borradores de todos los usuarios
+                const allDrafts = [];
+                if (Array.isArray(data)) {
+                    data.forEach(row => {
+                        if (Array.isArray(row.datos)) {
+                            row.datos.forEach(d => {
+                                if (!allDrafts.some(x => JSON.stringify(x) === JSON.stringify(d))) {
+                                    allDrafts.push(d);
+                                }
+                            });
+                        }
+                    });
+                }
+                return jsonResponse(200, { ok: true, data: allDrafts });
+            }
+
+            if (payload.action === 'save_borradores') {
+                const usuarioEmail = normalizeText(payload.usuario_email).toLowerCase() || 'shared';
+                const drafts = payload.drafts;
+                if (!Array.isArray(drafts)) {
+                    return jsonResponse(400, { ok: false, error: 'drafts debe ser un array' });
+                }
+                const { data: existing } = await supabase
+                    .from('borradores')
+                    .select('id')
+                    .eq('usuario_email', usuarioEmail)
+                    .limit(1);
+
+                const row = Array.isArray(existing) ? existing[0] : null;
+                let result;
+                if (row) {
+                    result = await supabase
+                        .from('borradores')
+                        .update({ datos: drafts, updated_at: new Date().toISOString() })
+                        .eq('id', row.id)
+                        .select('id');
+                } else {
+                    result = await supabase
+                        .from('borradores')
+                        .insert({ usuario_email: usuarioEmail, datos: drafts })
+                        .select('id');
+                }
+                if (result.error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al guardar borradores', detail: result.error.message });
+                }
+                return jsonResponse(200, { ok: true, message: 'Borradores guardados' });
+            }
+
+            if (payload.action === 'delete_borrador') {
+                const cotizacion = normalizeText(payload.cotizacion);
+                if (!cotizacion) {
+                    return jsonResponse(400, { ok: false, error: 'Se requiere cotizacion' });
+                }
+                // Buscar en TODAS las filas de borradores
+                const { data: allRows } = await supabase
+                    .from('borradores')
+                    .select('id, datos');
+                if (!Array.isArray(allRows)) {
+                    return jsonResponse(200, { ok: true, message: 'No hay borradores' });
+                }
+                for (const row of allRows) {
+                    if (!Array.isArray(row.datos)) continue;
+                    const filtered = row.datos.filter(d => String(d.cotizacion || d.quoteNumber || '') !== cotizacion);
+                    if (filtered.length !== row.datos.length) {
+                        await supabase
+                            .from('borradores')
+                            .update({ datos: filtered, updated_at: new Date().toISOString() })
+                            .eq('id', row.id);
+                    }
+                }
+                return jsonResponse(200, { ok: true, message: 'Borrador eliminado' });
+            }
+
             return jsonResponse(400, { ok: false, error: 'Acción no soportada' });
         } catch (err) {
             return jsonResponse(500, { ok: false, error: err.message });
