@@ -6,7 +6,7 @@
 /* ============================================================
    AJUSTES GENERALES QUE APLICAN A TABLET Y MÓVIL
    ============================================================ */
-@media (max-width: 1366px) {
+@media (max-width: 1280px) {
 	/* Contenedor principal */
 	.container {
 		margin: 8px;
@@ -700,9 +700,9 @@
 
 
 /* ============================================================
-   TABLET LANDSCAPE (1025px - 1366px)
+   TABLET LANDSCAPE (1025px - 1280px)
    ============================================================ */
-@media (min-width: 1025px) and (max-width: 1366px) {
+@media (min-width: 1025px) and (max-width: 1280px) {
 	/* ===== HEADER ===== */
 	.header {
 		padding: 25px !important;
@@ -1131,7 +1131,7 @@
 }
 
 /* Tablet landscape específico */
-@media (min-width: 1025px) and (max-width: 1366px) and (orientation: landscape) {
+@media (min-width: 1025px) and (max-width: 1280px) and (orientation: landscape) {
 	/* Header más espacioso */
 	.header {
 		flex-direction: row !important;
@@ -1168,7 +1168,7 @@
 /* ============================================================
    SCROLL HORIZONTAL PARA TABLAS QUE NO CABEN
    ============================================================ */
-@media (max-width: 1366px) {
+@media (max-width: 1280px) {
 	/* Todas las tablas con scroll horizontal */
 	.table-container,
 	.items-section,

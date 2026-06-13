@@ -7,169 +7,297 @@
     <meta name="keywords" content="portal cliente, HIGH TEST, certificados, ensayos eléctricos">
     <meta name="author" content="HIGH TEST SAS">
     <meta name="theme-color" content="#10b981">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="https://hightestsas.com/image/logo.png">
+    <link rel="apple-touch-icon" href="https://hightestsas.com/image/logo.png">
     <title>Portal de Cliente | HIGH TEST SAS</title>
     <link rel="stylesheet" href="../styles-v2.css">
 </head>
 <body class="bg-slate-50 font-sans text-slate-900 h-screen flex overflow-hidden">
-    <!-- HEADER CLIENTE -->
-    <header class="header header--client" role="banner">
-        <div class="header__container">
-            <div class="header__logo">
-                <a href="/index.html#inicio" class="header__logo-link">
-                    <img src="/image/logo.png" alt="HIGH TEST SAS" class="header__logo-image">
+
+    <!-- ===================== PANTALLA DE LOGIN ===================== -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-card">
+            <div class="login-logo">
+                <a href="../index.html">
+                    <img src="/image/logo.png" alt="HIGH TEST SAS" style="width:80px;height:80px;border-radius:50%;border:3px solid #003A80;">
                 </a>
             </div>
-            <nav class="header__nav" role="navigation" aria-label="Navegación cliente">
-                <button class="header__menu-toggle" id="clientMenuToggle" aria-label="Abrir menú" aria-expanded="false">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
-                <ul class="header__menu" id="clientHeaderMenu">
-                    <li><a href="#certificates" class="header__link">Certificados</a></li>
-                    <li><a href="#history" class="header__link">Historial</a></li>
-                    <li><a href="#requests" class="header__link">Solicitudes</a></li>
-                    <li><a href="#support" class="header__link">Soporte</a></li>
-                    <!-- Acción especial menú móvil: salir -->
-                    <li class="header__menu-item--action">
-                        <button class="header__menu-btn header__menu-btn--secondary" id="clientLogoutMobileBtn" aria-label="Cerrar sesión">
-                            🚪 Salir
-                        </button>
-                    </li>
-                </ul>
-                <button class="header__icon-btn" id="themeToggleBtn" aria-label="Cambiar tema de color" title="Cambiar tema">
-                    🌙
-                </button>
-                <div class="header__user-info">
-                    <span class="user-info__name" id="clientUserName">Cliente</span>
-                    <span class="user-info__company" id="clientUserCompany">Empresa</span>
+            <h2 class="login-title">Portal de Cliente</h2>
+            <p class="login-subtitle">Ingrese sus credenciales para acceder</p>
+            <form id="loginForm" onsubmit="clientLogin(event)">
+                <div class="login-field">
+                    <label for="loginUser">Correo electrónico</label>
+                    <input type="email" id="loginUser" placeholder="correo@empresa.com" required autocomplete="email">
                 </div>
-                <button class="header__cta header__cta--logout" id="clientLogoutBtn" aria-label="Cerrar sesión">
-                    🚪 Salir
-                </button>
-            </nav>
+                <div class="login-field">
+                    <label for="loginPass">Contraseña</label>
+                    <input type="password" id="loginPass" placeholder="••••••••" required autocomplete="current-password">
+                </div>
+                <div id="loginError" class="login-error" style="display:none;"></div>
+                <button type="submit" class="login-btn" id="loginBtn">Ingresar</button>
+            </form>
+            <a href="../index.html" class="login-back">← Volver al sitio</a>
         </div>
-    </header>
+    </div>
 
-    <!-- Overlay para móvil -->
-    <div id="mobile-overlay" class="fixed inset-0 bg-slate-900/50 z-40 hidden lg:hidden" onclick="toggleMobileMenu(false)"></div>
+    <!-- ===================== CONTENIDO DEL PORTAL (oculto hasta login) ===================== -->
+    <div id="portalApp" style="display:none;width:100%;height:100%;">
 
-    <!-- Sidebar Navigation -->
-    <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-in-out flex flex-col">
-        <div class="h-16 flex items-center px-6 border-b border-slate-200 shrink-0">
-            <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center mr-3">
-                <i data-lucide="activity" class="text-white w-5 h-5"></i>
+        <!-- HEADER CLIENTE -->
+        <header class="header header--client" role="banner">
+            <div class="header__container">
+                <div class="header__logo">
+                    <a href="../index.html#inicio" class="header__logo-link">
+                        <img src="/image/logo.png" alt="HIGH TEST SAS" class="header__logo-image">
+                    </a>
+                </div>
+                <nav class="header__nav" role="navigation" aria-label="Navegación cliente">
+                    <button class="header__menu-toggle" id="clientMenuToggle" aria-label="Abrir menú" aria-expanded="false">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                    <ul class="header__menu" id="clientHeaderMenu">
+                        <li><a href="#certificates" class="header__link">Certificados</a></li>
+                        <li><a href="#history" class="header__link">Historial</a></li>
+                        <li><a href="#requests" class="header__link">Solicitudes</a></li>
+                        <li><a href="#support" class="header__link">Soporte</a></li>
+                        <li class="header__menu-item--action">
+                            <button class="header__menu-btn header__menu-btn--secondary" id="clientLogoutMobileBtn" aria-label="Cerrar sesión" onclick="clientLogout()">
+                                🚪 Salir
+                            </button>
+                        </li>
+                    </ul>
+                    <button class="header__icon-btn" id="themeToggleBtn" aria-label="Cambiar tema de color" title="Cambiar tema">
+                        🌙
+                    </button>
+                    <div class="header__user-info">
+                        <span class="user-info__name" id="clientUserName">Cliente</span>
+                        <span class="user-info__company" id="clientUserCompany">Empresa</span>
+                    </div>
+                    <button class="header__cta header__cta--logout" id="clientLogoutBtn" aria-label="Cerrar sesión" onclick="clientLogout()">
+                        🚪 Salir
+                    </button>
+                </nav>
             </div>
-            <span class="text-xl font-bold text-slate-800 tracking-tight">LabPortal</span>
-            <button class="ml-auto lg:hidden text-slate-400 hover:text-slate-600" onclick="toggleMobileMenu(false)">
-                <i data-lucide="x" class="w-5 h-5"></i>
-            </button>
-        </div>
+        </header>
 
-        <div class="p-4 flex-1 overflow-y-auto">
-            <div class="mb-4 text-xs font-semibold text-slate-400 uppercase tracking-wider px-4">Principal</div>
-            
-            <button onclick="setTab('dashboard')" class="nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-1" data-id="dashboard">
-                <i data-lucide="activity" class="nav-icon mr-3 w-5 h-5"></i> Panel Operativo
-            </button>
-            <button onclick="setTab('reports')" class="nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-1" data-id="reports">
-                <i data-lucide="download" class="nav-icon mr-3 w-5 h-5"></i> Informes de Ensayos
-            </button>
-            <button onclick="setTab('requests')" class="nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-1" data-id="requests">
-                <i data-lucide="clock" class="nav-icon mr-3 w-5 h-5"></i> Estado de Solicitudes
-            </button>
-            
-            <div class="mt-8 mb-4 text-xs font-semibold text-slate-400 uppercase tracking-wider px-4">Administración</div>
-            
-            <button onclick="setTab('history')" class="nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-1" data-id="history">
-                <i data-lucide="file-text" class="nav-icon mr-3 w-5 h-5"></i> Historial de Servicios
-            </button>
-            <button onclick="setTab('profile')" class="nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-1" data-id="profile">
-                <i data-lucide="building" class="nav-icon mr-3 w-5 h-5"></i> Perfil de Empresa
-            </button>
-        </div>
+        <!-- Overlay para móvil -->
+        <div id="mobile-overlay" class="fixed inset-0 bg-slate-900/50 z-40 hidden lg:hidden" onclick="toggleMobileMenu(false)"></div>
 
-        <div class="p-4 border-t border-slate-200 shrink-0">
-            <div class="flex items-center px-4 py-2">
-                <div class="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 mr-3">
-                    <i data-lucide="user" class="w-4 h-4"></i>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <p id="sidebar-user-name" class="text-sm font-medium text-slate-900 truncate">Empresa</p>
-                </div>
-            </div>
-            <button class="w-full mt-2 flex items-center px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                <i data-lucide="log-out" class="mr-3 w-4 h-4"></i> Cerrar Sesión
-            </button>
-        </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
-        
-        <!-- Top Header (Mobile) -->
-        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:hidden shrink-0">
-            <div class="flex items-center">
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-in-out flex flex-col">
+            <div class="h-16 flex items-center px-6 border-b border-slate-200 shrink-0">
                 <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center mr-3">
                     <i data-lucide="activity" class="text-white w-5 h-5"></i>
                 </div>
-                <span class="text-xl font-bold text-slate-800">LabPortal</span>
+                <span class="text-xl font-bold text-slate-800 tracking-tight">HIGH TEST</span>
+                <button class="ml-auto lg:hidden text-slate-400 hover:text-slate-600" onclick="toggleMobileMenu(false)">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
             </div>
-            <button onclick="toggleMobileMenu(true)" class="p-2 text-slate-500 hover:text-slate-700 focus:outline-none">
-                <i data-lucide="menu" class="w-6 h-6"></i>
-            </button>
-        </header>
 
-        <!-- Dynamic Content Area -->
-        <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8" id="scroll-container">
-            <div id="dynamic-content" class="max-w-6xl mx-auto pb-10">
-                <!-- El contenido se inyectará aquí vía JS -->
+            <div class="p-4 flex-1 overflow-y-auto">
+                <div class="mb-4 text-xs font-semibold text-slate-400 uppercase tracking-wider px-4">Principal</div>
+                <button onclick="setTab('dashboard')" class="nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-1" data-id="dashboard">
+                    <i data-lucide="activity" class="nav-icon mr-3 w-5 h-5"></i> Panel Operativo
+                </button>
+                <button onclick="setTab('reports')" class="nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-1" data-id="reports">
+                    <i data-lucide="download" class="nav-icon mr-3 w-5 h-5"></i> Informes de Ensayos
+                </button>
+                <button onclick="setTab('requests')" class="nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-1" data-id="requests">
+                    <i data-lucide="clock" class="nav-icon mr-3 w-5 h-5"></i> Estado de Solicitudes
+                </button>
+                <div class="mt-8 mb-4 text-xs font-semibold text-slate-400 uppercase tracking-wider px-4">Administración</div>
+                <button onclick="setTab('history')" class="nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-1" data-id="history">
+                    <i data-lucide="file-text" class="nav-icon mr-3 w-5 h-5"></i> Historial de Servicios
+                </button>
+                <button onclick="setTab('profile')" class="nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-1" data-id="profile">
+                    <i data-lucide="building" class="nav-icon mr-3 w-5 h-5"></i> Perfil de Empresa
+                </button>
             </div>
-        </div>
-    </main>
-    
+
+            <div class="p-4 border-t border-slate-200 shrink-0">
+                <div class="flex items-center px-4 py-2">
+                    <div class="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 mr-3">
+                        <i data-lucide="user" class="w-4 h-4"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p id="sidebar-user-name" class="text-sm font-medium text-slate-900 truncate">Empresa</p>
+                    </div>
+                </div>
+                <button class="w-full mt-2 flex items-center px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors" onclick="clientLogout()">
+                    <i data-lucide="log-out" class="mr-3 w-4 h-4"></i> Cerrar Sesión
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <!-- Top Header (Mobile) -->
+            <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:hidden shrink-0">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center mr-3">
+                        <i data-lucide="activity" class="text-white w-5 h-5"></i>
+                    </div>
+                    <span class="text-xl font-bold text-slate-800">HIGH TEST</span>
+                </div>
+                <button onclick="toggleMobileMenu(true)" class="p-2 text-slate-500 hover:text-slate-700 focus:outline-none">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+            </header>
+
+            <!-- Dynamic Content Area -->
+            <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8" id="scroll-container">
+                <div id="dynamic-content" class="max-w-6xl mx-auto pb-10"></div>
+            </div>
+        </main>
+    </div>
+
     <style>
+        /* ===== LOGIN ===== */
+        .login-screen {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+            z-index: 9999;
+        }
 
-    .header {
-        position: fixed;
+        .login-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
 
-    }
+        .login-logo {
+            margin-bottom: 20px;
+        }
 
-    .header__container{
+        .login-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: #1e293b;
+            margin: 0 0 4px;
+        }
 
-    }
+        .login-subtitle {
+            font-size: 14px;
+            color: #64748b;
+            margin: 0 0 28px;
+        }
 
-    @keyframes fadeIn {
+        .login-field {
+            text-align: left;
+            margin-bottom: 18px;
+        }
+
+        .login-field label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 6px;
+        }
+
+        .login-field input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            box-sizing: border-box;
+        }
+
+        .login-field input:focus {
+            border-color: #003A80;
+            box-shadow: 0 0 0 3px rgba(0, 58, 128, 0.15);
+        }
+
+        .login-error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            text-align: left;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: #003A80;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .login-btn:hover {
+            background: #001f4d;
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .login-back {
+            display: inline-block;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #64748b;
+            text-decoration: none;
+        }
+
+        .login-back:hover {
+            color: #003A80;
+        }
+
+        /* ===== PORTAL ===== */
+        .header {
+            position: fixed;
+            width: 100%;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+
+        .header__container {
+            max-width: 100%;
+        }
+
+        @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
         .fade-in {
             animation: fadeIn 0.4s ease-out forwards;
         }
-        
-        /* Ocultar barra de desplazamiento global para emular mejor una app */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1; 
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8; 
-        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
         :root{--site-header-height:64px}
-        /* Empuja el main y el sidebar para quedar debajo de un header fijo */
         #sidebar{top:var(--site-header-height)}
         main{margin-top:var(--site-header-height)}
 
-        /* En pantallas pequeñas el header móvil ya ocupa espacio normal, resetear offsets */
         @media (max-width: 1024px){
             :root{--site-header-height:0px}
             #sidebar{top:0}
@@ -178,47 +306,124 @@
     </style>
 
 <script>
-        // --- 1. Datos Mock (Simulados) ---
-        const mockUser = {
-            name: 'Constructora Alfa S.A.',
-            contact: 'Ing. Carlos Gómez',
-            email: 'cgomez@alfa.com',
-            plan: 'Corporativo',
-            joined: '2022-03-15'
+        // --- 1. Usuarios registrados (simulados en localStorage) ---
+        function getRegisteredUsers() {
+            const users = localStorage.getItem('registeredClients');
+            if (users) return JSON.parse(users);
+            // Usuario por defecto para pruebas
+            const defaultUsers = [
+                { email: 'cliente@test.com', password: '123456', name: 'Constructora Alfa S.A.', contact: 'Ing. Carlos Gómez', plan: 'Corporativo', joined: '2022-03-15' }
+            ];
+            localStorage.setItem('registeredClients', JSON.stringify(defaultUsers));
+            return defaultUsers;
+        }
+
+        // --- 2. Login ---
+        function clientLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginUser').value.trim().toLowerCase();
+            const pass = document.getElementById('loginPass').value;
+            const errorEl = document.getElementById('loginError');
+            const btn = document.getElementById('loginBtn');
+
+            errorEl.style.display = 'none';
+            btn.disabled = true;
+            btn.textContent = 'Ingresando...';
+
+            setTimeout(() => {
+                const users = getRegisteredUsers();
+                const user = users.find(u => u.email === email && u.password === pass);
+
+                if (user) {
+                    // Guardar sesión activa
+                    const session = {
+                        email: user.email,
+                        name: user.name,
+                        contact: user.contact,
+                        plan: user.plan || '',
+                        joined: user.joined || '',
+                        loginAt: new Date().toISOString()
+                    };
+                    localStorage.setItem('clientSession', JSON.stringify(session));
+
+                    // Cargar datos del portal
+                    loadClientData(session);
+                    showPortal();
+                } else {
+                    errorEl.textContent = 'Correo o contraseña incorrectos. Intente de nuevo.';
+                    errorEl.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = 'Ingresar';
+                    document.getElementById('loginPass').value = '';
+                    document.getElementById('loginPass').focus();
+                }
+            }, 500);
+        }
+
+        // --- 3. Logout ---
+        function clientLogout() {
+            localStorage.removeItem('clientSession');
+            localStorage.removeItem('clientData');
+            showLogin();
+        }
+
+        // --- 4. Mostrar/ocultar login vs portal ---
+        function showLogin() {
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('portalApp').style.display = 'none';
+            document.getElementById('loginUser').value = '';
+            document.getElementById('loginPass').value = '';
+            document.getElementById('loginError').style.display = 'none';
+            document.getElementById('loginBtn').disabled = false;
+            document.getElementById('loginBtn').textContent = 'Ingresar';
+        }
+
+        function showPortal() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('portalApp').style.display = 'block';
+            setTab('dashboard');
+            lucide.createIcons();
+        }
+
+        // --- 5. Datos del portal ---
+        const clientData = {
+            user: { name: '', contact: '', email: '', plan: '', joined: '' },
+            reports: [],
+            requests: [],
+            history: [],
+            serviceDistribution: []
         };
 
-        const mockReports = [
-            { id: 'INF-2023-089', date: '2023-10-25', project: 'Edificio Central', type: 'Ensayo de Concreto', status: 'Disponible' },
-            { id: 'INF-2023-088', date: '2023-10-20', project: 'Puente Sur', type: 'Mecánica de Suelos', status: 'Disponible' },
-            { id: 'INF-2023-085', date: '2023-10-12', project: 'Edificio Central', type: 'Prueba de Acero', status: 'Disponible' },
-            { id: 'INF-2023-081', date: '2023-09-28', project: 'Vía Panamericana', type: 'Ensayo de Asfalto', status: 'Disponible' },
-        ];
+        function loadClientData(session) {
+            clientData.user.name = session.name || '';
+            clientData.user.contact = session.contact || '';
+            clientData.user.email = session.email || '';
+            clientData.user.plan = session.plan || '';
+            clientData.user.joined = session.joined || '';
 
-        const mockRequests = [
-            { id: 'SOL-1045', date: '2023-10-26', type: 'Análisis Químico', status: 'En Proceso', estimatedDate: '2023-11-02' },
-            { id: 'SOL-1046', date: '2023-10-27', type: 'Mecánica de Suelos', status: 'Recibido', estimatedDate: '2023-11-05' },
-            { id: 'SOL-1042', date: '2023-10-20', type: 'Ensayo de Concreto', status: 'Completado', estimatedDate: '2023-10-24' },
-        ];
+            const saved = localStorage.getItem('clientData');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    clientData.reports = parsed.reports || [];
+                    clientData.requests = parsed.requests || [];
+                    clientData.history = parsed.history || [];
+                    clientData.serviceDistribution = parsed.serviceDistribution || [];
+                } catch(e) {}
+            }
+            updateUserDisplay();
+        }
 
-        const mockHistory = [
-            { id: 'SRV-0980', date: '2023-09-15', amount: '$1,250.00', status: 'Pagado', service: 'Paquete de Ensayos C3' },
-            { id: 'SRV-0945', date: '2023-08-22', amount: '$850.00', status: 'Pagado', service: 'Suelos Fase 1' },
-            { id: 'SRV-0912', date: '2023-07-10', amount: '$2,100.00', status: 'Pagado', service: 'Asesoría Integral' },
-        ];
+        function updateUserDisplay() {
+            const nameEl = document.getElementById('clientUserName');
+            const companyEl = document.getElementById('clientUserCompany');
+            const sidebarName = document.getElementById('sidebar-user-name');
+            if (nameEl) nameEl.textContent = clientData.user.contact || 'Cliente';
+            if (companyEl) companyEl.textContent = clientData.user.name || 'Empresa';
+            if (sidebarName) sidebarName.textContent = clientData.user.name || 'Empresa';
+        }
 
-        const serviceDistribution = [
-            { name: 'Mecánica de Suelos', percentage: 45, color: 'bg-indigo-600' },
-            { name: 'Ensayos de Concreto', percentage: 35, color: 'bg-blue-500' },
-            { name: 'Análisis Químicos', percentage: 15, color: 'bg-sky-400' },
-            { name: 'Asesoría Técnica', percentage: 5, color: 'bg-slate-300' },
-        ];
-
-        // --- 2. Lógica Global y Menú ---
-        let activeTab = 'dashboard';
-        let searchQuery = '';
-
-        document.getElementById('sidebar-user-name').innerText = mockUser.name;
-
+        // --- 6. Menú móvil ---
         function toggleMobileMenu(isOpen) {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('mobile-overlay');
@@ -231,383 +436,76 @@
             }
         }
 
-        // --- 3. Generadores de Vistas (Plantillas HTML) ---
+        // --- 7. Renderizado de vistas ---
+        let activeTab = 'dashboard';
+        let searchQuery = '';
 
         function renderDashboard() {
-            const currentDate = new Date().toLocaleDateString('es-CO', { 
-                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
-            });
-            const activeServicesCount = mockRequests.filter(r => r.status !== 'Completado').length;
-            const historyVolume = mockReports.length + mockHistory.length;
+            const currentDate = new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const activeCount = clientData.requests.filter(r => r.status !== 'Completado').length;
+            const totalVolume = clientData.reports.length + clientData.history.length;
+            const pct = clientData.requests.length > 0 ? Math.round((clientData.requests.filter(r => r.status === 'Completado').length / clientData.requests.length) * 100) : 0;
 
-            const distributionHtml = serviceDistribution.map(item => `
-                <div>
-                    <div class="flex justify-between text-sm mb-1">
-                        <span class="font-medium text-slate-700">${item.name}</span>
-                        <span class="text-slate-500 font-semibold">${item.percentage}%</span>
-                    </div>
-                    <div class="w-full bg-slate-100 rounded-full h-2">
-                        <div class="${item.color} h-2 rounded-full transition-all duration-1000" style="width: ${item.percentage}%"></div>
-                    </div>
+            const distHtml = clientData.serviceDistribution.length > 0
+                ? clientData.serviceDistribution.map(i => `<div><div class="flex justify-between text-sm mb-1"><span class="font-medium text-slate-700">${i.name}</span><span class="text-slate-500 font-semibold">${i.percentage}%</span></div><div class="w-full bg-slate-100 rounded-full h-2"><div class="${i.color} h-2 rounded-full transition-all duration-1000" style="width:${i.percentage}%"></div></div></div>`).join('')
+                : '<p class="text-slate-400 text-sm">Sin datos de distribución disponibles.</p>';
+
+            return `<div class="space-y-8 fade-in">
+                <div class="flex flex-col md:flex-row md:items-end justify-between border-b border-slate-200 pb-6">
+                    <div><p class="text-sm font-medium text-slate-500 capitalize mb-1">${currentDate}</p><h2 class="text-3xl font-bold text-slate-900 tracking-tight">Panel Operativo</h2><p class="text-slate-600 mt-2 text-lg">Resumen de actividad para <span class="font-semibold text-slate-800">${clientData.user.name || 'su empresa'}</span>.</p></div>
+                    <div class="mt-4 md:mt-0 px-4 py-2 bg-emerald-50 rounded-lg border border-emerald-100 flex items-center shadow-sm w-max"><div class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-3 animate-pulse"></div><span class="text-sm font-medium text-emerald-800">Servicios Operativos</span></div>
                 </div>
-            `).join('');
-
-            return `
-                <div class="space-y-8 fade-in">
-                    <div class="flex flex-col md:flex-row md:items-end justify-between border-b border-slate-200 pb-6">
-                        <div>
-                            <p class="text-sm font-medium text-slate-500 capitalize mb-1">${currentDate}</p>
-                            <h2 class="text-3xl font-bold text-slate-900 tracking-tight">Panel Operativo</h2>
-                            <p class="text-slate-600 mt-2 text-lg">
-                                Resumen de actividad y métricas consolidadas para <span class="font-semibold text-slate-800">${mockUser.name}</span>.
-                            </p>
-                        </div>
-                        <div class="mt-4 md:mt-0 px-4 py-2 bg-emerald-50 rounded-lg border border-emerald-100 flex items-center shadow-sm w-max">
-                            <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-3 animate-pulse"></div>
-                            <span class="text-sm font-medium text-emerald-800">Servicios Operativos</span>
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
-                            <div class="flex justify-between items-start mb-4">
-                                <div>
-                                    <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Volumen Histórico</p>
-                                    <p class="text-3xl font-bold text-slate-800 mt-1">${historyVolume}</p>
-                                </div>
-                                <div class="p-3 rounded-lg bg-slate-50 text-slate-600 border border-slate-100">
-                                    <i data-lucide="file-text" class="w-6 h-6"></i>
-                                </div>
-                            </div>
-                            <p class="text-xs text-emerald-600 font-medium flex items-center">
-                                <i data-lucide="trending-up" class="w-3 h-3 mr-1"></i> +12% respecto al mes anterior
-                            </p>
-                        </div>
-                        
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
-                            <div class="flex justify-between items-start mb-4">
-                                <div>
-                                    <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Servicios Activos</p>
-                                    <p class="text-3xl font-bold text-slate-800 mt-1">${activeServicesCount}</p>
-                                </div>
-                                <div class="p-3 rounded-lg bg-slate-50 text-blue-600 border border-slate-100">
-                                    <i data-lucide="activity" class="w-6 h-6"></i>
-                                </div>
-                            </div>
-                            <p class="text-xs text-slate-500 font-medium">En proceso de análisis y revisión</p>
-                        </div>
-                        
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
-                            <div class="flex justify-between items-start mb-4">
-                                <div>
-                                    <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Tasa de Cumplimiento</p>
-                                    <p class="text-3xl font-bold text-slate-800 mt-1">98.5%</p>
-                                </div>
-                                <div class="p-3 rounded-lg bg-slate-50 text-indigo-600 border border-slate-100">
-                                    <i data-lucide="check-circle" class="w-6 h-6"></i>
-                                </div>
-                            </div>
-                            <div class="w-full bg-slate-100 rounded-full h-1.5 mt-2">
-                                <div class="bg-indigo-600 h-1.5 rounded-full" style="width: 98.5%"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-4">
-                        <div class="bg-white p-7 rounded-xl border border-slate-200 shadow-sm">
-                            <div class="mb-6">
-                                <h3 class="text-lg font-bold text-slate-800">Distribución de Servicios</h3>
-                                <p class="text-sm text-slate-500">Desglose histórico por tipo de ensayo solicitado.</p>
-                            </div>
-                            <div class="space-y-5">
-                                ${distributionHtml}
-                            </div>
-                        </div>
-
-                        <div class="bg-white p-7 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                            <div>
-                                <h3 class="text-lg font-bold text-slate-800">Métricas de Calidad (SLA)</h3>
-                                <p class="text-sm text-slate-500 mb-6">Indicadores de rendimiento de nuestro laboratorio.</p>
-                                <ul class="space-y-4">
-                                    <li class="flex items-center justify-between pb-4 border-b border-slate-100">
-                                        <div class="flex items-center text-slate-700">
-                                            <div class="w-8 h-8 rounded bg-blue-50 flex items-center justify-center text-blue-600 mr-3">
-                                                <i data-lucide="clock" class="w-4 h-4"></i>
-                                            </div>
-                                            <span class="font-medium">Tiempo prom. de entrega</span>
-                                        </div>
-                                        <span class="font-bold text-slate-800">48 hrs</span>
-                                    </li>
-                                    <li class="flex items-center justify-between pb-4 border-b border-slate-100">
-                                        <div class="flex items-center text-slate-700">
-                                            <div class="w-8 h-8 rounded bg-green-50 flex items-center justify-center text-green-600 mr-3">
-                                                <i data-lucide="check" class="w-4 h-4"></i>
-                                            </div>
-                                            <span class="font-medium">Precisión de resultados</span>
-                                        </div>
-                                        <span class="font-bold text-slate-800">99.9%</span>
-                                    </li>
-                                    <li class="flex items-center justify-between">
-                                        <div class="flex items-center text-slate-700">
-                                            <div class="w-8 h-8 rounded bg-purple-50 flex items-center justify-center text-purple-600 mr-3">
-                                                <i data-lucide="award" class="w-4 h-4"></i>
-                                            </div>
-                                            <span class="font-medium">Auditorías aprobadas</span>
-                                        </div>
-                                        <span class="font-bold text-slate-800">100%</span>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6"><div class="flex justify-between items-start mb-4"><div><p class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Volumen Histórico</p><p class="text-3xl font-bold text-slate-800 mt-1">${totalVolume}</p></div><div class="p-3 rounded-lg bg-slate-50 text-slate-600 border border-slate-100"><i data-lucide="file-text" class="w-6 h-6"></i></div></div><p class="text-xs text-emerald-600 font-medium flex items-center"><i data-lucide="trending-up" class="w-3 h-3 mr-1"></i> Informes y servicios registrados</p></div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6"><div class="flex justify-between items-start mb-4"><div><p class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Servicios Activos</p><p class="text-3xl font-bold text-slate-800 mt-1">${activeCount}</p></div><div class="p-3 rounded-lg bg-slate-50 text-blue-600 border border-slate-100"><i data-lucide="activity" class="w-6 h-6"></i></div></div><p class="text-xs text-slate-500 font-medium">En proceso de análisis</p></div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6"><div class="flex justify-between items-start mb-4"><div><p class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Tasa de Cumplimiento</p><p class="text-3xl font-bold text-slate-800 mt-1">${pct}%</p></div><div class="p-3 rounded-lg bg-slate-50 text-indigo-600 border border-slate-100"><i data-lucide="check-circle" class="w-6 h-6"></i></div></div><div class="w-full bg-slate-100 rounded-full h-1.5 mt-2"><div class="bg-indigo-600 h-1.5 rounded-full" style="width:${pct}%"></div></div></div>
                 </div>
-            `;
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-4">
+                    <div class="bg-white p-7 rounded-xl border border-slate-200 shadow-sm"><div class="mb-6"><h3 class="text-lg font-bold text-slate-800">Distribución de Servicios</h3><p class="text-sm text-slate-500">Desglose histórico por tipo de ensayo.</p></div><div class="space-y-5">${distHtml}</div></div>
+                    <div class="bg-white p-7 rounded-xl border border-slate-200 shadow-sm"><div><h3 class="text-lg font-bold text-slate-800">Métricas de Calidad (SLA)</h3><p class="text-sm text-slate-500 mb-6">Indicadores de rendimiento.</p><ul class="space-y-4"><li class="flex items-center justify-between pb-4 border-b border-slate-100"><div class="flex items-center text-slate-700"><div class="w-8 h-8 rounded bg-blue-50 flex items-center justify-center text-blue-600 mr-3"><i data-lucide="clock" class="w-4 h-4"></i></div><span class="font-medium">Tiempo prom. de entrega</span></div><span class="font-bold text-slate-800">48 hrs</span></li><li class="flex items-center justify-between pb-4 border-b border-slate-100"><div class="flex items-center text-slate-700"><div class="w-8 h-8 rounded bg-green-50 flex items-center justify-center text-green-600 mr-3"><i data-lucide="check" class="w-4 h-4"></i></div><span class="font-medium">Precisión de resultados</span></div><span class="font-bold text-slate-800">99.9%</span></li><li class="flex items-center justify-between"><div class="flex items-center text-slate-700"><div class="w-8 h-8 rounded bg-purple-50 flex items-center justify-center text-purple-600 mr-3"><i data-lucide="award" class="w-4 h-4"></i></div><span class="font-medium">Auditorías aprobadas</span></div><span class="font-bold text-slate-800">100%</span></li></ul></div></div>
+                </div>
+            </div>`;
         }
 
         function renderReports() {
-            // Lógica de filtrado de informes
-            const filteredReports = mockReports.filter(report => 
-                report.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                report.project.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-
-            const tableRows = filteredReports.map(report => `
-                <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="p-4 font-medium text-blue-600">${report.id}</td>
-                    <td class="p-4 text-slate-600">${report.date}</td>
-                    <td class="p-4 text-slate-800">${report.project}</td>
-                    <td class="p-4 text-slate-600">${report.type}</td>
-                    <td class="p-4 text-center">
-                        <button class="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors text-sm font-medium">
-                            <i data-lucide="download" class="w-4 h-4 mr-1.5"></i> PDF
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-
-            return `
-                <div class="space-y-6 fade-in">
-                    <div class="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
-                        <div>
-                            <h2 class="text-2xl font-bold text-slate-800">Informes de Ensayos</h2>
-                            <p class="text-slate-600 mt-1">Descargue los resultados oficiales de sus solicitudes.</p>
-                        </div>
-                        <div class="flex space-x-2 w-full sm:w-auto">
-                            <div class="relative flex-1 sm:flex-none">
-                                <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4"></i>
-                                <input 
-                                    type="text" 
-                                    id="search-input"
-                                    placeholder="Buscar por ID o proyecto..." 
-                                    class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    value="${searchQuery}"
-                                    oninput="handleSearch(this.value)"
-                                />
-                            </div>
-                            <button class="flex items-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50">
-                                <i data-lucide="filter" class="w-4 h-4 mr-2"></i> Filtrar
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse min-w-[600px]">
-                                <thead>
-                                    <tr class="bg-slate-50 border-b border-slate-200 text-sm font-medium text-slate-500 uppercase tracking-wider">
-                                        <th class="p-4">ID Informe</th>
-                                        <th class="p-4">Fecha</th>
-                                        <th class="p-4">Proyecto</th>
-                                        <th class="p-4">Tipo de Ensayo</th>
-                                        <th class="p-4 text-center">Acción</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-200">
-                                    ${tableRows.length > 0 ? tableRows : `<tr><td colspan="5" class="p-6 text-center text-slate-500">No se encontraron informes.</td></tr>`}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            `;
+            const filtered = clientData.reports.filter(r => r.id.toLowerCase().includes(searchQuery.toLowerCase()) || r.project.toLowerCase().includes(searchQuery.toLowerCase()));
+            const rows = filtered.map(r => `<tr class="hover:bg-slate-50 transition-colors"><td class="p-4 font-medium text-blue-600">${r.id}</td><td class="p-4 text-slate-600">${r.date}</td><td class="p-4 text-slate-800">${r.project}</td><td class="p-4 text-slate-600">${r.type}</td><td class="p-4 text-center"><button class="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors text-sm font-medium"><i data-lucide="download" class="w-4 h-4 mr-1.5"></i> PDF</button></td></tr>`).join('');
+            return `<div class="space-y-6 fade-in"><div class="flex flex-col sm:flex-row justify-between sm:items-end gap-4"><div><h2 class="text-2xl font-bold text-slate-800">Informes de Ensayos</h2><p class="text-slate-600 mt-1">Descargue los resultados oficiales de sus solicitudes.</p></div><div class="flex space-x-2 w-full sm:w-auto"><div class="relative flex-1 sm:flex-none"><i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4"></i><input type="text" id="search-input" placeholder="Buscar por ID o proyecto..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value="${searchQuery}" oninput="handleSearch(this.value)"/></div><button class="flex items-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50"><i data-lucide="filter" class="w-4 h-4 mr-2"></i> Filtrar</button></div></div><div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-left border-collapse min-w-[600px]"><thead><tr class="bg-slate-50 border-b border-slate-200 text-sm font-medium text-slate-500 uppercase tracking-wider"><th class="p-4">ID Informe</th><th class="p-4">Fecha</th><th class="p-4">Proyecto</th><th class="p-4">Tipo de Ensayo</th><th class="p-4 text-center">Acción</th></tr></thead><tbody class="divide-y divide-slate-200">${rows.length > 0 ? rows : '<tr><td colspan="5" class="p-6 text-center text-slate-500">No se encontraron informes.</td></tr>'}</tbody></table></div></div></div>`;
         }
 
-        // Función auxiliar para búsqueda (solo recarga la vista)
-        window.handleSearch = function(val) {
-            searchQuery = val;
-            const container = document.getElementById('dynamic-content');
-            container.innerHTML = renderReports();
-            lucide.createIcons(); // Reactivar iconos después de sobreescribir el HTML
-            
-            // Mantener el foco en el input al recargar
-            const input = document.getElementById('search-input');
-            if(input) {
-                input.focus();
-                input.setSelectionRange(input.value.length, input.value.length);
-            }
-        };
+        window.handleSearch = function(val) { searchQuery = val; const c = document.getElementById('dynamic-content'); c.innerHTML = renderReports(); const i = document.getElementById('search-input'); if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);} };
 
         function renderRequests() {
-            const cardsHtml = mockRequests.map(req => {
-                let badgeClass = '';
-                let iconName = '';
-                let topBarClass = '';
-
-                if (req.status === 'Completado') {
-                    badgeClass = 'bg-green-50 text-green-700 border-green-200';
-                    iconName = 'check-circle';
-                    topBarClass = 'bg-green-500';
-                } else if (req.status === 'En Proceso') {
-                    badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
-                    iconName = 'clock';
-                    topBarClass = 'bg-amber-500';
-                } else {
-                    badgeClass = 'bg-blue-50 text-blue-700 border-blue-200';
-                    iconName = 'info';
-                    topBarClass = 'bg-blue-500';
-                }
-
-                return `
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 relative overflow-hidden">
-                        <div class="h-1 w-full absolute top-0 left-0 ${topBarClass}"></div>
-                        
-                        <div class="flex justify-between items-start mb-4 mt-2">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${badgeClass}">
-                                <i data-lucide="${iconName}" class="w-3 h-3 mr-1"></i> ${req.status}
-                            </span>
-                            <span class="text-sm font-medium text-slate-500">${req.id}</span>
-                        </div>
-                        
-                        <h3 class="text-lg font-bold text-slate-800 mb-1">${req.type}</h3>
-                        <p class="text-sm text-slate-500 mb-4">Ingreso: ${req.date}</p>
-                        
-                        <div class="pt-4 border-t border-slate-100 flex justify-between items-center">
-                            <span class="text-xs text-slate-500 uppercase tracking-wider font-semibold">Entrega est.</span>
-                            <span class="text-sm font-medium text-slate-800">${req.estimatedDate}</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            return `
-                <div class="space-y-6 fade-in">
-                    <div>
-                        <h2 class="text-2xl font-bold text-slate-800">Estado de Solicitudes</h2>
-                        <p class="text-slate-600 mt-1">Haga seguimiento en tiempo real de sus servicios en curso.</p>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        ${cardsHtml}
-                    </div>
-                </div>
-            `;
+            const cards = clientData.requests.map(req => { let bc='bg-amber-50 text-amber-700 border-amber-200',ic='clock',tc='bg-amber-500'; if(req.status==='Completado'){bc='bg-green-50 text-green-700 border-green-200';ic='check-circle';tc='bg-green-500';} else if(req.status==='En Proceso'){bc='bg-blue-50 text-blue-700 border-blue-200';ic='info';tc='bg-blue-500';} return `<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 relative overflow-hidden"><div class="h-1 w-full absolute top-0 left-0 ${tc}"></div><div class="flex justify-between items-start mb-4 mt-2"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${bc}"><i data-lucide="${ic}" class="w-3 h-3 mr-1"></i> ${req.status}</span><span class="text-sm font-medium text-slate-500">${req.id}</span></div><h3 class="text-lg font-bold text-slate-800 mb-1">${req.type}</h3><p class="text-sm text-slate-500 mb-4">Ingreso: ${req.date}</p><div class="pt-4 border-t border-slate-100 flex justify-between items-center"><span class="text-xs text-slate-500 uppercase tracking-wider font-semibold">Entrega est.</span><span class="text-sm font-medium text-slate-800">${req.estimatedDate}</span></div></div>`; }).join('');
+            return `<div class="space-y-6 fade-in"><div><h2 class="text-2xl font-bold text-slate-800">Estado de Solicitudes</h2><p class="text-slate-600 mt-1">Seguimiento en tiempo real de sus servicios en curso.</p></div><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">${cards.length > 0 ? cards : '<p class="text-slate-400 col-span-full text-center py-12">No hay solicitudes activas.</p>'}</div></div>`;
         }
 
         function renderHistory() {
-            const listItemsHtml = mockHistory.map(item => `
-                <li class="p-4 sm:p-6 hover:bg-slate-50 transition-colors">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between">
-                        <div class="mb-2 sm:mb-0">
-                            <h4 class="text-lg font-semibold text-slate-800">${item.service}</h4>
-                            <div class="flex items-center text-sm text-slate-500 mt-1">
-                                <span class="mr-3">ID: ${item.id}</span>
-                                <span>Fecha: ${item.date}</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-between sm:flex-col sm:items-end">
-                            <span class="text-lg font-bold text-slate-800">${item.amount}</span>
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mt-1">
-                                ${item.status}
-                            </span>
-                        </div>
-                    </div>
-                </li>
-            `).join('');
-
-            return `
-                <div class="space-y-6 fade-in">
-                    <div>
-                        <h2 class="text-2xl font-bold text-slate-800">Historial de Servicios</h2>
-                        <p class="text-slate-600 mt-1">Registro completo de servicios facturados y completados.</p>
-                    </div>
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <ul class="divide-y divide-slate-200">
-                            ${listItemsHtml}
-                        </ul>
-                    </div>
-                </div>
-            `;
+            const items = clientData.history.map(i => `<li class="p-4 sm:p-6 hover:bg-slate-50 transition-colors"><div class="flex flex-col sm:flex-row sm:items-center justify-between"><div class="mb-2 sm:mb-0"><h4 class="text-lg font-semibold text-slate-800">${i.service}</h4><div class="flex items-center text-sm text-slate-500 mt-1"><span class="mr-3">ID: ${i.id}</span><span>Fecha: ${i.date}</span></div></div><div class="flex items-center justify-between sm:flex-col sm:items-end"><span class="text-lg font-bold text-slate-800">${i.amount}</span><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mt-1">${i.status}</span></div></div></li>`).join('');
+            return `<div class="space-y-6 fade-in"><div><h2 class="text-2xl font-bold text-slate-800">Historial de Servicios</h2><p class="text-slate-600 mt-1">Registro completo de servicios facturados.</p></div><div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"><ul class="divide-y divide-slate-200">${items.length > 0 ? items : '<li class="p-6 text-center text-slate-400">No hay historial registrado.</li>'}</ul></div></div>`;
         }
 
         function renderProfile() {
-            return `
-                <div class="space-y-6 max-w-3xl fade-in">
-                    <div>
-                        <h2 class="text-2xl font-bold text-slate-800">Información de la Empresa</h2>
-                        <p class="text-slate-600 mt-1">Gestione los datos de facturación y contacto de su cuenta.</p>
-                    </div>
-
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
-                            <h3 class="text-lg font-medium text-slate-800 flex items-center">
-                                <i data-lucide="building" class="w-5 h-5 mr-2 text-slate-500"></i> Datos Corporativos
-                            </h3>
-                        </div>
-                        <div class="p-6">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-500 mb-1">Razón Social</label>
-                                    <div class="text-slate-800 font-medium p-2 bg-slate-50 rounded border border-slate-100">${mockUser.name}</div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-500 mb-1">Contacto Principal</label>
-                                    <div class="text-slate-800 font-medium p-2 bg-slate-50 rounded border border-slate-100">${mockUser.contact}</div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-500 mb-1">Correo Electrónico</label>
-                                    <div class="text-slate-800 font-medium p-2 bg-slate-50 rounded border border-slate-100">${mockUser.email}</div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-500 mb-1">Plan de Servicio</label>
-                                    <div class="text-slate-800 font-medium p-2 bg-blue-50 text-blue-800 rounded border border-blue-100">${mockUser.plan}</div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-500 mb-1">Cliente desde</label>
-                                    <div class="text-slate-800 font-medium p-2 bg-slate-50 rounded border border-slate-100">${mockUser.joined}</div>
-                                </div>
-                            </div>
-                            <div class="mt-6 flex justify-end">
-                                <button class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors">
-                                    Solicitar Actualización de Datos
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
+            const u = clientData.user;
+            return `<div class="space-y-6 max-w-3xl fade-in"><div><h2 class="text-2xl font-bold text-slate-800">Información de la Empresa</h2><p class="text-slate-600 mt-1">Datos de facturación y contacto.</p></div><div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"><div class="bg-slate-50 px-6 py-4 border-b border-slate-200"><h3 class="text-lg font-medium text-slate-800 flex items-center"><i data-lucide="building" class="w-5 h-5 mr-2 text-slate-500"></i> Datos Corporativos</h3></div><div class="p-6"><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div><label class="block text-sm font-medium text-slate-500 mb-1">Razón Social</label><div class="text-slate-800 font-medium p-2 bg-slate-50 rounded border border-slate-100">${u.name || '—'}</div></div><div><label class="block text-sm font-medium text-slate-500 mb-1">Contacto Principal</label><div class="text-slate-800 font-medium p-2 bg-slate-50 rounded border border-slate-100">${u.contact || '—'}</div></div><div><label class="block text-sm font-medium text-slate-500 mb-1">Correo Electrónico</label><div class="text-slate-800 font-medium p-2 bg-slate-50 rounded border border-slate-100">${u.email || '—'}</div></div><div><label class="block text-sm font-medium text-slate-500 mb-1">Plan de Servicio</label><div class="text-slate-800 font-medium p-2 bg-blue-50 text-blue-800 rounded border border-blue-100">${u.plan || '—'}</div></div></div><div class="mt-6 flex justify-end"><button class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors">Solicitar Actualización de Datos</button></div></div></div></div>`;
         }
 
-        // --- 4. Gestión de Estado y Renderizado ---
-
+        // --- 8. Navegación ---
         function setTab(tabId) {
             activeTab = tabId;
-            searchQuery = ''; // resetear busqueda al cambiar de tab
-
-            // 1. Actualizar estilos de los botones en el sidebar
+            searchQuery = '';
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 const icon = btn.querySelector('.nav-icon');
                 if (btn.getAttribute('data-id') === tabId) {
                     btn.className = 'nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-1 bg-blue-50 text-blue-700';
-                    if(icon) icon.className = `nav-icon mr-3 w-5 h-5 text-blue-600`;
+                    if(icon) icon.className = 'nav-icon mr-3 w-5 h-5 text-blue-600';
                 } else {
                     btn.className = 'nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-1 text-slate-600 hover:bg-slate-50 hover:text-slate-900';
-                    if(icon) icon.className = `nav-icon mr-3 w-5 h-5 text-slate-400`;
+                    if(icon) icon.className = 'nav-icon mr-3 w-5 h-5 text-slate-400';
                 }
             });
-
-            // 2. Renderizar contenido correspondiente
             const container = document.getElementById('dynamic-content');
             const scrollArea = document.getElementById('scroll-container');
-            
             switch(tabId) {
                 case 'dashboard': container.innerHTML = renderDashboard(); break;
                 case 'reports': container.innerHTML = renderReports(); break;
@@ -615,33 +513,53 @@
                 case 'history': container.innerHTML = renderHistory(); break;
                 case 'profile': container.innerHTML = renderProfile(); break;
             }
-
-            // 3. Volver el scroll arriba al cambiar de vista
             scrollArea.scrollTo(0,0);
-
-            // 4. Reinicializar iconos de Lucide para los elementos recién creados
             lucide.createIcons();
-
-            // 5. Cerrar menú en móvil tras selección
             toggleMobileMenu(false);
         }
 
-        // Inicializar aplicación al cargar
-        document.addEventListener('DOMContentLoaded', () => {
-            setTab('dashboard'); // Cargar la vista principal por defecto
-        });
+        // --- 9. API pública ---
+        window.ClientPortal = {
+            setData: function(data) {
+                Object.assign(clientData, data);
+                localStorage.setItem('clientData', JSON.stringify(clientData));
+                updateUserDisplay();
+                setTab(activeTab);
+            },
+            registerUser: function(userData) {
+                const users = getRegisteredUsers();
+                if (users.find(u => u.email === userData.email)) {
+                    return { success: false, message: 'El correo ya está registrado.' };
+                }
+                users.push(userData);
+                localStorage.setItem('registeredClients', JSON.stringify(users));
+                return { success: true };
+            },
+            getUser: function() { return clientData.user; },
+            getReports: function() { return clientData.reports; },
+            getRequests: function() { return clientData.requests; },
+            getHistory: function() { return clientData.history; }
+        };
 
+        // --- 10. Inicializar ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const session = localStorage.getItem('clientSession');
+            if (session) {
+                try {
+                    const s = JSON.parse(session);
+                    loadClientData(s);
+                    showPortal();
+                } catch(e) {
+                    showLogin();
+                }
+            } else {
+                showLogin();
+            }
+        });
     </script>
 
-    <!-- SCRIPTS -->
     <script src="../script-v2.js"></script>
-     <!-- Tailwind CSS desde CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Lucide Icons desde CDN -->
     <script src="https://unpkg.com/lucide@latest"></script>
 </body>
 </html>
-
-
-

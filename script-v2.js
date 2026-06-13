@@ -2390,7 +2390,7 @@ const CertificatesAuthManager = {
 
             const storedClient = localStorage.getItem('hightest_client');
             if (storedClient) {
-                window.location.href = 'Portal cliente/client-portal.html';
+                window.location.href = 'client-portal.html';
                 return;
             }
 
@@ -2414,7 +2414,7 @@ const CertificatesAuthManager = {
 
                 const storedClient = localStorage.getItem('hightest_client');
                 if (storedClient) {
-                    window.location.href = 'Portal cliente/client-portal.html';
+                    window.location.href = 'client-portal.html';
                     // Cerrar menú móvil después de redireccionar
                     MobileMenu.close();
                     return;
@@ -2597,7 +2597,7 @@ const CertificatesAuthManager = {
             // Cerrar modal y redirigir después de pequeña pausa
             setTimeout(() => {
                 this.closeCertificatesModal();
-                window.location.href = 'Portal cliente/client-portal.html';
+                window.location.href = 'client-portal.html';
             }, 900);
         } catch (err) {
             console.error('CertificatesAuthManager: error conectando al servidor', err);
@@ -2861,7 +2861,7 @@ function bindCertificatesBtnFallback() {
         const storedClient = localStorage.getItem('hightest_client');
         if (storedClient) {
             console.log('➡️ Fallback: cliente logueado, redirigiendo');
-            window.location.href = 'Portal cliente/client-portal.html';
+            window.location.href = 'client-portal.html';
             return;
         }
 
@@ -3003,7 +3003,7 @@ const ClientAuth = {
             setFeedback(`Todo listo, ${client.name}. Estamos entrando a tu portal de cliente.`, false);
 
             setTimeout(() => {
-                window.location.href = 'Portal cliente/client-portal.html';
+                window.location.href = 'client-portal.html';
             }, 800);
         } catch (err) {
             console.error('ClientAuth error:', err);
