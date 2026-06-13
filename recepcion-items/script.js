@@ -4590,25 +4590,28 @@ function resetForm() {
 
     try {
         if (quoteEl) {
-            if (selectedIsHeld) {
-                // Mantener el mismo código bloqueado
-                if (!Array.from(quoteEl.options).some(opt => opt.value === selectedCode)) {
-                    const option = document.createElement('option');
-                    option.value = selectedCode;
-                    option.textContent = selectedCode;
-                    quoteEl.appendChild(option);
-                }
-                quoteEl.value = selectedCode;
-                quoteEl.disabled = true;
-                refreshLockRemainingInfo();
-            } else {
-                quoteEl.disabled = false; // Desbloquear el campo de recepción
-                initializeQuoteNumbers();
-                showProposedReceptionNumber();
+            // SIEMPRE liberar el campo
+            quoteEl.disabled = false;
+            // Limpiar opciones y poner el siguiente disponible directamente
+            const nextCode = getNextReceptionNumber();
+            quoteEl.innerHTML = '';
+            // Agregar placeholder
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'Seleccione N° de Recepción';
+            placeholder.disabled = true;
+            placeholder.selected = true;
+            quoteEl.appendChild(placeholder);
+            // Agregar siguiente número
+            if (nextCode) {
+                const opt = document.createElement('option');
+                opt.value = nextCode;
+                opt.textContent = nextCode;
+                quoteEl.appendChild(opt);
+                quoteEl.value = nextCode;
             }
+            refreshNextReceptionNumberInfo();
         }
-        refreshNextReceptionNumberInfo();
-        // panel eliminado: no renderizar lista de procesos en uso
     } catch (e) {
         console.warn('Error al reiniciar números de recepción después del reset:', e);
     }
@@ -4788,14 +4791,25 @@ function loadFormData(data, skipDates = false, isFromCompleted = false) {
     const ccEmailEl = document.getElementById('copiaEmail');
 
     if (quoteEl) {
-        quoteEl.value = data.cotizacion || '';
-        // Bloquear si es de casos terminados o si está restringido
-        if (isFromCompleted || (data.cotizacion && isReceptionRestricted(data.cotizacion))) {
+        const cotizacion = data.cotizacion || '';
+        // Agregar la opción si no existe en el select
+        if (cotizacion && !Array.from(quoteEl.options).some(opt => opt.value === cotizacion)) {
+            const option = document.createElement('option');
+            option.value = cotizacion;
+            option.textContent = cotizacion;
+            quoteEl.appendChild(option);
+        }
+        quoteEl.value = cotizacion;
+        // Bloquear si es de casos terminados, si está restringido, o si se está cargando un caso
+        if (isFromCompleted || (cotizacion && isReceptionRestricted(cotizacion))) {
+            quoteEl.disabled = true;
+        } else if (cotizacion) {
+            // Caso cargado desde borrador: mostrar y bloquear el número cargado
             quoteEl.disabled = true;
         } else {
             quoteEl.disabled = false;
+            restoreHeldReceptionSelection();
         }
-        restoreHeldReceptionSelection();
     }
     // Si skipDates = true (importar JSON), no cargar fechas
     if (!skipDates) {
@@ -6007,8 +6021,25 @@ function continueSelectedCase() {
     const idx = parseInt(sel.value, 10);
     const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
     if (drafts[idx]) {
+        // Resetear formulario primero (sin confirmación)
+        document.getElementById('deliveryForm')?.reset();
+        document.getElementById('itemsList') && (document.getElementById('itemsList').innerHTML = '');
+        document.getElementById('itemsList2') && (document.getElementById('itemsList2').innerHTML = '');
+        const previewSection = document.getElementById('previewSection');
+        const previewContent = document.getElementById('previewContent');
+        if (previewContent) previewContent.innerHTML = '';
+        if (previewSection) previewSection.style.display = 'none';
+        try {
+            if (typeof savedRowsData !== 'undefined') {
+                savedRowsData.ensayos_acreditados = {};
+                savedRowsData.ensayos_no_acreditados = {};
+            }
+            const savedContainer = document.getElementById('savedItemsContainer');
+            if (savedContainer) savedContainer.innerHTML = '';
+        } catch (e) {}
+        // Cargar el caso
         loadFormData(drafts[idx]);
-        showNotification('Caso cargado', 'success');
+        showNotification('Caso cargado: ' + (drafts[idx].cotizacion || ''), 'success');
     }
 }
 
@@ -6979,6 +7010,27 @@ async function crearProcesoEnPanelAdmin() {
             return;
         }
 
+        // 1. Eliminar reserva temporal si existe para este número
+        try {
+            await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'delete_proceso', numero_proceso: numeroProceso })
+            });
+        } catch (e) {
+            console.warn('No se pudo limpiar reserva temporal (puede que no exista):', e);
+        }
+
+        // 2. Limpiar bloqueo temporal local (hold) ya que el número ya se usó oficialmente
+        try {
+            const held = getHeldReceptionNumbers();
+            if (held[numeroProceso]) {
+                delete held[numeroProceso];
+                setHeldReceptionNumbers(held);
+            }
+        } catch (e) { console.warn('Error limpiando hold:', e); }
+
+        // 3. Crear proceso oficial
         const insertData = {
             numero_proceso: numeroProceso,
             cliente: clienteNombre,
@@ -7011,6 +7063,46 @@ async function crearProcesoEnPanelAdmin() {
     }
 }
 
+// Actualiza el proceso existente a estado ENTREGA CLIENTE
+async function actualizarProcesoAEntrega() {
+    try {
+        const numeroProceso = document.getElementById('quoteNumber')?.value;
+        const fechaEntrega = document.getElementById('fechaEntrega')?.value || new Date().toISOString().split('T')[0];
+
+        if (!numeroProceso) {
+            console.warn('Sin número de proceso para actualizar a entrega');
+            return;
+        }
+
+        const updateData = {
+            estado: 'entrega-cliente',
+            fecha_entrega_cliente: fechaEntrega
+        };
+
+        const response = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                action: 'update_proceso_status', 
+                numero_proceso: numeroProceso, 
+                estado: 'entrega-cliente',
+                fecha_entrega_cliente: fechaEntrega
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            console.warn('Error actualizando proceso a entrega:', result?.error);
+            return;
+        }
+
+        showNotification('Proceso actualizado a ENTREGA CLIENTE en el panel', 'success');
+    } catch (error) {
+        console.error('Error actualizando proceso a entrega:', error);
+    }
+}
+
 // Abre cliente de correo tras generar PDF de recepción si hay email del cliente
 async function pdfRecepcionAction() {
     const validation = validatePDFRequirements('recepcion');
@@ -7028,7 +7120,7 @@ async function pdfRecepcionAction() {
 }
 
 // Abre cliente de correo tras generar PDF completo si hay email del cliente
-function pdfCompletoAction() {
+async function pdfCompletoAction() {
     // Prevenir generación duplicada de entrega si ya existe un borrador marcado como 'entrega'
     try {
         const cot = document.getElementById('quoteNumber')?.value;
@@ -7056,6 +7148,9 @@ function pdfCompletoAction() {
     }
     // Solo genera el PDF Completo; no abre correo automáticamente
     generatePDF();
+
+    // Actualizar proceso existente a ENTREGA CLIENTE
+    await actualizarProcesoAEntrega();
 }
 
 // =======================================================

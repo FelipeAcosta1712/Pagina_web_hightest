@@ -384,13 +384,18 @@ exports.handler = async (event) => {
             if (payload.action === 'update_proceso_status') {
                 const numero = normalizeText(payload.numero_proceso || payload.numero || payload.id);
                 const estado = normalizeText(payload.estado || payload.status || payload.new_status);
+                const fechaEntrega = payload.fecha_entrega_cliente || payload.fecha_entrega || null;
+                const fechaFinalizado = payload.fecha_finalizado || null;
                 if (!numero || !estado) return jsonResponse(400, { ok: false, error: 'numero_proceso y estado son requeridos' });
 
                 let lastError = null;
                 for (const estadoCandidate of buildStatusCandidates(estado)) {
+                    const updateData = { estado: estadoCandidate };
+                    if (fechaEntrega) updateData.fecha_entrega_cliente = fechaEntrega;
+                    if (fechaFinalizado) updateData.fecha_finalizado = fechaFinalizado;
                     const { data, error } = await supabase
                         .from('procesos_acreditados')
-                        .update({ estado: estadoCandidate })
+                        .update(updateData)
                         .eq('numero_proceso', numero)
                         .select()
                         .limit(1);
