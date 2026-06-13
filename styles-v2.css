@@ -3347,13 +3347,14 @@ section {
     }
 
     .hero {
-        min-height: 500px !important;
-        padding: 80px 40px 10px 40px !important;
+        min-height: 560px !important;
+        padding: 80px 40px 40px 40px !important;
     }
 
     .hero__container {
-        grid-template-columns: 1fr 1fr !important;
+        grid-template-columns: 1fr !important;
         max-width: 100% !important;
+        gap: var(--spacing-xl) !important;
     }
 
     .hero__title {
