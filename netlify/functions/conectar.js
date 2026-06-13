@@ -159,6 +159,36 @@ exports.handler = async (event) => {
                 return jsonResponse(200, { ok: true, user, tipo: 'cliente' });
             }
 
+            if (payload.action === 'get_cliente_profile') {
+                const email = normalizeText(payload.email).toLowerCase();
+                if (!email) {
+                    return jsonResponse(400, { ok: false, error: 'Se requiere el correo del cliente' });
+                }
+                const { data, error } = await supabase
+                    .from('clientes')
+                    .select('*')
+                    .ilike('email', email)
+                    .limit(1);
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'No se pudo consultar el perfil', detail: error.message });
+                }
+                const row = Array.isArray(data) ? data[0] : null;
+                if (!row) {
+                    return jsonResponse(404, { ok: false, error: 'Cliente no encontrado' });
+                }
+                const profile = {
+                    id: row.id || row.client_id || null,
+                    email: pickFirstValue(row, ['email', 'correo', 'correo_electronico']),
+                    name: pickFirstValue(row, ['nombre', 'nombre_completo', 'contacto', 'representante']) || null,
+                    company: pickFirstValue(row, ['nombre_empresa', 'empresa', 'razon_social', 'razón_social']) || null,
+                    phone: pickFirstValue(row, ['telefono', 'teléfono', 'phone', 'celular', 'movil']) || null,
+                    address: pickFirstValue(row, ['direccion', 'dirección', 'address']) || null,
+                    nit: pickFirstValue(row, ['nit', 'NIT', 'documento', 'ruc']) || null,
+                    contact: pickFirstValue(row, ['contacto', 'representante', 'nombre_completo']) || null
+                };
+                return jsonResponse(200, { ok: true, profile });
+            }
+
             // Obtener nombre del usuario desde tabla usuarios
             if (payload.action === 'get_user_nombre') {
                 const email = normalizeText(payload.email).toLowerCase();

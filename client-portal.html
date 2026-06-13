@@ -21,36 +21,16 @@
         <header class="header header--client" role="banner">
             <div class="header__container">
                 <div class="header__logo">
-                    <a href="index.html#inicio" class="header__logo-link">
+                    <a href="index.html" class="header__logo-link">
                         <img src="image/logo.png" alt="HIGH TEST SAS" class="header__logo-image">
                     </a>
                 </div>
                 <nav class="header__nav" role="navigation" aria-label="Navegación cliente">
-                    <button class="header__menu-toggle" id="clientMenuToggle" aria-label="Abrir menú" aria-expanded="false">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </button>
-                    <ul class="header__menu" id="clientHeaderMenu">
-                        <li><a href="#certificates" class="header__link">Certificados</a></li>
-                        <li><a href="#history" class="header__link">Historial</a></li>
-                        <li><a href="#requests" class="header__link">Solicitudes</a></li>
-                        <li><a href="#support" class="header__link">Soporte</a></li>
-                        <li class="header__menu-item--action">
-                            <button class="header__menu-btn header__menu-btn--secondary" id="clientLogoutMobileBtn" aria-label="Cerrar sesión" onclick="clientLogout()">
-                                🚪 Salir
-                            </button>
-                        </li>
-                    </ul>
+                    <a href="index.html" class="header__cta header__cta--primary" style="text-decoration:none;">
+                        <i data-lucide="arrow-left" class="w-4 h-4 inline mr-1" style="vertical-align:middle;"></i> Volver al Inicio
+                    </a>
                     <button class="header__icon-btn" id="themeToggleBtn" aria-label="Cambiar tema de color" title="Cambiar tema">
                         🌙
-                    </button>
-                    <div class="header__user-info">
-                        <span class="user-info__name" id="clientUserName">Cliente</span>
-                        <span class="user-info__company" id="clientUserCompany">Empresa</span>
-                    </div>
-                    <button class="header__cta header__cta--logout" id="clientLogoutBtn" aria-label="Cerrar sesión" onclick="clientLogout()">
-                        🚪 Salir
                     </button>
                 </nav>
             </div>
@@ -117,6 +97,7 @@
                     <span class="text-lg font-bold text-slate-800">HIGH TEST</span>
                 </div>
                 <div class="flex items-center gap-2">
+                    <a href="index.html" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors no-underline" style="text-decoration:none;">Inicio</a>
                     <button id="mobileThemeToggleBtn" class="p-2 rounded-lg text-lg hover:bg-slate-100 transition-colors" aria-label="Cambiar tema" title="Cambiar tema">🌙</button>
                     <button onclick="toggleMobileMenu(true)" class="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg focus:outline-none">
                         <i data-lucide="menu" class="w-6 h-6"></i>
@@ -173,6 +154,12 @@
         .header__logo-image {
             height: 40px;
             width: auto;
+        }
+        .theme-dark .header__logo-image {
+            background: #fff;
+            border-radius: 6px;
+            padding: 4px 8px;
+            height: 36px;
         }
         .header__nav {
             display: flex;
@@ -475,8 +462,20 @@
         .theme-dark .text-purple-600 { color: #c084fc; }
         .theme-dark .border-purple-100 { border-color: #3b0764; }
         .theme-dark .bg-blue-100 { background-color: #1e40af; }
+        .theme-dark .text-blue-700 { color: #93c5fd; }
+        .theme-dark .text-blue-600 { color: #60a5fa; }
+        .theme-dark .border-blue-200 { border-color: #1e40af; }
         .theme-dark .bg-green-100 { background-color: #166534; }
+        .theme-dark .text-green-700 { color: #86efac; }
+        .theme-dark .text-green-600 { color: #4ade80; }
+        .theme-dark .border-green-200 { border-color: #166534; }
         .theme-dark .bg-amber-100 { background-color: #92400e; }
+        .theme-dark .text-amber-700 { color: #fde68a; }
+        .theme-dark .text-amber-600 { color: #fbbf24; }
+        .theme-dark .border-amber-200 { border-color: #92400e; }
+        .theme-dark .bg-red-100 { background-color: #991b1b; }
+        .theme-dark .text-red-700 { color: #fca5a5; }
+        .theme-dark .border-red-200 { border-color: #991b1b; }
         .theme-dark .bg-purple-100 { background-color: #581c87; }
         .theme-dark input, .theme-dark select { background: #0f172a; border-color: #334155; color: #e2e8f0; }
         .theme-dark table { color: #e2e8f0; }
@@ -733,43 +732,58 @@
             serviceDistribution: []
         };
 
-        function loadClientData() {
-            // Primero verificar si hay datos del portal
+        async function loadClientData() {
+            let email = '';
+
+            // Intentar obtener email de localStorage
             const saved = localStorage.getItem('clientData');
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
-                    clientData.user.name = parsed.user?.name || '';
-                    clientData.user.contact = parsed.user?.contact || '';
-                    clientData.user.email = parsed.user?.email || '';
-                    clientData.user.plan = parsed.user?.plan || '';
-                    clientData.user.joined = parsed.user?.joined || '';
+                    email = parsed.user?.email || '';
                     clientData.reports = parsed.reports || [];
                     clientData.requests = parsed.requests || [];
                     clientData.history = parsed.history || [];
                     clientData.serviceDistribution = parsed.serviceDistribution || [];
-                    updateUserDisplay();
-                    return;
                 } catch(e) {}
             }
+            if (!email) {
+                const hightestClient = localStorage.getItem('hightest_client');
+                if (hightestClient) {
+                    try {
+                        const hc = JSON.parse(hightestClient);
+                        email = hc.email || '';
+                    } catch(e) {}
+                }
+            }
 
-            // Si no, verificar si viene del login principal (hightest_client)
-            const hightestClient = localStorage.getItem('hightest_client');
-            if (hightestClient) {
+            // Si hay email, traer perfil completo de la DB
+            if (email) {
                 try {
-                    const hc = JSON.parse(hightestClient);
-                    clientData.user.name = hc.company || hc.name || '';
-                    clientData.user.contact = hc.name || '';
-                    clientData.user.email = hc.email || '';
-                    clientData.user.plan = '';
-                    clientData.user.joined = '';
-                    updateUserDisplay();
-                    return;
-                } catch(e) {}
+                    const resp = await fetch('/.netlify/functions/conectar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'get_cliente_profile', email })
+                    });
+                    const json = await resp.json();
+                    if (json.ok && json.profile) {
+                        const p = json.profile;
+                        clientData.user.name = p.company || p.name || '';
+                        clientData.user.contact = p.contact || p.name || '';
+                        clientData.user.email = p.email || email;
+                        clientData.user.phone = p.phone || '';
+                        clientData.user.address = p.address || '';
+                        clientData.user.nit = p.nit || '';
+                        clientData.user.joined = '';
+                    }
+                } catch(err) {
+                    console.warn('No se pudo cargar perfil desde la DB:', err.message);
+                }
             }
 
-            // Sin datos: mostrar valores por defecto
             updateUserDisplay();
+            await loadClientHistory();
+            setTab(activeTab);
         }
 
         function updateUserDisplay() {
@@ -806,6 +820,99 @@
             }
         }
 
+        // --- 3b. Consulta a base de datos ---
+        async function fetchFromDatabase(action, params = {}) {
+            const body = Object.assign({ action }, params);
+            const res = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            if (!res.ok) throw new Error('Error de red: ' + res.status);
+            const data = await res.json();
+            if (!data || typeof data !== 'object') throw new Error('Respuesta inválida del servidor');
+            return data;
+        }
+
+        function formatStatusLabel(status) {
+            if (!status) return '';
+            const map = {
+                'recepcion': 'Recepción',
+                'lavado': 'Lavado',
+                'en-proceso-de-ensayo': 'En Proceso',
+                'entrega-cliente': 'Entrega Cliente',
+                'informe-de-ensayo': 'Informe',
+                'finalizado': 'Finalizado'
+            };
+            const raw = String(status).trim().toLowerCase();
+            const compact = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[_\s]+/g, '-');
+            const aliases = {
+                'proceso-de-ensayo': 'en-proceso-de-ensayo',
+                'informe': 'informe-de-ensayo'
+            };
+            const key = aliases[compact] || compact;
+            return map[key] || status;
+        }
+
+        function formatDateShort(value) {
+            if (!value) return '';
+            const s = String(value).trim();
+            const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+            const d = new Date(s);
+            if (!isFinite(d)) return s;
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        }
+
+        async function loadClientHistory() {
+            const clientName = clientData.user.name;
+            if (!clientName) return;
+            try {
+                const payload = await fetchFromDatabase('get_procesos_acreditados', { cliente: clientName });
+                if (payload.ok && Array.isArray(payload.procesos)) {
+                    clientData.history = payload.procesos.map(p => {
+                        const numero = p.numero_proceso || p.numero || p.id || '';
+                        const estado = p.estado || p.status || '';
+                        const fechaRecepcion = p.fecha_recepcion || p.fecha_recepcion_iso || '';
+                        const fechaEntrega = p.fecha_entrega_cliente || p.fecha_entrega || '';
+                        const fechaFinalizado = p.fecha_finalizado || p.fecha_finalizacion || '';
+                        const valor = p.valor || p.precio || '';
+                        const informe = p.n_informe || p.informe_numero || '';
+                        const tipo = p.tipo || 'Ensayo';
+
+                        let status = 'Pendiente';
+                        const stateKey = String(estado).trim().toLowerCase();
+                        if (stateKey.includes('finalizado')) status = 'Completado';
+                        else if (stateKey.includes('informe')) status = 'Completado';
+                        else if (stateKey.includes('entrega')) status = 'En Proceso';
+                        else if (stateKey.includes('ensayo') || stateKey.includes('proceso')) status = 'En Proceso';
+                        else if (stateKey.includes('recepcion') || stateKey.includes('lavado')) status = 'Pendiente';
+
+                        const displayDate = fechaFinalizado || fechaEntrega || fechaRecepcion;
+
+                        return {
+                            id: numero,
+                            service: `${tipo} - ${formatStatusLabel(estado) || 'Ensayo'}`,
+                            type: tipo,
+                            status: status,
+                            statusRaw: estado,
+                            date: formatDateShort(displayDate),
+                            dateRaw: displayDate,
+                            amount: valor ? `$${Number(String(valor).replace(/[^0-9.]/g,'')).toLocaleString('es-CO')}` : '$0',
+                            informe: informe,
+                            client: p.cliente || ''
+                        };
+                    });
+
+                    // Separar activos vs finalizados
+                    clientData.requests = clientData.history.filter(h => h.status !== 'Completado');
+                    clientData.history = clientData.history.filter(h => h.status === 'Completado');
+                }
+            } catch (err) {
+                console.warn('No se pudo cargar historial desde la base de datos:', err.message);
+            }
+        }
+
         // --- 4. Renderizado de vistas ---
         let activeTab = 'dashboard';
         let searchQuery = '';
@@ -814,20 +921,14 @@
         function renderDashboard() {
             const currentDate = new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             const activeCount = clientData.requests.filter(r => r.status !== 'Completado').length;
-            const completedCount = clientData.requests.filter(r => r.status === 'Completado').length;
-            const totalVolume = clientData.reports.length;
-            const totalHistory = clientData.history.length;
-            const pct = clientData.requests.length > 0 ? Math.round((completedCount / clientData.requests.length) * 100) : 0;
-            
-            const recentReports = clientData.reports.slice(0, 5);
-            const recentRequests = clientData.requests.slice(0, 5);
+            const completedCount = clientData.history.filter(r => r.status === 'Completado').length;
+            const totalCount = activeCount + completedCount;
 
-            const distHtml = clientData.serviceDistribution.length > 0
-                ? clientData.serviceDistribution.map(i => `<div class="mb-4"><div class="flex justify-between text-sm mb-2"><span class="font-medium text-slate-700">${i.name}</span><span class="text-slate-500 font-semibold">${i.percentage}%</span></div><div class="w-full bg-slate-100 rounded-full h-2.5"><div class="${i.color} h-2.5 rounded-full transition-all duration-1000" style="width:${i.percentage}%"></div></div></div>`).join('')
-                : `<div class="text-center py-8"><div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3"><i data-lucide="pie-chart" class="w-8 h-8 text-slate-400"></i></div><p class="text-slate-500 text-sm">Sin datos de distribución disponibles.</p></div>`;
+            const recentReports = clientData.reports.slice(0, 3);
+            const recentHistory = clientData.history.slice(0, 3);
 
-            const recentActivityHtml = recentReports.length > 0 || recentRequests.length > 0
-                ? `<div class="space-y-3">${recentReports.map(r => `<div class="flex items-center p-3 bg-slate-50 rounded-lg border border-slate-100"><div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0"><i data-lucide="file-text" class="w-4 h-4 text-blue-600"></i></div><div class="flex-1 min-w-0"><p class="text-sm font-medium text-slate-800 truncate">${r.project}</p><p class="text-xs text-slate-500">${r.id} · ${r.date}</p></div><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 ml-2">Completado</span></div>`).join('')}${recentRequests.map(req => `<div class="flex items-center p-3 bg-slate-50 rounded-lg border border-slate-100"><div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center mr-3 flex-shrink-0"><i data-lucide="clock" class="w-4 h-4 text-amber-600"></i></div><div class="flex-1 min-w-0"><p class="text-sm font-medium text-slate-800 truncate">${req.type}</p><p class="text-xs text-slate-500">${req.id} · ${req.date}</p></div><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 ml-2">${req.status}</span></div>`).join('')}</div>`
+            const recentActivityHtml = recentReports.length > 0 || recentHistory.length > 0
+                ? `<div class="space-y-3">${recentHistory.map(r => `<div class="flex items-center p-3 bg-slate-50 rounded-lg border border-slate-100"><div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0"><i data-lucide="file-text" class="w-4 h-4 text-blue-600"></i></div><div class="flex-1 min-w-0"><p class="text-sm font-medium text-slate-800 truncate">${r.service}</p><p class="text-xs text-slate-500">${r.id} · ${r.date}</p></div><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${r.status === 'Completado' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'} ml-2">${r.status}</span></div>`).join('')}${recentReports.map(r => `<div class="flex items-center p-3 bg-slate-50 rounded-lg border border-slate-100"><div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center mr-3 flex-shrink-0"><i data-lucide="award" class="w-4 h-4 text-purple-600"></i></div><div class="flex-1 min-w-0"><p class="text-sm font-medium text-slate-800 truncate">Informe: ${r.id}</p><p class="text-xs text-slate-500">${r.project || 'Ensayo'}</p></div><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 ml-2">Completado</span></div>`).join('')}</div>`
                 : `<div class="text-center py-8"><div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3"><i data-lucide="activity" class="w-8 h-8 text-slate-400"></i></div><p class="text-slate-500 text-sm">No hay actividad reciente.</p></div>`;
 
             return `<div class="space-y-8 fade-in">
@@ -836,7 +937,7 @@
                     <div>
                         <p class="text-sm font-medium text-slate-500 capitalize mb-1">${currentDate}</p>
                         <h2 class="text-3xl font-bold text-slate-900 tracking-tight">Panel Operativo</h2>
-                        <p class="text-slate-600 mt-2 text-lg">Resumen de actividad para <span class="font-semibold text-slate-800">${clientData.user.name || 'su empresa'}</span>.</p>
+                        <p class="text-slate-600 mt-2 text-lg">Ensayos acreditados de <span class="font-semibold text-slate-800">${clientData.user.name || 'su empresa'}</span>.</p>
                     </div>
                     <div class="mt-4 md:mt-0 px-4 py-2 bg-emerald-50 rounded-lg border border-emerald-100 flex items-center shadow-sm w-max">
                         <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-3 animate-pulse"></div>
@@ -845,35 +946,35 @@
                 </div>
 
                 <!-- Stats Cards -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
                         <div class="flex justify-between items-start mb-4">
                             <div>
-                                <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Informes</p>
-                                <p class="text-3xl font-bold text-slate-800 mt-1">${totalVolume}</p>
+                                <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Ensayos</p>
+                                <p class="text-3xl font-bold text-slate-800 mt-1">${totalCount}</p>
                             </div>
                             <div class="p-3 rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
                                 <i data-lucide="file-text" class="w-6 h-6"></i>
                             </div>
                         </div>
-                        <p class="text-xs text-blue-600 font-medium">Certificados y ensayos registrados</p>
+                        <p class="text-xs text-blue-600 font-medium">Total de procesos registrados</p>
                     </div>
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
                         <div class="flex justify-between items-start mb-4">
                             <div>
-                                <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Solicitudes Activas</p>
+                                <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider">En Proceso</p>
                                 <p class="text-3xl font-bold text-slate-800 mt-1">${activeCount}</p>
                             </div>
                             <div class="p-3 rounded-lg bg-amber-50 text-amber-600 border border-amber-100">
                                 <i data-lucide="clock" class="w-6 h-6"></i>
                             </div>
                         </div>
-                        <p class="text-xs text-amber-600 font-medium">En proceso de análisis</p>
+                        <p class="text-xs text-amber-600 font-medium">Proceso de ensayo</p>
                     </div>
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
                         <div class="flex justify-between items-start mb-4">
                             <div>
-                                <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Completados</p>
+                                <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Finalizados</p>
                                 <p class="text-3xl font-bold text-slate-800 mt-1">${completedCount}</p>
                             </div>
                             <div class="p-3 rounded-lg bg-green-50 text-green-600 border border-green-100">
@@ -882,84 +983,18 @@
                         </div>
                         <p class="text-xs text-green-600 font-medium">Servicios finalizados</p>
                     </div>
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Tasa de Éxito</p>
-                                <p class="text-3xl font-bold text-slate-800 mt-1">${pct}%</p>
-                            </div>
-                            <div class="p-3 rounded-lg bg-purple-50 text-purple-600 border border-purple-100">
-                                <i data-lucide="trending-up" class="w-6 h-6"></i>
-                            </div>
-                        </div>
-                        <div class="w-full bg-slate-100 rounded-full h-1.5">
-                            <div class="bg-purple-600 h-1.5 rounded-full transition-all" style="width:${pct}%"></div>
-                        </div>
-                    </div>
                 </div>
 
-                <!-- Grid de 2 columnas -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Distribución de Servicios -->
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                        <div class="mb-6 flex items-center justify-between">
-                            <div>
-                                <h3 class="text-lg font-bold text-slate-800">Distribución de Servicios</h3>
-                                <p class="text-sm text-slate-500">Desglose por tipo de ensayo.</p>
-                            </div>
-                            <div class="p-2 bg-slate-50 rounded-lg"><i data-lucide="pie-chart" class="w-5 h-5 text-slate-600"></i></div>
-                        </div>
-                        <div class="max-h-64 overflow-y-auto">${distHtml}</div>
-                    </div>
-
-                    <!-- Actividad Reciente -->
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                        <div class="mb-6 flex items-center justify-between">
-                            <div>
-                                <h3 class="text-lg font-bold text-slate-800">Actividad Reciente</h3>
-                                <p class="text-sm text-slate-500">Últimos movimientos.</p>
-                            </div>
-                            <div class="p-2 bg-slate-50 rounded-lg"><i data-lucide="activity" class="w-5 h-5 text-slate-600"></i></div>
-                        </div>
-                        <div class="max-h-64 overflow-y-auto">${recentActivityHtml}</div>
-                    </div>
-                </div>
-
-                <!-- Métricas SLA -->
+                <!-- Actividad Reciente -->
                 <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                    <div class="mb-6">
-                        <h3 class="text-lg font-bold text-slate-800">Métricas de Calidad (SLA)</h3>
-                        <p class="text-sm text-slate-500">Indicadores de rendimiento del laboratorio.</p>
+                    <div class="mb-6 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-800">Ensayos Recientes</h3>
+                            <p class="text-sm text-slate-500">Últimos ensayos registrados.</p>
+                        </div>
+                        <div class="p-2 bg-slate-50 rounded-lg"><i data-lucide="activity" class="w-5 h-5 text-slate-600"></i></div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="flex items-center p-4 bg-blue-50 rounded-xl border border-blue-100">
-                            <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mr-4 flex-shrink-0">
-                                <i data-lucide="clock" class="w-6 h-6 text-blue-600"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-slate-600">Tiempo promedio de entrega</p>
-                                <p class="text-2xl font-bold text-slate-800">48 hrs</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center p-4 bg-green-50 rounded-xl border border-green-100">
-                            <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mr-4 flex-shrink-0">
-                                <i data-lucide="check" class="w-6 h-6 text-green-600"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-slate-600">Precisión de resultados</p>
-                                <p class="text-2xl font-bold text-slate-800">99.9%</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center p-4 bg-purple-50 rounded-xl border border-purple-100">
-                            <div class="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mr-4 flex-shrink-0">
-                                <i data-lucide="award" class="w-6 h-6 text-purple-600"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-slate-600">Auditorías aprobadas</p>
-                                <p class="text-2xl font-bold text-slate-800">100%</p>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="max-h-64 overflow-y-auto">${recentActivityHtml}</div>
                 </div>
             </div>`;
         }
@@ -1069,69 +1104,76 @@
             const filtered = filterStatus === 'all' ? clientData.requests : clientData.requests.filter(r => r.status === filterStatus);
             
             const cards = filtered.map(req => { 
-                let statusColor = 'amber', statusIcon = 'clock';
+                let statusColor = 'blue', statusIcon = 'loader';
                 if(req.status === 'Completado') { statusColor = 'green'; statusIcon = 'check-circle'; }
                 else if(req.status === 'En Proceso') { statusColor = 'blue'; statusIcon = 'loader'; }
-                else if(req.status === 'Pendiente') { statusColor = 'slate'; statusIcon = 'clock'; }
+                else if(req.status === 'Pendiente') { statusColor = 'amber'; statusIcon = 'clock'; }
                 else if(req.status === 'Cancelado') { statusColor = 'red'; statusIcon = 'x-circle'; }
+
+                const stateLabel = formatStatusLabel(req.statusRaw || '');
+
+                const progress = req.status === 'Completado' ? 100 
+                    : req.status === 'En Proceso' ? 60 
+                    : 20;
                 
-                const progress = req.status === 'Completado' ? 100 : req.status === 'En Proceso' ? 60 : req.status === 'Pendiente' ? 20 : 0;
-                
-                return `<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
-                    <div class="h-1 w-full bg-${statusColor}-500"></div>
+                return `<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-200">
                     <div class="p-6">
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="flex items-center">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-${statusColor}-100 text-${statusColor}-700 border border-${statusColor}-200 mr-2">
-                                    <i data-lucide="${statusIcon}" class="w-3 h-3 mr-1"></i> ${req.status}
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center gap-2">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-${statusColor}-100 text-${statusColor}-700 border border-${statusColor}-200">
+                                    <i data-lucide="${statusIcon}" class="w-3.5 h-3.5"></i> ${stateLabel || req.status}
                                 </span>
                             </div>
-                            <span class="text-sm font-mono text-slate-400">${req.id}</span>
+                            <span class="text-xs font-mono text-slate-400 bg-slate-50 px-2 py-1 rounded">${req.id}</span>
                         </div>
-                        <h3 class="text-lg font-bold text-slate-800 mb-1">${req.type}</h3>
-                        <p class="text-sm text-slate-500 mb-2">${req.project || 'Proyecto no especificado'}</p>
-                        <div class="flex items-center text-sm text-slate-500 mb-4">
-                            <i data-lucide="calendar" class="w-4 h-4 mr-1 text-slate-400"></i>
-                            <span>Ingreso: ${req.date}</span>
-                        </div>
-                        <div class="mb-3">
-                            <div class="flex justify-between text-sm mb-1">
-                                <span class="text-slate-600">Progreso</span>
-                                <span class="font-medium text-slate-800">${progress}%</span>
-                            </div>
-                            <div class="w-full bg-slate-100 rounded-full h-2">
-                                <div class="bg-${statusColor}-500 h-2 rounded-full transition-all" style="width:${progress}%"></div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-3">${req.type}</h3>
+                        <div class="flex items-center gap-4 text-sm text-slate-500 mb-4">
+                            <div class="flex items-center gap-1.5">
+                                <i data-lucide="calendar" class="w-4 h-4 text-slate-400"></i>
+                                <span>${req.date}</span>
                             </div>
                         </div>
-                        <div class="pt-4 border-t border-slate-100 flex justify-between items-center">
-                            <span class="text-xs text-slate-500 uppercase tracking-wider font-semibold">Entrega estimada</span>
-                            <span class="text-sm font-medium text-slate-800">${req.estimatedDate || 'Por definir'}</span>
+                        <div class="mb-4">
+                            <div class="flex justify-between text-sm mb-2">
+                                <span class="text-slate-500 font-medium">Progreso</span>
+                                <span class="font-bold text-${statusColor}-600">${progress}%</span>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                                <div class="bg-${statusColor}-500 h-2.5 rounded-full transition-all duration-500" style="width:${progress}%"></div>
+                            </div>
+                        </div>
+                        <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                            <div class="flex items-center gap-2 text-sm">
+                                <i data-lucide="file-text" class="w-4 h-4 text-slate-400"></i>
+                                <span class="text-slate-500">Informe:</span>
+                                <span class="font-semibold text-slate-700">${req.informe || '—'}</span>
+                            </div>
+                            <span class="text-xs text-slate-400 font-medium uppercase tracking-wide">${req.amount || ''}</span>
                         </div>
                     </div>
                 </div>`; 
             }).join('');
 
-            const emptyState = `<div class="text-center py-12">
-                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i data-lucide="clipboard-list" class="w-8 h-8 text-slate-400"></i>
+            const emptyState = `<div class="text-center py-16">
+                <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                    <i data-lucide="clipboard-list" class="w-10 h-10 text-slate-300"></i>
                 </div>
-                <h3 class="text-lg font-medium text-slate-800 mb-1">No hay solicitudes activas</h3>
-                <p class="text-sm text-slate-500 max-w-md mx-auto">Las solicitudes de servicios aparecerán aquí para su seguimiento.</p>
+                <h3 class="text-lg font-semibold text-slate-700 mb-2">No hay solicitudes activas</h3>
+                <p class="text-sm text-slate-500 max-w-sm mx-auto">Los ensayos en curso aparecerán aquí para su seguimiento.</p>
             </div>`;
 
             return `<div class="space-y-6 fade-in">
-                <div class="flex flex-col lg:flex-row justify-between lg:items-end gap-4">
+                <div class="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
                     <div>
                         <h2 class="text-2xl font-bold text-slate-800">Estado de Solicitudes</h2>
-                        <p class="text-slate-600 mt-1">Seguimiento en tiempo real de sus servicios en curso.</p>
+                        <p class="text-slate-500 mt-1">Ensayos activos de <span class="font-semibold text-slate-700">${clientData.user.name || 'su empresa'}</span>.</p>
                     </div>
                     <div class="flex gap-2">
-                        <button class="px-3 py-2 rounded-lg text-sm font-medium ${filterStatus === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 border border-slate-300 hover:bg-slate-50'}" onclick="filterRequests('all')">Todas</button>
-                        <button class="px-3 py-2 rounded-lg text-sm font-medium ${filterStatus === 'En Proceso' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 border border-slate-300 hover:bg-slate-50'}" onclick="filterRequests('En Proceso')">En Proceso</button>
-                        <button class="px-3 py-2 rounded-lg text-sm font-medium ${filterStatus === 'Completado' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 border border-slate-300 hover:bg-slate-50'}" onclick="filterRequests('Completado')">Completadas</button>
+                        <button class="px-4 py-2 rounded-lg text-sm font-semibold transition-all ${filterStatus === 'all' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'}" onclick="filterRequests('all')">Todas</button>
+                        <button class="px-4 py-2 rounded-lg text-sm font-semibold transition-all ${filterStatus === 'En Proceso' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'}" onclick="filterRequests('En Proceso')">En Proceso</button>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     ${filtered.length > 0 ? cards : emptyState}
                 </div>
             </div>`;
@@ -1144,16 +1186,22 @@
         };
 
         function renderHistory() {
-            const sorted = [...clientData.history].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const sorted = [...clientData.history].sort((a, b) => {
+                const da = a.dateRaw || a.date || '';
+                const db = b.dateRaw || b.date || '';
+                return db.localeCompare(da);
+            });
             const grouped = sorted.reduce((acc, item) => {
-                const year = item.date.split('/')[2] || '2024';
+                const dateStr = item.dateRaw || item.date || '';
+                const year = (dateStr.match(/^(\d{4})/) || ['','2025'])[1];
                 if (!acc[year]) acc[year] = [];
                 acc[year].push(item);
                 return acc;
             }, {});
             
             const totalAmount = sorted.reduce((sum, item) => {
-                const amount = parseFloat(item.amount?.replace(/[^0-9.]/g, '') || 0);
+                const raw = item.amount || '';
+                const amount = parseFloat(String(raw).replace(/[^0-9.]/g, '') || 0);
                 return sum + amount;
             }, 0);
 
@@ -1161,24 +1209,26 @@
                 const items = grouped[year].map(i => {
                     let statusColor = 'green';
                     if (i.status === 'Pendiente') statusColor = 'amber';
+                    else if (i.status === 'En Proceso') statusColor = 'blue';
                     else if (i.status === 'Cancelado') statusColor = 'red';
                     
-                    return `<div class="flex items-start p-4 bg-slate-50 rounded-lg border border-slate-100 mb-3">
-                        <div class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center mr-4 flex-shrink-0">
+                    return `<div class="flex flex-col sm:flex-row sm:items-start p-4 bg-slate-50 rounded-lg border border-slate-100 mb-3 gap-3">
+                        <div class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center sm:mr-4 flex-shrink-0">
                             <i data-lucide="file-check" class="w-5 h-5 text-slate-600"></i>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="flex justify-between items-start mb-1">
+                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-1 gap-1">
                                 <h4 class="text-base font-semibold text-slate-800">${i.service}</h4>
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-${statusColor}-100 text-${statusColor}-800">${i.status}</span>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-${statusColor}-100 text-${statusColor}-800 w-max">${i.status}</span>
                             </div>
                             <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500 mb-2">
                                 <span class="flex items-center"><i data-lucide="hash" class="w-3 h-3 mr-1"></i> ${i.id}</span>
                                 <span class="flex items-center"><i data-lucide="calendar" class="w-3 h-3 mr-1"></i> ${i.date}</span>
+                                ${i.informe ? `<span class="flex items-center"><i data-lucide="file-text" class="w-3 h-3 mr-1"></i> Inf: ${i.informe}</span>` : ''}
                             </div>
                             <div class="flex items-center justify-between">
                                 <span class="text-lg font-bold text-slate-800">${i.amount}</span>
-                                <button class="text-sm text-blue-600 hover:text-blue-800 font-medium" onclick="viewDetails('${i.id}')">Ver detalles</button>
+                                <button class="text-sm text-blue-600 hover:text-blue-800 font-medium" onclick="viewHistoryDetails('${i.id}')">Ver detalles</button>
                             </div>
                         </div>
                     </div>`;
@@ -1200,18 +1250,18 @@
                     <i data-lucide="history" class="w-8 h-8 text-slate-400"></i>
                 </div>
                 <h3 class="text-lg font-medium text-slate-800 mb-1">Sin historial registrado</h3>
-                <p class="text-sm text-slate-500 max-w-md mx-auto">El historial de servicios completados aparecerá aquí.</p>
+                <p class="text-sm text-slate-500 max-w-md mx-auto">El historial de ensayos acreditados aparecerá aquí una vez que se registren servicios a nombre de su empresa.</p>
             </div>`;
 
             return `<div class="space-y-6 fade-in">
                 <div class="flex flex-col lg:flex-row justify-between lg:items-end gap-4">
                     <div>
                         <h2 class="text-2xl font-bold text-slate-800">Historial de Servicios</h2>
-                        <p class="text-slate-600 mt-1">Registro completo de servicios facturados y completados.</p>
+                        <p class="text-slate-600 mt-1">Ensayos acreditados registrados a nombre de <span class="font-semibold">${clientData.user.name || 'su empresa'}</span>.</p>
                     </div>
                     <div class="bg-white rounded-lg border border-slate-200 px-4 py-3 shadow-sm">
-                        <p class="text-sm text-slate-500">Total invertido</p>
-                        <p class="text-2xl font-bold text-slate-800">$${totalAmount.toLocaleString('es-CO')}</p>
+                        <p class="text-sm text-slate-500">Total ensayos</p>
+                        <p class="text-2xl font-bold text-slate-800">${sorted.length}</p>
                     </div>
                 </div>
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-6">
@@ -1220,8 +1270,18 @@
             </div>`;
         }
         
-        window.viewDetails = function(id) {
-            alert('Ver detalles del servicio ' + id + '\n\nEn producción, esto abriría una vista detallada.');
+        window.viewHistoryDetails = function(id) {
+            const item = clientData.history.find(h => h.id === id);
+            if (!item) return;
+            const lines = [
+                `Proceso: ${item.id}`,
+                `Tipo: ${item.service}`,
+                `Estado: ${item.statusRaw || item.status}`,
+                `Fecha: ${item.date}`,
+                `Informe: ${item.informe || 'N/A'}`,
+                `Valor: ${item.amount}`
+            ].join('\n');
+            alert('Detalles del proceso ' + id + ':\n\n' + lines);
         };
 
         function renderProfile() {
@@ -1242,7 +1302,7 @@
                                 </div>
                                 <div>
                                     <h3 class="text-xl font-bold">${u.name || 'Nombre de Empresa'}</h3>
-                                    <p class="text-blue-100 text-sm">${u.plan || 'Plan Estándar'}</p>
+                                    <p class="text-blue-100 text-sm">${u.nit ? 'NIT: ' + u.nit : ''}</p>
                                 </div>
                             </div>
                         </div>
@@ -1277,52 +1337,25 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="mt-6 pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-                                <div class="flex items-center text-sm text-slate-500">
-                                    <i data-lucide="calendar" class="w-4 h-4 mr-2"></i>
-                                    <span>Miembro desde: ${u.joined || '—'}</span>
-                                </div>
-                                <button class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
-                                    <i data-lucide="edit" class="w-4 h-4 inline mr-2"></i>Solicitar Actualización
-                                </button>
+                            <div class="mt-6 pt-6 border-t border-slate-100 flex items-center text-sm text-slate-500">
+                                <i data-lucide="calendar" class="w-4 h-4 mr-2"></i>
+                                <span>Miembro desde: ${u.joined || '—'}</span>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Sidebar de plan -->
+                    <!-- Sidebar de contacto -->
                     <div class="space-y-6">
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                            <h3 class="text-lg font-bold text-slate-800 mb-4">Plan Actual</h3>
-                            <div class="p-4 bg-blue-50 rounded-lg border border-blue-100 mb-4">
-                                <p class="text-sm font-medium text-blue-800 mb-1">${u.plan || 'Plan Estándar'}</p>
-                                <p class="text-xs text-blue-600">Servicios ilimitados de ensayo</p>
-                            </div>
-                            <div class="space-y-3">
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-slate-600">Informes mensuales</span>
-                                    <span class="font-medium text-slate-800">Ilimitados</span>
-                                </div>
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-slate-600">Tiempo de respuesta</span>
-                                    <span class="font-medium text-slate-800">48 horas</span>
-                                </div>
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-slate-600">Soporte</span>
-                                    <span class="font-medium text-slate-800">Prioritario</span>
-                                </div>
-                            </div>
-                        </div>
-                        
                         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                             <h3 class="text-lg font-bold text-slate-800 mb-4">Contacto Soporte</h3>
                             <div class="space-y-3">
-                                <a href="mailto:soporte@hightest.com" class="flex items-center p-3 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 transition-colors">
+                                <a href="mailto:reportes.hightest@gmail.com" class="flex items-center p-3 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 transition-colors">
                                     <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
                                         <i data-lucide="mail" class="w-4 h-4 text-blue-600"></i>
                                     </div>
                                     <div>
                                         <p class="text-sm font-medium text-slate-800">Correo</p>
-                                        <p class="text-xs text-slate-500">soporte@hightest.com</p>
+                                        <p class="text-xs text-slate-500">reportes.hightest@gmail.com</p>
                                     </div>
                                 </a>
                                 <a href="tel:+573226197864" class="flex items-center p-3 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 transition-colors">
@@ -1414,9 +1447,9 @@
         }
 
         // --- 5. Inicializar ---
-        document.addEventListener('DOMContentLoaded', () => {
-            loadClientData();
+        document.addEventListener('DOMContentLoaded', async () => {
             setTab('dashboard');
+            await loadClientData();
             lucide.createIcons();
             initTheme();
             const themeBtn = document.getElementById('themeToggleBtn');
