@@ -8465,7 +8465,18 @@ function _insertIfNewer(map, caso) {
         const tsNew = caso.timestamp || caso.updated_at || caso.created_at || '';
         const tsOld = existing.timestamp || existing.updated_at || existing.created_at || '';
         if (tsNew > tsOld) {
-            const preserveFields = ['signatureData', 'items', 'formData', 'cliente', 'cotizacion'];
+            const preserveFields = [
+                'signatureData', 'items', 'formData', 'cotizacion',
+                'cliente', 'nitEmpresa', 'facturar', 'informeNombre', 'facturarNombre',
+                'informe', 'observaciones', 'clienteEmail', 'empresaEmail', 'copiaEmail',
+                'lavado', 'elementosLavados', 'tipoLavado', 'fechaLavado', 'responsableLavado', 'observacionesLavado',
+                'inspeccionVisual', 'pruebasFuncionales', 'inspectorCalidad', 'fechaInspeccion', 'observacionesCalidad', 'estadoCalidad',
+                'clienteRecepcionNombre', 'clienteRecepcionCedula', 'clienteRecepcionCargo', 'fechaFirmaRecepcion',
+                'clienteEntregaNombre', 'clienteEntregaCedula', 'clienteEntregaCargo', 'fechaFirmaEntrega',
+                'consentRecepcion', 'consentEntrega',
+                'highTestRecepcionNombre', 'highTestRecepcionCargo', 'highTestEntregaNombre', 'highTestEntregaCargo',
+                'fechaRecepcion', 'fechaEntrega'
+            ];
             preserveFields.forEach(f => {
                 const val = caso[f];
                 const isEmpty = val === null || val === undefined || val === '' || val === 'NO DEFINIDA' || (Array.isArray(val) && val.length === 0);
