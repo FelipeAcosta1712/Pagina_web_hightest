@@ -8081,7 +8081,7 @@ document.getElementById("empresaSelect")?.addEventListener("change", function() 
     const nitValue = selected.getAttribute("data-nit") || "";
     const nitInput = document.getElementById("nitEmpresa");
     if (nitInput) {
-        nitInput.value = nitValue ? nitValue : "NO DEFINIDA";
+        nitInput.value = nitValue || '';
     }
     
     // Mostrar u ocultar botón de limpiar según si hay selección
@@ -9572,6 +9572,7 @@ function validarCedula(cedula) {
 
 /**
  * Valida formato de NIT colombiano
+ * Acepta NITs con o sin dígito de verificación
  * @param {string} nit - NIT a validar
  * @returns {boolean} True si es válido
  */
@@ -9581,28 +9582,13 @@ function validarNIT(nit) {
     // Eliminar espacios, puntos y guiones
     const clean = nit.replace(/[\s.\-]/g, '');
     
-    // Debe tener entre 9 y 10 caracteres (incluyendo dígito de verificación)
+    // Solo dígitos
+    if (!/^\d+$/.test(clean)) return false;
+    
+    // Debe tener entre 9 y 11 dígitos
     if (clean.length < 9 || clean.length > 11) return false;
     
-    // Extraer número y dígito de verificación
-    const numero = clean.slice(0, -1);
-    const digitoVerificacion = clean.slice(-1);
-    
-    // Verificar que el número sea numérico
-    if (!/^\d+$/.test(numero)) return false;
-    
-    // Calcular dígito de verificación
-    const factores = [71, 67, 59, 53, 47, 43, 41, 37, 29, 23, 19, 17, 13, 7, 3];
-    let suma = 0;
-    
-    for (let i = 0; i < numero.length; i++) {
-        suma += parseInt(numero[i]) * factores[factores.length - numero.length + i];
-    }
-    
-    const residuo = suma % 11;
-    const digitoCalculado = residuo < 2 ? residuo : 11 - residuo;
-    
-    return digitoCalculado.toString() === digitoVerificacion;
+    return true;
 }
 
 /**
@@ -11227,5 +11213,279 @@ function exportarCasoJSON(numRecepcion) {
     link.download = `${numRecepcion}_${safeNombre}_entrega_${fechaEntrega}.json`;    link.click();
     URL.revokeObjectURL(url);
     try { showNotification('📥 Caso exportado - Puedes cargarlo en el formulario', 'success'); } catch(e){}
+}
+
+// =======================================================
+// FUNCIONES DE MARCACIÓN DE ÍTEMS
+// =======================================================
+
+let marcacionData = [];
+let marcacionProcesoPrefix = 'R26';
+
+/**
+ * Abre el modal de marcación de ítems.
+ * Carga el detalle del proceso desde la BD y lo muestra ordenado.
+ */
+async function verMarcacion() {
+    const numeroProceso = document.getElementById('quoteNumber')?.value;
+    if (!numeroProceso) {
+        alert('Primero debe ingresar un número de recepción.');
+        return;
+    }
+
+    // Extraer prefijo del proceso (ej: "R26" de "R26 0010")
+    const prefixMatch = numeroProceso.match(/^([A-Za-z]+\s*)/);
+    marcacionProcesoPrefix = prefixMatch ? prefixMatch[1].trim() : 'R26';
+
+    // Buscar el proceso en la BD para obtener su ID
+    let procesoId = null;
+    try {
+        const resp = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_proceso', numero_proceso: numeroProceso })
+        });
+        const result = await resp.json();
+        if (result.ok && result.proceso) {
+            procesoId = result.proceso.id;
+        }
+    } catch (e) {
+        console.warn('Error buscando proceso:', e);
+    }
+
+    if (!procesoId) {
+        alert('No se encontró un proceso asociado a este número de recepción.\nPrimero genere el PDF de Recepción.');
+        return;
+    }
+
+    // Obtener el detalle del proceso
+    let detalle = [];
+    try {
+        const resp = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_detalle_proceso', proceso_id: procesoId })
+        });
+        const result = await resp.json();
+        if (result.ok && Array.isArray(result.detalle)) {
+            detalle = result.detalle;
+        }
+    } catch (e) {
+        console.warn('Error obteniendo detalle:', e);
+    }
+
+    if (detalle.length === 0) {
+        alert('No hay ítems registrados para este proceso.\nPrimero guarde los items en la recepción.');
+        return;
+    }
+
+    // Enriquecer con nombres de ensayo
+    const itemsData = Array.isArray(predefinedItemsData) ? predefinedItemsData : [];
+    marcacionData = detalle.map((item, index) => {
+        const ensayo = itemsData.find(e => e.id === item.ensayo_id);
+        return {
+            id: item.id,
+            ensayo_id: item.ensayo_id,
+            elemento: ensayo?.nombre || `Ítem ${item.ensayo_id}`,
+            cantidad: item.cantidad || 0,
+            marca: item.marca || '',
+            marcacion: item.marcacion || 'Pendiente',
+            observacion_tecnica: item.observacion_tecnica || item.observaciones || '',
+            index: index
+        };
+    });
+
+    // Poblar tabla
+    renderMarcacionTable();
+    updateMarcacionStats();
+
+    // Abrir modal
+    const modal = document.getElementById('marcacionModal');
+    if (modal) {
+        modal.hidden = false;
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+/**
+ * Renderiza la tabla de marcación con los datos cargados.
+ * Los ítems con "PARES" en el nombre generan 2 filas consecutivas.
+ */
+function renderMarcacionTable() {
+    const tbody = document.getElementById('marcacionTableBody');
+    if (!tbody) return;
+
+    if (marcacionData.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="marcacion-empty">
+                    <i class="fas fa-clipboard-list"></i>
+                    No hay ítems para mostrar
+                </td>
+            </tr>`;
+        return;
+    }
+
+    // Construir filas expandiendo SECCIONES y PARES
+    const filas = [];
+    let numCounter = 1;
+
+    marcacionData.forEach((item, i) => {
+        const upper = item.elemento.toUpperCase();
+        const esPares = upper.includes('PARES');
+        const esSecciones = upper.includes('SECCIONES');
+        const esTramos = upper.includes('TRAMOS');
+        let cantidadFilas = 1;
+        let labelExtra = '';
+
+        if (esSecciones || esTramos) {
+            cantidadFilas = item.cantidad || 1;
+            labelExtra = esSecciones ? 'sección' : 'tramo';
+        } else if (esPares) {
+            cantidadFilas = 2;
+            labelExtra = 'par';
+        }
+
+        for (let f = 0; f < cantidadFilas; f++) {
+            const num = String(numCounter).padStart(3, '0');
+            const label = `${marcacionProcesoPrefix} ${num}`;
+            const subLabel = (esSecciones || esTramos)
+                ? ` <small style="color:#64748b">(${labelExtra} ${f + 1})</small>`
+                : esPares
+                    ? ` <small style="color:#64748b">(${labelExtra} ${f + 1})</small>`
+                    : '';
+
+            filas.push(`
+            <tr data-index="${i}" data-par="${f}">
+                <td class="marcacion-row-num">${label}${subLabel}</td>
+                <td class="marcacion-row-name">${escapeHtml(item.elemento)}${item.marca ? ' <small style="color:#64748b">(' + escapeHtml(item.marca) + ')</small>' : ''}</td>
+                <td class="marcacion-row-qty">${(esSecciones || esPares || esTramos) ? '1' : item.cantidad}</td>
+                <td>
+                    <input type="text" class="marcacion-obs-input" 
+                        value="${escapeHtml(item.observacion_tecnica)}" 
+                        placeholder="Observación técnica..."
+                        onchange="updateMarcacionObs(${i}, this.value)">
+                </td>
+                <td>
+                    <select class="marcacion-select" data-value="${item.marcacion}"
+                        onchange="updateMarcacionEstado(${i}, this.value, this)">
+                        <option value="Pendiente" ${item.marcacion === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
+                        <option value="Marcado" ${item.marcacion === 'Marcado' ? 'selected' : ''}>✅ Marcado</option>
+                        <option value="Revisado" ${item.marcacion === 'Revisado' ? 'selected' : ''}>🔍 Revisado</option>
+                        <option value="No Conforme" ${item.marcacion === 'No Conforme' ? 'selected' : ''}>❌ No Conforme</option>
+                    </select>
+                </td>
+            </tr>`);
+            numCounter++;
+        }
+    });
+
+    tbody.innerHTML = filas.join('');
+}
+
+/**
+ * Actualiza el estado de marcación de un ítem.
+ */
+function updateMarcacionEstado(index, value, selectEl) {
+    if (!marcacionData[index]) return;
+    marcacionData[index].marcacion = value;
+    if (selectEl) selectEl.setAttribute('data-value', value);
+    updateMarcacionStats();
+}
+
+/**
+ * Actualiza la observación técnica de un ítem.
+ */
+function updateMarcacionObs(index, value) {
+    if (!marcacionData[index]) return;
+    marcacionData[index].observacion_tecnica = value;
+}
+
+/**
+ * Actualiza las estadísticas del resumen.
+ * Cuenta filas visuales (SECCIONES = cantidad filas, PARES = 2 filas).
+ */
+function updateMarcacionStats() {
+    let totalVisuales = 0;
+    let pendientes = 0;
+    let marcados = 0;
+    let revisados = 0;
+    let noConforme = 0;
+
+    marcacionData.forEach(item => {
+        const upper = item.elemento.toUpperCase();
+        const esPares = upper.includes('PARES');
+        const esSecciones = upper.includes('SECCIONES');
+        const esTramos = upper.includes('TRAMOS');
+        let filas = 1;
+
+        if (esSecciones || esTramos) filas = item.cantidad || 1;
+        else if (esPares) filas = 2;
+
+        totalVisuales += filas;
+
+        if (item.marcacion === 'Pendiente') pendientes += filas;
+        else if (item.marcacion === 'Marcado') marcados += filas;
+        else if (item.marcacion === 'Revisado') revisados += filas;
+        else if (item.marcacion === 'No Conforme') noConforme += filas;
+    });
+
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+
+    setVal('marcacionTotalItems', totalVisuales);
+    setVal('marcacionPendientes', pendientes);
+    setVal('marcacionMarcados', marcados);
+    setVal('marcacionRevisados', revisados);
+    setVal('marcacionNoConforme', noConforme);
+}
+
+/**
+ * Guarda todas las marcaciones en la BD.
+ */
+async function guardarMarcacion() {
+    if (marcacionData.length === 0) {
+        alert('No hay ítems para guardar.');
+        return;
+    }
+
+    const marcaciones = marcacionData.map(item => ({
+        detalle_id: item.id,
+        marcacion: item.marcacion,
+        observacion_tecnica: item.observacion_tecnica
+    }));
+
+    try {
+        const resp = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update_marcacion_batch', marcaciones })
+        });
+        const result = await resp.json();
+
+        if (result.ok) {
+            showNotification('✅ Marcación guardada correctamente', 'success');
+            closeMarcacion();
+        } else {
+            alert('Error al guardar: ' + (result.error || 'Error desconocido'));
+        }
+    } catch (e) {
+        console.error('Error guardando marcación:', e);
+        alert('Error de conexión al guardar la marcación.');
+    }
+}
+
+/**
+ * Cierra el modal de marcación.
+ */
+function closeMarcacion() {
+    const modal = document.getElementById('marcacionModal');
+    if (modal) {
+        modal.hidden = true;
+        document.body.style.overflow = '';
+    }
+    marcacionData = [];
 }
 

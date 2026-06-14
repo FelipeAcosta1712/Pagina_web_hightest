@@ -838,6 +838,74 @@ exports.handler = async (event) => {
                 return jsonResponse(200, { ok: true, detalle: data || [] });
             }
 
+            // Actualizar marcación de un item del detalle
+            if (payload.action === 'update_marcacion') {
+                const { detalle_id, marcacion, observacion_tecnica } = payload;
+                if (!detalle_id) return jsonResponse(400, { ok: false, error: 'detalle_id requerido' });
+
+                const updateData = {};
+                if (marcacion !== undefined) updateData.marcacion = marcacion;
+                if (observacion_tecnica !== undefined) updateData.observacion_tecnica = observacion_tecnica;
+
+                if (Object.keys(updateData).length === 0) {
+                    return jsonResponse(400, { ok: false, error: 'No hay campos para actualizar' });
+                }
+
+                const { data, error } = await supabase
+                    .from('detalle_procesos_ac')
+                    .update(updateData)
+                    .eq('id', detalle_id)
+                    .select()
+                    .limit(1);
+
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al actualizar marcación', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true, item: Array.isArray(data) ? data[0] : data });
+            }
+
+            // Actualizar marcación de múltiples items de una vez
+            if (payload.action === 'update_marcacion_batch') {
+                const { marcaciones } = payload;
+                if (!Array.isArray(marcaciones) || marcaciones.length === 0) {
+                    return jsonResponse(400, { ok: false, error: 'Array marcaciones requerido' });
+                }
+
+                const results = [];
+                let hasError = false;
+
+                for (const item of marcaciones) {
+                    const { detalle_id, marcacion, observacion_tecnica } = item;
+                    if (!detalle_id) continue;
+
+                    const updateData = {};
+                    if (marcacion !== undefined) updateData.marcacion = marcacion;
+                    if (observacion_tecnica !== undefined) updateData.observacion_tecnica = observacion_tecnica;
+
+                    if (Object.keys(updateData).length === 0) continue;
+
+                    const { data, error } = await supabase
+                        .from('detalle_procesos_ac')
+                        .update(updateData)
+                        .eq('id', detalle_id)
+                        .select()
+                        .limit(1);
+
+                    if (error) {
+                        hasError = true;
+                    } else {
+                        results.push(Array.isArray(data) ? data[0] : data);
+                    }
+                }
+
+                if (hasError && results.length === 0) {
+                    return jsonResponse(500, { ok: false, error: 'Error al actualizar marcaciones' });
+                }
+
+                return jsonResponse(200, { ok: true, updated: results });
+            }
+
             // =============================================
             // COTIZACIONES - CRUD completo
             // =============================================

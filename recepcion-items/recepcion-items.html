@@ -476,7 +476,9 @@
                             <button type="button" class="btn btn-secondary" onclick="saveAsDraft()">
                                 <i class="fas fa-save"></i> Guardar Borrador
                             </button>
-                            
+                            <button type="button" class="btn btn-warning" onclick="verMarcacion()">
+                                <i class="fas fa-tasks"></i> Ver Marcación
+                            </button>
                             <button id="btnLoadCompleted" type="button" class="btn btn-secondary" style="display:none;" title="Solo Administrador y Director Técnico" onclick="loadCompletedCases()">
                                 <i class="fas fa-folder-open"></i> Casos Terminados
                             </button>
@@ -621,6 +623,65 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal de Marcación de Ítems -->
+    <div id="marcacionModal" class="marcacion-modal-overlay" hidden>
+        <div class="marcacion-modal-panel" role="dialog" aria-modal="true" aria-labelledby="marcacionModalTitle">
+            <div class="marcacion-modal-header">
+                <div>
+                    <div class="marcacion-modal-kicker">Recepción de Items</div>
+                    <h3 id="marcacionModalTitle">Marcación de Ítems</h3>
+                    <p id="marcacionModalSubtitle">Visualiza y marca cada elemento recibido</p>
+                </div>
+                <button type="button" class="marcacion-modal-close" onclick="closeMarcacion()" aria-label="Cerrar modal">✕</button>
+            </div>
+            <div class="marcacion-summary" id="marcacionSummary">
+                <div class="marcacion-stat">
+                    <span class="marcacion-stat__value" id="marcacionTotalItems">0</span>
+                    <span class="marcacion-stat__label">Ítems</span>
+                </div>
+                <div class="marcacion-stat marcacion-stat--pending">
+                    <span class="marcacion-stat__value" id="marcacionPendientes">0</span>
+                    <span class="marcacion-stat__label">Pendientes</span>
+                </div>
+                <div class="marcacion-stat marcacion-stat--done">
+                    <span class="marcacion-stat__value" id="marcacionMarcados">0</span>
+                    <span class="marcacion-stat__label">Marcados</span>
+                </div>
+                <div class="marcacion-stat marcacion-stat--review">
+                    <span class="marcacion-stat__value" id="marcacionRevisados">0</span>
+                    <span class="marcacion-stat__label">Revisados</span>
+                </div>
+                <div class="marcacion-stat marcacion-stat--reject">
+                    <span class="marcacion-stat__value" id="marcacionNoConforme">0</span>
+                    <span class="marcacion-stat__label">No Conforme</span>
+                </div>
+            </div>
+            <div class="marcacion-table-wrapper">
+                <table class="marcacion-table">
+                    <thead>
+                        <tr>
+                            <th style="width:5%">Nº</th>
+                            <th style="width:30%">Elemento</th>
+                            <th style="width:10%">Cantidad</th>
+                            <th style="width:30%">Observación</th>
+                            <th style="width:25%">Marcación</th>
+                        </tr>
+                    </thead>
+                    <tbody id="marcacionTableBody">
+                        <!-- Se llena dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="marcacion-modal-footer">
+                <button type="button" class="btn btn-primary" onclick="guardarMarcacion()">
+                    <i class="fas fa-save"></i> Guardar Marcación
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="closeMarcacion()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="script.js"></script>
     <script src="save-table.js"></script>

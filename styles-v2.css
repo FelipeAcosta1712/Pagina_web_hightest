@@ -871,6 +871,8 @@ a:hover {
     border-radius: 10px;
     box-shadow: 0 1px 4px rgba(0, 82, 163, 0.12);
     flex: 0 0 auto;
+    align-self: flex-start;
+    margin-top: var(--spacing-sm);
 }
 
 #resetAcreditadosFiltersBtn:hover,

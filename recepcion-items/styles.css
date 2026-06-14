@@ -1224,6 +1224,274 @@ th[data-col="acciones"],
 }
 
 /* =========================================
+   MODAL DE MARCACIÓN DE ÍTEMS
+========================================= */
+.marcacion-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 15, 35, 0.64);
+  backdrop-filter: blur(8px);
+  z-index: 10004;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.marcacion-modal-overlay[hidden] {
+  display: none !important;
+}
+
+.marcacion-modal-panel {
+  width: min(960px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 28px 80px rgba(2, 20, 46, 0.35);
+  padding: 20px;
+}
+
+.marcacion-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.marcacion-modal-kicker {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-weight: 700;
+  color: #0288d1;
+  margin-bottom: 4px;
+}
+
+.marcacion-modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #022859;
+}
+
+.marcacion-modal-header p {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: #5f6b7a;
+}
+
+.marcacion-modal-close {
+  border: none;
+  background: #fff;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(2, 40, 89, 0.12);
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.marcacion-modal-close:hover {
+  background: #f0f4f8;
+}
+
+/* Resumen de estados */
+.marcacion-summary {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.marcacion-stat {
+  flex: 1;
+  min-width: 100px;
+  background: #f0f4f8;
+  border-radius: 12px;
+  padding: 10px 14px;
+  text-align: center;
+  border: 1px solid rgba(2, 40, 89, 0.08);
+}
+
+.marcacion-stat__value {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #022859;
+  line-height: 1.2;
+}
+
+.marcacion-stat__label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #5f6b7a;
+  margin-top: 2px;
+}
+
+.marcacion-stat--pending .marcacion-stat__value { color: #f59e0b; }
+.marcacion-stat--done .marcacion-stat__value { color: #10b981; }
+.marcacion-stat--review .marcacion-stat__value { color: #3b82f6; }
+.marcacion-stat--reject .marcacion-stat__value { color: #ef4444; }
+
+/* Tabla de marcación */
+.marcacion-table-wrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(2, 40, 89, 0.1);
+  background: #fff;
+}
+
+.marcacion-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.marcacion-table thead {
+  background: linear-gradient(135deg, #022859, #0369a1);
+  color: #fff;
+}
+
+.marcacion-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.marcacion-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eef2f7;
+  vertical-align: middle;
+}
+
+.marcacion-table tbody tr:hover {
+  background: #f0f7ff;
+}
+
+.marcacion-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.marcacion-row-num {
+  font-weight: 700;
+  color: #022859;
+}
+
+.marcacion-row-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.marcacion-row-qty {
+  text-align: center;
+  font-weight: 700;
+  color: #022859;
+}
+
+.marcacion-row-obs {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.marcacion-obs-input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-family: inherit;
+  resize: none;
+  background: #fafbfc;
+}
+
+.marcacion-obs-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+/* Select de marcación */
+.marcacion-select {
+  width: 100%;
+  padding: 6px 10px;
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #fff;
+  transition: all 0.2s;
+  appearance: auto;
+}
+
+.marcacion-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.marcacion-select[data-value="Pendiente"] {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.marcacion-select[data-value="Marcado"] {
+  border-color: #10b981;
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.marcacion-select[data-value="Revisado"] {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+.marcacion-select[data-value="No Conforme"] {
+  border-color: #ef4444;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+/* Footer del modal */
+.marcacion-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+/* Estado vacío */
+.marcacion-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #5f6b7a;
+  font-size: 0.9rem;
+}
+
+.marcacion-empty i {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  display: block;
+  opacity: 0.4;
+}
+
+/* =========================================
    INFORMACION DE LAVADO
 ========================================= */
 /* Estilos para la sección de información de lavado */
