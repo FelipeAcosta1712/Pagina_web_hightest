@@ -7467,11 +7467,12 @@ function updateDraftStatus(cotizacion, status) {
     drafts[idx].status = status;
     drafts[idx].timestamp = new Date().toISOString();
     
-    // Si es recepción, asegurar que tenga datos guardados
     if (status === 'recepcion' || status === 'entrega') {
-        // Obtener datos actuales del formulario y mergearlos
         try {
             const currentFormData = collectFormData();
+            if (typeof signatureData === 'object' && signatureData !== null) {
+                currentFormData.signatureData = signatureData;
+            }
             drafts[idx] = { ...drafts[idx], ...currentFormData, status: status, timestamp: new Date().toISOString() };
         } catch (e) {
             console.log('No hay formulario activo, solo actualizando status');
@@ -8464,6 +8465,14 @@ function _insertIfNewer(map, caso) {
         const tsNew = caso.timestamp || caso.updated_at || caso.created_at || '';
         const tsOld = existing.timestamp || existing.updated_at || existing.created_at || '';
         if (tsNew > tsOld) {
+            const preserveFields = ['signatureData', 'items', 'formData', 'cliente', 'cotizacion'];
+            preserveFields.forEach(f => {
+                const val = caso[f];
+                const isEmpty = val === null || val === undefined || val === '' || val === 'NO DEFINIDA' || (Array.isArray(val) && val.length === 0);
+                if (isEmpty && existing[f]) {
+                    caso[f] = existing[f];
+                }
+            });
             map.set(key, caso);
         }
     }
