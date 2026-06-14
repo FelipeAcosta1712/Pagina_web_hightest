@@ -194,6 +194,16 @@ function formatStatusLabel(status) {
     return map[key] || status;
 }
 
+/**
+ * Determina si un proceso está activo basado en su estado.
+ * Solo los procesos con estado 'finalizado' se consideran inactivos.
+ * 'entrega-cliente' y demás estados se mantienen activos.
+ */
+function isProcesoActivo(row) {
+    const estado = normalizeStatusKey(row.estado || row.status || '');
+    return estado !== 'finalizado';
+}
+
 function normalizeStatusKey(status) {
     if (!status) return '';
     const raw = String(status).trim().toLowerCase();
@@ -464,10 +474,10 @@ function filtrarProcesos() {
     const finalizedFilters = getFinalizedProcesoFiltersFromDom();
 
     const activeSource = PROCESOS_STORE.all.filter(
-        (row) => !((row.estado || row.status || '').toString().toLowerCase().includes('finalizado'))
+        (row) => isProcesoActivo(row)
     );
     const finalizedSource = PROCESOS_STORE.all.filter(
-        (row) => ((row.estado || row.status || '').toString().toLowerCase().includes('finalizado'))
+        (row) => !isProcesoActivo(row)
     );
 
     PROCESOS_STORE.filtered.active = activeSource.filter((row) => matchesProcesoFilters(row, mainFilters));
@@ -5137,6 +5147,7 @@ const CommercialQuotesModule = {
         this.loadData();
         this.bindEvents();
         this.populateClientSelect();
+        this.populateRecepcionSelect();
         this.render();
         this.initialized = true;
     },
@@ -5176,6 +5187,7 @@ const CommercialQuotesModule = {
         this.previewEmailEl = document.getElementById('commercialPreviewEmail');
         this.previewPhoneEl = document.getElementById('commercialPreviewPhone');
         this.previewBadgeEl = document.getElementById('commercialClientPreviewBadge');
+        this.recepcionSelectEl = document.getElementById('commercialRecepcionSelect');
     },
 
     bindEvents() {
@@ -5202,6 +5214,7 @@ const CommercialQuotesModule = {
         document.getElementById('commercialRejectBtn')?.addEventListener('click', () => this.rejectQuote());
 
         this.clientSelectEl?.addEventListener('change', () => this.syncClientSelection());
+        this.recepcionSelectEl?.addEventListener('change', () => this.vincularRecepcion());
 
         [
             this.quoteNameEl,
@@ -5261,14 +5274,68 @@ const CommercialQuotesModule = {
             const stored = localStorage.getItem(this.storageKey);
             if (stored) {
                 this.quotes = JSON.parse(stored);
-                return;
             }
         } catch (error) {
-            console.error('No se pudo cargar el módulo comercial desde localStorage:', error);
+            console.error('Error cargando caché local:', error);
         }
 
-        this.quotes = this.getSeedQuotes();
-        this.saveData();
+        this._fetchFromSupabase();
+    },
+
+    async _fetchFromSupabase() {
+        try {
+            const resp = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_cotizaciones' })
+            });
+            const result = await resp.json();
+            if (result.ok && Array.isArray(result.cotizaciones)) {
+                this.quotes = result.cotizaciones.map(c => this._supabaseToQuote(c));
+                localStorage.setItem(this.storageKey, JSON.stringify(this.quotes));
+                this.render();
+            }
+        } catch (e) {
+            console.warn('No se pudieron cargar cotizaciones del servidor:', e.message);
+            if (!this.quotes || this.quotes.length === 0) {
+                this.quotes = this.getSeedQuotes();
+                localStorage.setItem(this.storageKey, JSON.stringify(this.quotes));
+            }
+        }
+    },
+
+    _supabaseToQuote(c) {
+        return {
+            id: c.cotizacion || `COT-${c.id}`,
+            dbId: c.id,
+            procesoId: c.proceso_id,
+            date: (c.created_at || '').slice(0, 10),
+            status: c.estado || 'borrador',
+            responsible: '',
+            contactName: '',
+            company: c.cliente || '',
+            email: '',
+            phone: '',
+            clientId: '',
+            cliente: c.cliente || '',
+            informeNombre: c.informe_nombre || '',
+            items: Array.isArray(c.items) ? c.items : [],
+            history: [],
+            total: Number(c.total_valor) || 0,
+        };
+    },
+
+    _quoteToSupabase(quote) {
+        return {
+            proceso_id: quote.procesoId || null,
+            cotizacion: quote.id || '',
+            cliente: quote.cliente || quote.company || '',
+            informe_nombre: quote.informeNombre || '',
+            items: quote.items || [],
+            total_items: (quote.items || []).length,
+            total_valor: quote.total || 0,
+            estado: quote.status || 'borrador'
+        };
     },
 
     saveData() {
@@ -5277,6 +5344,29 @@ const CommercialQuotesModule = {
         } catch (error) {
             console.error('No se pudo guardar el módulo comercial:', error);
         }
+    },
+
+    async _saveToSupabase(quote) {
+        const payload = this._quoteToSupabase(quote);
+        if (quote.dbId) {
+            payload.id = quote.dbId;
+        }
+        try {
+            const action = quote.dbId ? 'update_cotizacion' : 'add_cotizacion';
+            const resp = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, ...payload })
+            });
+            const result = await resp.json();
+            if (result.ok && result.cotizacion) {
+                quote.dbId = result.cotizacion.id;
+                return true;
+            }
+        } catch (e) {
+            console.warn('Error guardando cotización en servidor:', e.message);
+        }
+        return false;
     },
 
     getSeedQuotes() {
@@ -5466,12 +5556,15 @@ const CommercialQuotesModule = {
     normalizeStatus(status) {
         const raw = String(status || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         const map = {
-            pendiente: 'pendiente',
-            enrevision: 'en-revision',
-            'en-revision': 'en-revision',
-            revision: 'en-revision',
+            borrador: 'borrador',
+            pendiente: 'borrador',
+            enviada: 'enviada',
+            enrevision: 'enviada',
+            'en-revision': 'enviada',
+            revision: 'enviada',
             aprobada: 'aprobada',
             rechazada: 'rechazada',
+            facturada: 'facturada',
         };
 
         return map[raw.replace(/[_\s]+/g, '-')] || map[raw.replace(/[-_\s]+/g, '')] || raw;
@@ -5480,10 +5573,13 @@ const CommercialQuotesModule = {
     getStatusLabel(status) {
         const normalized = this.normalizeStatus(status);
         const labels = {
-            pendiente: 'Pendiente',
-            'en-revision': 'En revisión',
+            borrador: 'Borrador',
+            pendiente: 'Borrador',
+            enviada: 'Enviada',
+            'en-revision': 'Enviada',
             aprobada: 'Aprobada',
             rechazada: 'Rechazada',
+            facturada: 'Facturada',
         };
         return labels[normalized] || 'Pendiente';
     },
@@ -5512,7 +5608,7 @@ const CommercialQuotesModule = {
         return {
             id: this.getNextQuoteId(),
             date: today,
-            status: 'pendiente',
+            status: 'borrador',
             responsible: defaultResponsible,
             contactName: '',
             company: '',
@@ -5544,6 +5640,8 @@ const CommercialQuotesModule = {
                 quote.id,
                 quote.contactName,
                 quote.company,
+                quote.cliente,
+                quote.informeNombre,
                 quote.email,
                 quote.phone,
                 quote.responsible,
@@ -5607,18 +5705,14 @@ const CommercialQuotesModule = {
             return;
         }
 
-        const activeCount = this.quotes.filter((quote) => ['pendiente', 'en-revision'].includes(this.normalizeStatus(quote.status))).length;
-        const pendingCount = this.quotes.filter((quote) => this.normalizeStatus(quote.status) === 'pendiente').length;
-        const approvedCount = this.quotes.filter((quote) => this.normalizeStatus(quote.status) === 'aprobada').length;
-        const rejectedCount = this.quotes.filter((quote) => this.normalizeStatus(quote.status) === 'rechazada').length;
-        const totalValue = this.quotes.reduce((sum, quote) => sum + this.getQuoteTotal(quote), 0);
+        const total = this.quotes.length;
+        const pendientes = this.quotes.filter((quote) => this.normalizeStatus(quote.status) === 'borrador').length;
+        const hechas = total - pendientes;
 
         const cards = [
-            { icon: '✨', growth: '+12%', label: 'Cotizaciones activas', value: activeCount },
-            { icon: '⏳', growth: '+8%', label: 'Pendientes', value: pendingCount },
-            { icon: '✅', growth: '+15%', label: 'Aprobadas', value: approvedCount },
-            { icon: '⛔', growth: '-4%', label: 'Rechazadas', value: rejectedCount },
-            { icon: '💠', growth: '↑', label: 'Valor total cotizado', value: this.formatMoney(totalValue) },
+            { icon: '📋', label: 'Total Cotizaciones', value: total },
+            { icon: '⏳', label: 'Pendientes', value: pendientes },
+            { icon: '✅', label: 'Hechas', value: hechas },
         ];
 
         this.statsGrid.innerHTML = cards
@@ -5626,7 +5720,6 @@ const CommercialQuotesModule = {
                 <article class="commercial-stat-card">
                     <div class="commercial-stat-card__top">
                         <div class="commercial-stat-card__icon">${card.icon}</div>
-                        <span class="commercial-stat-card__growth">${card.growth}</span>
                     </div>
                     <p class="commercial-stat-card__value">${escapeHtml(String(card.value))}</p>
                     <p class="commercial-stat-card__label">${escapeHtml(card.label)}</p>
@@ -5658,8 +5751,8 @@ const CommercialQuotesModule = {
             <tr>
                 <td><strong>${escapeHtml(quote.id)}</strong></td>
                 <td>
-                    <div>${escapeHtml(quote.company)}</div>
-                    <small>${escapeHtml(quote.email || '')}</small>
+                    <div>${escapeHtml(quote.cliente || quote.company || 'N/A')}</div>
+                    <small>${escapeHtml(quote.informeNombre || quote.email || '')}</small>
                 </td>
                 <td>${escapeHtml(formatDateShort(quote.date))}</td>
                 <td><span class="commercial-status-badge ${this.getStatusClass(quote.status)}">${escapeHtml(this.getStatusLabel(quote.status))}</span></td>
@@ -5686,15 +5779,14 @@ const CommercialQuotesModule = {
                 <div class="commercial-mobile-card__top">
                     <div>
                         <div class="commercial-mobile-card__id">${escapeHtml(quote.id)}</div>
-                        <div>${escapeHtml(quote.company)}</div>
+                        <div>${escapeHtml(quote.cliente || quote.company || 'N/A')}</div>
                     </div>
                     <span class="commercial-status-badge ${this.getStatusClass(quote.status)}">${escapeHtml(this.getStatusLabel(quote.status))}</span>
                 </div>
                 <div class="commercial-mobile-card__meta">
                     <div><strong>Fecha:</strong> ${escapeHtml(formatDateShort(quote.date))}</div>
                     <div><strong>Total:</strong> ${escapeHtml(this.formatMoney(totals.total))}</div>
-                    <div><strong>Responsable:</strong> ${escapeHtml(quote.responsible || '')}</div>
-                    <div><strong>Correo:</strong> ${escapeHtml(quote.email || '')}</div>
+                    <div><strong>Informe:</strong> ${escapeHtml(quote.informeNombre || '')}</div>
                 </div>
                 <div class="commercial-mobile-card__actions">
                     <button type="button" class="commercial-action-button" data-action="view" data-id="${escapeHtml(quote.id)}">Ver</button>
@@ -5768,6 +5860,7 @@ const CommercialQuotesModule = {
         this.currentQuoteId = null;
         this.drawerMode = 'new';
         this.currentQuote = this.getActiveQuoteTemplate();
+        if (this.recepcionSelectEl) this.recepcionSelectEl.value = '';
         this.showDrawer();
         this.populateDrawer();
     },
@@ -5878,6 +5971,67 @@ const CommercialQuotesModule = {
         if (this.quoteEmailEl && selectedClient.email) this.quoteEmailEl.value = selectedClient.email;
         if (this.quotePhoneEl && selectedClient.phone) this.quotePhoneEl.value = selectedClient.phone;
         this.updatePreview(selectedClient);
+    },
+
+    async populateRecepcionSelect() {
+        if (!this.recepcionSelectEl) return;
+        try {
+            const resp = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_procesos_acreditados', limit: 500 })
+            });
+            const result = await resp.json();
+            if (result.ok && Array.isArray(result.procesos)) {
+                const opciones = result.procesos.map(p => {
+                    const num = p.numero_proceso || '';
+                    const cliente = p.cliente || '';
+                    const estado = p.estado || '';
+                    return `<option value="${p.id}" data-num="${num}" data-cliente="${cliente}" data-estado="${estado}">${num} — ${cliente}</option>`;
+                }).join('');
+                this.recepcionSelectEl.innerHTML = '<option value="">Sin vincular — Cotización manual</option>' + opciones;
+            }
+        } catch (e) {
+            console.warn('No se pudieron cargar recepciones:', e.message);
+        }
+    },
+
+    async vincularRecepcion() {
+        const procesoId = this.recepcionSelectEl?.value;
+        if (!procesoId) return;
+
+        try {
+            const resp = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'generar_cotizacion', proceso_id: Number(procesoId) })
+            });
+            const result = await resp.json();
+
+            if (result.ok && result.cotizacion) {
+                const c = result.cotizacion;
+                if (!this.currentQuote) {
+                    this.currentQuote = this.getActiveQuoteTemplate();
+                }
+                this.currentQuote.procesoId = c.proceso_id;
+                this.currentQuote.cliente = c.cliente || '';
+                this.currentQuote.informeNombre = c.informe_nombre || '';
+                this.currentQuote.company = c.cliente || '';
+                this.currentQuote.items = Array.isArray(c.items) ? c.items.map(item => ({
+                    description: item.nombre || item.description || '',
+                    quantity: item.cantidad || item.quantity || 1,
+                    price: item.precio_unitario || item.price || 0,
+                })) : [];
+
+                if (this.quoteCompanyEl) this.quoteCompanyEl.value = c.cliente || '';
+                this.renderItemRows();
+                this.recalculateTotals();
+                this.updatePreview();
+                this.showNotification?.('Recepción vinculada. Ajuste precios y cantidades.', 'success');
+            }
+        } catch (e) {
+            console.error('Error vinculando recepción:', e);
+        }
     },
 
     updatePreview(clientOverride = null) {
@@ -6014,6 +6168,7 @@ const CommercialQuotesModule = {
         this.currentQuote.clientId = this.clientSelectEl?.value || this.currentQuote.clientId || '';
         this.currentQuote.contactName = this.quoteNameEl?.value.trim() || this.currentQuote.contactName;
         this.currentQuote.company = this.quoteCompanyEl?.value.trim() || this.currentQuote.company;
+        this.currentQuote.cliente = this.quoteCompanyEl?.value.trim() || this.currentQuote.cliente || this.currentQuote.company;
         this.currentQuote.email = this.quoteEmailEl?.value.trim() || this.currentQuote.email;
         this.currentQuote.phone = this.quotePhoneEl?.value.trim() || this.currentQuote.phone;
         this.currentQuote.responsible = this.quoteResponsibleEl?.value.trim() || this.currentQuote.responsible;
@@ -6038,6 +6193,7 @@ const CommercialQuotesModule = {
         this.currentQuoteId = quote.id;
         this.currentQuote = JSON.parse(JSON.stringify(quote));
         this.saveData();
+        this._saveToSupabase(quote);
         this.populateClientSelect();
         this.render();
     },
@@ -6050,15 +6206,15 @@ const CommercialQuotesModule = {
 
     saveDraft() {
         this.syncQuoteFromForm();
-        this.currentQuote.status = 'pendiente';
-        this.addHistoryEntry(this.currentQuote, 'Borrador guardado', 'La cotización se actualizó desde el panel comercial.');
+        this.currentQuote.status = 'borrador';
+        this.addHistoryEntry(this.currentQuote, 'Borrador guardado', 'La cotización se guardó como borrador.');
         this.persistQuote();
         this.populateDrawer();
     },
 
     sendQuote() {
         this.syncQuoteFromForm();
-        this.currentQuote.status = 'en-revision';
+        this.currentQuote.status = 'enviada';
         this.addHistoryEntry(this.currentQuote, 'Cotización enviada', 'Se marcó para revisión del cliente.');
         this.persistQuote();
         this.populateDrawer();
@@ -6089,6 +6245,15 @@ const CommercialQuotesModule = {
         quote.status = this.normalizeStatus(status);
         this.addHistoryEntry(quote, this.getStatusLabel(quote.status), detail);
         this.saveData();
+
+        if (quote.dbId) {
+            fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'update_cotizacion_estado', id: quote.dbId, estado: quote.status })
+            }).catch(e => console.warn('Error actualizando estado en servidor:', e.message));
+        }
+
         if (this.currentQuoteId === quoteId) {
             this.currentQuote = JSON.parse(JSON.stringify(quote));
             this.populateDrawer();
@@ -6102,15 +6267,29 @@ const CommercialQuotesModule = {
             return;
         }
 
-        const cloned = JSON.parse(JSON.stringify(quote));
-        const today = new Date().toISOString().slice(0, 10);
-        cloned.id = this.getNextQuoteId();
-        cloned.date = today;
-        cloned.status = 'pendiente';
-        cloned.history = [{ date: today, title: 'Cotización duplicada', detail: `Copiada desde ${quote.id}.` }];
-        this.quotes.unshift(cloned);
-        this.saveData();
-        this.render();
+        if (quote.dbId) {
+            fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'duplicate_cotizacion', id: quote.dbId })
+            }).then(r => r.json()).then(result => {
+                if (result.ok && result.cotizacion) {
+                    this.quotes.unshift(this._supabaseToQuote(result.cotizacion));
+                    this.saveData();
+                    this.render();
+                }
+            }).catch(e => console.warn('Error duplicando en servidor:', e.message));
+        } else {
+            const cloned = JSON.parse(JSON.stringify(quote));
+            const today = new Date().toISOString().slice(0, 10);
+            cloned.id = this.getNextQuoteId();
+            cloned.date = today;
+            cloned.status = 'borrador';
+            cloned.history = [{ date: today, title: 'Cotización duplicada', detail: `Copiada desde ${quote.id}.` }];
+            this.quotes.unshift(cloned);
+            this.saveData();
+            this.render();
+        }
     },
 
     deleteQuote(quoteId) {
@@ -6130,6 +6309,15 @@ const CommercialQuotesModule = {
             this.closeDrawer();
         }
         this.saveData();
+
+        if (quote.dbId) {
+            fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'delete_cotizacion', id: quote.dbId })
+            }).catch(e => console.warn('Error eliminando del servidor:', e.message));
+        }
+
         this.render();
     },
 
@@ -6167,7 +6355,9 @@ const CommercialQuotesModule = {
         pdf.text('Cliente', marginX, cursorY);
         pdf.setFontSize(11);
         cursorY += 18;
-        pdf.text(`Empresa: ${quote.company || ''}`, marginX, cursorY);
+        pdf.text(`Cliente: ${quote.cliente || quote.company || ''}`, marginX, cursorY);
+        cursorY += 16;
+        pdf.text(`Informe a Nombre de: ${quote.informeNombre || ''}`, marginX, cursorY);
         cursorY += 16;
         pdf.text(`Contacto: ${quote.contactName || ''}`, marginX, cursorY);
         cursorY += 16;

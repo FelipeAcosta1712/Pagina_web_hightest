@@ -1189,7 +1189,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     const lock20Btn = document.getElementById('btnLockReception20Min');
     if (lock20Btn) {
-        lock20Btn.addEventListener('click', async () => await lockReceptionNumberForMinutes(20));
+        lock20Btn.addEventListener('click', async () => await lockReceptionNumberForMinutes(40));
     }
 
     const releaseReceptionBtn = document.getElementById('btnReleaseReceptionNumber');
@@ -1693,6 +1693,7 @@ window.dbUnavailableReceptionNumbers = window.dbUnavailableReceptionNumbers || n
 
 /**
  * Refresca la cache de procesos acreditados y los números reservados en DB.
+ * También limpia localStorage de números que ya no existen en la DB.
  * Devuelve un Set normalizado.
  */
 async function refreshDbUnavailableReceptionNumbers() {
@@ -1705,10 +1706,58 @@ async function refreshDbUnavailableReceptionNumbers() {
             if (code) s.add(normalizeReceptionNumber(code));
         });
         window.dbUnavailableReceptionNumbers = s;
+
+        // Limpiar localStorage: remover números de used/held que ya no existen en la DB
+        syncLocalStorageWithDB(s);
+
         return s;
     } catch (e) {
         console.warn('refreshDbUnavailableReceptionNumbers error', e);
         return window.dbUnavailableReceptionNumbers || new Set();
+    }
+}
+
+/**
+ * Sincroniza localStorage con la DB: elimina números de used y held
+ * que ya no existen en procesos_acreditados.
+ * Solo limpia si la DB devolvió al menos 1 proceso (evita limpiar con DB vacía/fallida).
+ */
+function syncLocalStorageWithDB(dbNumbers) {
+    if (!dbNumbers || dbNumbers.size === 0) return;
+
+    try {
+        // Limpiar used: solo mantener números que existen en la DB
+        const used = getUsedReceptionNumbers();
+        let usedChanged = false;
+        Object.keys(used).forEach((year) => {
+            const original = used[year] || [];
+            const filtered = original.filter((code) => dbNumbers.has(normalizeReceptionNumber(code)));
+            if (filtered.length !== original.length) {
+                used[year] = filtered;
+                usedChanged = true;
+            }
+        });
+        if (usedChanged) setUsedReceptionNumbers(used);
+
+        // Limpiar held: solo mantener números que existen en la DB
+        const held = getHeldReceptionNumbers();
+        let heldChanged = false;
+        Object.keys(held).forEach((code) => {
+            if (!dbNumbers.has(normalizeReceptionNumber(code))) {
+                delete held[code];
+                heldChanged = true;
+            }
+        });
+        if (heldChanged) setHeldReceptionNumbers(held);
+
+        // Limpiar restricted: solo mantener números que existen en la DB
+        const restricted = getRestrictedReceptionNumbers();
+        const filteredRestricted = restricted.filter((code) => dbNumbers.has(normalizeReceptionNumber(code)));
+        if (filteredRestricted.length !== restricted.length) {
+            setRestrictedReceptionNumbers(filteredRestricted);
+        }
+    } catch (e) {
+        console.warn('syncLocalStorageWithDB error', e);
     }
 }
 
@@ -4874,8 +4923,9 @@ function loadFormData(data, skipDates = false, isFromCompleted = false) {
     if (htRecCargo) htRecCargo.value = data.highTestRecepcionCargo || '';
     if (htEntName) htEntName.value = data.highTestEntregaNombre || '';
     if (htEntCargo) htEntCargo.value = data.highTestEntregaCargo || '';
-    // Asegurar que cargos se actualicen según select si está disponible
-    try { actualizarCargoHighTest('Recepcion'); actualizarCargoHighTest('Entrega'); } catch(e) {}
+    // Actualizar cargo solo si no vino en los datos (para preservar el valor original al importar)
+    if (!data.highTestRecepcionCargo) { try { actualizarCargoHighTest('Recepcion'); } catch(e) {} }
+    if (!data.highTestEntregaCargo) { try { actualizarCargoHighTest('Entrega'); } catch(e) {} }
 
     // Seleccionar empresa en el combo por nombre visible o data-nombre
     if (empresaSel && data.cliente) {
@@ -5715,6 +5765,7 @@ function generatePDFRecepcion() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const formData = collectFormData();
+    formData.signatureData = signatureData;
     // incrustar JSON de formulario para permitir carga desde el PDF de recepción
     try {
         const json = JSON.stringify(formData);
@@ -6272,61 +6323,138 @@ function isAdminOrDirector() {
     return (rol === 'administrador' || rol === 'director_tecnico');
 }
 
-function importFromPDF() {
-    // sólo director técnico o administrador
-    if (!isAdminOrDirector()) {
-        alert('No tiene permisos para importar desde PDF');
+async function importFromPDF(file) {
+    if (typeof pdfjsLib === 'undefined') {
+        alert('La librería pdf.js no está cargada.');
         return;
     }
-    // asegurar que el worker de pdf.js está configurado (ruta CDN compatible)
-    if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-    }
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'application/pdf';
-    input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        try {
-            const array = await file.arrayBuffer();
-            if (typeof pdfjsLib === 'undefined') {
-                alert('La librería pdf.js no está cargada.');
-                return;
+
+    try {
+        const array = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: array }).promise;
+
+        let formJson = null;
+
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const content = await page.getTextContent();
+            const text = content.items.map(i => i.str).join('');
+
+            const match = text.match(/\/\*FORMDATA:(\{[\s\S]*?\})\*\//);
+
+            if (match) {
+                formJson = match[1];
+                break;
             }
-            const pdf = await pdfjsLib.getDocument({ data: array }).promise;
-            let formJson = null;
-            try {
-                const meta = await pdf.getMetadata();
-                if (meta && meta.info && meta.info.FORMData) {
-                    formJson = meta.info.FORMData;
-                }
-            } catch (_) {}
-            if (!formJson) {
-                const page = await pdf.getPage(1);
-                const txtcont = await page.getTextContent();
-                const combined = txtcont.items.map(i => i.str).join('');
-                const m = combined.match(/\/\*FORMDATA:(\{.*?\})\*\//);
-                if (m) formJson = m[1];
-            }
-            if (!formJson) {
-                alert('No se encontró información de formulario dentro del PDF');
-                return;
-            }
-            try {
-                const data = JSON.parse(formJson);
-                loadFormData(data, false);
-                alert('Formulario importado desde PDF exitosamente');
-            } catch (err) {
-                console.error(err);
-                alert('Error procesando los datos del PDF.');
-            }
-        } catch (err) {
-            console.error('Error leyendo PDF:', err);
-            alert('No se pudo leer el PDF seleccionado.');
         }
-    };
-    input.click();
+
+        if (!formJson) {
+            alert('Este PDF no contiene datos recuperables del formulario.');
+            return;
+        }
+
+        try {
+            const data = JSON.parse(formJson);
+            loadFormData(data, false);
+        } catch (e) {
+            console.error('FORMData inválido:', formJson);
+            alert('El PDF contiene datos corruptos o incompletos.');
+        }
+    } catch (err) {
+        console.error('Error leyendo PDF:', err);
+        alert('No se pudo leer el PDF seleccionado.');
+    }
+}
+
+// Inicializar input oculto para importar PDF
+(function initPdfImport() {
+    const existing = document.getElementById('pdfInput');
+    if (!existing) {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.id = 'pdfInput';
+        input.accept = 'application/pdf';
+        input.style.display = 'none';
+        input.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            input.value = '';
+            await importFromPDF(file);
+        });
+        document.body.appendChild(input);
+    }
+})();
+
+async function recuperarCaso(numeroProceso) {
+    if (!numeroProceso || !numeroProceso.trim()) {
+        alert('Ingrese un número de proceso válido (ej: R26 0012)');
+        return;
+    }
+    const num = numeroProceso.trim().toUpperCase();
+
+    // 1. Buscar en drafts (localStorage)
+    const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
+    const caso = drafts.find(d =>
+        (d.cotizacion || '').toUpperCase() === num ||
+        (d.numero_proceso || '').toUpperCase() === num
+    );
+
+    if (caso) {
+        console.log('Caso encontrado en drafts');
+        loadFormData(caso, false);
+        return;
+    }
+
+    // 2. Buscar en base de datos (procesos_acreditados)
+    try {
+        const res = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_proceso', numero_proceso: num })
+        });
+        const data = await res.json();
+
+        if (!data.ok || !data.proceso) {
+            alert('No se encontró el caso "' + num + '" en borradores ni en base de datos.');
+            return;
+        }
+
+        const proceso = data.proceso;
+
+        // 3. Buscar detalle del proceso
+        let detalle = [];
+        if (proceso.id) {
+            const resDet = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_detalle_proceso', proceso_id: proceso.id })
+            });
+            const detData = await resDet.json();
+            if (detData.ok) detalle = detData.detalle || [];
+        }
+
+        // 4. Reconstruir objeto de formulario
+        const form = {
+            cotizacion: proceso.numero_proceso || num,
+            cliente: proceso.cliente || '',
+            status: (proceso.estado || 'recepcion').toLowerCase(),
+            fechaRecepcion: proceso.fecha_recepcion || '',
+            fechaEntrega: proceso.fecha_entrega_cliente || '',
+            items: (detalle || []).map(d => ({
+                id: d.ensayo_id,
+                quantity: d.cantidad,
+                brand: d.marca,
+                observations: d.observaciones
+            }))
+        };
+
+        // 5. Cargar formulario
+        loadFormData(form, false);
+
+    } catch (error) {
+        console.error('Error recuperando caso:', error);
+        alert('Error al recuperar el caso. Ver consola para más detalles.');
+    }
 }
 
 // Mostrar todas las fotos de un caso en modal
@@ -6395,11 +6523,7 @@ function nextImage() {
 
 async function loadDraftsFromServer() {
     try {
-        const userEmail = getCurrentUserEmail();
-        if (!userEmail) {
-            console.warn('⚠️ No hay usuario logueado, cargando borradores locales');
-            return JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
-        }
+        const userEmail = getCurrentUserEmail() || 'shared';
         const resp = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -6421,11 +6545,7 @@ async function loadDraftsFromServer() {
 
 async function saveDraftsToServer(drafts) {
     try {
-        const userEmail = getCurrentUserEmail();
-        if (!userEmail) {
-            console.warn('⚠️ No hay usuario logueado, guardando sólo local');
-            return false;
-        }
+        const userEmail = getCurrentUserEmail() || 'shared';
         const resp = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -6445,8 +6565,7 @@ async function saveDraftsToServer(drafts) {
 
 async function deleteBorradorFromServer(cotizacion) {
     try {
-        const userEmail = getCurrentUserEmail();
-        if (!userEmail) return;
+        const userEmail = getCurrentUserEmail() || 'shared';
         await fetch('/.netlify/functions/conectar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -6473,8 +6592,7 @@ let lastDraftsSyncHash = '';
 
 async function autoSyncDrafts() {
     try {
-        const userEmail = getCurrentUserEmail();
-        if (!userEmail) return;
+        const userEmail = getCurrentUserEmail() || 'shared';
         const resp = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -6533,10 +6651,10 @@ function newForm() {
 
 // Poblar el selector al cargar
 // también habilitar botón "Casos Terminados" según rol
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(refreshCasesSelect, 300);
-    // Cargar borradores desde servidor al iniciar
-    try { loadDraftsFromServer(); } catch(e) { console.log('Error loading drafts from server', e); }
+document.addEventListener('DOMContentLoaded', async () => {
+    // Cargar borradores desde servidor al iniciar (esperar antes de refrescar select)
+    try { await loadDraftsFromServer(); } catch(e) { console.log('Error loading drafts from server', e); }
+    setTimeout(refreshCasesSelect, 100);
     try {
         if ((typeof hasRole === 'function' && (hasRole('administrador') || hasRole('director_tecnico'))) ||
             (function(){
@@ -7086,7 +7204,8 @@ async function crearProcesoEnPanelAdmin() {
             estado: 'recepcion',
             fecha_recepcion: fechaRecepcion,
             fecha_entrega_cliente: null,
-            fecha_finalizado: null
+            fecha_finalizado: null,
+            caso_activo: true
         };
 
         const response = await fetch('/.netlify/functions/conectar', {
@@ -7100,15 +7219,17 @@ async function crearProcesoEnPanelAdmin() {
         if (!response.ok) {
             if (result && result.error && result.error.toLowerCase().includes('duplicado')) {
                 showNotification('El proceso ya existe en el panel administrativo', 'info');
-                return;
+                return null;
             }
             throw new Error((result && result.error) || 'Error al crear proceso');
         }
 
         showNotification('Proceso creado oficialmente en el panel con estado RECEPCIÓN', 'success');
+        return result.proceso || null;
     } catch (error) {
         console.error('Error creando proceso en panel:', error);
         showNotification('No se pudo crear el proceso en el panel: ' + error.message, 'warning');
+        return null;
     }
 }
 
@@ -7123,20 +7244,15 @@ async function actualizarProcesoAEntrega() {
             return;
         }
 
-        const updateData = {
-            estado: 'entrega-cliente',
-            fecha_entrega_cliente: fechaEntrega
-        };
-
         const response = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                action: 'update_proceso_status', 
-                numero_proceso: numeroProceso, 
-                estado: 'entrega-cliente',
-                fecha_entrega_cliente: fechaEntrega
-            })
+                body: JSON.stringify({ 
+                    action: 'update_proceso_status', 
+                    numero_proceso: numeroProceso, 
+                    estado: 'entrega-cliente',
+                    fecha_entrega_cliente: fechaEntrega
+                })
         });
 
         const result = await response.json();
@@ -7149,6 +7265,71 @@ async function actualizarProcesoAEntrega() {
         showNotification('Proceso actualizado a ENTREGA CLIENTE en el panel', 'success');
     } catch (error) {
         console.error('Error actualizando proceso a entrega:', error);
+    }
+}
+
+// Guarda cada elemento recibido en detalle_procesos_ac
+async function guardarDetalleProceso(procesoId) {
+    const detalle = [];
+
+    if (savedRowsData?.ensayos_acreditados) {
+        for (const [key, row] of Object.entries(savedRowsData.ensayos_acreditados)) {
+            if (!row) continue;
+            const index = parseInt(key.replace(/^row_/, ''));
+            const ensayo = Array.isArray(predefinedItemsData) ? predefinedItemsData[index] : null;
+            const ensayoId = ensayo?.id;
+            if (!ensayoId) continue;
+
+            const units = getRowUnits('ensayos_acreditados', index);
+            const obs = String(row.observaciones || '').trim();
+
+            if (units && units.length > 0) {
+                const brandGroups = {};
+                for (const unit of units) {
+                    const marca = unit.brand || '';
+                    if (!brandGroups[marca]) brandGroups[marca] = 0;
+                    brandGroups[marca]++;
+                }
+                for (const [marca, cantidad] of Object.entries(brandGroups)) {
+                    if (cantidad > 0) {
+                        detalle.push({
+                            proceso_id: procesoId,
+                            ensayo_id: ensayoId,
+                            cantidad,
+                            marca: marca || '',
+                            observaciones: obs || ''
+                        });
+                    }
+                }
+            } else {
+                const cantidad = parseInt(row.cantRecibida) || 0;
+                if (cantidad > 0) {
+                    detalle.push({
+                        proceso_id: procesoId,
+                        ensayo_id: ensayoId,
+                        cantidad,
+                        marca: '',
+                        observaciones: obs || ''
+                    });
+                }
+            }
+        }
+    }
+
+    if (detalle.length === 0) return;
+
+    try {
+        const response = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'add_detalle_proceso', detalle })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            console.warn('Error guardando detalle del proceso:', result?.error);
+        }
+    } catch (err) {
+        console.warn('Error en guardarDetalleProceso:', err);
     }
 }
 
@@ -7165,7 +7346,15 @@ async function pdfRecepcionAction() {
     generatePDFRecepcion();
 
     // Crear proceso oficial en el panel de administración
-    await crearProcesoEnPanelAdmin();
+    const proceso = await crearProcesoEnPanelAdmin();
+
+    // Guardar borrador completo en servidor (items, cantidades, firmas, etc.)
+    await saveAsDraft();
+
+    // Guardar detalle de cada elemento recibido en detalle_procesos_ac
+    if (proceso && proceso.id) {
+        await guardarDetalleProceso(proceso.id);
+    }
 }
 
 // Abre cliente de correo tras generar PDF completo si hay email del cliente
@@ -7200,6 +7389,13 @@ async function pdfCompletoAction() {
 
     // Actualizar proceso existente a ENTREGA CLIENTE
     await actualizarProcesoAEntrega();
+
+    // Guardar borrador final en servidor y marcar como completado
+    await saveAsDraft();
+    const cot2 = document.getElementById('quoteNumber')?.value;
+    if (cot2) {
+        try { updateDraftStatus(cot2, 'entrega'); } catch(e) {}
+    }
 }
 
 // =======================================================
@@ -7211,7 +7407,7 @@ async function pdfCompletoAction() {
  * Se almacena localmente en el navegador y se puede continuar después.
  * Funciona como guardado automático durante la captura de datos.
  */
-function saveAsDraft() {
+async function saveAsDraft() {
     const formData = collectFormData();
     
     // Verificar si el caso ya está completado (tiene estado 'entrega')
@@ -7246,8 +7442,8 @@ function saveAsDraft() {
 
     localStorage.setItem('cmr_drafts', JSON.stringify(allDrafts)); // Guarda el array actualizado en el almacenamiento local
 
-    // Sincronizar con servidor
-    try { saveDraftsToServer(allDrafts); } catch(e) { console.log('Sync server error', e); }
+    // Sincronizar con servidor (con await para asegurar que se guarde)
+    try { await saveDraftsToServer(allDrafts); } catch(e) { console.log('Sync server error', e); }
 
     // Refrescar selector de casos y notificar al usuario
     setTimeout(refreshCasesSelect, 100);
@@ -7337,6 +7533,7 @@ function deleteCaseByReception(num) {
     drafts.splice(idx, 1);
     localStorage.setItem('cmr_drafts', JSON.stringify(drafts));
     try { saveDraftsToServer(drafts); } catch(e) {}
+    invalidarCacheCasos();
     try { showNotification('✅ Caso eliminado', 'success'); } catch(e){}
     refreshCasesSelect();
 }
@@ -8219,11 +8416,159 @@ function validarFechaEntrega() {
  * Funciones para gestionar datos, búsquedas, filtros y exportaciones
  */
 
-// Obtener todos los casos guardados
+// Obtener todos los casos guardados (solo localStorage, síncrono)
 function obtenerTodosCasos() {
     const casosGuardados = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
     // Asegurar que es un array
     return Array.isArray(casosGuardados) ? casosGuardados : Object.values(casosGuardados);
+}
+
+// Cache de casos unificados para evitar llamadas repetidas
+window._casosUnificadosCache = window._casosUnificadosCache || null;
+window._fetchEnCurso = window._fetchEnCurso || false;
+window._callbacksRender = window._callbacksRender || [];
+
+// Convertir un proceso de la tabla procesos_acreditados al formato de caso del frontend
+function procesoACaso(p) {
+    if (!p) return null;
+    const nroProceso = p.numero_proceso || '';
+    return {
+        cotizacion: nroProceso,
+        quoteNumber: nroProceso,
+        cliente: p.cliente || '',
+        fechaRecepcion: p.fecha_recepcion || '',
+        fechaEntrega: p.fecha_entrega_cliente || '',
+        status: (p.estado === 'finalizado' || p.estado === 'entrega-cliente') ? 'entrega' : (p.estado || 'recepcion'),
+        estado: p.estado || '',
+        items: [],
+        n_informe: p.n_informe || '',
+        numero_proceso: nroProceso,
+        timestamp: p.updated_at || p.created_at || '',
+        _source: 'supabase_proceso',
+        caso_activo: p.caso_activo !== undefined ? p.caso_activo : true
+    };
+}
+
+function _getKeyCaso(c) {
+    return c && (c.cotizacion || c.quoteNumber || c.numero_proceso || '');
+}
+
+function _insertIfNewer(map, caso) {
+    if (!caso || typeof caso !== 'object') return;
+    const key = _getKeyCaso(caso);
+    if (!key) return;
+    const existing = map.get(key);
+    if (!existing) {
+        map.set(key, caso);
+    } else {
+        const tsNew = caso.timestamp || caso.updated_at || caso.created_at || '';
+        const tsOld = existing.timestamp || existing.updated_at || existing.created_at || '';
+        if (tsNew > tsOld) {
+            map.set(key, caso);
+        }
+    }
+}
+
+function _mergeCasos(localCasos, supabaseCasos) {
+    const merged = new Map();
+    localCasos.forEach(c => _insertIfNewer(merged, c));
+    supabaseCasos.forEach(c => _insertIfNewer(merged, c));
+    const unified = Array.from(merged.values());
+    unified.sort((a, b) => {
+        const numA = String(a.cotizacion || a.quoteNumber || a.numero_proceso || '');
+        const numB = String(b.cotizacion || b.quoteNumber || b.numero_proceso || '');
+        return numB.localeCompare(numA);
+    });
+    return unified;
+}
+
+async function _fetchSupabaseEnBackground() {
+    if (window._fetchEnCurso) return;
+    window._fetchEnCurso = true;
+
+    const supabaseCasos = [];
+
+    try {
+        const resp = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_borradores' })
+        });
+        const result = await resp.json();
+        if (result.ok && Array.isArray(result.data)) {
+            result.data.forEach(d => {
+                if (d && typeof d === 'object') {
+                    d._source = 'supabase_borrador';
+                    supabaseCasos.push(d);
+                }
+            });
+        }
+    } catch (e) {
+        console.warn('⚠️ No se pudieron obtener borradores del servidor:', e.message || e);
+    }
+
+    try {
+        const resp = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_procesos_acreditados', limit: 1000 })
+        });
+        const result = await resp.json();
+        if (result.ok && Array.isArray(result.procesos)) {
+            result.procesos.forEach(p => {
+                const caso = procesoACaso(p);
+                if (caso) supabaseCasos.push(caso);
+            });
+        }
+    } catch (e) {
+        console.warn('⚠️ No se pudieron obtener procesos del servidor:', e.message || e);
+    }
+
+    // Merge con datos locales
+    const localCasos = obtenerTodosCasos();
+    window._casosUnificadosCache = _mergeCasos(localCasos, supabaseCasos);
+    window._fetchEnCurso = false;
+
+    // Disparar re-render en todos los callbacks registrados
+    const cbs = window._callbacksRender.slice();
+    window._callbacksRender = [];
+    cbs.forEach(cb => {
+        try { cb(window._casosUnificadosCache); } catch(e) { console.warn('Error en callback de render:', e); }
+    });
+
+    console.log(`✅ Datos unificados: ${window._casosUnificadosCache.length} casos (${localCasos.length} locales + ${supabaseCasos.length} remotos)`);
+}
+
+// Obtener casos unificados: devuelve localStorage INMEDIATAMENTE (síncrono)
+// y busca Supabase en background. Si ya hay datos fusionados, devuelve esos.
+function obtenerCasosUnificados() {
+    // Si ya tenemos cache fusionado, devolverlo
+    if (window._casosUnificadosCache) return window._casosUnificadosCache;
+
+    // Devolver localStorage inmediatamente
+    const localCasos = obtenerTodosCasos();
+
+    // Iniciar fetch a Supabase en background (no bloquear)
+    _fetchSupabaseEnBackground();
+
+    return localCasos;
+}
+
+// Como obtenerCasosUnificados pero registra un callback para re-render
+// cuando lleguen datos de Supabase (útil para analytics)
+function obtenerCasosUnificadosConRender(callback) {
+    const casos = obtenerCasosUnificados();
+
+    if (window._fetchEnCurso) {
+        window._callbacksRender.push(callback);
+    }
+
+    return casos;
+}
+
+// Forzar recarga del cache de casos unificados
+function invalidarCacheCasos() {
+    window._casosUnificadosCache = null;
 }
 
 // Mostrar/ocultar pestañas de reportes
@@ -8264,21 +8609,26 @@ function showReportsTab(tabName) {
 function refrescarHistorial() {
     const tbody = document.getElementById('historialTableBody');
     if (!tbody) return; // Si la tabla no existe (pestaña no activa), no hacer nada
-    
-    const casos = obtenerTodosCasos();
+
+    // Obtener casos (devuelve localStorage inmediatamente, Supabase en background)
+    // Registrar re-render automático cuando lleguen datos de Supabase
+    const casos = obtenerCasosUnificadosConRender(() => {
+        const el = document.getElementById('historialTableBody');
+        if (el) refrescarHistorial();
+    });
     const searchValue = document.getElementById('searchHistorial')?.value.toLowerCase() || '';
-    
+
     tbody.innerHTML = '';
     
-    if (casos.length === 0) {
+    if (!casos || casos.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" style="padding: 20px; text-align: center; color: #999;">No hay casos registrados</td></tr>';
         return;
     }
     
     // Ordenar casos descendentemente por Nº de Recepción
     const casosOrdenados = casos.sort((a, b) => {
-        const numA = (a.cotizacion || a.quoteNumber || '');
-        const numB = (b.cotizacion || b.quoteNumber || '');
+        const numA = (a.cotizacion || a.quoteNumber || a.numero_proceso || '');
+        const numB = (b.cotizacion || b.quoteNumber || b.numero_proceso || '');
         return String(numB).localeCompare(String(numA));
     });
     
@@ -8334,7 +8684,10 @@ function refrescarHistorial() {
 
 // Actualizar estadísticas
 function actualizarEstadisticas() {
-    const casos = obtenerTodosCasos();
+    const casos = obtenerCasosUnificadosConRender(() => {
+        const el = document.getElementById('estadisticasCasoTableBody');
+        if (el) actualizarEstadisticas();
+    });
     
     let totalCasos = casos.length;
     let completados = casos.filter(c => c.status === 'entrega' || (c.signatureData?.Recepcion?.isSignature && c.signatureData?.Entrega?.isSignature)).length;
@@ -8438,8 +8791,24 @@ function actualizarEstadisticas() {
 }
 
 // Búsqueda avanzada
+window._paginaBusqueda = window._paginaBusqueda || 1;
+
 function ejecutarBusquedaAvanzada() {
-    const casos = obtenerTodosCasos();
+    window._paginaBusqueda = 1;
+    _renderBusquedaAvanzada();
+}
+
+function paginarBusqueda(pagina) {
+    window._paginaBusqueda = pagina;
+    _renderBusquedaAvanzada();
+    document.getElementById('resultadosBusquedaContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function _renderBusquedaAvanzada() {
+    const casos = obtenerCasosUnificadosConRender(() => {
+        const el = document.getElementById('resultadosBusquedaBody');
+        if (el) _renderBusquedaAvanzada();
+    });
     const filtros = {
         numRecepcion: document.getElementById('filtroNumRecepcion')?.value.toLowerCase() || '',
         cliente: document.getElementById('filtroCliente')?.value.toLowerCase() || '',
@@ -8470,16 +8839,26 @@ function ejecutarBusquedaAvanzada() {
         return String(numB).localeCompare(String(numA));
     });
 
+    // Paginación
+    const totalPaginas = Math.ceil(resultados.length / 40);
+    let pagina = window._paginaBusqueda || 1;
+    if (pagina > totalPaginas) pagina = totalPaginas;
+    if (pagina < 1) pagina = 1;
+    window._paginaBusqueda = pagina;
+    const inicio = (pagina - 1) * 40;
+    const paginados = resultados.slice(inicio, inicio + 40);
+
     // Mostrar resultados
     const tbody = document.getElementById('resultadosBusquedaBody');
     tbody.innerHTML = '';
 
     if (resultados.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="padding: 20px; text-align: center; color: #999;">No se encontraron resultados</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="padding: 20px; text-align: center; color: #999;">No se encontraron resultados</td></tr>';
+        document.getElementById('paginacionBusqueda').innerHTML = '';
         return;
     }
 
-    resultados.forEach(caso => {
+    paginados.forEach(caso => {
         const itemCount = (caso.items ? caso.items.length : 0) || ((caso.savedRowsData?.ensayos_acreditados ? Object.keys(caso.savedRowsData.ensayos_acreditados).length : 0) +
                          (caso.savedRowsData?.ensayos_no_acreditados ? Object.keys(caso.savedRowsData.ensayos_no_acreditados).length : 0));
 
@@ -8490,26 +8869,48 @@ function ejecutarBusquedaAvanzada() {
         const num = caso.cotizacion || caso.quoteNumber || 'N/A';
         const clienteDisp = caso.cliente || caso.clienteRecepcionNombre || 'N/A';
         const informeDisp = caso.informeNombre || caso.empresa || 'N/A';
+        const facturaDisp = caso.facturarNombre || 'N/A';
 
         const row = `
             <tr style="border-bottom: 1px solid #ddd;">
                 <td style="padding: 10px; border: 1px solid #ddd;">${num}</td>
-                <td style="padding: 10px; border: 1px solid #ddd;">${clienteDisp}</td>
+                <td style="padding: 10px; border: 1px solid #ddd; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${clienteDisp}</td>
                 <td style="padding: 10px; border: 1px solid #ddd;">${informeDisp}</td>
-                <td style="padding: 10px; border: 1px solid #ddd;">${caso.fechaRecepcion || 'N/A'}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">${facturaDisp}</td>
+                <td style="padding: 10px; border: 1px solid #ddd; width: 110px;">${caso.fechaRecepcion || 'N/A'}</td>
+                <td style="padding: 10px; border: 1px solid #ddd; width: 140px;">${caso.fechaEntrega || 'N/A'}</td>
                 <td style="padding: 10px; border: 1px solid #ddd; text-align: center;"><strong>${itemCount}</strong></td>
                 <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">
                     <span style="background: ${estadoColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${estado}</span>
                 </td>
-                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">
-                    <button type="button" class="btn btn-small" onclick="mostrarVistaPrevia('${num}')" style="padding: 4px 8px; font-size: 12px; margin-right:4px;">✏️ Editar</button>
-                    ${isCompletado ? `<button type="button" class="btn btn-small" onclick="exportarCasoJSON('${num}')" style="padding: 4px 8px; font-size: 12px;">📥 Exp</button>` : ''}
+                <td style="padding: 10px; border: 1px solid #ddd; text-align: center; width: 80px; min-width: 80px;">
+                    <button type="button" class="btn btn-small" onclick="mostrarVistaPrevia('${num}')" style="padding: 4px 8px; font-size: 12px; margin-right:4px;">👁️ Ver</button>
                     ${canManageCases() ? `<button type="button" class="btn btn-small" onclick="deleteCaseByReception('${num}')" style="padding: 4px 8px; font-size: 12px; margin-left:4px;">🗑️</button>` : ''}
                 </td>
             </tr>
         `;
         tbody.innerHTML += row;
     });
+
+    // Renderizar paginación
+    const pagDiv = document.getElementById('paginacionBusqueda');
+    if (totalPaginas <= 1) { pagDiv.innerHTML = ''; return; }
+
+    let html = `<span style="font-size: 13px; color: #666;">Mostrando ${inicio + 1}-${Math.min(inicio + 40, resultados.length)} de ${resultados.length}</span>`;
+    html += `<button type="button" class="btn btn-small" onclick="paginarBusqueda(1)" ${pagina === 1 ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">«</button>`;
+    html += `<button type="button" class="btn btn-small" onclick="paginarBusqueda(${pagina - 1})" ${pagina === 1 ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">‹</button>`;
+
+    let startPage = Math.max(1, pagina - 2);
+    let endPage = Math.min(totalPaginas, startPage + 4);
+    if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+    for (let i = startPage; i <= endPage; i++) {
+        html += `<button type="button" class="btn btn-small" onclick="paginarBusqueda(${i})" style="padding: 4px 10px; font-size: 13px; ${i === pagina ? 'background: #022859; color: white;' : ''}">${i}</button>`;
+    }
+
+    html += `<button type="button" class="btn btn-small" onclick="paginarBusqueda(${pagina + 1})" ${pagina === totalPaginas ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">›</button>`;
+    html += `<button type="button" class="btn btn-small" onclick="paginarBusqueda(${totalPaginas})" ${pagina === totalPaginas ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">»</button>`;
+    pagDiv.innerHTML = html;
 }
 
 // Limpiar filtros
@@ -8519,21 +8920,21 @@ function limpiarFiltros() {
     document.getElementById('filtroEmpresa').value = '';
     document.getElementById('filtroFechaDesde').value = '';
     document.getElementById('filtroFechaHasta').value = '';
-    document.getElementById('resultadosBusquedaBody').innerHTML = '';
+    ejecutarBusquedaAvanzada();
 }
 
 // Poblar filtro de empresas/informes en la pestaña de búsqueda
 function populateFiltroEmpresas() {
     const select = document.getElementById('filtroEmpresa');
     if (!select) return;
-    const casos = obtenerTodosCasos();
+    const casos = obtenerCasosUnificados();
     const nombres = Array.from(new Set(casos.map(c => (c.informeNombre || c.empresa || '').trim()).filter(x => x)));
     select.innerHTML = '<option value="">(Todas)</option>' + nombres.map(n => `<option value="${n}">${n}</option>`).join('');
 }
 
 // Exportar a CSV
 function exportarCSV() {
-    const casos = obtenerTodosCasos();
+    const casos = obtenerCasosUnificados();
     let csv = 'Nº Recepción,Cliente,Empresa,Fecha Recepción,Fecha Entrega,Items,Estado,Ensayos\n';
     
     casos.forEach(caso => {
@@ -8718,10 +9119,11 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Página cargada, inicializando botones de selección');
     
     // ocultar botón de importación de PDF si no tiene permisos
-    const btnImport = document.getElementById('btnImportPDF');
-    if (btnImport && !isAdminOrDirector()) {
-        btnImport.style.display = 'none';
-    }
+    // (comentado: ya no se restringe - cualquier usuario puede importar)
+    // const btnImport = document.getElementById('btnImportPDF');
+    // if (btnImport && !isAdminOrDirector()) {
+    //     btnImport.style.display = 'none';
+    // }
     
     // Inicializar monitoreo de sesión
     initializeSessionMonitoring();
@@ -9118,6 +9520,31 @@ function loadRowData(tableType, rowIndex) {
                 if (observaciones) observaciones.value = savedData.observaciones;
                 
             } else if (tableType === 'ensayos_no_acreditados') {
+                // Cargar datos en la tabla de ensayos no acreditados
+                const cantRecibida = document.getElementById(`qty2_${rowIndex}`);
+                const cantEntregada = document.getElementById(`qty2_2_${rowIndex}`);
+                const cantNoUsado = document.getElementById(`qty2_3_${rowIndex}`);
+                const cantUsado = document.getElementById(`qty2_4_${rowIndex}`);
+                const cantLavados = document.getElementById(`status2_${rowIndex}`);
+                const observaciones = document.getElementById(`observaciones2_${rowIndex}`);
+                
+                if (cantRecibida) cantRecibida.value = savedData.cantRecibida;
+                if (cantEntregada) cantEntregada.value = savedData.cantEntregada;
+                if (cantNoUsado) cantNoUsado.value = savedData.cantNoUsado;
+                if (cantUsado) cantUsado.value = savedData.cantUsado;
+                if (cantLavados) cantLavados.value = savedData.cantLavados;
+                if (observaciones) observaciones.value = savedData.observaciones;
+            }
+            
+            // Actualizar UI para mostrar que está guardado
+            updateRowSaveStatus(tableType, rowIndex, true);
+            
+            console.log(`Datos cargados para fila ${rowIndex} en ${tableType}`);
+        }
+    } catch (error) {
+        console.error('Error al cargar los datos de la fila:', error);
+    }
+}
 
 // =======================================================
 // SISTEMA DE VALIDACIONES ROBUSTAS
@@ -9509,31 +9936,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 console.log('🔒 Sistema de validaciones robustas cargado');
-                // Cargar datos en la tabla de ensayos no acreditados
-                const cantRecibida = document.getElementById(`qty2_${rowIndex}`);
-                const cantEntregada = document.getElementById(`qty2_2_${rowIndex}`);
-                const cantNoUsado = document.getElementById(`qty2_3_${rowIndex}`);
-                const cantUsado = document.getElementById(`qty2_4_${rowIndex}`);
-                const cantLavados = document.getElementById(`status2_${rowIndex}`);
-                const observaciones = document.getElementById(`observaciones2_${rowIndex}`);
-                
-                if (cantRecibida) cantRecibida.value = savedData.cantRecibida;
-                if (cantEntregada) cantEntregada.value = savedData.cantEntregada;
-                if (cantNoUsado) cantNoUsado.value = savedData.cantNoUsado;
-                if (cantUsado) cantUsado.value = savedData.cantUsado;
-                if (cantLavados) cantLavados.value = savedData.cantLavados;
-                if (observaciones) observaciones.value = savedData.observaciones;
-            }
-            
-            // Actualizar UI para mostrar que está guardado
-            updateRowSaveStatus(tableType, rowIndex, true);
-            
-            console.log(`Datos cargados para fila ${rowIndex} en ${tableType}`);
-        }
-    } catch (error) {
-        console.error('Error al cargar los datos de la fila:', error);
-    }
-}
 
 /**
  * Actualiza el estado visual del botón de guardar
@@ -10434,8 +10836,8 @@ function openReportsWithCaseData() {
 // Mostrar Vista Previa en Modal
 // ===============================
 function mostrarVistaPrevia(numRecepcion) {
-    const casos = obtenerTodosCasos();
-    const caso = casos.find(c => c.cotizacion === numRecepcion);
+    const casos = obtenerCasosUnificados();
+    const caso = casos.find(c => (c.cotizacion || c.quoteNumber || c.numero_proceso) === numRecepcion);
     
     if (!caso) {
         alert('No se encontraron datos para este caso');
@@ -10629,8 +11031,8 @@ function cerrarModalEstadisticasDetalle() {
 
 // Mostrar detalles de estadísticas para un caso
 function mostrarDetallesEstadisticas(cotizacion) {
-    const casos = obtenerTodosCasos();
-    const caso = casos.find(c => (c.cotizacion || c.quoteNumber) === cotizacion);
+    const casos = obtenerCasosUnificados();
+    const caso = casos.find(c => (c.cotizacion || c.quoteNumber || c.numero_proceso) === cotizacion);
     
     if (!caso) {
         try { showNotification('❌ Caso no encontrado', 'error'); } catch(e){}
@@ -10785,6 +11187,7 @@ function importarJSON() {
 
             localStorage.setItem('cmr_drafts', JSON.stringify(drafts));
             try { saveDraftsToServer(drafts); } catch(e) {}
+            invalidarCacheCasos();
 
             try { showNotification(`✅ ${actionReplace ? 'Reemplazados' : 'Fusionados'} ${drafts.length} caso(s)`, 'success'); } catch(e){}
             try { refrescarHistorial(); } catch(e){}
@@ -10799,8 +11202,8 @@ function importarJSON() {
 // Exportar Caso Individual como JSON
 // ===============================
 function exportarCasoJSON(numRecepcion) {
-    const casos = obtenerTodosCasos();
-    const caso = casos.find(c => c.cotizacion === numRecepcion);
+    const casos = obtenerCasosUnificados();
+    const caso = casos.find(c => (c.cotizacion || c.quoteNumber || c.numero_proceso) === numRecepcion);
     
     if (!caso) {
         try { showNotification('❌ No se encontró el caso', 'error'); } catch(e){}

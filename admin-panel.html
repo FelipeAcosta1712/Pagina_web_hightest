@@ -469,10 +469,11 @@
                             <div class="control__filters commercial-filters__row">
                                 <select id="commercialStatusFilter" class="control__select" aria-label="Filtrar por estado">
                                     <option value="">Todos los estados</option>
-                                    <option value="pendiente">Pendiente</option>
-                                    <option value="en-revision">En revisión</option>
+                                    <option value="borrador">Borrador</option>
+                                    <option value="enviada">Enviada</option>
                                     <option value="aprobada">Aprobada</option>
                                     <option value="rechazada">Rechazada</option>
+                                    <option value="facturada">Facturada</option>
                                 </select>
                                 <select id="commercialClientFilter" class="control__select" aria-label="Filtrar por cliente">
                                     <option value="">Todos los clientes</option>
@@ -569,6 +570,12 @@
                                     <section class="commercial-drawer__section">
                                         <h4>Datos generales</h4>
                                         <div class="commercial-form-grid">
+                                            <label class="commercial-form-field commercial-form-field--wide">
+                                                <span>Vincular a Recepción (R26) — Opcional</span>
+                                                <select id="commercialRecepcionSelect" class="control__select">
+                                                    <option value="">Sin vincular — Cotización manual</option>
+                                                </select>
+                                            </label>
                                             <label class="commercial-form-field">
                                                 <span>ID Cotización</span>
                                                 <input type="text" id="commercialQuoteId" class="control__input" readonly>
@@ -604,10 +611,11 @@
                                             <label class="commercial-form-field">
                                                 <span>Estado</span>
                                                 <select id="commercialQuoteStatus" class="control__select">
-                                                    <option value="pendiente">Pendiente</option>
-                                                    <option value="en-revision">En revisión</option>
+                                                    <option value="borrador">Borrador</option>
+                                                    <option value="enviada">Enviada</option>
                                                     <option value="aprobada">Aprobada</option>
                                                     <option value="rechazada">Rechazada</option>
+                                                    <option value="facturada">Facturada</option>
                                                 </select>
                                             </label>
                                         </div>

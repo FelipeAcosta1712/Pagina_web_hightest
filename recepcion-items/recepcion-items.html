@@ -45,8 +45,10 @@
                             <button type="button" class="btn btn-light" onclick="refreshCasesSelect()">↻</button>
                             <button type="button" class="btn btn-danger delete-btn" onclick="deleteSelectedCase()" title="Eliminar caso seleccionado">🗑️ Eliminar</button>
                             <button type="button" class="btn btn-light delete-btn" onclick="deleteAllCases()" title="Eliminar todos los casos">🧹 Eliminar todo</button>
-                            <button type="button" id="btnImportPDF" class="btn btn-warning" onclick="importFromPDF()" title="Importar desde PDF">📄 Importar PDF</button>
+                            <button type="button" id="btnImportPDF" class="btn btn-warning" onclick="document.getElementById('pdfInput').click()" title="Importar desde PDF">📄 Importar caso desde PDF</button>
                             <button type="button" id="btnSyncDrafts" class="btn btn-outline-primary" onclick="toggleAutoSyncDrafts()" title="Sincronizar casos en progreso">🔁 Sincronizar</button>
+                            <input type="text" id="inputRecuperarCaso" placeholder="R26 0012" style="width:110px; padding:2px 6px; border:1px solid #ccc; border-radius:4px; margin-left:6px;">
+                            <button type="button" class="btn btn-info" onclick="recuperarCaso(document.getElementById('inputRecuperarCaso').value)" style="padding:2px 10px; font-size:0.9em;">🔍 Recuperar</button>
                             <div id="loadedCaseInfo" style="margin-left:10px; font-weight:600;">
                                 Cargado: <span id="loadedReceptionNumber">-</span>
                             </div>
@@ -62,7 +64,7 @@
                                 <label style="white-space:nowrap; margin:0; flex:0 0 auto;">🔢 Nº de Recepción: <span style="color: red;">*</span></label>
                                 <div style="display:flex; gap:6px; margin-left:auto; flex:0 0 auto; align-items:center;">
                                     <span id="lockRemainingTime" style="font-size:11px; font-weight:600; color:#6c757d; min-width:48px; text-align:right; white-space:nowrap;">--:--</span>
-                                    <button type="button" id="btnLockReception20Min" class="btn btn-warning" style="white-space:nowrap; padding:4px 8px; font-size:11px; line-height:1; min-height:28px; border-radius:6px;">🔒 20 min</button>
+                                    <button type="button" id="btnLockReception20Min" class="btn btn-warning" style="white-space:nowrap; padding:4px 8px; font-size:11px; line-height:1; min-height:28px; border-radius:6px;">🔒 40 min</button>
                                     <button type="button" id="btnReleaseReceptionNumber" class="btn btn-success" style="white-space:nowrap; padding:4px 8px; font-size:11px; line-height:1; min-height:28px; border-radius:6px;">Liberar N°</button>
                                 </div>
                             </div>

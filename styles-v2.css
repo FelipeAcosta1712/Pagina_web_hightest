@@ -863,13 +863,14 @@ a:hover {
 
 #resetAcreditadosFiltersBtn,
 #resetFinalizedAcreditadosFiltersBtn {
-    padding: 6px 1px;
+    padding: 6px 14px;
     font-size: 0.78rem;
     border-width: 2px;
     min-height: 34px;
     line-height: 1;
     border-radius: 10px;
     box-shadow: 0 1px 4px rgba(0, 82, 163, 0.12);
+    flex: 0 0 auto;
 }
 
 #resetAcreditadosFiltersBtn:hover,
@@ -7651,7 +7652,13 @@ textarea:focus-visible {
     color: #92400e;
 }
 
-.commercial-status-badge--en-revision {
+.commercial-status-badge--borrador {
+    background: rgba(245, 158, 11, 0.14);
+    color: #92400e;
+}
+
+.commercial-status-badge--en-revision,
+.commercial-status-badge--enviada {
     background: rgba(14, 165, 233, 0.14);
     color: #0369a1;
 }
@@ -7664,6 +7671,11 @@ textarea:focus-visible {
 .commercial-status-badge--rechazada {
     background: rgba(239, 68, 68, 0.14);
     color: #b91c1c;
+}
+
+.commercial-status-badge--facturada {
+    background: rgba(139, 92, 246, 0.14);
+    color: #6d28d9;
 }
 
 .commercial-action-buttons {

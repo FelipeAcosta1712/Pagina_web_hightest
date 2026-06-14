@@ -294,11 +294,16 @@ exports.handler = async (event) => {
 
             // Obtener procesos acreditados con filtros básicos
             if (payload.action === 'get_procesos_acreditados') {
-                const { estado, cliente, tipo, month, date, search, limit, offset } = payload;
+                const { estado, cliente, tipo, month, date, search, limit, offset, caso_activo: activo } = payload;
 
                 let query = supabase
                     .from('procesos_acreditados')
                     .select('*');
+
+                // filtro por activo (boolean)
+                if (activo !== undefined && activo !== null && activo !== '') {
+                    query = query.eq('caso_activo', Boolean(activo));
+                }
 
                 // filtros sencillos
                 if (estado) {
@@ -386,6 +391,7 @@ exports.handler = async (event) => {
                 const estado = normalizeText(payload.estado || payload.status || payload.new_status);
                 const fechaEntrega = payload.fecha_entrega_cliente || payload.fecha_entrega || null;
                 const fechaFinalizado = payload.fecha_finalizado || null;
+                const payloadActivo = payload.caso_activo;
                 if (!numero || !estado) return jsonResponse(400, { ok: false, error: 'numero_proceso y estado son requeridos' });
 
                 let lastError = null;
@@ -393,6 +399,12 @@ exports.handler = async (event) => {
                     const updateData = { estado: estadoCandidate };
                     if (fechaEntrega) updateData.fecha_entrega_cliente = fechaEntrega;
                     if (fechaFinalizado) updateData.fecha_finalizado = fechaFinalizado;
+                    // Si el frontend envía activo explícitamente, usarlo; si no, deducir del estado
+                    if (payloadActivo !== undefined) {
+                        updateData.caso_activo = Boolean(payloadActivo);
+                    } else if (estadoCandidate === 'finalizado') {
+                        updateData.caso_activo = false;
+                    }
                     const { data, error } = await supabase
                         .from('procesos_acreditados')
                         .update(updateData)
@@ -439,7 +451,7 @@ exports.handler = async (event) => {
                 if (!numero) return jsonResponse(400, { ok: false, error: 'numero_proceso requerido' });
 
                 // Permitir actualizar solo campos autorizados
-                const allowed = ['numero_proceso','cliente','cliente_id','tipo','estado','fecha_recepcion','fecha_entrega_cliente','fecha_finalizado','valor'];
+                const allowed = ['numero_proceso','cliente','cliente_id','tipo','estado','fecha_recepcion','fecha_entrega_cliente','fecha_finalizado','valor','caso_activo'];
                 const updateData = {};
                 for (const key of allowed) {
                     if (payload[key] !== undefined) updateData[key] = payload[key];
@@ -524,43 +536,54 @@ exports.handler = async (event) => {
                 const insert = payload.insert || {};
                 if (!insert.numero_proceso) return jsonResponse(400, { ok: false, error: 'numero_proceso requerido' });
 
-                // Algunas bases no tienen esta columna; no la usamos para bloquear números
                 const baseInsert = { ...insert };
-                delete baseInsert.observaciones;
+                if (baseInsert.caso_activo === undefined) baseInsert.caso_activo = true;
 
-                // Si el estado viene con valor, intentar normalizar probando candidatos
-                if (baseInsert.estado) {
+                // Función para intentar insertar, quitando columnas faltantes y reintentando
+                async function attemptInsertWithRetry(data) {
+                    let attemptData = { ...data };
                     let lastError = null;
-                    for (const estadoCandidate of buildStatusCandidates(insert.estado)) {
-                        const attemptInsert = { ...baseInsert, estado: estadoCandidate };
-                        const { data, error } = await supabase
+                    while (Object.keys(attemptData).length > 0) {
+                        const { data: result, error } = await supabase
                             .from('procesos_acreditados')
-                            .insert([attemptInsert])
+                            .insert([attemptData])
                             .select()
                             .limit(1);
 
                         if (!error) {
-                            return jsonResponse(200, { ok: true, proceso: Array.isArray(data) ? data[0] : data });
+                            return { ok: true, proceso: Array.isArray(result) ? result[0] : result };
                         }
+
                         lastError = error;
+                        const msg = String(error.message || error || '').toLowerCase();
+                        const missingCols = [];
+                        const m1 = msg.match(/could not find the '([^']+)' column/);
+                        if (m1) missingCols.push(m1[1]);
+                        const m2 = msg.match(/column\s+\"?([^\"\s]+)\"?\s+does not exist/);
+                        if (m2) missingCols.push(m2[1]);
+
+                        if (missingCols.length === 0) break;
+
+                        missingCols.forEach(col => {
+                            delete attemptData[col];
+                            delete attemptData[col.replace(/-/g, '_')];
+                        });
                     }
-
-                    // Si todos los candidatos fallaron, retornar el último error
-                    return jsonResponse(500, { ok: false, error: 'Error al crear proceso', detail: lastError?.message });
+                    return { ok: false, error: lastError?.message || 'Error al crear proceso' };
                 }
 
-                // Si no hay estado o está vacío, insertar directamente
-                const { data, error } = await supabase
-                    .from('procesos_acreditados')
-                    .insert([baseInsert])
-                    .select()
-                    .limit(1);
-
-                if (error) {
-                    return jsonResponse(500, { ok: false, error: 'Error al crear proceso', detail: error.message });
+                // Si el estado viene con valor, intentar normalizar probando candidatos
+                if (baseInsert.estado) {
+                    for (const estadoCandidate of buildStatusCandidates(insert.estado)) {
+                        const attemptInsert = { ...baseInsert, estado: estadoCandidate };
+                        const result = await attemptInsertWithRetry(attemptInsert);
+                        if (result.ok) return jsonResponse(200, result);
+                    }
+                    return jsonResponse(500, { ok: false, error: 'Error al crear proceso' });
                 }
 
-                return jsonResponse(200, { ok: true, proceso: Array.isArray(data) ? data[0] : data });
+                const result = await attemptInsertWithRetry(baseInsert);
+                return jsonResponse(result.ok ? 200 : 500, result);
             }
 
             // Agregar nuevo cliente
@@ -768,6 +791,313 @@ exports.handler = async (event) => {
                     }
                 }
                 return jsonResponse(200, { ok: true, message: 'Borrador eliminado' });
+            }
+
+            // Guardar detalle del proceso (elementos recibidos en recepción)
+            if (payload.action === 'add_detalle_proceso') {
+                const detalle = payload.detalle || [];
+                if (!Array.isArray(detalle) || detalle.length === 0) {
+                    return jsonResponse(400, { ok: false, error: 'detalle debe ser un array no vacío' });
+                }
+
+                // Validar que cada registro tenga los campos requeridos
+                for (const item of detalle) {
+                    if (!item.proceso_id || !item.ensayo_id) {
+                        return jsonResponse(400, { ok: false, error: 'proceso_id y ensayo_id son requeridos para cada item' });
+                    }
+                }
+
+                const { data, error } = await supabase
+                    .from('detalle_procesos_ac')
+                    .insert(detalle)
+                    .select();
+
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al guardar detalle del proceso', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true, detalle: data || [] });
+            }
+
+            // Obtener detalle de un proceso
+            if (payload.action === 'get_detalle_proceso') {
+                const procesoId = payload.proceso_id;
+                if (!procesoId) {
+                    return jsonResponse(400, { ok: false, error: 'proceso_id requerido' });
+                }
+
+                const { data, error } = await supabase
+                    .from('detalle_procesos_ac')
+                    .select('*')
+                    .eq('proceso_id', procesoId);
+
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al consultar detalle del proceso', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true, detalle: data || [] });
+            }
+
+            // =============================================
+            // COTIZACIONES - CRUD completo
+            // =============================================
+
+            // Listar cotizaciones con filtros opcionales
+            if (payload.action === 'get_cotizaciones') {
+                let query = supabase
+                    .from('cotizaciones_ac')
+                    .select('*');
+
+                if (payload.estado) {
+                    query = query.eq('estado', payload.estado);
+                }
+                if (payload.cliente) {
+                    query = query.ilike('cliente', `%${payload.cliente}%`);
+                }
+                if (payload.cotizacion) {
+                    query = query.ilike('cotizacion', `%${payload.cotizacion}%`);
+                }
+
+                query = query.order('created_at', { ascending: false });
+
+                if (payload.limit) {
+                    query = query.limit(payload.limit);
+                }
+                if (payload.offset) {
+                    query = query.range(payload.offset, payload.offset + (payload.limit || 50) - 1);
+                }
+
+                const { data, error } = await query;
+
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al consultar cotizaciones', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true, cotizaciones: data || [] });
+            }
+
+            // Obtener una cotización por ID
+            if (payload.action === 'get_cotizacion') {
+                if (!payload.id) {
+                    return jsonResponse(400, { ok: false, error: 'id requerido' });
+                }
+
+                const { data, error } = await supabase
+                    .from('cotizaciones_ac')
+                    .select('*')
+                    .eq('id', payload.id)
+                    .single();
+
+                if (error) {
+                    return jsonResponse(404, { ok: false, error: 'Cotización no encontrada', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true, cotizacion: data });
+            }
+
+            // Crear cotización
+            if (payload.action === 'add_cotizacion') {
+                const procesoId = payload.proceso_id;
+                if (!procesoId) {
+                    return jsonResponse(400, { ok: false, error: 'proceso_id requerido' });
+                }
+
+                const cotizacionData = {
+                    proceso_id: procesoId,
+                    cotizacion: normalizeText(payload.cotizacion),
+                    cliente: normalizeText(payload.cliente),
+                    informe_nombre: normalizeText(payload.informe_nombre),
+                    items: payload.items || [],
+                    total_items: payload.total_items || 0,
+                    total_valor: payload.total_valor || 0,
+                    estado: payload.estado || 'borrador'
+                };
+
+                const { data, error } = await supabase
+                    .from('cotizaciones_ac')
+                    .insert(cotizacionData)
+                    .select()
+                    .single();
+
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al crear cotización', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true, cotizacion: data });
+            }
+
+            // Actualizar cotización
+            if (payload.action === 'update_cotizacion') {
+                if (!payload.id) {
+                    return jsonResponse(400, { ok: false, error: 'id requerido' });
+                }
+
+                const updates = {};
+                if (payload.estado !== undefined) updates.estado = payload.estado;
+                if (payload.items !== undefined) updates.items = payload.items;
+                if (payload.total_items !== undefined) updates.total_items = payload.total_items;
+                if (payload.total_valor !== undefined) updates.total_valor = payload.total_valor;
+                if (payload.cliente !== undefined) updates.cliente = normalizeText(payload.cliente);
+                if (payload.informe_nombre !== undefined) updates.informe_nombre = normalizeText(payload.informe_nombre);
+
+                const { data, error } = await supabase
+                    .from('cotizaciones_ac')
+                    .update(updates)
+                    .eq('id', payload.id)
+                    .select()
+                    .single();
+
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al actualizar cotización', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true, cotizacion: data });
+            }
+
+            // Cambiar estado de cotización
+            if (payload.action === 'update_cotizacion_estado') {
+                if (!payload.id) {
+                    return jsonResponse(400, { ok: false, error: 'id requerido' });
+                }
+                if (!payload.estado) {
+                    return jsonResponse(400, { ok: false, error: 'estado requerido' });
+                }
+
+                const { data, error } = await supabase
+                    .from('cotizaciones_ac')
+                    .update({ estado: payload.estado })
+                    .eq('id', payload.id)
+                    .select()
+                    .single();
+
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al cambiar estado', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true, cotizacion: data });
+            }
+
+            // Eliminar cotización
+            if (payload.action === 'delete_cotizacion') {
+                if (!payload.id) {
+                    return jsonResponse(400, { ok: false, error: 'id requerido' });
+                }
+
+                const { error } = await supabase
+                    .from('cotizaciones_ac')
+                    .delete()
+                    .eq('id', payload.id);
+
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al eliminar cotización', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true });
+            }
+
+            // Generar cotización desde una recepción existente
+            if (payload.action === 'generar_cotizacion') {
+                const procesoId = payload.proceso_id;
+                if (!procesoId) {
+                    return jsonResponse(400, { ok: false, error: 'proceso_id requerido' });
+                }
+
+                // 1. Obtener el proceso
+                const { data: proceso, error: errProceso } = await supabase
+                    .from('procesos_acreditados')
+                    .select('*')
+                    .eq('id', procesoId)
+                    .single();
+
+                if (errProceso || !proceso) {
+                    return jsonResponse(404, { ok: false, error: 'Recepción no encontrada' });
+                }
+
+                // 2. Obtener el detalle (items)
+                const { data: detalle } = await supabase
+                    .from('detalle_procesos_ac')
+                    .select('*, ensayos_acreditados(nombre, categoria)')
+                    .eq('proceso_id', procesoId);
+
+                // 3. Construir items para la cotización
+                const items = [];
+                if (Array.isArray(detalle)) {
+                    for (const d of detalle) {
+                        items.push({
+                            ensayo_id: d.ensayo_id,
+                            nombre: d.ensayos_acreditados?.nombre || '',
+                            categoria: d.ensayos_acreditados?.categoria || '',
+                            cantidad: d.cantidad || 0,
+                            marca: d.marca || '',
+                            precio_unitario: 0,
+                            subtotal: 0
+                        });
+                    }
+                }
+
+                // 4. Crear la cotización
+                const cotizacionData = {
+                    proceso_id: procesoId,
+                    cotizacion: normalizeText(proceso.numero_proceso),
+                    cliente: normalizeText(proceso.cliente),
+                    informe_nombre: normalizeText(proceso.n_informe),
+                    items: items,
+                    total_items: items.length,
+                    total_valor: 0,
+                    estado: 'borrador'
+                };
+
+                const { data: nuevaCotizacion, error: errInsert } = await supabase
+                    .from('cotizaciones_ac')
+                    .insert(cotizacionData)
+                    .select()
+                    .single();
+
+                if (errInsert) {
+                    return jsonResponse(500, { ok: false, error: 'Error al crear cotización', detail: errInsert.message });
+                }
+
+                return jsonResponse(200, { ok: true, cotizacion: nuevaCotizacion });
+            }
+
+            // Duplicar cotización
+            if (payload.action === 'duplicate_cotizacion') {
+                if (!payload.id) {
+                    return jsonResponse(400, { ok: false, error: 'id requerido' });
+                }
+
+                const { data: original, error: errFind } = await supabase
+                    .from('cotizaciones_ac')
+                    .select('*')
+                    .eq('id', payload.id)
+                    .single();
+
+                if (errFind || !original) {
+                    return jsonResponse(404, { ok: false, error: 'Cotización original no encontrada' });
+                }
+
+                const copia = {
+                    proceso_id: original.proceso_id,
+                    cotizacion: normalizeText(original.cotizacion),
+                    cliente: original.cliente,
+                    informe_nombre: original.informe_nombre,
+                    items: original.items,
+                    total_items: original.total_items,
+                    total_valor: original.total_valor,
+                    estado: 'borrador'
+                };
+
+                const { data: nueva, error: errDup } = await supabase
+                    .from('cotizaciones_ac')
+                    .insert(copia)
+                    .select()
+                    .single();
+
+                if (errDup) {
+                    return jsonResponse(500, { ok: false, error: 'Error al duplicar cotización', detail: errDup.message });
+                }
+
+                return jsonResponse(200, { ok: true, cotizacion: nueva });
             }
 
             return jsonResponse(400, { ok: false, error: 'Acción no soportada' });

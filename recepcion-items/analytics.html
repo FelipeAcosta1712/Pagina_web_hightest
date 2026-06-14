@@ -224,9 +224,9 @@
                                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
                     </div>
                     <div>
-                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Empresa:</label>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Informe a Nombre de:</label>
                         <select id="filtroEmpresa" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
-                            <option value="">Todas las empresas</option>
+                            <option value="">Todas</option>
                         </select>
                     </div>
                     <!-- 'Tipo de Ensayo' eliminado por simplificación -->
@@ -254,12 +254,14 @@
                         <thead style="background-color: #f5f5f5;">
                             <tr>
                                 <th data-col="num">Nº Recepción</th>
-                                <th data-col="cliente">Cliente</th>
-                                <th data-col="empresa">Empresa</th>
-                                <th data-col="fecha">Fecha</th>
+                                <th data-col="cliente" style="max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Cliente</th>
+                                <th data-col="informe">Informe a Nombre de</th>
+                                <th data-col="factura">Factura a Nombre de</th>
+                                <th data-col="fechaRec" style="width: 110px;">Fecha Recepción</th>
+                                <th data-col="fechaEnt" style="width: 140px;">Fecha Entrega</th>
                                 <th data-col="items">Items</th>
                                 <th data-col="estado">Estado</th>
-                                <th data-col="acciones">Acciones</th>
+                                <th data-col="acciones" style="width: 80px; min-width: 80px;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="resultadosBusquedaBody">
@@ -267,6 +269,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="paginacionBusqueda" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 15px; flex-wrap: wrap;"></div>
             </div>
         </div>
 
@@ -321,15 +324,12 @@
     <script src="auth.js"></script>
     <script src="script.js"></script>
     <script>
-        // Validar acceso al cargar la página
         function validateAccessToAnalytics() {
-            const session = JSON.parse(localStorage.getItem('hightest_session') || '{}');
-            // Soportar sesión simple { rol: 'administrador', nombre: '...' }
-            // y sesión compleja guardada por `auth.js`: { user: { rol: 'administrador', nombre: '...' }, ... }
-            const userRole = (session && session.user && session.user.rol) ? session.user.rol : session.rol;
-            const displayName = (session && session.user && (session.user.nombre || session.user.email)) ? (session.user.nombre || session.user.email) : (session.nombre || session.email || 'Desconocido');
+            var session = JSON.parse(localStorage.getItem('hightest_session') || '{}');
+            var userRole = (session && session.user && session.user.rol) ? session.user.rol : session.rol;
+            var displayName = (session && session.user && (session.user.nombre || session.user.email)) ? (session.user.nombre || session.user.email) : (session.nombre || session.email || 'Desconocido');
 
-            const permittedRoles = ['administrador', 'director_tecnico'];
+            var permittedRoles = ['administrador', 'director_tecnico'];
 
             if (!userRole || !permittedRoles.includes(userRole)) {
                 document.getElementById('dashboardContent').style.display = 'none';
@@ -340,23 +340,38 @@
             document.getElementById('dashboardContent').style.display = 'block';
             document.getElementById('accessDenied').style.display = 'none';
             document.getElementById('currentUserDisplay').textContent = displayName;
-            
-            // Cargar datos iniciales: TODOS los casos
-            refrescarHistorial();
-            
             return true;
         }
 
-        // Validar acceso al cargar
-        document.addEventListener('DOMContentLoaded', function() {
-            validateAccessToAnalytics();
-            
-            // Event listener para búsqueda rápida
-            const searchInput = document.getElementById('searchHistorial');
-            if (searchInput) {
-                searchInput.addEventListener('keyup', refrescarHistorial);
+        function _cargarHistorialInicial() {
+            if (!validateAccessToAnalytics()) return;
+            try { showReportsTab('historial'); } catch(e) { console.error('Error showReportsTab:', e); }
+            try { refrescarHistorial(); } catch(e) { console.error('Error refrescarHistorial:', e); }
+
+            var _si = document.getElementById('searchHistorial');
+            if (_si) {
+                _si.addEventListener('input', function() { refrescarHistorial(); });
             }
-        });
+        }
+
+        document.addEventListener('DOMContentLoaded', _cargarHistorialInicial);
+
+        var _intentos = 0;
+        var _pollCarga = setInterval(function() {
+            _intentos++;
+            if (_intentos > 30) { clearInterval(_pollCarga); return; }
+            try {
+                var dc = document.getElementById('dashboardContent');
+                if (!dc || dc.style.display === 'none') return;
+                var tbody = document.getElementById('historialTableBody');
+                if (!tbody) return;
+                if (tbody.querySelectorAll('tr').length <= 1) {
+                    refrescarHistorial();
+                } else {
+                    clearInterval(_pollCarga);
+                }
+            } catch(e) {}
+        }, 1000);
     </script>
 </body>
 </html>
