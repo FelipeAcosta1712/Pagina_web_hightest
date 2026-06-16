@@ -1168,6 +1168,576 @@ exports.handler = async (event) => {
                 return jsonResponse(200, { ok: true, cotizacion: nueva });
             }
 
+            // ── GESTIÓN DE INFORMES (informes_ensayo_ac + Storage) ──
+
+            // Obtener informes de un proceso
+            if (payload.action === 'get_informes_proceso') {
+                const procesoId = normalizeText(payload.proceso_id);
+                if (!procesoId) return jsonResponse(400, { ok: false, error: 'proceso_id requerido' });
+
+                const { data, error } = await supabase
+                    .from('informes_ensayo_ac')
+                    .select('*')
+                    .eq('proceso_id', procesoId)
+                    .order('version', { ascending: false });
+
+                if (error) return jsonResponse(500, { ok: false, error: error.message });
+                return jsonResponse(200, { ok: true, informes: data || [] });
+            }
+
+            // Buscar informe público por número (para verificación pública)
+            // Busca directamente en procesos_acreditados por n_informe
+            if (payload.action === 'search_informe_publico') {
+                const nInforme = normalizeText(payload.n_informe);
+                if (!nInforme) return jsonResponse(400, { ok: false, error: 'n_informe requerido' });
+
+                // 1. Buscar en procesos_acreditados por n_informe (exacto)
+                let { data: proceso } = await supabase
+                    .from('procesos_acreditados')
+                    .select('*')
+                    .ilike('n_informe', nInforme)
+                    .maybeSingle();
+
+                // 2. Si no encontró, buscar sin espacios ni guiones
+                if (!proceso) {
+                    const stripped = nInforme.replace(/[\s\-]/g, '');
+                    const { data: todos } = await supabase
+                        .from('procesos_acreditados')
+                        .select('*');
+                    if (todos) {
+                        proceso = todos.find(p => {
+                            const pNorm = (p.n_informe || '').toUpperCase().replace(/[\s\-]/g, '');
+                            return pNorm === stripped;
+                        }) || null;
+                    }
+                }
+
+                if (!proceso) return jsonResponse(200, { ok: false, found: false, message: 'Informe no encontrado' });
+
+                // Buscar informe activo asociado al proceso (si existe)
+                const { data: informeActivo } = await supabase
+                    .from('informes_ensayo_ac')
+                    .select('*')
+                    .eq('proceso_id', proceso.id)
+                    .eq('activo', true)
+                    .order('version', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                return jsonResponse(200, {
+                    ok: true,
+                    found: true,
+                    informe: {
+                        n_informe: proceso.n_informe,
+                        fecha_recepcion: informeActivo?.fecha_recepcion || proceso.fecha_recepcion || '—',
+                        fecha_entrega_cliente: informeActivo?.fecha_entrega_cliente || proceso.fecha_entrega_cliente || '—',
+                        version: informeActivo?.version || 1,
+                        activo: informeActivo?.activo ?? true,
+                        nombre_documento: informeActivo?.nombre_documento || proceso.n_informe || '—',
+                        cliente: proceso.cliente || proceso.empresa || '—',
+                        informe_a_nombre_de: proceso.informe_a_nombre_de || proceso.cliente || proceso.empresa || '—',
+                        numero_proceso: proceso.numero_proceso || '—',
+                        producto: proceso.producto || '—',
+                        tipo_prueba: proceso.tipo_prueba || '—',
+                        norma_referencia: proceso.norma_referencia || '—',
+                        estado: proceso.estado || '—',
+                    }
+                });
+            }
+
+            // Obtener informe activo de un proceso
+            if (payload.action === 'get_informe_activo') {
+                const procesoId = normalizeText(payload.proceso_id);
+                if (!procesoId) return jsonResponse(400, { ok: false, error: 'proceso_id requerido' });
+
+                const { data, error } = await supabase
+                    .from('informes_ensayo_ac')
+                    .select('*')
+                    .eq('proceso_id', procesoId)
+                    .eq('activo', true)
+                    .limit(1)
+                    .single();
+
+                if (error && error.code !== 'PGRST116') return jsonResponse(500, { ok: false, error: error.message });
+                return jsonResponse(200, { ok: true, informe: data || null });
+            }
+
+            // Subir informe PDF (con versionado automático)
+            if (payload.action === 'upload_informe') {
+                const procesoId = normalizeText(payload.proceso_id);
+                const nombreDocumento = normalizeText(payload.nombre_documento);
+                const archivoPdf = normalizeText(payload.archivo_pdf);
+                if (!procesoId || !archivoPdf) {
+                    return jsonResponse(400, { ok: false, error: 'proceso_id y archivo_pdf requeridos' });
+                }
+
+                // Obtener última versión del proceso
+                const { data: existing } = await supabase
+                    .from('informes_ensayo_ac')
+                    .select('version')
+                    .eq('proceso_id', procesoId)
+                    .order('version', { ascending: false })
+                    .limit(1);
+
+                const nextVersion = (existing && existing.length > 0) ? (existing[0].version || 0) + 1 : 1;
+
+                // Desactivar versiones anteriores
+                await supabase
+                    .from('informes_ensayo_ac')
+                    .update({ activo: false })
+                    .eq('proceso_id', procesoId)
+                    .eq('activo', true);
+
+                // Insertar nueva versión
+                const insertData = {
+                    proceso_id: procesoId,
+                    nombre_documento: nombreDocumento || `Informe ${procesoId}`,
+                    archivo_pdf: archivoPdf,
+                    version: nextVersion,
+                    activo: true
+                };
+
+                const { data: nuevoInforme, error: errInsert } = await supabase
+                    .from('informes_ensayo_ac')
+                    .insert(insertData)
+                    .select()
+                    .single();
+
+                if (errInsert) return jsonResponse(500, { ok: false, error: errInsert.message });
+                return jsonResponse(200, { ok: true, informe: nuevoInforme });
+            }
+
+            // Subir archivo PDF a Storage + crear registro en informes_ensayo_ac
+            if (payload.action === 'upload_informe_file') {
+                const procesoId = normalizeText(payload.proceso_id);
+                const nombreDocumento = normalizeText(payload.nombre_documento);
+                const fileBase64 = payload.file_base64;
+                const fileMime = payload.file_mime || 'application/pdf';
+                const fileExt = payload.file_ext || 'pdf';
+                if (!procesoId || !fileBase64) {
+                    return jsonResponse(400, { ok: false, error: 'proceso_id y file_base64 requeridos' });
+                }
+
+                // Decodificar base64
+                const buffer = Buffer.from(fileBase64, 'base64');
+                const filePath = `${procesoId}/${Date.now()}_informe.${fileExt}`;
+
+                // Subir a Supabase Storage
+                const { error: uploadError } = await supabase
+                    .storage
+                    .from('Informes')
+                    .upload(filePath, buffer, { contentType: fileMime, upsert: false });
+
+                if (uploadError) {
+                    return jsonResponse(500, { ok: false, error: 'Error subiendo archivo: ' + uploadError.message });
+                }
+
+                // Obtener URL pública
+                const { data: urlData } = supabase
+                    .storage
+                    .from('Informes')
+                    .getPublicUrl(filePath);
+
+                const publicUrl = urlData?.publicUrl || '';
+
+                // Obtener última versión
+                const { data: existing } = await supabase
+                    .from('informes_ensayo_ac')
+                    .select('version')
+                    .eq('proceso_id', procesoId)
+                    .order('version', { ascending: false })
+                    .limit(1);
+
+                const nextVersion = (existing && existing.length > 0) ? (existing[0].version || 0) + 1 : 1;
+
+                // Desactivar versiones anteriores
+                await supabase
+                    .from('informes_ensayo_ac')
+                    .update({ activo: false })
+                    .eq('proceso_id', procesoId)
+                    .eq('activo', true);
+
+                // Insertar registro
+                const insertData = {
+                    proceso_id: procesoId,
+                    nombre_documento: nombreDocumento || `Informe ${procesoId}`,
+                    archivo_pdf: publicUrl || filePath,
+                    version: nextVersion,
+                    activo: true
+                };
+
+                const { data: nuevoInforme, error: errInsert } = await supabase
+                    .from('informes_ensayo_ac')
+                    .insert(insertData)
+                    .select()
+                    .single();
+
+                if (errInsert) return jsonResponse(500, { ok: false, error: errInsert.message });
+                return jsonResponse(200, { ok: true, informe: nuevoInforme });
+            }
+
+            // Eliminar informe
+            if (payload.action === 'delete_informe') {
+                const id = payload.id;
+                if (!id) return jsonResponse(400, { ok: false, error: 'id requerido' });
+
+                const { error } = await supabase
+                    .from('informes_ensayo_ac')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) return jsonResponse(500, { ok: false, error: error.message });
+                return jsonResponse(200, { ok: true });
+            }
+
+            // Obtener URL firmada para descargar PDF desde Storage
+            if (payload.action === 'get_informe_download_url') {
+                const filePath = normalizeText(payload.file_path);
+                if (!filePath) return jsonResponse(400, { ok: false, error: 'file_path requerido' });
+
+                const { data, error } = await supabase
+                    .storage
+                    .from('Informes')
+                    .createSignedUrl(filePath, 3600);
+
+                if (error) return jsonResponse(500, { ok: false, error: error.message });
+                return jsonResponse(200, { ok: true, signedUrl: data?.signedUrl || '' });
+            }
+
+            // Obtener URL pública para previsualizar PDF
+            if (payload.action === 'get_informe_public_url') {
+                const filePath = normalizeText(payload.file_path);
+                if (!filePath) return jsonResponse(400, { ok: false, error: 'file_path requerido' });
+
+                const { data } = supabase
+                    .storage
+                    .from('Informes')
+                    .getPublicUrl(filePath);
+
+                return jsonResponse(200, { ok: true, publicUrl: data?.publicUrl || '' });
+            }
+
+            // Listar archivos en Storage (carpeta de un proceso)
+            if (payload.action === 'list_informe_files') {
+                const folderPath = normalizeText(payload.folder_path) || '';
+                const { data, error } = await supabase
+                    .storage
+                    .from('Informes')
+                    .list(folderPath, { limit: 50, sortBy: { column: 'created_at', order: 'desc' } });
+
+                if (error) return jsonResponse(500, { ok: false, error: error.message });
+                return jsonResponse(200, { ok: true, files: data || [] });
+            }
+
+            // ── STATS DE INFORMES ──
+            if (payload.action === 'get_informes_stats') {
+                const { data, error } = await supabase
+                    .from('informes_ensayo_ac')
+                    .select('id, version, activo, created_at, proceso_id');
+
+                if (error) return jsonResponse(500, { ok: false, error: error.message });
+
+                const rows = data || [];
+                const total = rows.length;
+                const vigentes = rows.filter(r => r.activo === true).length;
+                const versionados = rows.filter(r => (r.version || 1) > 1).length;
+
+                let ultimoCargado = null;
+                rows.forEach(r => {
+                    if (r.created_at && (!ultimoCargado || r.created_at > ultimoCargado)) {
+                        ultimoCargado = r.created_at;
+                    }
+                });
+
+                // Procesos sin informe
+                const procesoIdsConInforme = new Set(rows.map(r => r.proceso_id).filter(Boolean));
+                const { data: todosProcesos } = await supabase
+                    .from('procesos_acreditados')
+                    .select('id');
+
+                const totalProcesos = (todosProcesos || []).length;
+                const procesosSinInforme = (todosProcesos || []).filter(p => !procesoIdsConInforme.has(p.id)).length;
+
+                return jsonResponse(200, {
+                    ok: true,
+                    stats: {
+                        total,
+                        vigentes,
+                        versionados,
+                        ultimo_cargado: ultimoCargado,
+                        procesos_sin_informe: procesosSinInforme,
+                        total_procesos: totalProcesos
+                    }
+                });
+            }
+
+            // ── IMPORTAR INFORMES EXISTENTES DESDE STORAGE ──
+            if (payload.action === 'import_informes_from_storage') {
+                const SUPABASE_URL = process.env.SUPABASE_URL;
+                const supabaseStorageUrl = `${SUPABASE_URL}/storage/v1/object/public/Informes`;
+
+                // 1. Listar todos los archivos del bucket (raíz)
+                const { data: files, error: listError } = await supabase
+                    .storage
+                    .from('Informes')
+                    .list('', { limit: 200, sortBy: { column: 'name', order: 'asc' } });
+
+                if (listError) return jsonResponse(500, { ok: false, error: 'Error listando archivos: ' + listError.message });
+
+                const pdfFiles = (files || []).filter(f => f.name && f.name.toLowerCase().endsWith('.pdf'));
+
+                // 2. Obtener todos los procesos para buscar por numero_proceso
+                const { data: procesos } = await supabase
+                    .from('procesos_acreditados')
+                    .select('id, numero_proceso');
+
+                const procesoMap = {};
+                (procesos || []).forEach(p => {
+                    if (p.numero_proceso) procesoMap[p.numero_proceso.trim()] = p.id;
+                });
+
+                // 3. Obtener informes existentes para evitar duplicados
+                const { data: existentes } = await supabase
+                    .from('informes_ensayo_ac')
+                    .select('proceso_id, nombre_documento');
+
+                const existentesSet = new Set();
+                (existentes || []).forEach(e => {
+                    existentesSet.add(`${e.proceso_id}|||${(e.nombre_documento || '').trim()}`);
+                });
+
+                // 4. Procesar cada archivo
+                let importados = 0;
+                let duplicados = 0;
+                let errores = 0;
+                let sinProceso = 0;
+                const resultados = [];
+
+                for (const file of pdfFiles) {
+                    const fileName = file.name;
+                    const fileNameNoExt = fileName.replace(/\.pdf$/i, '');
+
+                    // Extraer número de proceso: "HT-R26 0001 ..." → "R26 0001"
+                    const match = fileName.match(/R26\s*\d{4}/i);
+                    if (!match) {
+                        sinProceso++;
+                        resultados.push({ archivo: fileName, estado: 'sin_proceso', detalle: 'No se detectó R26 XXXX en el nombre' });
+                        continue;
+                    }
+
+                    const numProceso = match[0].toUpperCase().replace(/\s+/g, ' ').trim();
+                    const procesoId = procesoMap[numProceso];
+
+                    if (!procesoId) {
+                        sinProceso++;
+                        resultados.push({ archivo: fileName, estado: 'proceso_no_encontrado', detalle: `No se encontró proceso ${numProceso} en DB` });
+                        continue;
+                    }
+
+                    // Verificar duplicado
+                    const key = `${procesoId}|||${fileNameNoExt.trim()}`;
+                    if (existentesSet.has(key)) {
+                        duplicados++;
+                        resultados.push({ archivo: fileName, estado: 'duplicado', detalle: `Proceso ${numProceso} ya tiene este documento` });
+                        continue;
+                    }
+
+                    // Construir URL pública
+                    const fileUrl = `${supabaseStorageUrl}/${encodeURIComponent(fileName)}`;
+
+                    // Insertar registro
+                    const { error: insertError } = await supabase
+                        .from('informes_ensayo_ac')
+                        .insert({
+                            proceso_id: procesoId,
+                            nombre_documento: fileNameNoExt.trim(),
+                            archivo_pdf: fileUrl,
+                            version: 1,
+                            activo: true
+                        });
+
+                    if (insertError) {
+                        errores++;
+                        resultados.push({ archivo: fileName, estado: 'error', detalle: insertError.message });
+                    } else {
+                        importados++;
+                        existentesSet.add(key);
+                        resultados.push({ archivo: fileName, estado: 'importado', proceso_id: procesoId, numero_proceso: numProceso });
+                    }
+                }
+
+                return jsonResponse(200, {
+                    ok: true,
+                    resumen: {
+                        total_archivos: pdfFiles.length,
+                        importados,
+                        duplicados,
+                        errores,
+                        sin_proceso: sinProceso
+                    },
+                    resultados
+                });
+            }
+
+            // ── CARGA MASIVA DE INFORMES ──
+            if (payload.action === 'upload_informes_bulk') {
+                const files = payload.files || [];
+                const omitDuplicates = payload.omit_duplicates !== false;
+                const createVersion = payload.create_version !== false;
+                const replaceActive = payload.replace_active === true;
+                const SUPABASE_URL = process.env.SUPABASE_URL;
+                const supabaseStorageUrl = `${SUPABASE_URL}/storage/v1/object/public/Informes`;
+
+                if (!files.length) return jsonResponse(400, { ok: false, error: 'No se enviaron archivos' });
+
+                // Obtener todos los procesos
+                const { data: procesos } = await supabase
+                    .from('procesos_acreditados')
+                    .select('id, numero_proceso');
+
+                const procesoMap = {};
+                (procesos || []).forEach(p => {
+                    if (p.numero_proceso) procesoMap[p.numero_proceso.trim()] = p.id;
+                });
+
+                // Obtener informes existentes
+                const { data: existentes } = await supabase
+                    .from('informes_ensayo_ac')
+                    .select('proceso_id, nombre_documento, version, activo');
+
+                const existentesMap = {};
+                (existentes || []).forEach(e => {
+                    const key = `${e.proceso_id}|||${(e.nombre_documento || '').trim()}`;
+                    if (!existentesMap[key]) existentesMap[key] = [];
+                    existentesMap[key].push(e);
+                });
+
+                let importados = 0;
+                let versionados = 0;
+                let duplicados = 0;
+                let errores = 0;
+                const resultados = [];
+
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const fileName = file.name || `archivo_${i}.pdf`;
+                    const fileBase64 = file.base64;
+                    const fileNameNoExt = fileName.replace(/\.pdf$/i, '');
+
+                    // Detectar R26
+                    const match = fileName.match(/R26\s*\d{4}/i);
+                    if (!match) {
+                        errores++;
+                        resultados.push({ archivo: fileName, estado: 'error', detalle: 'No se detectó R26 XXXX' });
+                        continue;
+                    }
+
+                    const numProceso = match[0].toUpperCase().replace(/\s+/g, ' ').trim();
+                    const procesoId = procesoMap[numProceso];
+
+                    if (!procesoId) {
+                        errores++;
+                        resultados.push({ archivo: fileName, estado: 'error', detalle: `Proceso ${numProceso} no encontrado` });
+                        continue;
+                    }
+
+                    // Verificar si ya existe informe activo para este proceso
+                    const key = `${procesoId}|||${fileNameNoExt.trim()}`;
+                    const existentesParaProceso = existentesMap[key] || [];
+                    const existeActivo = existentesParaProceso.some(e => e.activo === true);
+
+                    if (existeActivo && omitDuplicates && !createVersion && !replaceActive) {
+                        duplicados++;
+                        resultados.push({ archivo: fileName, estado: 'duplicado', detalle: `Ya existe informe activo para ${numProceso}` });
+                        continue;
+                    }
+
+                    // Subir archivo a Storage
+                    const filePath = `${procesoId}/${Date.now()}_${i}_bulk.pdf`;
+                    let publicUrl = '';
+
+                    try {
+                        const buffer = Buffer.from(fileBase64, 'base64');
+                        const { error: uploadError } = await supabase
+                            .storage
+                            .from('Informes')
+                            .upload(filePath, buffer, { contentType: 'application/pdf', upsert: false });
+
+                        if (uploadError) throw new Error(uploadError.message);
+
+                        const { data: urlData } = supabase.storage.from('Informes').getPublicUrl(filePath);
+                        publicUrl = urlData?.publicUrl || '';
+                    } catch (uploadErr) {
+                        errores++;
+                        resultados.push({ archivo: fileName, estado: 'error', detalle: 'Error Storage: ' + uploadErr.message });
+                        continue;
+                    }
+
+                    // Determinar versión
+                    let nextVersion = 1;
+                    let shouldDeactivate = false;
+
+                    if (existeActivo && (createVersion || replaceActive)) {
+                        const maxVersion = Math.max(...existentesParaProceso.map(e => e.version || 1));
+                        nextVersion = maxVersion + 1;
+                        shouldDeactivate = true;
+                    } else if (existeActivo) {
+                        nextVersion = (existentesParaProceso[0]?.version || 0) + 1;
+                        shouldDeactivate = true;
+                    }
+
+                    // Desactivar versiones anteriores si aplica
+                    if (shouldDeactivate) {
+                        await supabase
+                            .from('informes_ensayo_ac')
+                            .update({ activo: false })
+                            .eq('proceso_id', procesoId)
+                            .eq('nombre_documento', fileNameNoExt.trim())
+                            .eq('activo', true);
+                    }
+
+                    // Insertar registro
+                    const { error: insertError } = await supabase
+                        .from('informes_ensayo_ac')
+                        .insert({
+                            proceso_id: procesoId,
+                            nombre_documento: fileNameNoExt.trim(),
+                            archivo_pdf: publicUrl || `${supabaseStorageUrl}/${encodeURIComponent(filePath)}`,
+                            version: nextVersion,
+                            activo: true
+                        });
+
+                    if (insertError) {
+                        errores++;
+                        resultados.push({ archivo: fileName, estado: 'error', detalle: insertError.message });
+                    } else {
+                        if (existeActivo) {
+                            versionados++;
+                            resultados.push({ archivo: fileName, estado: 'versionado', proceso_id: procesoId, numero_proceso: numProceso, version: nextVersion });
+                        } else {
+                            importados++;
+                            resultados.push({ archivo: fileName, estado: 'importado', proceso_id: procesoId, numero_proceso: numProceso, version: nextVersion });
+                        }
+                        // Agregar al mapa para futuros duplicados
+                        const newKey = `${procesoId}|||${fileNameNoExt.trim()}`;
+                        if (!existentesMap[newKey]) existentesMap[newKey] = [];
+                        existentesMap[newKey].push({ proceso_id: procesoId, nombre_documento: fileNameNoExt.trim(), version: nextVersion, activo: true });
+                    }
+                }
+
+                return jsonResponse(200, {
+                    ok: true,
+                    resumen: {
+                        total: files.length,
+                        importados,
+                        versionados,
+                        duplicados,
+                        errores
+                    },
+                    resultados
+                });
+            }
+
             return jsonResponse(400, { ok: false, error: 'Acción no soportada' });
         } catch (err) {
             return jsonResponse(500, { ok: false, error: err.message });

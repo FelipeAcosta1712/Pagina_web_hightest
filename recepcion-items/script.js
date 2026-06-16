@@ -8730,10 +8730,12 @@ function actualizarEstadisticas() {
     casos.forEach(caso => {
         const cotizacion = caso.cotizacion || caso.quoteNumber || 'N/A';
         const cliente = caso.cliente || caso.clienteRecepcionNombre || 'N/A';
+        const informeNombre = caso.informeNombre || caso.empresa || 'N/A';
         
         if (!caseStats[cotizacion]) {
             caseStats[cotizacion] = {
                 cliente: cliente,
+                informeNombre: informeNombre,
                 totalRecibidos: 0,
                 totalEntregados: 0,
                 items: {},
@@ -8784,10 +8786,20 @@ function actualizarEstadisticas() {
         return String(b[0]).localeCompare(String(a[0]));
     });
     
+    // Paginación
+    const itemsPorPagina = 20;
+    const totalPaginasEst = Math.ceil(casesArray.length / itemsPorPagina);
+    let paginaEst = window._paginaEstadisticas || 1;
+    if (paginaEst > totalPaginasEst) paginaEst = totalPaginasEst;
+    if (paginaEst < 1) paginaEst = 1;
+    window._paginaEstadisticas = paginaEst;
+    const inicioEst = (paginaEst - 1) * itemsPorPagina;
+    const paginadosEst = casesArray.slice(inicioEst, inicioEst + itemsPorPagina);
+    
     if (casesArray.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="padding: 16px; text-align: center; color: #666;">No hay registros</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="padding: 16px; text-align: center; color: #666;">No hay registros</td></tr>';
     } else {
-        casesArray.forEach(([cotizacion, stats]) => {
+        paginadosEst.forEach(([cotizacion, stats]) => {
             const diferencia = stats.totalEntregados - stats.totalRecibidos;
             const diferenciasStyle = diferencia !== 0 ? 'background: #ffebee; color: #c62828; font-weight: bold;' : '';
             const discrepanciaIndicador = diferencia !== 0 ? '<div style="color: #e91e63; font-size: 11px; margin-top: 4px; font-weight: bold;">⚠️ Discrepancia</div>' : '';
@@ -8795,6 +8807,7 @@ function actualizarEstadisticas() {
                 <tr>
                     <td style="padding: 10px; border: 1px solid #ddd;">${cotizacion}</td>
                     <td style="padding: 10px; border: 1px solid #ddd;">${stats.cliente}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${stats.informeNombre}</td>
                     <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${stats.totalItems}</td>
                     <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${stats.totalRecibidos}</td>
                     <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${stats.totalEntregados}</td>
@@ -8808,6 +8821,31 @@ function actualizarEstadisticas() {
             tbody.innerHTML += row;
         });
     }
+    
+    // Renderizar paginación de estadísticas
+    const pagDivEst = document.getElementById('paginacionEstadisticas');
+    if (pagDivEst) {
+        if (totalPaginasEst <= 1) { pagDivEst.innerHTML = ''; return; }
+        let html = `<span style="font-size: 13px; color: #666;">Mostrando ${inicioEst + 1}-${Math.min(inicioEst + itemsPorPagina, casesArray.length)} de ${casesArray.length}</span>`;
+        html += `<button type="button" class="btn btn-small" onclick="paginarEstadisticas(1)" ${paginaEst === 1 ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">«</button>`;
+        html += `<button type="button" class="btn btn-small" onclick="paginarEstadisticas(${paginaEst - 1})" ${paginaEst === 1 ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">‹</button>`;
+        let startPage = Math.max(1, paginaEst - 2);
+        let endPage = Math.min(totalPaginasEst, startPage + 4);
+        if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+        for (let i = startPage; i <= endPage; i++) {
+            html += `<button type="button" class="btn btn-small" onclick="paginarEstadisticas(${i})" style="padding: 4px 10px; font-size: 13px; ${i === paginaEst ? 'background: #022859; color: white;' : ''}">${i}</button>`;
+        }
+        html += `<button type="button" class="btn btn-small" onclick="paginarEstadisticas(${paginaEst + 1})" ${paginaEst === totalPaginasEst ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">›</button>`;
+        html += `<button type="button" class="btn btn-small" onclick="paginarEstadisticas(${totalPaginasEst})" ${paginaEst === totalPaginasEst ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">»</button>`;
+        pagDivEst.innerHTML = html;
+    }
+}
+
+// Paginación de estadísticas
+function paginarEstadisticas(pagina) {
+    window._paginaEstadisticas = pagina;
+    actualizarEstadisticas();
+    document.getElementById('estadisticasCasoTableBody').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // Búsqueda avanzada

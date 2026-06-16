@@ -85,13 +85,17 @@
         .badge-recepcion { background: #ff9800; }
         .badge-completado { background: #28a745; }
         /* Ajustes específicos de columnas para mejorar lectura */
-        th[data-col="num"] { width: 12%; }
-        th[data-col="cliente"] { width: 24%; }
+        th[data-col="num"] { width: 90px; white-space: nowrap; }
+        th[data-col="cliente"] { width: 18%; }
+        th[data-col="informe"] { width: 18%; }
+        th[data-col="factura"] { width: 16%; }
+        th[data-col="fechaRec"] { width: 110px; white-space: nowrap; }
+        th[data-col="fechaEnt"] { width: 110px; white-space: nowrap; }
         th[data-col="empresa"] { width: 24%; }
         th[data-col="fecha"] { width: 14%; }
-        th[data-col="items"] { width: 8%; text-align: center; }
-        th[data-col="estado"] { width: 10%; text-align: center; }
-        th[data-col="acciones"] { width: 14%; text-align: center; }
+        th[data-col="items"] { width: 6%; text-align: center; }
+        th[data-col="estado"] { width: 8%; text-align: center; }
+        th[data-col="acciones"] { width: 8%; text-align: center; }
         .report-tab tbody td:last-child { white-space: nowrap; }
     </style>
 </head>
@@ -194,6 +198,7 @@
                             <tr>
                                 <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Nº Recepción</th>
                                 <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Cliente</th>
+                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Informe a Nombre de</th>
                                 <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Items</th>
                                 <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Recibidos Total</th>
                                 <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Entregados Total</th>
@@ -206,6 +211,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="paginacionEstadisticas" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 15px; flex-wrap: wrap;"></div>
             </div>
 
             <!-- TAB 3: BÚSQUEDA AVANZADA -->
@@ -253,12 +259,12 @@
                     <table id="resultadosBusquedaTable" style="width: 100%; border-collapse: collapse;">
                         <thead style="background-color: #f5f5f5;">
                             <tr>
-                                <th data-col="num">Nº Recepción</th>
-                                <th data-col="cliente" style="max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Cliente</th>
+                                <th data-col="num" style="width: 90px; white-space: nowrap;">Nº Recepción</th>
+                                <th data-col="cliente">Cliente</th>
                                 <th data-col="informe">Informe a Nombre de</th>
                                 <th data-col="factura">Factura a Nombre de</th>
                                 <th data-col="fechaRec" style="width: 110px;">Fecha Recepción</th>
-                                <th data-col="fechaEnt" style="width: 140px;">Fecha Entrega</th>
+                                <th data-col="fechaEnt" style="width: 110px; white-space: nowrap;">Fecha Entrega</th>
                                 <th data-col="items">Items</th>
                                 <th data-col="estado">Estado</th>
                                 <th data-col="acciones" style="width: 80px; min-width: 80px;">Acciones</th>

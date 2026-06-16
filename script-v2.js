@@ -204,6 +204,15 @@ function isProcesoActivo(row) {
     return estado !== 'finalizado';
 }
 
+/**
+ * Normaliza el formato del número de informe: elimina espacios alrededor de guiones.
+ * Ej: "HT - R" → "HT-R", "HT - 2025 - 001" → "HT-2025-001"
+ */
+function normalizeInformeNumber(value) {
+    if (!value) return '';
+    return String(value).replace(/\s*-\s*/g, '-').trim();
+}
+
 function normalizeStatusKey(status) {
     if (!status) return '';
     const raw = String(status).trim().toLowerCase();
@@ -255,7 +264,7 @@ function renderProcesosToTable(tbodyId, rows = []) {
     sortedRows.forEach(row => {
         const numero = row.numero_proceso || row.proceso_numero || row.numero || row.id || row.proceso || row.nro_proceso || '';
         const cliente = row.cliente || row.empresa || row.nombre_cliente || row.client || '';
-        const informe = row.n_informe || row.informe_numero || row.nro_informe || row.informe || '';
+        const informe = normalizeInformeNumber(row.n_informe || row.informe_numero || row.nro_informe || row.informe || '');
         const estado = row.estado || row.status || '';
         const estadoKey = normalizeStatusKey(estado) || (estado || '').toString().trim().toLowerCase();
         const fechaRecepcion = row.fecha_recepcion || row.fecha_recepcion_iso || row.recepcion || row.fecha_rec || '';
@@ -358,7 +367,7 @@ function getProcessDateValues(row) {
 function getProcessSearchBlob(row) {
     const numero = row?.numero_proceso || row?.proceso_numero || row?.numero || row?.id || row?.proceso || row?.nro_proceso || '';
     const cliente = row?.cliente || row?.empresa || row?.nombre_cliente || row?.client || '';
-    const informe = row?.n_informe || row?.informe_numero || row?.nro_informe || row?.informe || '';
+    const informe = normalizeInformeNumber(row?.n_informe || row?.informe_numero || row?.nro_informe || row?.informe || '');
     const estado = row?.estado || row?.status || '';
     return `${numero} ${cliente} ${informe} ${formatStatusLabel(estado)}`.toLowerCase();
 }
@@ -494,6 +503,10 @@ async function cargarProcesos() {
         PROCESOS_STORE.pagination.page = 1;
         populateClientFilterOptions();
         filtrarProcesos();
+        if (typeof GestionInformesModule !== 'undefined') {
+            GestionInformesModule.populateClienteFilter?.();
+            GestionInformesModule.populateProcesosSelect?.();
+        }
     } catch (err) {
         console.error('Error cargando procesos acreditados', err);
         Toast.show({ title: 'Error', message: err.message || 'No se pudieron cargar los procesos', variant: 'error' });
@@ -643,7 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (receptionDate) receptionDate.value = p.fecha_recepcion ? p.fecha_recepcion.split('T')[0] : '';
             if (deliveryDate) deliveryDate.value = p.fecha_entrega_cliente ? p.fecha_entrega_cliente.split('T')[0] : '';
             if (finalizedDate) finalizedDate.value = p.fecha_finalizado ? p.fecha_finalizado.split('T')[0] : '';
-            if (nInforme) nInforme.value = p.n_informe || '';
+            if (nInforme) nInforme.value = normalizeInformeNumber(p.n_informe || '');
             if (valor) valor.value = p.valor || '';
             if (obs) obs.value = p.observaciones || '';
 
@@ -1366,7 +1379,7 @@ const PublicReportVerifier = {
 
         this.bindModalEvents();
 
-        const handleVerify = () => {
+        const handleVerify = async () => {
             const raw = input.value.trim();
             if (!raw) {
                 this.showResult('Por favor ingrese un número de informe.', false);
@@ -1374,14 +1387,34 @@ const PublicReportVerifier = {
                 return;
             }
 
-            const normalized = raw.toUpperCase();
-            const record = this.reports.find(r => r.number === normalized);
+            const normalized = raw.toUpperCase().replace(/\s+/g, ' ').trim();
+            this.showResult('Buscando informe...', true);
 
-            if (record) {
-                this.showResult(`✔ Informe ${normalized} válido. Se muestran más datos en la ventana.`, true);
-                this.showModal(record, true, normalized);
-            } else {
-                this.showResult(`✖ No encontramos el informe ${normalized} en los registros de ejemplo.`, false);
+            try {
+                const result = await fetchFromDatabase('search_informe_publico', { n_informe: normalized });
+
+                if (result?.ok && result?.found) {
+                    const inf = result.informe;
+                    this.showResult(`✔ Informe ${inf.n_informe} válido.`, true);
+                    this.showModal({
+                        number: inf.n_informe,
+                        client: inf.cliente,
+                        informe_a_nombre: inf.informe_a_nombre_de || inf.cliente,
+                        product: inf.producto,
+                        date: inf.fecha_entrega_cliente || '—',
+                        fecha_recepcion: inf.fecha_recepcion || '—',
+                        type: inf.tipo_prueba || 'Ensayo acreditado',
+                        status: inf.activo ? 'Válido' : 'Inactivo',
+                        lab: 'HIGH TEST SAS',
+                        numero_proceso: inf.numero_proceso,
+                    }, true, normalized);
+                } else {
+                    this.showResult(`✖ No encontramos el informe ${normalized} en los registros de HIGH TEST.`, false);
+                    this.showModal(null, false, normalized);
+                }
+            } catch (err) {
+                console.error('Error verificando informe:', err);
+                this.showResult(`✖ Error al buscar el informe. Intente nuevamente.`, false);
                 this.showModal(null, false, normalized);
             }
         };
@@ -1436,11 +1469,18 @@ const PublicReportVerifier = {
     showModal(record, ok, searchedNumber) {
         if (!this.modal || !this.modalBody) return;
 
+        const now = new Date();
+        const verifyDate = now.toLocaleDateString('es-CO', { year:'numeric', month:'long', day:'numeric' });
+        const verifyTime = now.toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' });
+
         if (!record && !searchedNumber) {
             this.modalBody.innerHTML = `
-                <div class="report-modal__status report-modal__status--error">
-                    <span class="report-modal__status-icon">!</span>
-                    <span>No se pudo realizar la verificación. Intente nuevamente.</span>
+                <div style="text-align:center; padding:24px 0;">
+                    <div style="width:72px; height:72px; margin:0 auto 16px; background:#fff3e0; border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <span style="font-size:32px;">⚠️</span>
+                    </div>
+                    <h3 style="margin:0 0 8px; color:#e65100; font-size:18px;">No se pudo verificar</h3>
+                    <p style="margin:0; color:#666; font-size:14px;">Ocurrió un error al consultar. Intente nuevamente.</p>
                 </div>
             `;
             this.openModal();
@@ -1448,56 +1488,148 @@ const PublicReportVerifier = {
         }
 
         if (record) {
+            const isValid = record.status === 'Válido' || record.status === 'Activo';
+            const statusColor = isValid ? '#16a34a' : record.status === 'Inactivo' ? '#dc2626' : '#d97706';
+            const statusBg = isValid ? '#f0fdf4' : record.status === 'Inactivo' ? '#fef2f2' : '#fffbeb';
+            const borderColor = isValid ? '#16a34a' : record.status === 'Inactivo' ? '#dc2626' : '#d97706';
+            const statusText = isValid ? 'VÁLIDO' : (record.status || 'VÁLIDO');
+
             this.modalBody.innerHTML = `
-                <div class="report-modal__status report-modal__status--ok">
-                    <span class="report-modal__status-icon">✔</span>
-                    <span>Informe válido emitido por HIGH TEST SAS.</span>
+                <div style="text-align:center; padding:20px 0 16px;">
+                    <div style="width:72px; height:72px; margin:0 auto 14px; background:${statusBg}; border-radius:50%; display:flex; align-items:center; justify-content:center; border:3px solid ${borderColor}; box-shadow:0 0 0 6px ${statusBg};">
+                        <span style="font-size:32px;">${isValid ? '🛡️' : '❌'}</span>
+                    </div>
+                    <h2 class="verify-modal__title" style="margin:0 0 6px; color:${statusColor}; font-size:20px; text-transform:uppercase; letter-spacing:1px;">Informe Verificado</h2>
+                    <p class="verify-modal__subtitle" style="margin:0; font-size:13px;">El informe ha sido verificado exitosamente y es auténtico.</p>
                 </div>
-                <div class="report-modal__details">
-                    <div class="report-modal__row">
-                        <span class="report-modal__label">Número de informe:</span>
-                        <span class="report-modal__value">${record.number}</span>
-                    </div>
-                    <div class="report-modal__row">
-                        <span class="report-modal__label">Cliente:</span>
-                        <span class="report-modal__value">${record.client}</span>
-                    </div>
-                    <div class="report-modal__row">
-                        <span class="report-modal__label">Elemento/Ensayo:</span>
-                        <span class="report-modal__value">${record.product}</span>
-                    </div>
-                    <div class="report-modal__row">
-                        <span class="report-modal__label">Fecha de emisión:</span>
-                        <span class="report-modal__value">${record.date}</span>
-                    </div>
-                    <div class="report-modal__row">
-                        <span class="report-modal__label">Tipo de documento:</span>
-                        <span class="report-modal__value">${record.type}</span>
-                    </div>
-                    <div class="report-modal__row">
-                        <span class="report-modal__label">Estado:</span>
-                        <span class="report-modal__value">${record.status}</span>
-                    </div>
-                    <div class="report-modal__row">
-                        <span class="report-modal__label">Laboratorio:</span>
-                        <span class="report-modal__value">${record.lab}</span>
+
+                <div style="text-align:center; margin-bottom:16px;">
+                    <span class="verify-modal__badge" style="display:inline-block; padding:6px 20px; background:${statusBg}; color:${statusColor}; border:2px solid ${borderColor}; border-radius:20px; font-size:13px; font-weight:700; letter-spacing:0.5px;">
+                        ✅ Estado del informe: ${statusText}
+                    </span>
+                    <div class="verify-modal__subtitle" style="margin-top:8px; font-size:11px;">
+                        🕐 Verificado el ${verifyDate} a las ${verifyTime} a. m.
                     </div>
                 </div>
-                <p class="report-modal__note">
-                    La presente verificación es informativa y se basa en datos de ejemplo cargados en este entorno de demostración.
-                    Para confirmar informes reales, el laboratorio HIGH TEST SAS podrá solicitar datos adicionales de validación.
-                </p>
+
+                <div class="verify-modal__card" style="display:flex; align-items:center; gap:16px; padding:16px; border:1px solid #e2e8f0; border-radius:12px; margin-bottom:20px;">
+                    <div style="width:48px; height:48px; background:#e0e7ff; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <span style="font-size:22px;">📄</span>
+                    </div>
+                    <div style="flex:1;">
+                        <div class="verify-modal__label" style="font-size:10px; text-transform:uppercase; letter-spacing:0.5px;">Informe de Ensayo</div>
+                        <div style="font-size:20px; font-weight:800; color:#1e293b; font-family:monospace; letter-spacing:1px;">${record.number}</div>
+                    </div>
+                    <div style="text-align:right; border-left:1px solid #e2e8f0; padding-left:16px;">
+                        <div class="verify-modal__label" style="font-size:10px; text-transform:uppercase; letter-spacing:0.5px;">N° Proceso</div>
+                        <div style="font-size:15px; font-weight:700; color:#022859;">${record.numero_proceso || '—'}</div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <h4 class="verify-modal__section-title" style="margin:0 0 10px; font-size:12px; text-transform:uppercase; letter-spacing:1px; border-bottom:2px solid #022859; padding-bottom:6px; color:#022859;">Información del Informe</h4>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0;">
+                        <div class="verify-modal__field" style="padding:10px 12px; border-bottom:1px solid #f0f0f0;">
+                            <div class="verify-modal__label" style="font-size:10px; text-transform:uppercase;">👤 Cliente</div>
+                            <div style="font-size:13px; font-weight:600; color:#1e293b;">${record.client || '—'}</div>
+                        </div>
+                        <div class="verify-modal__field" style="padding:10px 12px; border-bottom:1px solid #f0f0f0;">
+                            <div class="verify-modal__label" style="font-size:10px; text-transform:uppercase;">📝 Informe a nombre de</div>
+                            <div style="font-size:13px; font-weight:600; color:#1e293b;">${record.informe_a_nombre || record.client || '—'}</div>
+                        </div>
+                        <div class="verify-modal__field" style="padding:10px 12px; border-bottom:1px solid #f0f0f0;">
+                            <div class="verify-modal__label" style="font-size:10px; text-transform:uppercase;">📅 Fecha de recepción</div>
+                            <div style="font-size:13px; font-weight:600; color:#1e293b;">${record.fecha_recepcion || '—'}</div>
+                        </div>
+                        <div class="verify-modal__field" style="padding:10px 12px; border-bottom:1px solid #f0f0f0;">
+                            <div class="verify-modal__label" style="font-size:10px; text-transform:uppercase;">📅 Fecha de entrega</div>
+                            <div style="font-size:13px; font-weight:600; color:#1e293b;">${record.date || '—'}</div>
+                        </div>
+                        <div class="verify-modal__field" style="padding:10px 12px;">
+                            <div class="verify-modal__label" style="font-size:10px; text-transform:uppercase;">🏢 Laboratorio emisor</div>
+                            <div style="font-size:13px; font-weight:600; color:#1e293b;">${record.lab}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <h4 class="verify-modal__section-title" style="margin:0 0 10px; font-size:12px; text-transform:uppercase; letter-spacing:1px; border-bottom:2px solid #022859; padding-bottom:6px; color:#022859;">Detalles de Verificación</h4>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+                        <div class="verify-modal__detail-box" style="padding:10px; background:#f8fafc; border-radius:8px; text-align:center;">
+                            <div class="verify-modal__label" style="font-size:10px; text-transform:uppercase;">Código</div>
+                            <div style="font-size:11px; font-weight:700; color:#022859; font-family:monospace;">${record.number}</div>
+                        </div>
+                        <div class="verify-modal__detail-box" style="padding:10px; background:#f8fafc; border-radius:8px; text-align:center;">
+                            <div class="verify-modal__label" style="font-size:10px; text-transform:uppercase;">Emisión</div>
+                            <div style="font-size:11px; font-weight:600; color:#1e293b;">${record.date || '—'}</div>
+                        </div>
+                        <div class="verify-modal__detail-box" style="padding:10px; background:#f8fafc; border-radius:8px; text-align:center;">
+                            <div class="verify-modal__label" style="font-size:10px; text-transform:uppercase;">Verificación</div>
+                            <div style="font-size:11px; font-weight:600; color:#1e293b;">${verifyDate}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="verify-modal__footer-box" style="display:flex; align-items:flex-start; gap:10px; padding:12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px;">
+                    <span style="font-size:20px; flex-shrink:0;">🛡️</span>
+                    <div>
+                        <div style="font-size:12px; font-weight:700; color:#166534;">Autenticidad garantizada</div>
+                        <div class="verify-modal__subtitle" style="font-size:11px; line-height:1.5; color:#166534;">Este informe ha sido emitido por HIGH TEST SAS y su autenticidad ha sido confirmada en nuestra base de datos.</div>
+                    </div>
+                </div>
             `;
         } else {
             this.modalBody.innerHTML = `
-                <div class="report-modal__status report-modal__status--error">
-                    <span class="report-modal__status-icon">✖</span>
-                    <span>No encontramos el informe <strong>${searchedNumber}</strong> en los registros de ejemplo.</span>
+                <div style="text-align:center; padding:20px 0 16px;">
+                    <div style="width:72px; height:72px; margin:0 auto 14px; background:#fef2f2; border-radius:50%; display:flex; align-items:center; justify-content:center; border:3px solid #dc2626; box-shadow:0 0 0 6px #fef2f2;">
+                        <span style="font-size:32px;">🛡️</span>
+                    </div>
+                    <h2 class="verify-modal__title" style="margin:0 0 6px; color:#dc2626; font-size:20px; text-transform:uppercase; letter-spacing:1px;">Informe No Verificado</h2>
+                    <p class="verify-modal__subtitle" style="margin:0; font-size:13px;">No se encontró el informe en los registros de HIGH TEST SAS.</p>
                 </div>
-                <p class="report-modal__note">
-                    Verifique que el número esté escrito exactamente como aparece en el informe (ejemplo: HT-2025-001).
-                    Si se trata de un informe real y aún así tiene dudas, por favor contacte directamente a HIGH TEST SAS para recibir confirmación formal.
-                </p>
+
+                <div style="text-align:center; margin-bottom:16px;">
+                    <span class="verify-modal__badge" style="display:inline-block; padding:6px 20px; background:#fef2f2; color:#dc2626; border:2px solid #dc2626; border-radius:20px; font-size:13px; font-weight:700; letter-spacing:0.5px;">
+                        ❌ Estado del informe: NO ENCONTRADO
+                    </span>
+                </div>
+
+                <div class="verify-modal__warn-box" style="padding:14px; background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; margin-bottom:16px;">
+                    <div style="font-size:11px; font-weight:600; color:#9a3412; margin-bottom:4px;">Número buscado:</div>
+                    <div style="font-size:16px; font-weight:800; color:#c2410c; font-family:monospace; letter-spacing:1px;">${searchedNumber}</div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <h4 class="verify-modal__section-title" style="margin:0 0 10px; font-size:12px; text-transform:uppercase; letter-spacing:1px; border-bottom:2px solid #022859; padding-bottom:6px; color:#022859;">Posibles Causas</h4>
+                    <div style="display:grid; gap:8px;">
+                        <div class="verify-modal__field" style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:#f8fafc; border-radius:8px;">
+                            <span style="font-size:16px;">🔍</span>
+                            <span class="verify-modal__text" style="font-size:13px; color:#475569;">El número no existe en el sistema</span>
+                        </div>
+                        <div class="verify-modal__field" style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:#f8fafc; border-radius:8px;">
+                            <span style="font-size:16px;">✏️</span>
+                            <span class="verify-modal__text" style="font-size:13px; color:#475569;">Error de escritura en el número</span>
+                        </div>
+                        <div class="verify-modal__field" style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:#f8fafc; border-radius:8px;">
+                            <span style="font-size:16px;">📋</span>
+                            <span class="verify-modal__text" style="font-size:13px; color:#475569;">El informe aún no ha sido cargado al sistema</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="verify-modal__success-box" style="padding:14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; margin-bottom:14px;">
+                    <div style="font-size:12px; font-weight:700; color:#166534; margin-bottom:6px;">✅ Formato correcto:</div>
+                    <div style="font-size:12px; color:#166534; line-height:1.6;">
+                        Ejemplo: <strong>HT-R26 0001</strong>, <strong>HT-R26 0015</strong>
+                    </div>
+                </div>
+
+                <div class="verify-modal__footer-box" style="display:flex; align-items:flex-start; gap:10px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+                    <span style="font-size:18px; flex-shrink:0;">📞</span>
+                    <div class="verify-modal__subtitle" style="font-size:11px; line-height:1.5; color:#64748b;">
+                        Si tiene dudas, contacte directamente a <strong>HIGH TEST SAS</strong> para recibir confirmación formal.
+                    </div>
+                </div>
             `;
         }
 
@@ -3405,6 +3537,7 @@ const AdminPanelManager = {
         const quickLinkSection = document.querySelector('.admin-quick-link');
         const reportsAcreditadosSection = document.getElementById('reports-acreditados');
         const reportsNoAcreditadosSection = document.getElementById('reports-no-acreditados');
+        const gestionInformesSection = document.getElementById('gestion-informes');
 
         // Ocultar todas las secciones por defecto
         certificatesSection?.classList.add('is-hidden');
@@ -3415,6 +3548,7 @@ const AdminPanelManager = {
         reportsAcreditadosSection?.classList.add('is-hidden');
         reportsNoAcreditadosSection?.classList.add('is-hidden');
         quickLinkSection?.classList.add('is-hidden');
+        if (gestionInformesSection) gestionInformesSection.style.display = 'none';
 
         if (commercialSection) {
             commercialSection.hidden = true;
@@ -3426,12 +3560,12 @@ const AdminPanelManager = {
             statsSection?.classList.remove('is-hidden');
             reportsAcreditadosSection?.classList.remove('is-hidden');
             certificatesSection?.classList.remove('is-hidden');
+            if (gestionInformesSection) gestionInformesSection.style.display = '';
             if (shouldScroll) {
                 quickLinkSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
-            this.renderCertificates();
-            this.updateStats();
-            this.renderMonthlySummary();
+            filtrarProcesos();
+            GestionInformesModule.init();
         } else if (tabName === 'no-acreditados') {
             quickLinkSection?.classList.remove('is-hidden');
             reportsNoAcreditadosSection?.classList.remove('is-hidden');
@@ -3439,6 +3573,7 @@ const AdminPanelManager = {
             if (shouldScroll) {
                 quickLinkSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
+            filtrarProcesos();
             this.renderCertificatesNoAcreditados();
             this.updateStatsNoAcreditados();
             this.renderMonthlySummaryNoAcreditados();
@@ -3455,6 +3590,9 @@ const AdminPanelManager = {
             if (shouldScroll) {
                 commercialSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
+            window.CommercialQuotesModule?.loadData?.().then(() => {
+                window.CommercialQuotesModule?.render?.();
+            });
         }
     },
 
@@ -3662,7 +3800,7 @@ const AdminPanelManager = {
         processNumber.value = cert.id;
         client.value = cert.client;
         if (tipo) tipo.value = cert.type || 'acreditado';
-        nInforme.value = cert.n_informe || '';
+        nInforme.value = normalizeInformeNumber(cert.n_informe || '');
         status.value = cert.status;
         receptionDate.value = cert.receptionDate || '';
         deliveryDate.value = cert.deliveryDate || '';
@@ -5269,7 +5407,7 @@ const CommercialQuotesModule = {
         });
     },
 
-    loadData() {
+    async loadData() {
         try {
             const stored = localStorage.getItem(this.storageKey);
             if (stored) {
@@ -5279,7 +5417,7 @@ const CommercialQuotesModule = {
             console.error('Error cargando caché local:', error);
         }
 
-        this._fetchFromSupabase();
+        await this._fetchFromSupabase();
     },
 
     async _fetchFromSupabase() {
@@ -5293,7 +5431,6 @@ const CommercialQuotesModule = {
             if (result.ok && Array.isArray(result.cotizaciones)) {
                 this.quotes = result.cotizaciones.map(c => this._supabaseToQuote(c));
                 localStorage.setItem(this.storageKey, JSON.stringify(this.quotes));
-                this.render();
             }
         } catch (e) {
             console.warn('No se pudieron cargar cotizaciones del servidor:', e.message);
@@ -5302,6 +5439,7 @@ const CommercialQuotesModule = {
                 localStorage.setItem(this.storageKey, JSON.stringify(this.quotes));
             }
         }
+        this.render();
     },
 
     _supabaseToQuote(c) {
@@ -5705,14 +5843,16 @@ const CommercialQuotesModule = {
             return;
         }
 
-        const total = this.quotes.length;
-        const pendientes = this.quotes.filter((quote) => this.normalizeStatus(quote.status) === 'borrador').length;
-        const hechas = total - pendientes;
+        const cotizacionesCreadas = this.quotes.length;
+        const procesosSinCotizacion = this.getProcesosSinCotizacion();
+        const totalPendientes = procesosSinCotizacion.length;
+        const total = cotizacionesCreadas + totalPendientes;
+        const hechas = cotizacionesCreadas;
 
         const cards = [
-            { icon: '📋', label: 'Total Cotizaciones', value: total },
-            { icon: '⏳', label: 'Pendientes', value: pendientes },
-            { icon: '✅', label: 'Hechas', value: hechas },
+            { icon: '📋', label: 'Total Procesos', value: total },
+            { icon: '⏳', label: 'Pendientes', value: totalPendientes },
+            { icon: '✅', label: 'Cotizaciones Hechas', value: hechas },
         ];
 
         this.statsGrid.innerHTML = cards
@@ -5726,6 +5866,20 @@ const CommercialQuotesModule = {
                 </article>
             `)
             .join('');
+    },
+
+    getProcesosSinCotizacion() {
+        if (typeof PROCESOS_STORE === 'undefined' || !Array.isArray(PROCESOS_STORE.all)) {
+            return [];
+        }
+        const numerosConCotizacion = new Set(
+            (this.quotes || []).map(q => String(q.id || '').trim().toLowerCase())
+        );
+        return PROCESOS_STORE.all.filter(proceso => {
+            const num = String(proceso.numero_proceso || '').trim().toLowerCase();
+            if (!num) return false;
+            return !numerosConCotizacion.has(num);
+        });
     },
 
     renderTableAndCards() {
@@ -6716,3 +6870,818 @@ document.addEventListener('click', (e) => {
         }
     }
 });
+
+// ===========================
+// GESTIÓN DE INFORMES PDF
+// ===========================
+
+const GestionInformesModule = {
+    _initialized: false,
+    _currentProcesoId: null,
+    _informes: [],
+
+    async init() {
+        if (this._initialized) {
+            this.populateClienteFilter();
+            this.populateProcesosSelect();
+            this.updateInformesStats();
+            return;
+        }
+        this._initialized = true;
+        this.populateClienteFilter();
+        this.populateProcesosSelect();
+        this.bindEvents();
+        this.updateInformesStats();
+    },
+
+    populateClienteFilter() {
+        const select = document.getElementById('informesClienteFilter');
+        if (!select) return;
+        const currentVal = select.value;
+        select.innerHTML = '<option value="">Todos</option>';
+        const procesos = PROCESOS_STORE?.all || [];
+        const clientes = [...new Set(procesos.map(p => p.cliente || p.empresa || '').filter(Boolean))].sort();
+        clientes.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            select.appendChild(opt);
+        });
+        if (currentVal) select.value = currentVal;
+    },
+
+    populateProcesosSelect() {
+        const select = document.getElementById('informesProcesoSelect');
+        if (!select) return;
+        const currentVal = select.value;
+        select.innerHTML = '<option value="">Todos</option>';
+
+        const clienteFilter = document.getElementById('informesClienteFilter')?.value || '';
+        const monthFilter = document.getElementById('informesMonthFilter')?.value || '';
+        const dateFrom = document.getElementById('informesDateFrom')?.value || '';
+        const dateTo = document.getElementById('informesDateTo')?.value || '';
+
+        const procesos = PROCESOS_STORE?.all || [];
+        let filtered = procesos;
+
+        if (clienteFilter) {
+            filtered = filtered.filter(p => (p.cliente || p.empresa || '') === clienteFilter);
+        }
+        if (monthFilter) {
+            filtered = filtered.filter(p => {
+                const fecha = (p.fecha_entrega_cliente || '').substring(0, 7);
+                return fecha === monthFilter;
+            });
+        }
+        if (dateFrom) {
+            filtered = filtered.filter(p => (p.fecha_entrega_cliente || '').substring(0, 10) >= dateFrom);
+        }
+        if (dateTo) {
+            filtered = filtered.filter(p => (p.fecha_entrega_cliente || '').substring(0, 10) <= dateTo);
+        }
+
+        filtered.forEach(p => {
+            const num = p.numero_proceso || p.proceso_numero || '';
+            if (!num || !p.id) return;
+            const cliente = p.cliente || p.empresa || '';
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = `${num} — ${cliente}`;
+            select.appendChild(opt);
+        });
+        if (currentVal) select.value = currentVal;
+    },
+
+    bindEvents() {
+        const select = document.getElementById('informesProcesoSelect');
+        const clienteFilter = document.getElementById('informesClienteFilter');
+        const monthFilter = document.getElementById('informesMonthFilter');
+        const dateFrom = document.getElementById('informesDateFrom');
+        const dateTo = document.getElementById('informesDateTo');
+        const btnCargar = document.getElementById('btnCargarInforme');
+        const fileInput = document.getElementById('informeFileInput');
+        const btnImportar = document.getElementById('btnImportarInformes');
+        const btnLimpiar = document.getElementById('btnLimpiarFiltrosInformes');
+        const closeHistory = document.getElementById('closeInformeHistoryModal');
+        const closeHistoryBtn = document.getElementById('closeInformeHistoryBtn');
+
+        const refreshProcesos = () => {
+            this.populateProcesosSelect();
+            this.onProcesoChange();
+        };
+        if (clienteFilter) clienteFilter.addEventListener('change', refreshProcesos);
+        if (monthFilter) monthFilter.addEventListener('change', refreshProcesos);
+        if (dateFrom) dateFrom.addEventListener('change', refreshProcesos);
+        if (dateTo) dateTo.addEventListener('change', refreshProcesos);
+        if (select) {
+            select.addEventListener('change', () => this.onProcesoChange());
+        }
+        if (btnLimpiar) {
+            btnLimpiar.addEventListener('click', () => this.limpiarFiltros());
+        }
+        if (btnCargar) {
+            btnCargar.addEventListener('click', () => fileInput?.click());
+        }
+        if (fileInput) {
+            fileInput.addEventListener('change', (e) => this.onFileSelected(e));
+        }
+        if (btnImportar) {
+            btnImportar.addEventListener('click', () => this.importarInformes());
+        }
+        // Bulk upload
+        const btnBulk = document.getElementById('btnCargaMasiva');
+        const bulkFileInput = document.getElementById('bulkFileInput');
+        const btnSelectBulk = document.getElementById('btnSelectBulkFiles');
+        const btnStartBulk = document.getElementById('btnStartBulkUpload');
+        const closeBulk = document.getElementById('closeBulkUploadModal');
+        const closeBulkBtn = document.getElementById('closeBulkUploadBtn');
+
+        if (btnBulk) btnBulk.addEventListener('click', () => this.openBulkModal());
+        if (btnSelectBulk) btnSelectBulk.addEventListener('click', () => bulkFileInput?.click());
+        if (bulkFileInput) bulkFileInput.addEventListener('change', (e) => this.onBulkFilesSelected(e));
+        if (btnStartBulk) btnStartBulk.addEventListener('click', () => this.startBulkUpload());
+        if (closeBulk) closeBulk.addEventListener('click', () => this.closeModal('bulkUploadModal'));
+        if (closeBulkBtn) closeBulkBtn.addEventListener('click', () => this.closeModal('bulkUploadModal'));
+
+        if (closeHistory) closeHistory.addEventListener('click', () => this.closeModal('informeHistoryModal'));
+        if (closeHistoryBtn) closeHistoryBtn.addEventListener('click', () => this.closeModal('informeHistoryModal'));
+
+        // Cerrar modales con Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.closeModal('informeHistoryModal');
+            }
+        });
+    },
+
+    async onProcesoChange() {
+        const select = document.getElementById('informesProcesoSelect');
+        const clienteLabel = document.getElementById('informesClienteLabel');
+        const btnCargar = document.getElementById('btnCargarInforme');
+        const container = document.getElementById('informesListContainer');
+        const clienteFilter = document.getElementById('informesClienteFilter')?.value || '';
+        this._currentProcesoId = select?.value || null;
+
+        // Si hay cliente seleccionado pero proceso es "Todos" → mostrar todos los informes del cliente
+        if (!this._currentProcesoId && clienteFilter) {
+            if (clienteLabel) clienteLabel.value = clienteFilter;
+            if (btnCargar) btnCargar.disabled = true;
+            await this.loadInformesByCliente(clienteFilter);
+            return;
+        }
+
+        if (!this._currentProcesoId) {
+            if (clienteLabel) clienteLabel.value = '';
+            if (btnCargar) btnCargar.disabled = true;
+            if (container) container.innerHTML = '<div style="text-align:center; padding:24px; color:#999;">Seleccione un proceso o cliente para ver informes</div>';
+            return;
+        }
+
+        // Cargar cliente del proceso
+        const procesos = PROCESOS_STORE?.all || [];
+        const proc = procesos.find(p => String(p.id) === String(this._currentProcesoId));
+        if (clienteLabel) clienteLabel.value = proc?.cliente || proc?.empresa || '';
+        if (btnCargar) btnCargar.disabled = false;
+
+        await this.loadInformes();
+    },
+
+    async loadInformesByCliente(clienteNombre) {
+        const container = document.getElementById('informesListContainer');
+        if (container) container.innerHTML = '<div style="text-align:center; padding:16px; color:#666;">Cargando informes del cliente...</div>';
+
+        try {
+            const monthFilter = document.getElementById('informesMonthFilter')?.value || '';
+            const dateFrom = document.getElementById('informesDateFrom')?.value || '';
+            const dateTo = document.getElementById('informesDateTo')?.value || '';
+
+            let procesos = PROCESOS_STORE?.all || [];
+            procesos = procesos.filter(p => (p.cliente || p.empresa || '') === clienteNombre);
+
+            if (monthFilter) {
+                procesos = procesos.filter(p => (p.fecha_entrega_cliente || '').substring(0, 7) === monthFilter);
+            }
+            if (dateFrom) {
+                procesos = procesos.filter(p => (p.fecha_entrega_cliente || '').substring(0, 10) >= dateFrom);
+            }
+            if (dateTo) {
+                procesos = procesos.filter(p => (p.fecha_entrega_cliente || '').substring(0, 10) <= dateTo);
+            }
+
+            const ids = procesos.map(p => p.id).filter(Boolean);
+
+            if (ids.length === 0) {
+                if (container) container.innerHTML = '<div style="text-align:center; padding:24px; color:#999;">No se encontraron procesos con esas fechas de entrega</div>';
+                return;
+            }
+
+            let allInformes = [];
+            for (const pid of ids) {
+                const result = await fetchFromDatabase('get_informes_proceso', { proceso_id: pid });
+                const informes = result?.informes || [];
+                informes.forEach(inf => {
+                    const proc = procesos.find(p => String(p.id) === String(inf.proceso_id));
+                    inf._numeroProceso = proc?.numero_proceso || proc?.proceso_numero || '';
+                    inf._cliente = proc?.cliente || proc?.empresa || '';
+                });
+                allInformes = allInformes.concat(informes);
+            }
+
+            this._informes = allInformes;
+            this.renderInformesListByCliente(clienteNombre, procesos);
+        } catch (err) {
+            console.error('Error cargando informes del cliente:', err);
+            if (container) container.innerHTML = '<div style="text-align:center; padding:16px; color:#c62828;">Error al cargar informes</div>';
+        }
+    },
+
+    renderInformesListByCliente(clienteNombre, procesos) {
+        const container = document.getElementById('informesListContainer');
+        if (!container) return;
+
+        if (!this._informes || this._informes.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; padding:32px; color:#999;">
+                    <div style="font-size:48px; margin-bottom:12px;">📄</div>
+                    <p>No hay informes para <strong>${escapeHtml(clienteNombre)}</strong></p>
+                    <p style="font-size:13px;">${procesos.length} proceso(s) encontrado(s) sin informes</p>
+                </div>`;
+            return;
+        }
+
+        // Agrupar por proceso
+        const grouped = {};
+        this._informes.forEach(inf => {
+            const key = inf.proceso_id;
+            if (!grouped[key]) grouped[key] = { numero: inf._numeroProceso, cliente: inf._cliente, informes: [] };
+            grouped[key].informes.push(inf);
+        });
+
+        let html = `<div style="margin-bottom:12px; font-size:13px; color:#666;">
+            <strong>${this._informes.length}</strong> informe(s) de <strong>${Object.keys(grouped).length}</strong> proceso(s) — <strong>${escapeHtml(clienteNombre)}</strong>
+        </div>`;
+
+        Object.values(grouped).forEach(g => {
+            const proc = (PROCESOS_STORE?.all || []).find(p => String(p.id) === String(g.informes[0]?.proceso_id));
+            const fechaEntrega = proc?.fecha_entrega_cliente || '';
+            html += `
+                <div style="border:1px solid #ddd; border-radius:6px; margin-bottom:8px; padding:10px 14px;">
+                    <div style="font-weight:600; margin-bottom:4px;">${escapeHtml(g.numero)} — ${escapeHtml(g.cliente)}</div>`;
+            g.informes.forEach(inf => {
+                const fechaCarga = inf.created_at ? new Date(inf.created_at).toLocaleDateString('es-CO') : '';
+                html += `
+                    <div style="display:flex; align-items:center; gap:6px; padding:4px 0; font-size:13px; ${inf.activo ? 'color:#28a745;' : 'color:#999;'}">
+                        <span style="background:${inf.activo ? '#28a745' : '#999'}; color:#fff; padding:1px 5px; border-radius:3px; font-size:10px;">v${inf.version}</span>
+                        <span style="flex:1;">${escapeHtml(inf.nombre_documento || '')}</span>
+                        <span style="font-size:10px; color:#999;" title="Fecha de carga"><span style="font-size:9px; color:#aaa;">Carga:</span> ${fechaCarga}</span>
+                        ${fechaEntrega ? `<span style="font-size:10px; font-weight:600; color:#022859;" title="Entrega a cliente"><span style="font-size:9px; color:#aaa;">Entrega:</span> ${fechaEntrega.substring(0, 10)}</span>` : ''}
+                        <button class="btn btn--small btn--primary" onclick="GestionInformesModule.openPdf('${escapeHtml(inf.archivo_pdf || '')}')" style="font-size:11px; padding:2px 6px;">👁️</button>
+                        <button class="btn btn--small btn--secondary" onclick="GestionInformesModule.downloadPdf('${escapeHtml(inf.archivo_pdf || '')}', '${escapeHtml(inf.nombre_documento || '')}')" style="font-size:11px; padding:2px 6px;">📥</button>
+                    </div>`;
+            });
+            html += '</div>';
+        });
+
+        container.innerHTML = html;
+    },
+
+    limpiarFiltros() {
+        const clienteFilter = document.getElementById('informesClienteFilter');
+        const monthFilter = document.getElementById('informesMonthFilter');
+        const dateFrom = document.getElementById('informesDateFrom');
+        const dateTo = document.getElementById('informesDateTo');
+        const select = document.getElementById('informesProcesoSelect');
+        const clienteLabel = document.getElementById('informesClienteLabel');
+        const container = document.getElementById('informesListContainer');
+        const btnCargar = document.getElementById('btnCargarInforme');
+
+        if (clienteFilter) clienteFilter.value = '';
+        if (monthFilter) monthFilter.value = '';
+        if (dateFrom) dateFrom.value = '';
+        if (dateTo) dateTo.value = '';
+        this.populateProcesosSelect();
+        if (select) select.value = '';
+        if (clienteLabel) clienteLabel.value = '';
+        if (btnCargar) btnCargar.disabled = true;
+        this._currentProcesoId = null;
+        this._informes = [];
+        if (container) container.innerHTML = '<div style="text-align:center; padding:24px; color:#999;">Seleccione un proceso o cliente para ver informes</div>';
+    },
+
+    _bulkFiles: [],
+
+    openBulkModal() {
+        this._bulkFiles = [];
+        this.openModal('bulkUploadModal');
+        document.getElementById('bulkStep1').style.display = '';
+        document.getElementById('bulkStep2').style.display = 'none';
+        document.getElementById('bulkStep3').style.display = 'none';
+        document.getElementById('bulkStep4').style.display = 'none';
+        document.getElementById('btnStartBulkUpload').style.display = 'none';
+        document.getElementById('btnSelectBulkFiles').style.display = '';
+    },
+
+    onBulkFilesSelected(e) {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+
+        this._bulkFiles = [];
+        const previewBody = document.getElementById('bulkPreviewBody');
+        const step1 = document.getElementById('bulkStep1');
+        const step2 = document.getElementById('bulkStep2');
+        const btnStart = document.getElementById('btnStartBulkUpload');
+        const btnSelect = document.getElementById('btnSelectBulkFiles');
+        const summary = document.getElementById('bulkSummary');
+
+        step1.style.display = 'none';
+        step2.style.display = '';
+        btnStart.style.display = '';
+        btnSelect.style.display = 'none';
+
+        const procesos = PROCESOS_STORE?.all || [];
+        const procesoMap = {};
+        procesos.forEach(p => {
+            if (p.numero_proceso) procesoMap[p.numero_proceso.trim()] = p;
+        });
+
+        let html = '';
+        let encontrados = 0;
+        let noEncontrados = 0;
+
+        files.forEach(file => {
+            const name = file.name;
+            const match = name.match(/R26\s*\d{4}/i);
+            let numProceso = '';
+            let proc = null;
+            let estado = '';
+            let estadoClass = '';
+
+            if (match) {
+                numProceso = match[0].toUpperCase().replace(/\s+/g, ' ').trim();
+                proc = procesoMap[numProceso];
+            }
+
+            if (proc) {
+                encontrados++;
+                estado = '✅ Encontrado';
+                estadoClass = 'color:#28a745;';
+                this._bulkFiles.push({ file, name, numProceso, procesoId: proc.id, cliente: proc.cliente || proc.empresa || '' });
+            } else {
+                noEncontrados++;
+                estado = match ? '❌ No existe' : '⚠️ Sin R26';
+                estadoClass = 'color:#c62828;';
+                this._bulkFiles.push({ file, name, numProceso: numProceso || '-', procesoId: null, cliente: '' });
+            }
+
+            html += `<tr>
+                <td style="padding:6px 8px; border-bottom:1px solid #eee; max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${name}">${name}</td>
+                <td style="padding:6px 8px; border-bottom:1px solid #eee;">${numProceso || '-'}</td>
+                <td style="padding:6px 8px; border-bottom:1px solid #eee;">${proc?.cliente || '-'}</td>
+                <td style="padding:6px 8px; border-bottom:1px solid #eee; text-align:center; ${estadoClass} font-weight:600; font-size:11px;">${estado}</td>
+            </tr>`;
+        });
+
+        previewBody.innerHTML = html;
+        summary.innerHTML = `<strong>${files.length}</strong> archivos | <span style="color:#28a745;"><strong>${encontrados}</strong> encontrados</span> | <span style="color:#c62828;"><strong>${noEncontrados}</strong> sin proceso</span>`;
+
+        e.target.value = '';
+    },
+
+    async startBulkUpload() {
+        const validFiles = this._bulkFiles.filter(f => f.procesoId);
+        if (!validFiles.length) {
+            alert('No hay archivos válidos para importar');
+            return;
+        }
+
+        const step2 = document.getElementById('bulkStep2');
+        const step3 = document.getElementById('bulkStep3');
+        const btnStart = document.getElementById('btnStartBulkUpload');
+        const btnSelect = document.getElementById('btnSelectBulkFiles');
+        const progressBar = document.getElementById('bulkProgressBar');
+        const progressText = document.getElementById('bulkProgressText');
+        const progressDetail = document.getElementById('bulkProgressDetail');
+
+        step2.style.display = 'none';
+        step3.style.display = '';
+        btnStart.style.display = 'none';
+        btnSelect.style.display = 'none';
+
+        const filesToSend = [];
+        for (const item of validFiles) {
+            const base64 = await this.readFileAsBase64(item.file);
+            filesToSend.push({ name: item.name, base64 });
+        }
+
+        const omitDuplicates = document.getElementById('bulkOptOmitDuplicates')?.checked;
+        const createVersion = document.getElementById('bulkOptCreateVersion')?.checked;
+        const replaceActive = document.getElementById('bulkOptReplaceActive')?.checked;
+
+        progressText.textContent = `Subiendo ${filesToSend.length} archivos...`;
+        progressBar.style.width = '10%';
+        progressDetail.innerHTML = '<div style="color:#666;">Enviando al servidor...</div>';
+
+        try {
+            progressBar.style.width = '50%';
+            const result = await fetchFromDatabase('upload_informes_bulk', {
+                files: filesToSend,
+                omit_duplicates: omitDuplicates,
+                create_version: createVersion,
+                replace_active: replaceActive
+            });
+
+            progressBar.style.width = '100%';
+
+            if (!result?.ok) throw new Error(result?.error || 'Error desconocido');
+
+            const r = result.resumen;
+            let detailHtml = '';
+            (result.resultados || []).forEach(item => {
+                const icon = item.estado === 'importado' ? '✅' : item.estado === 'versionado' ? '🔄' : item.estado === 'duplicado' ? '⚠️' : '❌';
+                detailHtml += `<div style="padding:2px 0;">${icon} ${item.archivo} ${item.numero_proceso ? '→ ' + item.numero_proceso : ''} ${item.version ? 'v' + item.version : ''} <span style="color:#999;">${item.detalle || ''}</span></div>`;
+            });
+            progressDetail.innerHTML = detailHtml;
+
+            progressText.innerHTML = `<span style="color:#28a745; font-weight:600;">✅ Importación completada</span>`;
+
+            // Show step4 result
+            const step4 = document.getElementById('bulkStep4');
+            const resultContent = document.getElementById('bulkResultContent');
+            step3.style.display = 'none';
+            step4.style.display = '';
+            resultContent.innerHTML = `
+                <div style="padding:16px; border:1px solid #28a745; border-radius:8px; background:#e8f5e9;">
+                    <h3 style="margin:0 0 8px 0; color:#28a745;">✅ Importación completada</h3>
+                    <div style="display:flex; gap:16px; flex-wrap:wrap; font-size:13px;">
+                        <span>Total: <strong>${r.total}</strong></span>
+                        <span style="color:#28a745;">Importados: <strong>${r.importados}</strong></span>
+                        <span style="color:#0288d1;">Versionados: <strong>${r.versionados}</strong></span>
+                        <span style="color:#ff9800;">Duplicados: <strong>${r.duplicados}</strong></span>
+                        <span style="color:#c62828;">Errores: <strong>${r.errores}</strong></span>
+                    </div>
+                </div>`;
+
+            this.populateClienteFilter();
+            this.populateProcesosSelect();
+            this.updateInformesStats();
+
+        } catch (err) {
+            console.error('Error en carga masiva:', err);
+            progressBar.style.width = '0%';
+            progressText.innerHTML = `<span style="color:#c62828;">❌ Error: ${err.message}</span>`;
+            progressDetail.innerHTML = '';
+        }
+    },
+
+    async loadInformes() {
+        if (!this._currentProcesoId) return;
+        const container = document.getElementById('informesListContainer');
+        if (container) container.innerHTML = '<div style="text-align:center; padding:16px; color:#666;">Cargando informes...</div>';
+
+        try {
+            const result = await fetchFromDatabase('get_informes_proceso', { proceso_id: this._currentProcesoId });
+            this._informes = result?.informes || [];
+            this.renderInformesList();
+        } catch (err) {
+            console.error('Error cargando informes:', err);
+            if (container) container.innerHTML = '<div style="text-align:center; padding:16px; color:#c62828;">Error al cargar informes</div>';
+        }
+    },
+
+    renderInformesList() {
+        const container = document.getElementById('informesListContainer');
+        if (!container) return;
+
+        if (!this._informes || this._informes.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; padding:32px; color:#999;">
+                    <div style="font-size:48px; margin-bottom:12px;">📄</div>
+                    <p>No hay informes para este proceso</p>
+                    <p style="font-size:13px;">Haga clic en "Cargar Informe" para subir el primer PDF</p>
+                </div>`;
+            return;
+        }
+
+        const activo = this._informes.find(i => i.activo);
+        const proc = (PROCESOS_STORE?.all || []).find(p => String(p.id) === String(this._currentProcesoId));
+        const fechaEntrega = proc?.fecha_entrega_cliente || '';
+        let html = '';
+
+        // Informe activo destacado
+        if (activo) {
+            html += `
+                <div style="background:#e8f5e9; border:2px solid #28a745; border-radius:8px; padding:16px; margin-bottom:16px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                        <div>
+                            <span style="background:#28a745; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:700;">ACTIVO — v${activo.version}</span>
+                            <strong style="margin-left:8px;">${escapeHtml(activo.nombre_documento || 'Informe')}</strong>
+                            <span style="font-size:10px; color:#999; margin-left:6px;" title="Fecha de carga"><span style="font-size:9px; color:#aaa;">Carga:</span> ${escapeHtml(activo.created_at ? new Date(activo.created_at).toLocaleDateString('es-CO') : '-')}</span>
+                            ${fechaEntrega ? `<span style="font-size:10px; font-weight:600; color:#022859; margin-left:8px;" title="Entrega a cliente"><span style="font-size:9px; color:#aaa;">Entrega:</span> ${fechaEntrega.substring(0, 10)}</span>` : ''}
+                        </div>
+                        <div style="display:flex; gap:6px;">
+                            <button class="btn btn--small btn--primary" onclick="GestionInformesModule.openPdf('${escapeHtml(activo.archivo_pdf || '')}')">👁️ Ver</button>
+                            <button class="btn btn--small btn--secondary" onclick="GestionInformesModule.downloadPdf('${escapeHtml(activo.archivo_pdf || '')}', '${escapeHtml(activo.nombre_documento || 'informe')}')">📥 Descargar</button>
+                            <button class="btn btn--small btn--secondary" onclick="GestionInformesModule.showHistory()">📜 Historial</button>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        // Botón para cargar nueva versión
+        html += `
+            <div style="margin-bottom:16px;">
+                <button class="btn btn--primary" onclick="document.getElementById('informeFileInput').click()">
+                    📄 Cargar Nueva Versión
+                </button>
+            </div>`;
+
+        container.innerHTML = html;
+    },
+
+    async updateInformesStats() {
+        try {
+            const result = await fetchFromDatabase('get_informes_stats', {});
+            if (!result?.ok) return;
+            const s = result.stats || {};
+
+            const totalEl = document.getElementById('informeStatTotal');
+            const vigentesEl = document.getElementById('informeStatVigentes');
+            const faltantesEl = document.getElementById('informeStatFaltantes');
+            const ultimoEl = document.getElementById('informeStatUltimo');
+
+            if (totalEl) totalEl.querySelector('div:last-child').textContent = s.total || 0;
+            if (vigentesEl) vigentesEl.querySelector('div:last-child').textContent = s.vigentes || 0;
+            if (faltantesEl) faltantesEl.querySelector('div:last-child').textContent = s.procesos_sin_informe || 0;
+            if (ultimoEl) {
+                const fecha = s.ultimo_cargado;
+                ultimoEl.querySelector('div:last-child').textContent = fecha
+                    ? new Date(fecha).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
+                    : '—';
+            }
+        } catch (err) {
+            console.error('Error cargando stats informes:', err);
+        }
+    },
+
+    async onFileSelected(e) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.type !== 'application/pdf') {
+            alert('Solo se permiten archivos PDF');
+            e.target.value = '';
+            return;
+        }
+        if (!this._currentProcesoId) {
+            alert('Seleccione un proceso primero');
+            e.target.value = '';
+            return;
+        }
+
+        await this.uploadPdf(file);
+        e.target.value = '';
+    },
+
+    async uploadPdf(file) {
+        const progressDiv = document.getElementById('informeUploadProgress');
+        const progressBar = document.getElementById('informeProgressBar');
+        const progressText = document.getElementById('informeProgressText');
+        if (progressDiv) progressDiv.style.display = 'block';
+        if (progressBar) progressBar.style.width = '30%';
+        if (progressText) progressText.textContent = 'Leyendo archivo PDF...';
+
+        try {
+            // 1. Leer archivo como base64
+            const fileBase64 = await this.readFileAsBase64(file);
+            const fileExt = file.name.split('.').pop() || 'pdf';
+
+            if (progressBar) progressBar.style.width = '50%';
+            if (progressText) progressText.textContent = 'Subiendo a Storage y registrando...';
+
+            // 2. Enviar al backend (Storage upload + DB insert en un solo paso)
+            const result = await fetchFromDatabase('upload_informe_file', {
+                proceso_id: this._currentProcesoId,
+                nombre_documento: file.name.replace(/\.pdf$/i, ''),
+                file_base64: fileBase64,
+                file_mime: file.type || 'application/pdf',
+                file_ext: fileExt
+            });
+
+            if (progressBar) progressBar.style.width = '100%';
+            if (progressText) progressText.textContent = '¡Informe cargado exitosamente!';
+
+            setTimeout(() => {
+                if (progressDiv) progressDiv.style.display = 'none';
+                if (progressBar) progressBar.style.width = '0%';
+            }, 2000);
+
+            await this.loadInformes();
+
+        } catch (err) {
+            console.error('Error subiendo informe:', err);
+            if (progressText) progressText.textContent = `Error: ${err.message}`;
+            if (progressBar) progressBar.style.width = '0%';
+            setTimeout(() => {
+                if (progressDiv) progressDiv.style.display = 'none';
+            }, 4000);
+        }
+    },
+
+    readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const base64 = reader.result.split(',')[1];
+                resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    },
+
+    async openPdf(archivoUrl) {
+        if (!archivoUrl) {
+            alert('URL del informe no disponible');
+            return;
+        }
+        // Si es una URL pública, abrirla directamente
+        if (archivoUrl.startsWith('http')) {
+            window.open(archivoUrl, '_blank');
+            return;
+        }
+        // Si es una ruta de Storage, obtener URL firmada
+        try {
+            const result = await fetchFromDatabase('get_informe_download_url', { file_path: archivoUrl });
+            if (result?.signedUrl) {
+                window.open(result.signedUrl, '_blank');
+            }
+        } catch (err) {
+            console.error('Error abriendo PDF:', err);
+        }
+    },
+
+    async downloadPdf(archivoUrl, nombre) {
+        if (!archivoUrl) {
+            alert('URL del informe no disponible');
+            return;
+        }
+        try {
+            let downloadUrl = archivoUrl;
+            if (!archivoUrl.startsWith('http')) {
+                const result = await fetchFromDatabase('get_informe_download_url', { file_path: archivoUrl });
+                downloadUrl = result?.signedUrl || '';
+            }
+            if (downloadUrl) {
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = `${nombre || 'informe'}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+        } catch (err) {
+            console.error('Error descargando PDF:', err);
+        }
+    },
+
+    async showHistory() {
+        if (!this._currentProcesoId) return;
+        const body = document.getElementById('informeHistoryBody');
+        if (!body) return;
+
+        body.innerHTML = '<div style="text-align:center; padding:16px; color:#666;">Cargando historial...</div>';
+        this.openModal('informeHistoryModal');
+
+        try {
+            const result = await fetchFromDatabase('get_informes_proceso', { proceso_id: this._currentProcesoId });
+            const informes = result?.informes || [];
+
+            if (informes.length === 0) {
+                body.innerHTML = '<div style="text-align:center; padding:24px; color:#999;">No hay versiones registradas</div>';
+                return;
+            }
+
+            let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
+            informes.forEach((inf) => {
+                const isActivo = inf.activo;
+                const fecha = inf.created_at ? new Date(inf.created_at).toLocaleString('es-CO') : '-';
+                html += `
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:12px; border:1px solid ${isActivo ? '#28a745' : '#ddd'}; border-radius:6px; background:${isActivo ? '#e8f5e9' : '#fafafa'};">
+                        <div>
+                            <span style="background:${isActivo ? '#28a745' : '#999'}; color:#fff; padding:2px 6px; border-radius:3px; font-size:11px;">v${inf.version}</span>
+                            <strong style="margin-left:8px; font-size:13px;">${escapeHtml(inf.nombre_documento || 'Informe')}</strong>
+                            <div style="font-size:12px; color:#666; margin-top:4px;">${fecha}</div>
+                        </div>
+                        <div style="display:flex; gap:6px;">
+                            <button class="btn btn--small btn--primary" onclick="GestionInformesModule.openPdf('${escapeHtml(inf.archivo_pdf || '')}')" style="font-size:12px;">👁️ Ver</button>
+                            <button class="btn btn--small btn--secondary" onclick="GestionInformesModule.downloadPdf('${escapeHtml(inf.archivo_pdf || '')}', '${escapeHtml(inf.nombre_documento || 'informe')}')" style="font-size:12px;">📥</button>
+                            ${!isActivo ? `<button class="btn btn--small" onclick="GestionInformesModule.deleteInforme('${inf.id}')" style="font-size:12px; color:#c62828; border-color:#c62828;">🗑️</button>` : ''}
+                        </div>
+                    </div>`;
+            });
+            html += '</div>';
+            body.innerHTML = html;
+        } catch (err) {
+            console.error('Error cargando historial:', err);
+            body.innerHTML = '<div style="text-align:center; padding:16px; color:#c62828;">Error al cargar historial</div>';
+        }
+    },
+
+    async deleteInforme(id) {
+        if (!confirm('¿Está seguro de eliminar este informe?')) return;
+        try {
+            await fetchFromDatabase('delete_informe', { id });
+            await this.loadInformes();
+        } catch (err) {
+            console.error('Error eliminando informe:', err);
+            alert('Error al eliminar informe');
+        }
+    },
+
+    async importarInformes() {
+        const btn = document.getElementById('btnImportarInformes');
+        const resultContainer = document.getElementById('importResultContainer');
+        if (!btn) return;
+
+        if (!confirm('Se leerán todos los PDFs del bucket "Informes" y se crearán registros faltantes en informes_ensayo_ac. ¿Continuar?')) return;
+
+        btn.disabled = true;
+        btn.textContent = '⏳ Importando...';
+        if (resultContainer) {
+            resultContainer.style.display = 'block';
+            resultContainer.innerHTML = '<div style="padding:16px; text-align:center; color:#666;">Leyendo archivos del Storage...</div>';
+        }
+
+        try {
+            const result = await fetchFromDatabase('import_informes_from_storage', {});
+
+            if (!result?.ok) {
+                throw new Error(result?.error || 'Error desconocido');
+            }
+
+            const r = result.resumen;
+            let html = `
+                <div style="padding:16px; border:1px solid #28a745; border-radius:8px; background:#e8f5e9;">
+                    <h3 style="margin:0 0 12px 0; color:#28a745;">✅ Importación completada</h3>
+                    <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px;">
+                        <span><strong>${r.total_archivos}</strong> archivos encontrados</span>
+                        <span style="color:#28a745;"><strong>${r.importados}</strong> importados</span>
+                        <span style="color:#ff9800;"><strong>${r.duplicados}</strong> duplicados</span>
+                        <span style="color:#f44336;"><strong>${r.errores}</strong> errores</span>
+                        <span style="color:#999;"><strong>${r.sin_proceso}</strong> sin proceso</span>
+                    </div>`;
+
+            if (result.resultados && result.resultados.length > 0) {
+                html += '<div style="max-height:300px; overflow-y:auto;">';
+                result.resultados.forEach(item => {
+                    const icon = item.estado === 'importado' ? '✅' :
+                                 item.estado === 'duplicado' ? '⚠️' :
+                                 item.estado === 'error' ? '❌' : 'ℹ️';
+                    html += `<div style="padding:4px 0; border-bottom:1px solid #ddd; font-size:13px;">
+                        ${icon} <span style="font-weight:600;">${item.archivo}</span>
+                        <span style="color:#666; margin-left:8px;">${item.detalle || item.estado}${item.numero_proceso ? ' → ' + item.numero_proceso : ''}</span>
+                    </div>`;
+                });
+                html += '</div>';
+            }
+
+            html += '</div>';
+            if (resultContainer) resultContainer.innerHTML = html;
+
+            // Recargar select de procesos
+            this.populateClienteFilter();
+            this.populateProcesosSelect();
+            this.updateInformesStats();
+
+        } catch (err) {
+            console.error('Error importando informes:', err);
+            if (resultContainer) {
+                resultContainer.innerHTML = `<div style="padding:16px; border:1px solid #c62828; border-radius:8px; background:#ffebee; color:#c62828;">
+                    <strong>Error:</strong> ${err.message}
+                </div>`;
+            }
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '🔄 Importar Informes Existentes';
+        }
+    },
+
+    openModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.add('modal--open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+    },
+
+    closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.remove('modal--open');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+    }
+};
+
+window.GestionInformesModule = GestionInformesModule;
