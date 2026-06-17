@@ -644,6 +644,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const deliveryDate = document.getElementById('processDeliveryDate');
             const finalizedDate = document.getElementById('processFinalizedDate');
             const nInforme = document.getElementById('processNInforme');
+            const informeANombre = document.getElementById('processInformeANombreDe');
             const valor = document.getElementById('processValor');
             const obs = document.getElementById('processObservaciones');
 
@@ -657,6 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (deliveryDate) deliveryDate.value = p.fecha_entrega_cliente ? p.fecha_entrega_cliente.split('T')[0] : '';
             if (finalizedDate) finalizedDate.value = p.fecha_finalizado ? p.fecha_finalizado.split('T')[0] : '';
             if (nInforme) nInforme.value = normalizeInformeNumber(p.n_informe || '');
+            if (informeANombre) informeANombre.value = p.informe_a_nombre_de || p.cliente || '';
             if (valor) valor.value = p.valor || '';
             if (obs) obs.value = p.observaciones || '';
 
@@ -4125,6 +4127,7 @@ const AdminPanelManager = {
         const processNumber = document.getElementById('processNumber');
         const client = document.getElementById('processClientSelect');
         const nInforme = document.getElementById('processNInforme');
+        const informeANombre = document.getElementById('processInformeANombreDe');
         const status = document.getElementById('processStatusSelect');
         const receptionDate = document.getElementById('processReceptionDate');
         const deliveryDate = document.getElementById('processDeliveryDate');
@@ -4140,6 +4143,7 @@ const AdminPanelManager = {
         processNumber.value = '';
         client.value = '';
         nInforme.value = '';
+        if (informeANombre) informeANombre.value = '';
         status.value = 'recepcion';
         receptionDate.value = this.getTodayISO();
         deliveryDate.value = '';
@@ -4153,6 +4157,7 @@ const AdminPanelManager = {
         const processNumber = document.getElementById('processNumber');
         const client = document.getElementById('processClientSelect');
         const nInforme = document.getElementById('processNInforme');
+        const informeANombre = document.getElementById('processInformeANombreDe');
         const status = document.getElementById('processStatusSelect');
         const receptionDate = document.getElementById('processReceptionDate');
         const deliveryDate = document.getElementById('processDeliveryDate');
@@ -4195,6 +4200,9 @@ const AdminPanelManager = {
         const informeValue = (nInforme?.value || '').trim();
         if (informeValue) insertData.n_informe = informeValue;
 
+        const informeANombreValue = (informeANombre?.value || '').trim();
+        if (informeANombreValue) insertData.informe_a_nombre_de = informeANombreValue;
+
         try {
             if (editId && editId.value) {
                 const res = await fetchFromDatabase('update_proceso', {
@@ -4205,7 +4213,8 @@ const AdminPanelManager = {
                     fecha_recepcion: receptionDate.value || null,
                     fecha_entrega_cliente: deliveryDate?.value || null,
                     fecha_finalizado: finalizedDate?.value || null,
-                    ...(informeValue ? { n_informe: informeValue } : {})
+                    ...(informeValue ? { n_informe: informeValue } : {}),
+                    ...(informeANombreValue ? { informe_a_nombre_de: informeANombreValue } : {})
                 });
                 if (!res.ok) throw new Error(res.error || 'Error al actualizar proceso');
                 Toast.show({ title: 'Actualizado', message: `Proceso ${numero} actualizado`, variant: 'success' });

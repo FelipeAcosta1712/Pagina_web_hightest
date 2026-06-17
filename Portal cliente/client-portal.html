@@ -303,6 +303,23 @@
             #sidebar{top:0}
             main{margin-top:0}
         }
+
+        /* ===== ESTADO DE SOLICITUDES ===== */
+        .req-card { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 12px; }
+        .req-left { flex: 0 0 200px; min-width: 200px; }
+        .req-center { flex: 1; min-width: 300px; }
+        .req-right { flex: 0 0 200px; min-width: 200px; text-align: right; }
+        .timeline-container { display: flex; align-items: flex-start; position: relative; padding: 0 10px; }
+        .timeline-step { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
+        .timeline-connector { position: absolute; top: 11px; left: 50%; right: -50%; height: 2px; z-index: 0; }
+        .timeline-circle { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 2; }
+        @media (max-width: 1024px) {
+            .req-card { flex-direction: column; align-items: flex-start; }
+            .req-right { text-align: left; flex: 1; min-width: 100%; }
+        }
+        @media (max-width: 640px) {
+            .req-left, .req-center, .req-right { flex: 1; min-width: 100%; }
+        }
     </style>
 
 <script>
@@ -439,6 +456,7 @@
         // --- 7. Renderizado de vistas ---
         let activeTab = 'dashboard';
         let searchQuery = '';
+        let filterStatus = 'all';
 
         function renderDashboard() {
             const currentDate = new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -475,10 +493,246 @@
 
         window.handleSearch = function(val) { searchQuery = val; const c = document.getElementById('dynamic-content'); c.innerHTML = renderReports(); const i = document.getElementById('search-input'); if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);} };
 
-        function renderRequests() {
-            const cards = clientData.requests.map(req => { let bc='bg-amber-50 text-amber-700 border-amber-200',ic='clock',tc='bg-amber-500'; if(req.status==='Completado'){bc='bg-green-50 text-green-700 border-green-200';ic='check-circle';tc='bg-green-500';} else if(req.status==='En Proceso'){bc='bg-blue-50 text-blue-700 border-blue-200';ic='info';tc='bg-blue-500';} return `<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 relative overflow-hidden"><div class="h-1 w-full absolute top-0 left-0 ${tc}"></div><div class="flex justify-between items-start mb-4 mt-2"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${bc}"><i data-lucide="${ic}" class="w-3 h-3 mr-1"></i> ${req.status}</span><span class="text-sm font-medium text-slate-500">${req.id}</span></div><h3 class="text-lg font-bold text-slate-800 mb-1">${req.type}</h3><p class="text-sm text-slate-500 mb-4">Ingreso: ${req.date}</p><div class="pt-4 border-t border-slate-100 flex justify-between items-center"><span class="text-xs text-slate-500 uppercase tracking-wider font-semibold">Entrega est.</span><span class="text-sm font-medium text-slate-800">${req.estimatedDate}</span></div></div>`; }).join('');
-            return `<div class="space-y-6 fade-in"><div><h2 class="text-2xl font-bold text-slate-800">Estado de Solicitudes</h2><p class="text-slate-600 mt-1">Seguimiento en tiempo real de sus servicios en curso.</p></div><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">${cards.length > 0 ? cards : '<p class="text-slate-400 col-span-full text-center py-12">No hay solicitudes activas.</p>'}</div></div>`;
+        function getTimelineStepIndex(statusRaw) {
+            const raw = String(statusRaw || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[_\s-]+/g, '');
+            if (raw.includes('finalizado') || raw.includes('completado')) return 5;
+            if (raw.includes('informe')) return 4;
+            if (raw.includes('entregacliente') || raw.includes('entrega')) return 3;
+            if (raw.includes('procesodeensayo') || raw.includes('ensayo') || raw.includes('proceso')) return 2;
+            if (raw.includes('lavado')) return 1;
+            if (raw.includes('recepcion')) return 0;
+            return 0;
         }
+
+        function renderRequests() {
+            const allItems = [...clientData.requests, ...clientData.history];
+            let filtered = allItems;
+            if (filterStatus !== 'all') {
+                if (filterStatus === 'En Proceso') {
+                    filtered = allItems.filter(r => {
+                        const raw = String(r.statusRaw || r.status || '').toLowerCase();
+                        return !raw.includes('finalizado') && !raw.includes('completado') && !raw.includes('entrega') && !raw.includes('informe');
+                    });
+                } else if (filterStatus === 'Listas para Entrega') {
+                    filtered = allItems.filter(r => {
+                        const raw = String(r.statusRaw || r.status || '').toLowerCase();
+                        const inf = (r.informe || '').trim();
+                        const hasInforme = inf && inf !== '-' && inf !== '—';
+                        return hasInforme && !raw.includes('finalizado') && !raw.includes('completado');
+                    });
+                } else if (filterStatus === 'Finalizadas') {
+                    filtered = allItems.filter(r => {
+                        const raw = String(r.statusRaw || r.status || '').toLowerCase();
+                        return raw.includes('finalizado') || raw.includes('completado');
+                    });
+                }
+            }
+
+            const totalCount = allItems.length;
+            const finalizadasCount = allItems.filter(r => {
+                const raw = String(r.statusRaw || r.status || '').toLowerCase();
+                return raw.includes('finalizado') || raw.includes('completado');
+            }).length;
+            const enProcesoCount = totalCount - finalizadasCount;
+            const informesCount = allItems.filter(r => {
+                const raw = String(r.statusRaw || r.status || '').toLowerCase();
+                const inf = (r.informe || '').trim();
+                const hasInforme = inf && inf !== '-' && inf !== '—';
+                return hasInforme && !raw.includes('finalizado') && !raw.includes('completado');
+            }).length;
+
+            const summaryCards = `
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px;">
+                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;display:flex;align-items:center;gap:14px;">
+                        <div style="width:48px;height:48px;background:#eff6ff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="file-text" class="w-6 h-6 text-blue-600"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:13px;color:#64748b;font-weight:600;">Solicitudes Totales</div>
+                            <div style="font-size:28px;font-weight:800;color:#1e293b;">${totalCount}</div>
+                            <div style="font-size:11px;color:#2563eb;font-weight:600;">Todas las solicitudes registradas</div>
+                        </div>
+                    </div>
+                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;display:flex;align-items:center;gap:14px;">
+                        <div style="width:48px;height:48px;background:#fff7ed;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="clock" class="w-6 h-6 text-amber-600"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:13px;color:#64748b;font-weight:600;">En Proceso</div>
+                            <div style="font-size:28px;font-weight:800;color:#1e293b;">${enProcesoCount}</div>
+                            <div style="font-size:11px;color:#d97706;font-weight:600;">Actualmente en ejecución</div>
+                        </div>
+                    </div>
+                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;display:flex;align-items:center;gap:14px;">
+                        <div style="width:48px;height:48px;background:#f0fdf4;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="check-circle" class="w-6 h-6 text-green-600"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:13px;color:#64748b;font-weight:600;">Informes Disponibles</div>
+                            <div style="font-size:28px;font-weight:800;color:#1e293b;">${informesCount}</div>
+                            <div style="font-size:11px;color:#16a34a;font-weight:600;">Listos para entrega</div>
+                        </div>
+                    </div>
+                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;display:flex;align-items:center;gap:14px;">
+                        <div style="width:48px;height:48px;background:#faf5ff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="flag" class="w-6 h-6 text-purple-600"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:13px;color:#64748b;font-weight:600;">Finalizadas</div>
+                            <div style="font-size:28px;font-weight:800;color:#1e293b;">${finalizadasCount}</div>
+                            <div style="font-size:11px;color:#9333ea;font-weight:600;">Procesos completados</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const tabs = [
+                { id: 'all', label: 'Todas' },
+                { id: 'En Proceso', label: 'En Proceso' },
+                { id: 'Listas para Entrega', label: 'Listas para Entrega' },
+                { id: 'Finalizadas', label: 'Finalizadas' }
+            ];
+            const tabsHtml = tabs.map(t => {
+                const isActive = filterStatus === t.id || (filterStatus === 'all' && t.id === 'all');
+                const activeStyle = isActive ? 'background:#2563eb;color:#fff;border-color:#2563eb;' : 'background:#fff;color:#475569;border-color:#e2e8f0;';
+                return `<button onclick="filterRequests('${t.id}')" style="padding:8px 16px;border-radius:8px;border:1px solid #e2e8f0;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;${activeStyle}" onmouseover="${isActive ? '' : 'this.style.background=\'#f8fafc\';'}" onmouseout="${isActive ? '' : 'this.style.background=\'#fff\';'}">${t.label}</button>`;
+            }).join('');
+
+            const stepDefs = [
+                { key: 'recepcion', label: 'Recepción', color: '#3b82f6', bg: '#eff6ff' },
+                { key: 'lavado',    label: 'Lavado',    color: '#06b6d4', bg: '#ecfeff' },
+                { key: 'proceso',   label: 'Proceso de ensayo', color: '#f97316', bg: '#fff7ed' },
+                { key: 'entrega',   label: 'Entrega cliente',   color: '#a855f7', bg: '#faf5ff' },
+                { key: 'informe',   label: 'Informe',   color: '#22c55e', bg: '#f0fdf4' },
+                { key: 'finalizado',label: 'Finalizado',color: '#15803d', bg: '#dcfce7' }
+            ];
+
+            const cards = filtered.map(req => {
+                const raw = String(req.statusRaw || req.status || '').toLowerCase();
+                const isFinalizado = raw.includes('finalizado') || raw.includes('completado');
+                const isInforme = raw.includes('informe');
+                const isEntrega = raw.includes('entrega');
+                const isProceso = raw.includes('proceso') || raw.includes('ensayo');
+                const isLavado = raw.includes('lavado');
+                const isRecepcion = raw.includes('recepcion');
+
+                const currentStepIndex = getTimelineStepIndex(req.statusRaw || req.status);
+
+                const timelineHtml = stepDefs.map((step, idx) => {
+                    const isLast = idx === stepDefs.length - 1;
+                    const isDone = idx < currentStepIndex;
+                    const isCurrent = idx === currentStepIndex;
+                    const connectorColor = isDone ? step.color : '#e2e8f0';
+                    const connector = !isLast ? `<div class="timeline-connector" style="background:${connectorColor};"></div>` : '';
+
+                    let circleHtml = '', labelStyle = '';
+                    if (isDone) {
+                        circleHtml = `<div class="timeline-circle" style="background:${step.color};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`;
+                        labelStyle = `color:${step.color};font-weight:600;`;
+                    } else if (isCurrent) {
+                        circleHtml = `<div class="timeline-circle" style="background:${step.bg};border:2px solid ${step.color};"><div style="width:8px;height:8px;background:${step.color};border-radius:50%;"></div></div>`;
+                        labelStyle = `color:${step.color};font-weight:700;`;
+                    } else {
+                        circleHtml = `<div class="timeline-circle" style="background:#fff;border:2px solid #e2e8f0;"></div>`;
+                        labelStyle = 'color:#94a3b8;font-weight:500;';
+                    }
+
+                    return `<div class="timeline-step">
+                        ${circleHtml}
+                        <span style="font-size:11px;${labelStyle}">${step.label}</span>
+                        ${connector}
+                    </div>`;
+                }).join('');
+
+                let badgeStyle = '', badgeText = '';
+                if (isFinalizado) { badgeStyle = 'background:#d1fae5;color:#059669;border:1px solid #a7f3d0;'; badgeText = 'Finalizada'; }
+                else if (isEntrega || isInforme) { badgeStyle = 'background:#d1fae5;color:#059669;border:1px solid #a7f3d0;'; badgeText = 'Entrega cliente'; }
+                else { badgeStyle = 'background:#fef3c7;color:#b45309;border:1px solid #fde68a;'; badgeText = 'En proceso'; }
+
+                let rightStatus = '', rightSub = '', rightColor = '';
+                if (isFinalizado) { rightStatus = 'FINALIZADA'; rightSub = 'Proceso completado'; rightColor = '#15803d'; }
+                else if (isInforme) { rightStatus = 'INFORME DISPONIBLE'; rightSub = 'Listo para entrega'; rightColor = '#22c55e'; }
+                else if (isEntrega) { rightStatus = 'ENTREGA CLIENTE'; rightSub = 'Listo para entrega'; rightColor = '#a855f7'; }
+                else if (isProceso) { rightStatus = 'EN PROCESO'; rightSub = 'Ensayo en ejecución'; rightColor = '#f97316'; }
+                else if (isLavado) { rightStatus = 'EN PROCESO'; rightSub = 'En espera de lavado'; rightColor = '#06b6d4'; }
+                else if (isRecepcion) { rightStatus = 'EN PROCESO'; rightSub = 'En espera de recepción'; rightColor = '#3b82f6'; }
+                else { rightStatus = 'EN PROCESO'; rightSub = 'En espera'; rightColor = '#64748b'; }
+
+                return `<div class="req-card">
+                    <div class="req-left">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                            <span style="font-size:16px;font-weight:800;color:#1e293b;font-family:monospace;">${req.id}</span>
+                            <span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;${badgeStyle}">${badgeText}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px;color:#64748b;">
+                            <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span>Cliente: ${req.client || clientData.user.name || 'ONAC'}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px;color:#64748b;">
+                            <i data-lucide="file-text" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span>Informe a nombre de: ${req.informe_a_nombre_de || req.client || clientData.user.name || '—'}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#64748b;">
+                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span>Fecha: ${req.date}</span>
+                        </div>
+                    </div>
+                    <div class="req-center">
+                        <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;">Estado del Proceso</div>
+                        <div class="timeline-container">${timelineHtml}</div>
+                    </div>
+                    <div class="req-right">
+                        <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;margin-bottom:4px;">
+                            <div style="width:8px;height:8px;background:${rightColor};border-radius:50%;"></div>
+                            <span style="font-size:12px;font-weight:800;color:${rightColor};">${rightStatus}</span>
+                        </div>
+                        <div style="font-size:12px;color:#64748b;margin-bottom:12px;">${rightSub}</div>
+                        <button onclick="openRequestDetail('${req.id}')" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background='#dbeafe';" onmouseout="this.style.background='#eff6ff';">Ver detalle <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            const emptyState = `<div style="text-align:center;padding:48px 16px;color:#94a3b8;">
+                <div style="width:64px;height:64px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                    <i data-lucide="clipboard-list" class="w-8 h-8 text-slate-300"></i>
+                </div>
+                <h3 style="font-size:16px;font-weight:600;color:#475569;margin-bottom:8px;">No hay solicitudes activas</h3>
+                <p style="font-size:13px;color:#94a3b8;max-width:360px;margin:0 auto;">Los ensayos en curso aparecerán aquí para su seguimiento.</p>
+            </div>`;
+
+            return `<div class="space-y-6 fade-in">
+                <div style="margin-bottom:24px;">
+                    <h2 style="font-size:24px;font-weight:800;color:#1e293b;margin:0 0 4px;">Estado de Solicitudes</h2>
+                    <p style="font-size:14px;color:#64748b;margin:0;">Consulta el estado actual de tus ensayos y solicitudes.</p>
+                </div>
+                ${summaryCards}
+                <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+                    ${tabsHtml}
+                </div>
+                ${filtered.length > 0 ? cards : emptyState}
+                <div style="display:flex;align-items:center;gap:8px;margin-top:24px;padding:16px;background:#eff6ff;border:1px solid #dbeafe;border-radius:8px;">
+                    <div style="width:20px;height:20px;background:#2563eb;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                    <p style="font-size:13px;color:#1e40af;margin:0;flex:1;">Los estados se actualizan automáticamente. Si tienes dudas sobre tu solicitud, contáctanos.</p>
+                    <a href="mailto:contacto@hightestsas.com" style="padding:8px 16px;background:#fff;color:#2563eb;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+                        <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
+                        Contáctanos
+                    </a>
+                </div>
+            </div>`;
+        }
+
+        window.filterRequests = function(status) {
+            filterStatus = status;
+            const c = document.getElementById('dynamic-content');
+            c.innerHTML = renderRequests();
+            lucide.createIcons();
+        };
+
+        window.openRequestDetail = function(id) {
+            alert('Detalle del proceso ' + id);
+        };
 
         function renderHistory() {
             const items = clientData.history.map(i => `<li class="p-4 sm:p-6 hover:bg-slate-50 transition-colors"><div class="flex flex-col sm:flex-row sm:items-center justify-between"><div class="mb-2 sm:mb-0"><h4 class="text-lg font-semibold text-slate-800">${i.service}</h4><div class="flex items-center text-sm text-slate-500 mt-1"><span class="mr-3">ID: ${i.id}</span><span>Fecha: ${i.date}</span></div></div><div class="flex items-center justify-between sm:flex-col sm:items-end"><span class="text-lg font-bold text-slate-800">${i.amount}</span><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mt-1">${i.status}</span></div></div></li>`).join('');

@@ -451,7 +451,7 @@ exports.handler = async (event) => {
                 if (!numero) return jsonResponse(400, { ok: false, error: 'numero_proceso requerido' });
 
                 // Permitir actualizar solo campos autorizados
-                const allowed = ['numero_proceso','cliente','cliente_id','tipo','estado','fecha_recepcion','fecha_entrega_cliente','fecha_finalizado','valor','caso_activo'];
+                const allowed = ['numero_proceso','cliente','cliente_id','tipo','estado','fecha_recepcion','fecha_entrega_cliente','fecha_finalizado','valor','caso_activo','informe_a_nombre_de'];
                 const updateData = {};
                 for (const key of allowed) {
                     if (payload[key] !== undefined) updateData[key] = payload[key];
@@ -1818,6 +1818,40 @@ exports.handler = async (event) => {
                         errores
                     },
                     resultados
+                });
+            }
+
+            // ── BACKFILL: Llenar informe_a_nombre_de con cliente donde esté vacío ──
+            if (payload.action === 'backfill_informe_a_nombre_de') {
+                const { data: procesos, error: fetchErr } = await supabase
+                    .from('procesos_acreditados')
+                    .select('id, cliente, informe_a_nombre_de');
+
+                if (fetchErr) return jsonResponse(500, { ok: false, error: fetchErr.message });
+
+                const vacios = (procesos || []).filter(p => {
+                    const v = (p.informe_a_nombre_de || '').trim();
+                    return !v || v === '-' || v === '—';
+                });
+
+                let actualizados = 0;
+                let errores = 0;
+                for (const p of vacios) {
+                    const cliente = (p.cliente || '').trim();
+                    if (!cliente) { errores++; continue; }
+                    const { error: updErr } = await supabase
+                        .from('procesos_acreditados')
+                        .update({ informe_a_nombre_de: cliente })
+                        .eq('id', p.id);
+                    if (updErr) { errores++; } else { actualizados++; }
+                }
+
+                return jsonResponse(200, {
+                    ok: true,
+                    total_registros: (procesos || []).length,
+                    vacios_encontrados: vacios.length,
+                    actualizados,
+                    errores
                 });
             }
 

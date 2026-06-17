@@ -768,6 +768,23 @@
             .lg\:hidden { display: none; }
             .lg\:flex-row { flex-direction: row; }
         }
+
+        /* ===== ESTADO DE SOLICITUDES ===== */
+        .req-card { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 12px; }
+        .req-left { flex: 0 0 200px; min-width: 200px; }
+        .req-center { flex: 1; min-width: 300px; }
+        .req-right { flex: 0 0 200px; min-width: 200px; text-align: right; }
+        .timeline-container { display: flex; align-items: flex-start; position: relative; padding: 0 10px; }
+        .timeline-step { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
+        .timeline-connector { position: absolute; top: 11px; left: 50%; right: -50%; height: 2px; z-index: 0; }
+        .timeline-circle { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 2; }
+        @media (max-width: 1024px) {
+            .req-card { flex-direction: column; align-items: flex-start; }
+            .req-right { text-align: left; flex: 1; min-width: 100%; }
+        }
+        @media (max-width: 640px) {
+            .req-left, .req-center, .req-right { flex: 1; min-width: 100%; }
+        }
     </style>
     <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -939,10 +956,9 @@
                         let status = 'Pendiente';
                         const stateKey = String(estado).trim().toLowerCase();
                         if (stateKey.includes('finalizado')) status = 'Completado';
-                        else if (stateKey.includes('informe')) status = 'Completado';
-                        else if (stateKey.includes('entrega')) status = 'En Proceso';
-                        else if (stateKey.includes('ensayo') || stateKey.includes('proceso')) status = 'En Proceso';
-                        else if (stateKey.includes('recepcion') || stateKey.includes('lavado')) status = 'Pendiente';
+                        else if (stateKey.includes('informe') || stateKey.includes('entrega')) status = 'Listo';
+                        else if (stateKey.includes('ensayo') || stateKey.includes('proceso') || stateKey.includes('marcacion') || stateKey.includes('lavado')) status = 'En Proceso';
+                        else if (stateKey.includes('recepcion')) status = 'Pendiente';
 
                         const displayDate = fechaFinalizado || fechaEntrega || fechaRecepcion;
 
@@ -956,7 +972,8 @@
                             dateRaw: displayDate,
                             amount: valor ? `${Number(String(valor).replace(/[^0-9.]/g,'')).toLocaleString('es-CO')}` : '0',
                             informe: informe,
-                            client: p.cliente || ''
+                            client: p.cliente || '',
+                            informe_a_nombre_de: p.informe_a_nombre_de || p.cliente || ''
                         };
                     });
 
@@ -1353,81 +1370,222 @@
             }
         }
 
+        function getTimelineStepIndex(statusRaw) {
+            const raw = String(statusRaw || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[_\s-]+/g, '');
+            if (raw.includes('finalizado')) return 5;
+            if (raw.includes('informe')) return 4;
+            if (raw.includes('entregacliente') || raw.includes('entrega')) return 3;
+            if (raw.includes('procesodeensayo') || raw.includes('ensayo') || raw.includes('proceso')) return 2;
+            if (raw.includes('lavado')) return 1;
+            if (raw.includes('recepcion')) return 0;
+            return 0;
+        }
+
         function renderRequests() {
-            const filtered = filterStatus === 'all' ? clientData.requests : clientData.requests.filter(r => r.status === filterStatus);
-            
-            const cards = filtered.map(req => { 
-                let statusColor = 'blue', statusIcon = 'loader';
-                if(req.status === 'Completado') { statusColor = 'green'; statusIcon = 'check-circle'; }
-                else if(req.status === 'En Proceso') { statusColor = 'blue'; statusIcon = 'loader'; }
-                else if(req.status === 'Pendiente') { statusColor = 'amber'; statusIcon = 'clock'; }
-                else if(req.status === 'Cancelado') { statusColor = 'red'; statusIcon = 'x-circle'; }
+            const allItems = [...clientData.requests, ...clientData.history];
+            const hasRealInforme = (numeroProceso) => {
+                return Array.isArray(informesData) && informesData.some(inf => inf.numero_proceso === numeroProceso);
+            };
 
-                const stateLabel = formatStatusLabel(req.statusRaw || '');
+            let filtered = allItems;
+            if (filterStatus !== 'all') {
+                if (filterStatus === 'En Proceso') {
+                    filtered = allItems.filter(r => {
+                        const raw = String(r.statusRaw || '').toLowerCase();
+                        return !raw.includes('finalizado') && !hasRealInforme(r.id);
+                    });
+                } else if (filterStatus === 'Listas para Entrega') {
+                    filtered = allItems.filter(r => {
+                        const raw = String(r.statusRaw || '').toLowerCase();
+                        return hasRealInforme(r.id) && !raw.includes('finalizado');
+                    });
+                } else if (filterStatus === 'Finalizadas') {
+                    filtered = allItems.filter(r => {
+                        const raw = String(r.statusRaw || '').toLowerCase();
+                        return raw.includes('finalizado');
+                    });
+                }
+            }
 
-                const progress = req.status === 'Completado' ? 100 
-                    : req.status === 'En Proceso' ? 60 
-                    : 20;
-                
-                return `<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-200">
-                    <div class="p-6">
-                        <div class="flex items-start justify-between mb-4">
-                            <div class="flex items-center gap-2">
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-${statusColor}-100 text-${statusColor}-700 border border-${statusColor}-200">
-                                    <i data-lucide="${statusIcon}" class="w-3.5 h-3.5"></i> ${stateLabel || req.status}
-                                </span>
-                            </div>
-                            <span class="text-xs font-mono text-slate-400 bg-slate-50 px-2 py-1 rounded">${req.id}</span>
+            const totalCount = allItems.length;
+            const finalizadasCount = allItems.filter(r => {
+                const raw = String(r.statusRaw || '').toLowerCase();
+                return raw.includes('finalizado');
+            }).length;
+            const enProcesoCount = totalCount - finalizadasCount;
+            const informesCount = allItems.filter(r => {
+                const raw = String(r.statusRaw || '').toLowerCase();
+                return hasRealInforme(r.id) && !raw.includes('finalizado');
+            }).length;
+
+            const summaryCards = `
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px;">
+                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;display:flex;align-items:center;gap:14px;">
+                        <div style="width:48px;height:48px;background:#eff6ff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="file-text" class="w-6 h-6 text-blue-600"></i>
                         </div>
-                        <h3 class="text-lg font-bold text-slate-800 mb-3">${req.type}</h3>
-                        <div class="flex items-center gap-4 text-sm text-slate-500 mb-4">
-                            <div class="flex items-center gap-1.5">
-                                <i data-lucide="calendar" class="w-4 h-4 text-slate-400"></i>
-                                <span>${req.date}</span>
-                            </div>
-                        </div>
-                        <div class="mb-4">
-                            <div class="flex justify-between text-sm mb-2">
-                                <span class="text-slate-500 font-medium">Progreso</span>
-                                <span class="font-bold text-${statusColor}-600">${progress}%</span>
-                            </div>
-                            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                                <div class="bg-${statusColor}-500 h-2.5 rounded-full transition-all duration-500" style="width:${progress}%"></div>
-                            </div>
-                        </div>
-                        <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
-                            <div class="flex items-center gap-2 text-sm">
-                                <i data-lucide="file-text" class="w-4 h-4 text-slate-400"></i>
-                                <span class="text-slate-500">Informe:</span>
-                                <span class="font-semibold text-slate-700">${req.informe || '—'}</span>
-                            </div>
-                            <span class="text-xs text-slate-400 font-medium uppercase tracking-wide">${req.amount || ''}</span>
+                        <div>
+                            <div style="font-size:13px;color:#64748b;font-weight:600;">Solicitudes Totales</div>
+                            <div style="font-size:28px;font-weight:800;color:#1e293b;">${totalCount}</div>
+                            <div style="font-size:11px;color:#2563eb;font-weight:600;">Todas las solicitudes registradas</div>
                         </div>
                     </div>
-                </div>`; 
+                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;display:flex;align-items:center;gap:14px;">
+                        <div style="width:48px;height:48px;background:#fff7ed;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="clock" class="w-6 h-6 text-amber-600"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:13px;color:#64748b;font-weight:600;">En Proceso</div>
+                            <div style="font-size:28px;font-weight:800;color:#1e293b;">${enProcesoCount}</div>
+                            <div style="font-size:11px;color:#d97706;font-weight:600;">Actualmente en ejecución</div>
+                        </div>
+                    </div>
+                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;display:flex;align-items:center;gap:14px;">
+                        <div style="width:48px;height:48px;background:#faf5ff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="flag" class="w-6 h-6 text-purple-600"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:13px;color:#64748b;font-weight:600;">Finalizadas</div>
+                            <div style="font-size:28px;font-weight:800;color:#1e293b;">${finalizadasCount}</div>
+                            <div style="font-size:11px;color:#9333ea;font-weight:600;">Procesos completados</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const tabs = [
+                { id: 'all', label: 'Todas' },
+                { id: 'En Proceso', label: 'En Proceso' },
+                { id: 'Listas para Entrega', label: 'Listas para Entrega' },
+                { id: 'Finalizadas', label: 'Finalizadas' }
+            ];
+            const tabsHtml = tabs.map(t => {
+                const isActive = filterStatus === t.id || (filterStatus === 'all' && t.id === 'all');
+                const activeStyle = isActive ? 'background:#2563eb;color:#fff;border-color:#2563eb;' : 'background:#fff;color:#475569;border-color:#e2e8f0;';
+                return `<button onclick="filterRequests('${t.id}')" style="padding:8px 16px;border-radius:8px;border:1px solid #e2e8f0;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;${activeStyle}" onmouseover="${isActive ? '' : 'this.style.background=\'#f8fafc\';'}" onmouseout="${isActive ? '' : 'this.style.background=\'#fff\';'}">${t.label}</button>`;
             }).join('');
 
-            const emptyState = `<div class="text-center py-16">
-                <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-5">
-                    <i data-lucide="clipboard-list" class="w-10 h-10 text-slate-300"></i>
+            const stepDefs = [
+                { key: 'recepcion', label: 'Recepción', color: '#3b82f6', bg: '#eff6ff' },
+                { key: 'lavado',    label: 'Lavado',    color: '#06b6d4', bg: '#ecfeff' },
+                { key: 'proceso',   label: 'Proceso de ensayo', color: '#f97316', bg: '#fff7ed' },
+                { key: 'entrega',   label: 'Entrega cliente',   color: '#a855f7', bg: '#faf5ff' },
+                { key: 'informe',   label: 'Informe',   color: '#22c55e', bg: '#f0fdf4' },
+                { key: 'finalizado',label: 'Finalizado',color: '#15803d', bg: '#dcfce7' }
+            ];
+
+            const cards = filtered.map(req => {
+                const raw = String(req.statusRaw || '').toLowerCase();
+                const isFinalizado = raw.includes('finalizado');
+                const isInforme = raw.includes('informe');
+                const isEntrega = raw.includes('entrega');
+                const isProceso = raw.includes('proceso') || raw.includes('ensayo');
+                const isLavado = raw.includes('lavado');
+                const isRecepcion = raw.includes('recepcion');
+
+                const currentStepIndex = getTimelineStepIndex(req.statusRaw);
+
+                const timelineHtml = stepDefs.map((step, idx) => {
+                    const isLast = idx === stepDefs.length - 1;
+                    const isDone = idx < currentStepIndex;
+                    const isCurrent = idx === currentStepIndex;
+                    const connectorColor = isDone ? step.color : '#e2e8f0';
+                    const connector = !isLast ? `<div class="timeline-connector" style="background:${connectorColor};"></div>` : '';
+
+                    let circleHtml = '', labelStyle = '';
+                    if (isDone) {
+                        circleHtml = `<div class="timeline-circle" style="background:${step.color};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`;
+                        labelStyle = `color:${step.color};font-weight:600;`;
+                    } else if (isCurrent) {
+                        circleHtml = `<div class="timeline-circle" style="background:${step.bg};border:2px solid ${step.color};"><div style="width:8px;height:8px;background:${step.color};border-radius:50%;"></div></div>`;
+                        labelStyle = `color:${step.color};font-weight:700;`;
+                    } else {
+                        circleHtml = `<div class="timeline-circle" style="background:#fff;border:2px solid #e2e8f0;"></div>`;
+                        labelStyle = 'color:#94a3b8;font-weight:500;';
+                    }
+
+                    return `<div class="timeline-step">
+                        ${circleHtml}
+                        <span style="font-size:11px;${labelStyle}">${step.label}</span>
+                        ${connector}
+                    </div>`;
+                }).join('');
+
+                let badgeStyle = '', badgeText = '';
+                if (isFinalizado) { badgeStyle = 'background:#d1fae5;color:#059669;border:1px solid #a7f3d0;'; badgeText = 'Finalizada'; }
+                else if (isEntrega || isInforme) { badgeStyle = 'background:#d1fae5;color:#059669;border:1px solid #a7f3d0;'; badgeText = 'Entrega cliente'; }
+                else { badgeStyle = 'background:#fef3c7;color:#b45309;border:1px solid #fde68a;'; badgeText = 'En proceso'; }
+
+                let rightStatus = '', rightSub = '', rightColor = '';
+                if (isFinalizado) { rightStatus = 'FINALIZADA'; rightSub = 'Proceso completado'; rightColor = '#15803d'; }
+                else if (isInforme) { rightStatus = 'INFORME DISPONIBLE'; rightSub = 'Listo para entrega'; rightColor = '#22c55e'; }
+                else if (isEntrega) { rightStatus = 'ENTREGA CLIENTE'; rightSub = 'Listo para entrega'; rightColor = '#a855f7'; }
+                else if (isProceso) { rightStatus = 'EN PROCESO'; rightSub = 'Ensayo en ejecución'; rightColor = '#f97316'; }
+                else if (isLavado) { rightStatus = 'EN PROCESO'; rightSub = 'En espera de lavado'; rightColor = '#06b6d4'; }
+                else if (isRecepcion) { rightStatus = 'EN PROCESO'; rightSub = 'En espera de recepción'; rightColor = '#3b82f6'; }
+                else { rightStatus = 'EN PROCESO'; rightSub = 'En espera'; rightColor = '#64748b'; }
+
+                return `<div class="req-card">
+                    <div class="req-left">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                            <span style="font-size:16px;font-weight:800;color:#1e293b;font-family:monospace;">${req.id}</span>
+                            <span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;${badgeStyle}">${badgeText}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px;color:#64748b;">
+                            <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span>Cliente: ${req.client || clientData.user.name || 'ONAC'}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px;color:#64748b;">
+                            <i data-lucide="file-text" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span>Informe a nombre de: ${req.informe_a_nombre_de || req.client || clientData.user.name || '—'}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#64748b;">
+                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span>Fecha: ${req.date}</span>
+                        </div>
+                    </div>
+                    <div class="req-center">
+                        <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;">Estado del Proceso</div>
+                        <div class="timeline-container">${timelineHtml}</div>
+                    </div>
+                    <div class="req-right">
+                        <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;margin-bottom:4px;">
+                            <div style="width:8px;height:8px;background:${rightColor};border-radius:50%;"></div>
+                            <span style="font-size:12px;font-weight:800;color:${rightColor};">${rightStatus}</span>
+                        </div>
+                        <div style="font-size:12px;color:#64748b;margin-bottom:12px;">${rightSub}</div>
+                        <button onclick="openRequestDetail('${req.id}')" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background='#dbeafe';" onmouseout="this.style.background='#eff6ff';">Ver detalle <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            const emptyState = `<div style="text-align:center;padding:48px 16px;color:#94a3b8;">
+                <div style="width:64px;height:64px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                    <i data-lucide="clipboard-list" class="w-8 h-8 text-slate-300"></i>
                 </div>
-                <h3 class="text-lg font-semibold text-slate-700 mb-2">No hay solicitudes activas</h3>
-                <p class="text-sm text-slate-500 max-w-sm mx-auto">Los ensayos en curso aparecerán aquí para su seguimiento.</p>
+                <h3 style="font-size:16px;font-weight:600;color:#475569;margin-bottom:8px;">No hay solicitudes activas</h3>
+                <p style="font-size:13px;color:#94a3b8;max-width:360px;margin:0 auto;">Los ensayos en curso aparecerán aquí para su seguimiento.</p>
             </div>`;
 
             return `<div class="space-y-6 fade-in">
-                <div class="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
-                    <div>
-                        <h2 class="text-2xl font-bold text-slate-800">Estado de Solicitudes</h2>
-                        <p class="text-slate-500 mt-1">Ensayos activos de <span class="font-semibold text-slate-700">${clientData.user.name || 'su empresa'}</span>.</p>
-                    </div>
-                    <div class="flex gap-2">
-                        <button class="px-4 py-2 rounded-lg text-sm font-semibold transition-all ${filterStatus === 'all' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'}" onclick="filterRequests('all')">Todas</button>
-                        <button class="px-4 py-2 rounded-lg text-sm font-semibold transition-all ${filterStatus === 'En Proceso' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'}" onclick="filterRequests('En Proceso')">En Proceso</button>
-                    </div>
+                <div style="margin-bottom:24px;">
+                    <h2 style="font-size:24px;font-weight:800;color:#1e293b;margin:0 0 4px;">Estado de Solicitudes</h2>
+                    <p style="font-size:14px;color:#64748b;margin:0;">Consulta el estado actual de tus ensayos y solicitudes.</p>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    ${filtered.length > 0 ? cards : emptyState}
+                ${summaryCards}
+                <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+                    ${tabsHtml}
+                </div>
+                ${filtered.length > 0 ? cards : emptyState}
+                <div style="display:flex;align-items:center;gap:8px;margin-top:24px;padding:16px;background:#eff6ff;border:1px solid #dbeafe;border-radius:8px;">
+                    <div style="width:20px;height:20px;background:#2563eb;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                    <p style="font-size:13px;color:#1e40af;margin:0;flex:1;">Los estados se actualizan automáticamente. Si tienes dudas sobre tu solicitud, contáctanos.</p>
+                    <a href="mailto:contacto@hightestsas.com" style="padding:8px 16px;background:#fff;color:#2563eb;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+                        <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
+                        Contáctanos
+                    </a>
                 </div>
             </div>`;
         }
@@ -1436,6 +1594,11 @@
             filterStatus = status;
             const c = document.getElementById('dynamic-content');
             c.innerHTML = renderRequests();
+            lucide.createIcons();
+        };
+
+        window.openRequestDetail = function(id) {
+            openHistoryModal(id);
         };
 
         function renderHistory() {
@@ -1692,7 +1855,7 @@
 
         // --- Modal Historial ---
         function openHistoryModal(id) {
-            const item = clientData.history.find(r => r.id === id);
+            const item = clientData.history.find(r => r.id === id) || clientData.requests.find(r => r.id === id);
             if (!item) return;
             let statusColor = 'green', statusIcon = 'check-circle';
             if (item.status === 'Pendiente') { statusColor = 'amber'; statusIcon = 'clock'; }

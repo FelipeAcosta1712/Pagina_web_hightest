@@ -7201,6 +7201,7 @@ async function crearProcesoEnPanelAdmin() {
         const insertData = {
             numero_proceso: numeroProceso,
             cliente: clienteNombre,
+            informe_a_nombre_de: document.getElementById('informeNombre')?.value || clienteNombre,
             estado: 'recepcion',
             fecha_recepcion: fechaRecepcion,
             fecha_entrega_cliente: null,

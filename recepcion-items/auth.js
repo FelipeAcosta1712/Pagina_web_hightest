@@ -12,7 +12,7 @@ const ROLE_PERMISSIONS = {
     director_tecnico: ['crear', 'editar', 'eliminar', 'ver'],
     tecnico_ensayos: ['crear', 'editar', 'ver'],
     operador: ['crear', 'ver'],
-    cliente: ['ver']
+    cliente: ['ver', 'crear']
 };
 
 // Configuración de sesión
