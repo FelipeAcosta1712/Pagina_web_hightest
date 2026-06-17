@@ -54,7 +54,7 @@
                 <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center mr-3">
                     <i data-lucide="activity" class="text-white w-5 h-5"></i>
                 </div>
-                <span class="text-xl font-bold text-slate-800 tracking-tight">HIGH TEST</span>
+                <span id="sidebar-welcome" class="text-sm font-bold text-slate-800 tracking-tight">Bienvenido</span>
                 <button class="ml-auto lg:hidden text-slate-400 hover:text-slate-600" onclick="toggleMobileMenu(false)">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
@@ -103,7 +103,7 @@
                     <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center mr-2">
                         <i data-lucide="activity" class="text-white w-5 h-5"></i>
                     </div>
-                    <span class="text-lg font-bold text-slate-800">HIGH TEST</span>
+                    <span id="mobile-welcome" class="text-sm font-bold text-slate-800">Bienvenido</span>
                 </div>
                 <div class="flex items-center gap-2">
                     <a href="index.html" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors no-underline" style="text-decoration:none;">Inicio</a>
@@ -443,62 +443,69 @@
         .theme-dark #sidebar .nav-btn.bg-blue-50 { background: #1e3a5f; color: #93c5fd; }
         .theme-dark #sidebar .nav-btn.bg-blue-50 .nav-icon { color: #60a5fa; }
         .theme-dark #sidebar p { color: #e2e8f0; }
+        .theme-dark #sidebar span { color: #e2e8f0; }
         .theme-dark main { background: #0f172a; }
         .theme-dark main > header { background: #1e293b; border-color: #334155; }
         .theme-dark #scroll-container { scrollbar-color: #475569 #1e293b; }
         .theme-dark #scroll-container::-webkit-scrollbar-track { background: #1e293b; }
         .theme-dark #scroll-container::-webkit-scrollbar-thumb { background: #475569; }
-        .theme-dark .bg-white { background-color: #1e293b; }
-        .theme-dark .bg-slate-50 { background-color: #1e293b; }
-        .theme-dark .text-slate-800, .theme-dark .text-slate-900 { color: #e2e8f0; }
-        .theme-dark .text-slate-400 { color: #64748b; }
-        .theme-dark .text-slate-500, .theme-dark .text-slate-600 { color: #94a3b8; }
-        .theme-dark .text-slate-700 { color: #cbd5e1; }
-        .theme-dark .border-slate-200 { border-color: #334155; }
-        .theme-dark .border-slate-100 { border-color: #1e293b; }
-        .theme-dark .hover\:bg-slate-50:hover { background-color: #334155; }
-        .theme-dark .hover\:bg-slate-100:hover { background-color: #334155; }
-        .theme-dark .hover\:shadow-md:hover { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.4); }
-        .theme-dark .bg-slate-50 { background-color: #1e293b; }
-        .theme-dark .bg-blue-50 { background-color: #1e3a5f; }
-        .theme-dark .border-blue-100 { border-color: #1e3a5f; }
-        .theme-dark .bg-green-50 { background-color: #14532d; }
-        .theme-dark .border-green-100 { border-color: #14532d; }
-        .theme-dark .bg-amber-50 { background-color: #451a03; }
-        .theme-dark .text-amber-600 { color: #fbbf24; }
-        .theme-dark .border-amber-100 { border-color: #451a03; }
-        .theme-dark .bg-purple-50 { background-color: #3b0764; }
-        .theme-dark .text-purple-600 { color: #c084fc; }
-        .theme-dark .border-purple-100 { border-color: #3b0764; }
-        .theme-dark .bg-blue-100 { background-color: #1e40af; }
-        .theme-dark .text-blue-800 { color: #93c5fd; }
-        .theme-dark .text-green-800 { color: #86efac; }
-        .theme-dark .text-amber-800 { color: #fde68a; }
-        .theme-dark .text-red-800 { color: #fca5a5; }
-        .theme-dark .hover\:text-blue-800:hover { color: #93c5fd; }
-        .theme-dark .text-blue-700 { color: #93c5fd; }
-        .theme-dark .text-blue-600 { color: #60a5fa; }
-        .theme-dark .border-blue-200 { border-color: #1e40af; }
-        .theme-dark .bg-green-100 { background-color: #166534; }
-        .theme-dark .text-green-700 { color: #86efac; }
-        .theme-dark .text-green-600 { color: #4ade80; }
-        .theme-dark .border-green-200 { border-color: #166534; }
-        .theme-dark .bg-amber-100 { background-color: #92400e; }
-        .theme-dark .text-amber-700 { color: #fde68a; }
-        .theme-dark .text-amber-600 { color: #fbbf24; }
-        .theme-dark .border-amber-200 { border-color: #92400e; }
-        .theme-dark .bg-red-100 { background-color: #991b1b; }
-        .theme-dark .text-red-700 { color: #fca5a5; }
-        .theme-dark .border-red-200 { border-color: #991b1b; }
-        .theme-dark .bg-purple-100 { background-color: #581c87; }
         .theme-dark input, .theme-dark select { background: #0f172a; border-color: #334155; color: #e2e8f0; }
         .theme-dark table { color: #e2e8f0; }
         .theme-dark thead tr { background: #1e293b; }
-        .theme-dark .nav-btn.bg-blue-50 { background: #1e3a5f; color: #93c5fd; }
-        .theme-dark .nav-btn.bg-blue-50 .nav-icon { color: #60a5fa; }
-        .theme-dark main > header { background: #1e293b; border-color: #334155; }
-        .theme-dark main > header span { color: #e2e8f0; }
-        .theme-dark #sidebar .nav-btn:hover { background: #334155; color: #e2e8f0; }
+
+        /* ===== DARK MODE - Componentes reutilizables ===== */
+        .theme-dark .req-card { background: #1e293b; border-color: #334155; }
+        .theme-dark .timeline-connector { background: #334155; }
+        .theme-dark .timeline-circle-empty { background: #334155; border-color: #475569; }
+        .theme-dark .dm-card { background: #1e293b; border-color: #334155; }
+        .theme-dark .dm-card-white { background: #1e293b; border-color: #334155; }
+        .theme-dark .dm-text-primary { color: #e2e8f0; }
+        .theme-dark .dm-text-secondary { color: #94a3b8; }
+        .theme-dark .dm-text-muted { color: #64748b; }
+        .theme-dark .dm-text-link { color: #60a5fa; }
+        .theme-dark .dm-border { border-color: #334155; }
+        .theme-dark .dm-border-light { border-color: #1e293b; }
+        .theme-dark .dm-bg-light { background: #1e293b; }
+        .theme-dark .dm-bg-lighter { background: #334155; }
+        .theme-dark .dm-bg-blue { background: #1e3a5f; }
+        .theme-dark .dm-bg-amber { background: #451a03; }
+        .theme-dark .dm-bg-green { background: #14532d; }
+        .theme-dark .dm-bg-purple { background: #3b0764; }
+        .theme-dark .dm-bg-red { background: #450a0a; }
+        .theme-dark .dm-bg-pdf { background: #450a0a; }
+        .theme-dark .dm-text-pdf { color: #fca5a5; }
+        .theme-dark .dm-text-blue { color: #60a5fa; }
+        .theme-dark .dm-text-amber { color: #fbbf24; }
+        .theme-dark .dm-text-green { color: #4ade80; }
+        .theme-dark .dm-text-purple { color: #c084fc; }
+        .theme-dark .dm-text-red { color: #f87171; }
+        .theme-dark .dm-shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .theme-dark .dm-shadow-hover:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+        .theme-dark .dm-scrollbar { scrollbar-color: #475569 #1e293b; }
+        .theme-dark .dm-badge-green { background: #14532d; color: #86efac; }
+        .theme-dark .dm-badge-amber { background: #451a03; color: #fde68a; }
+        .theme-dark .dm-badge-blue { background: #1e3a5f; color: #93c5fd; }
+        .theme-dark .dm-badge-purple { background: #3b0764; color: #c084fc; }
+        .theme-dark .dm-badge-red { background: #450a0a; color: #fca5a5; }
+        .theme-dark .dm-tab { background: #1e293b; border-color: #334155; color: #94a3b8; }
+        .theme-dark .dm-tab:hover { background: #334155; }
+        .theme-dark .dm-tab-active { background: #2563eb; border-color: #2563eb; color: #fff; }
+        .theme-dark .dm-input { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+        .theme-dark .dm-input::placeholder { color: #64748b; }
+        .theme-dark .dm-empty-icon { background: #334155; }
+        .theme-dark .dm-activity-item:hover { background: #334155; }
+        .theme-dark .dm-quick-card { background: #1e293b; border-color: #334155; }
+        .theme-dark .dm-quick-card:hover { background: #334155; border-color: #60a5fa; }
+        .theme-dark .dm-banner { background: #1e3a5f; border-color: #1e40af; }
+        .theme-dark .dm-banner p { color: #93c5fd; }
+        .theme-dark .dm-banner a { color: #60a5fa; }
+        .theme-dark .dm-timeline-empty { background: #334155; border-color: #475569; }
+        .theme-dark .dm-btn-outline { background: #1e293b; border-color: #334155; color: #94a3b8; }
+        .theme-dark .dm-btn-outline:hover { background: #334155; }
+        .theme-dark .dm-btn-blue { background: #1e3a5f; border-color: #1e40af; color: #60a5fa; }
+        .theme-dark .dm-btn-blue:hover { background: #1e40af; }
+        .theme-dark .dm-info-text { color: #94a3b8; }
+        .theme-dark .dm-dark-bg { background: #0f172a; }
 
         /* ===== MODAL ===== */
         .modal-overlay {
@@ -863,9 +870,14 @@
             const nameEl = document.getElementById('clientUserName');
             const companyEl = document.getElementById('clientUserCompany');
             const sidebarName = document.getElementById('sidebar-user-name');
+            const sidebarWelcome = document.getElementById('sidebar-welcome');
+            const mobileWelcome = document.getElementById('mobile-welcome');
             if (nameEl) nameEl.textContent = clientData.user.contact || 'Cliente';
             if (companyEl) companyEl.textContent = clientData.user.name || 'Empresa';
             if (sidebarName) sidebarName.textContent = clientData.user.name || 'Empresa';
+            const welcomeText = clientData.user.name ? `Bienvenido, ${clientData.user.name}` : 'Bienvenido';
+            if (sidebarWelcome) sidebarWelcome.textContent = welcomeText;
+            if (mobileWelcome) mobileWelcome.textContent = welcomeText;
         }
 
         // --- 2. Menú móvil ---
@@ -1008,162 +1020,174 @@
             const latestNumber = latestInforme ? latestInforme.informe : '—';
 
             const emptyInforme = `<div style="text-align:center; padding:32px 16px; color:#94a3b8;">
-                <div style="width:48px; height:48px; background:#f1f5f9; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">📋</div>
+                <div class="dm-empty-icon" style="width:48px; height:48px; background:#f1f5f9; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">📋</div>
                 <p style="font-size:13px;">No hay informes disponibles aún.</p>
             </div>`;
 
+            const getInformePdfUrl = (numeroProceso) => {
+                if (!Array.isArray(informesData)) return '';
+                const inf = informesData.find(i => i.numero_proceso === numeroProceso && i.activo);
+                return inf ? (inf.archivo_pdf || '') : '';
+            };
+
             const informesList = informesDisponibles.length > 0
-                ? informesDisponibles.slice(0, 5).map(h => `
-                <div style="display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid #f1f5f9; transition:background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
-                    <div style="width:42px; height:42px; background:#fee2e2; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                ? informesDisponibles.slice(0, 5).map(h => {
+                    const pdfUrl = getInformePdfUrl(h.id);
+                    return `
+                <div class="dm-activity-item" style="display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid #f1f5f9; transition:background 0.15s; cursor:pointer;" onclick="${pdfUrl ? `window.open('${pdfUrl}', '_blank')` : `setTab('reports')`}">
+                    <div class="dm-bg-red" style="width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                         <span style="font-size:18px;">📄</span>
                     </div>
                     <div style="flex:1; min-width:0;">
-                        <div style="font-size:14px; font-weight:700; color:#1e293b; font-family:monospace;">${h.informe}</div>
-                        <div style="font-size:12px; color:#64748b;">${clientData.user.name || '—'} · Proceso: ${h.id}</div>
-                        <div style="font-size:11px; color:#94a3b8;">📅 ${h.date}</div>
+                        <div class="dm-text-primary" style="font-size:14px; font-weight:700; font-family:monospace;">${h.informe || 'Informe'}</div>
+                        <div class="dm-text-secondary" style="font-size:12px;">Proceso: ${h.id}</div>
+                        <div class="dm-text-muted" style="font-size:11px;">📅 ${h.date}</div>
                     </div>
                     <div style="text-align:right; flex-shrink:0;">
-                        <span style="display:inline-block; padding:3px 10px; background:#dcfce7; color:#166534; border-radius:12px; font-size:11px; font-weight:600;">✅ Disponible</span>
-                        <div style="margin-top:4px;"><a href="#" style="font-size:11px; color:#2563eb; font-weight:600; text-decoration:none;">Ver detalle →</a></div>
+                        <span class="dm-badge-green" style="display:inline-block; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:600;">✅ Disponible</span>
+                        <div class="dm-text-link" style="margin-top:4px; font-size:11px; font-weight:600;">${pdfUrl ? 'Ver PDF →' : 'Ver detalle →'}</div>
                     </div>
-                </div>
-            `).join('')
+                </div>`;
+                }).join('')
                 : emptyInforme;
 
-            const recentActivity = [...informesDisponibles.slice(0, 3).map(h => ({
-                icon: '📄', iconBg: '#dbeafe', iconColor: '#2563eb',
-                text: `<strong>Informe ${h.informe}</strong> disponible`,
-                sub: 'Tu informe está listo para consultar.',
-                date: h.date
-            })), ...clientData.requests.slice(0, 2).map(r => ({
-                icon: '🧪', iconBg: '#fef3c7', iconColor: '#d97706',
-                text: `Proceso ${r.id} en curso`,
-                sub: 'Tu proceso de ensayo ha sido iniciado.',
-                date: r.date
-            }))].slice(0, 4);
+            const recentActivity = [
+                ...informesDisponibles.slice(0, 3).map(h => ({
+                    icon: '📄', iconBg: '#dcfce7', iconColor: '#16a34a',
+                    text: `<strong>Informe ${h.informe || ''}</strong> disponible`,
+                    sub: 'Haz clic para ver el estado.',
+                    date: h.date,
+                    action: `setTab('requests')`,
+                    actionLabel: 'Ver estado'
+                })),
+                ...clientData.requests.slice(0, 3).map(r => ({
+                    icon: '🧪', iconBg: '#fef3c7', iconColor: '#d97706',
+                    text: `Proceso ${r.id} — ${r.statusRaw || 'En proceso'}`,
+                    sub: r.informe ? `Informe: ${r.informe}` : 'En seguimiento.',
+                    date: r.date,
+                    action: `setTab('requests')`,
+                    actionLabel: 'Ver estado'
+                }))
+            ].slice(0, 5);
 
             const activityHtml = recentActivity.length > 0
                 ? recentActivity.map(a => `
-                    <div style="display:flex; gap:10px; padding:10px 0; border-bottom:1px solid #f1f5f9;">
+                    <div class="dm-activity-item" style="display:flex; gap:10px; padding:10px 0; border-bottom:1px solid #f1f5f9; cursor:pointer; transition:background 0.15s;" onclick="${a.action}">
                         <div style="width:32px; height:32px; background:${a.iconBg}; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                             <span style="font-size:14px;">${a.icon}</span>
                         </div>
-                        <div style="flex:1;">
-                            <div style="font-size:12px; color:#94a3b8;">${a.date}</div>
-                            <div style="font-size:13px; font-weight:600; color:#1e293b;">${a.text}</div>
-                            <div style="font-size:11px; color:#64748b;">${a.sub}</div>
+                        <div style="flex:1; min-width:0;">
+                            <div class="dm-text-secondary" style="font-size:12px;">📅 ${a.date}</div>
+                            <div class="dm-text-primary" style="font-size:13px; font-weight:600;">${a.text}</div>
+                            <div class="dm-text-muted" style="font-size:11px;">${a.sub}</div>
+                        </div>
+                        <div style="flex-shrink:0; display:flex; align-items:center;">
+                            <span class="dm-text-link" style="font-size:11px; font-weight:600;">${a.actionLabel} →</span>
                         </div>
                     </div>
                 `).join('')
                 : `<div style="text-align:center; padding:24px; color:#94a3b8; font-size:13px;">No hay actividad reciente.</div>`;
 
             return `<div class="space-y-6 fade-in">
-                <!-- Stats Cards - 4 columnas -->
                 <div class="dashboard-stats" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:16px;">
-                    <div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                    <div class="dm-card dm-shadow" style="border-radius:12px; padding:20px;">
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-                            <div style="width:40px; height:40px; background:#eff6ff; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                            <div class="dm-bg-blue" style="width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
                                 <span style="font-size:18px;">📄</span>
                             </div>
                             <div>
-                                <div style="font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Informes Disponibles</div>
-                                <div style="font-size:28px; font-weight:800; color:#1e293b; line-height:1;">${informesDisponibles.length}</div>
+                                <div class="dm-text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Informes Disponibles</div>
+                                <div class="dm-text-primary" style="font-size:28px; font-weight:800; line-height:1;">${informesDisponibles.length}</div>
                             </div>
                         </div>
-                        <a href="#" onclick="setTab('reports'); return false;" style="font-size:11px; color:#2563eb; font-weight:600; text-decoration:none;">Listos para consultar →</a>
+                        <a href="#" onclick="setTab('reports'); return false;" class="dm-text-link" style="font-size:11px; font-weight:600; text-decoration:none;">Listos para consultar →</a>
                     </div>
-                    <div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                    <div class="dm-card dm-shadow" style="border-radius:12px; padding:20px;">
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-                            <div style="width:40px; height:40px; background:#fff7ed; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                            <div class="dm-bg-amber" style="width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
                                 <span style="font-size:18px;">⏳</span>
                             </div>
                             <div>
-                                <div style="font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Procesos en Curso</div>
-                                <div style="font-size:28px; font-weight:800; color:#1e293b; line-height:1;">${activeCount}</div>
+                                <div class="dm-text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Procesos en Curso</div>
+                                <div class="dm-text-primary" style="font-size:28px; font-weight:800; line-height:1;">${activeCount}</div>
                             </div>
                         </div>
-                        <span style="font-size:11px; color:#d97706; font-weight:600;">En ejecución</span>
+                        <span class="dm-text-amber" style="font-size:11px; font-weight:600;">En ejecución</span>
                     </div>
-                    <div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                    <div class="dm-card dm-shadow" style="border-radius:12px; padding:20px;">
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-                            <div style="width:40px; height:40px; background:#f0fdf4; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                            <div class="dm-bg-green" style="width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
                                 <span style="font-size:18px;">✅</span>
                             </div>
                             <div>
-                                <div style="font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Informes Emitidos</div>
-                                <div style="font-size:28px; font-weight:800; color:#1e293b; line-height:1;">${completedCount}</div>
+                                <div class="dm-text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Informes Emitidos</div>
+                                <div class="dm-text-primary" style="font-size:28px; font-weight:800; line-height:1;">${completedCount}</div>
                             </div>
                         </div>
-                        <span style="font-size:11px; color:#16a34a; font-weight:600;">Servicios finalizados</span>
+                        <span class="dm-text-green" style="font-size:11px; font-weight:600;">Servicios finalizados</span>
                     </div>
-                    <div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                    <div class="dm-card dm-shadow" style="border-radius:12px; padding:20px;">
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-                            <div style="width:40px; height:40px; background:#faf5ff; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                            <div class="dm-bg-purple" style="width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
                                 <span style="font-size:18px;">📅</span>
                             </div>
                             <div>
-                                <div style="font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Último Informe</div>
-                                <div style="font-size:16px; font-weight:800; color:#1e293b; font-family:monospace;">${latestNumber}</div>
+                                <div class="dm-text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Último Informe</div>
+                                <div class="dm-text-primary" style="font-size:16px; font-weight:800; font-family:monospace;">${latestNumber}</div>
                             </div>
                         </div>
-                        <div style="font-size:11px; color:#94a3b8;">${latestDate}</div>
+                        <div class="dm-text-secondary" style="font-size:11px;">${latestDate}</div>
                     </div>
                 </div>
 
-                <!-- Dos columnas -->
                 <div class="dashboard-cols" style="display:grid; grid-template-columns:1fr 1.2fr; gap:20px;">
-                    <!-- Columna izquierda -->
                     <div style="display:flex; flex-direction:column; gap:20px;">
-                        <!-- Accesos Rápidos -->
-                        <div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-                            <h3 style="font-size:15px; font-weight:700; color:#1e293b; margin:0 0 12px 0;">Accesos Rápidos</h3>
+                        <div class="dm-card dm-shadow" style="border-radius:12px; padding:20px;">
+                            <h3 class="dm-text-primary" style="font-size:15px; font-weight:700; margin:0 0 12px 0;">Accesos Rápidos</h3>
                             <div class="quick-access" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                                <a href="#" onclick="setTab('reports'); return false;" style="display:flex; align-items:center; gap:10px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; text-decoration:none; transition:all 0.15s;" onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#bfdbfe'" onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0'">
+                                <a href="#" onclick="setTab('reports'); return false;" class="dm-quick-card" style="display:flex; align-items:center; gap:10px; padding:12px; border-radius:10px; text-decoration:none; transition:all 0.15s;">
                                     <span style="font-size:16px;">📋</span>
                                     <div>
-                                        <div style="font-size:12px; font-weight:700; color:#1e293b;">Ver mis informes</div>
-                                        <div style="font-size:10px; color:#64748b;">Consulta todos tus informes</div>
+                                        <div class="dm-text-primary" style="font-size:12px; font-weight:700;">Ver mis informes</div>
+                                        <div class="dm-text-muted" style="font-size:10px;">Consulta todos tus informes</div>
                                     </div>
                                 </a>
-                                <a href="#" onclick="setTab('requests'); return false;" style="display:flex; align-items:center; gap:10px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; text-decoration:none; transition:all 0.15s;" onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#bfdbfe'" onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0'">
+                                <a href="#" onclick="setTab('requests'); return false;" class="dm-quick-card" style="display:flex; align-items:center; gap:10px; padding:12px; border-radius:10px; text-decoration:none; transition:all 0.15s;">
                                     <span style="font-size:16px;">📊</span>
                                     <div>
-                                        <div style="font-size:12px; font-weight:700; color:#1e293b;">Estado de solicitudes</div>
-                                        <div style="font-size:10px; color:#64748b;">Consulta el estado de tus procesos</div>
+                                        <div class="dm-text-primary" style="font-size:12px; font-weight:700;">Estado de solicitudes</div>
+                                        <div class="dm-text-muted" style="font-size:10px;">Consulta el estado de tus procesos</div>
                                     </div>
                                 </a>
-                                <a href="#" onclick="setTab('profile'); return false;" style="display:flex; align-items:center; gap:10px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; text-decoration:none; transition:all 0.15s;" onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#bfdbfe'" onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0'">
+                                <a href="#" onclick="setTab('profile'); return false;" class="dm-quick-card" style="display:flex; align-items:center; gap:10px; padding:12px; border-radius:10px; text-decoration:none; transition:all 0.15s;">
                                     <span style="font-size:16px;">👤</span>
                                     <div>
-                                        <div style="font-size:12px; font-weight:700; color:#1e293b;">Mi perfil</div>
-                                        <div style="font-size:10px; color:#64748b;">Actualiza la información de tu empresa</div>
+                                        <div class="dm-text-primary" style="font-size:12px; font-weight:700;">Mi perfil</div>
+                                        <div class="dm-text-muted" style="font-size:10px;">Actualiza la información de tu empresa</div>
                                     </div>
                                 </a>
-                                <a href="mailto:contacto@hightestsas.com" style="display:flex; align-items:center; gap:10px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; text-decoration:none; transition:all 0.15s;" onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#bfdbfe'" onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0'">
-                                    <span style="font-size:16px;">📞</span>
+                                <a href="https://wa.me/573115514940?text=Hola%2C%20necesito%20informaci%C3%B3n%20sobre%20un%20servicio" target="_blank" class="dm-quick-card" style="display:flex; align-items:center; gap:10px; padding:12px; border-radius:10px; text-decoration:none; transition:all 0.15s;">
+                                    <span style="font-size:16px;">💬</span>
                                     <div>
-                                        <div style="font-size:12px; font-weight:700; color:#1e293b;">Contactar laboratorio</div>
-                                        <div style="font-size:10px; color:#64748b;">Comunícate con nuestro equipo</div>
+                                        <div class="dm-text-primary" style="font-size:12px; font-weight:700;">Contactar laboratorio</div>
+                                        <div class="dm-text-muted" style="font-size:10px;">+57 311 5514940</div>
                                     </div>
                                 </a>
                             </div>
                         </div>
-                        <!-- Actividad Reciente -->
-                        <div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-                            <h3 style="font-size:15px; font-weight:700; color:#1e293b; margin:0 0 12px 0;">Actividad Reciente</h3>
-                            ${activityHtml}
-                            <div style="text-align:center; padding-top:12px;">
-                                <a href="#" style="font-size:12px; color:#2563eb; font-weight:600; text-decoration:none;">Ver todas las actividades →</a>
+                        <div class="dm-card dm-shadow" style="border-radius:12px; padding:20px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                <h3 class="dm-text-primary" style="font-size:15px; font-weight:700; margin:0;">Actividad Reciente</h3>
+                                <a href="#" onclick="setTab('requests'); return false;" class="dm-text-link" style="font-size:11px; font-weight:600; text-decoration:none;">Ver todo →</a>
                             </div>
+                            ${activityHtml}
                         </div>
                     </div>
 
-                    <!-- Columna derecha: Últimos Informes -->
-                    <div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                    <div class="dm-card dm-shadow" style="border-radius:12px; padding:20px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                            <h3 style="font-size:15px; font-weight:700; color:#1e293b; margin:0;">Últimos Informes Disponibles</h3>
-                            <a href="#" onclick="setTab('reports'); return false;" style="font-size:12px; color:#2563eb; font-weight:600; text-decoration:none;">Ver todos los informes →</a>
+                            <h3 class="dm-text-primary" style="font-size:15px; font-weight:700; margin:0;">Últimos Informes Disponibles</h3>
+                            <a href="#" onclick="setTab('reports'); return false;" class="dm-text-link" style="font-size:12px; font-weight:600; text-decoration:none;">Ver todos los informes →</a>
                         </div>
                         ${informesList || emptyInforme}
                     </div>
@@ -1210,84 +1234,83 @@
                 const aNombreDe = r.informe_a_nombre_de || cliente;
                 const infName = r.n_informe || r.nombre_documento || 'Informe de Ensayo';
                 const badge = r.activo 
-                    ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#dcfce7;color:#166534;border-radius:12px;font-size:11px;font-weight:600;">✅ Disponible</span>'
-                    : '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#fef3c7;color:#92400e;border-radius:12px;font-size:11px;font-weight:600;">⏳ Versión anterior</span>';
+                    ? '<span class="dm-badge-green" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;">✅ Disponible</span>'
+                    : '<span class="dm-badge-amber" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;">⏳ Versión anterior</span>';
                 const archivoUrl = r.archivo_pdf || '';
 
-                return `<div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:0;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
+                return `<div class="dm-card dm-shadow-hover" style="border-radius:12px;padding:0;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow 0.2s;">
                     <div style="padding:20px;flex:1;">
                         <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px;">
-                            <div style="width:48px;height:56px;background:#fee2e2;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:#dc2626;">PDF</div>
+                            <div class="dm-bg-pdf" style="width:48px;height:56px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;">PDF</div>
                             <div style="flex:1;min-width:0;">
-                                <div style="font-size:16px;font-weight:800;color:#1e293b;margin-bottom:2px;font-family:monospace;">${escapeHtml(infName)}</div>
-                                <div style="font-size:12px;color:#64748b;">Informe a nombre de: <strong style="color:#475569;">${escapeHtml(aNombreDe)}</strong></div>
-                                <div style="font-size:12px;color:#64748b;">Cliente: <strong style="color:#475569;">${escapeHtml(cliente)}</strong> — Proceso: <strong style="color:#475569;">${escapeHtml(numProc)}</strong></div>
+                                <div class="dm-text-primary" style="font-size:16px;font-weight:800;margin-bottom:2px;font-family:monospace;">${escapeHtml(infName)}</div>
+                                <div class="dm-text-secondary" style="font-size:12px;">Informe a nombre de: <strong class="dm-text-primary">${escapeHtml(aNombreDe)}</strong></div>
+                                <div class="dm-text-secondary" style="font-size:12px;">Cliente: <strong class="dm-text-primary">${escapeHtml(cliente)}</strong> — Proceso: <strong class="dm-text-primary">${escapeHtml(numProc)}</strong></div>
                                 <div style="margin-top:6px;">${badge}</div>
                             </div>
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#64748b;">
+                        <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;" class="dm-text-secondary">
                             <div style="display:flex;align-items:center;gap:6px;">📅 <span>Fecha de entrega: ${fecha}</span></div>
                         </div>
                     </div>
-                    <div style="border-top:1px solid #f1f5f9;padding:12px 20px;display:flex;gap:8px;">
-                        ${archivoUrl ? `<button onclick="window.open('${escapeHtml(archivoUrl)}', '_blank')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:600;color:#2563eb;background:white;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">👁️ Ver PDF</button>` : ''}
-                        ${archivoUrl ? `<button onclick="window.open('${escapeHtml(archivoUrl)}', '_blank')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:600;color:#475569;background:white;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">📥 Descargar</button>` : ''}
+                    <div class="dm-border" style="border-top:1px solid #f1f5f9;padding:12px 20px;display:flex;gap:8px;">
+                        ${archivoUrl ? `<button onclick="window.open('${escapeHtml(archivoUrl)}', '_blank')" class="dm-btn-blue" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">👁️ Ver PDF</button>` : ''}
+                        ${archivoUrl ? `<button onclick="window.open('${escapeHtml(archivoUrl)}', '_blank')" class="dm-btn-outline" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">📥 Descargar</button>` : ''}
                     </div>
                 </div>`;
             }).join('');
 
-            const emptyState = `<div style="text-align:center;padding:48px 16px;color:#94a3b8;">
-                <div style="width:64px;height:64px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px;">📄</div>
-                <h3 style="font-size:16px;font-weight:600;color:#475569;margin-bottom:8px;">No se encontraron informes</h3>
-                <p style="font-size:13px;color:#94a3b8;max-width:360px;margin:0 auto;">Los informes de ensayos aparecerán aquí una vez que estén disponibles para descarga.</p>
+            const emptyState = `<div style="text-align:center;padding:48px 16px;" class="dm-text-secondary">
+                <div class="dm-empty-icon" style="width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px;">📄</div>
+                <h3 style="font-size:16px;font-weight:600;margin-bottom:8px;" class="dm-text-primary">No se encontraron informes</h3>
+                <p style="font-size:13px;max-width:360px;margin:0 auto;" class="dm-text-secondary">Los informes de ensayos aparecerán aquí una vez que estén disponibles para descarga.</p>
             </div>`;
 
             const procOptsHtml = procesoOptions.map(p => `<option value="${escapeHtml(p.numero_proceso)}" ${f.proceso === p.numero_proceso ? 'selected' : ''}>${escapeHtml(p.numero_proceso)} — ${escapeHtml(p.cliente || '')}</option>`).join('');
 
             return `<div style="space-y:6;">
                 <div style="margin-bottom:24px;">
-                    <h2 style="font-size:24px;font-weight:800;color:#1e293b;margin:0 0 4px;">Informes de Ensayos</h2>
-                    <p style="font-size:14px;color:#64748b;margin:0;">Descargue los resultados oficiales de sus solicitudes.</p>
+                    <h2 class="dm-text-primary" style="font-size:24px;font-weight:800;margin:0 0 4px;">Informes de Ensayos</h2>
+                    <p class="dm-text-secondary" style="font-size:14px;margin:0;">Descargue los resultados oficiales de sus solicitudes.</p>
                 </div>
 
-                <!-- Filtros -->
-                <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:20px;">
-                    <div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:14px;">🔍 Filtros de Búsqueda</div>
+                <div class="dm-card" style="border-radius:12px;padding:20px;margin-bottom:20px;">
+                    <div class="dm-text-primary" style="font-size:14px;font-weight:700;margin-bottom:14px;">🔍 Filtros de Búsqueda</div>
                     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:12px;">
                         <div>
-                            <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Buscar</label>
-                            <input type="text" placeholder="Buscar por ID, proceso o cliente..." value="${escapeHtml(f.search)}" onchange="handleInformeFilter('search', this.value)" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;"/>
+                            <label class="dm-text-muted" style="font-size:11px;font-weight:600;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Buscar</label>
+                            <input type="text" class="dm-input" placeholder="Buscar por ID, proceso o cliente..." value="${escapeHtml(f.search)}" onchange="handleInformeFilter('search', this.value)" style="width:100%;padding:8px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;"/>
                         </div>
                         <div>
-                            <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Fecha desde</label>
-                            <input type="date" value="${f.dateFrom}" onchange="handleInformeFilter('dateFrom', this.value)" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;"/>
+                            <label class="dm-text-muted" style="font-size:11px;font-weight:600;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Fecha desde</label>
+                            <input type="date" class="dm-input" value="${f.dateFrom}" onchange="handleInformeFilter('dateFrom', this.value)" style="width:100%;padding:8px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;"/>
                         </div>
                         <div>
-                            <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Fecha hasta</label>
-                            <input type="date" value="${f.dateTo}" onchange="handleInformeFilter('dateTo', this.value)" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;"/>
+                            <label class="dm-text-muted" style="font-size:11px;font-weight:600;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Fecha hasta</label>
+                            <input type="date" class="dm-input" value="${f.dateTo}" onchange="handleInformeFilter('dateTo', this.value)" style="width:100%;padding:8px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;"/>
                         </div>
                         <div>
-                            <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Mes</label>
-                            <input type="month" value="${f.month}" onchange="handleInformeFilter('month', this.value)" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;"/>
+                            <label class="dm-text-muted" style="font-size:11px;font-weight:600;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Mes</label>
+                            <input type="month" class="dm-input" value="${f.month}" onchange="handleInformeFilter('month', this.value)" style="width:100%;padding:8px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;"/>
                         </div>
                         <div>
-                            <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Proceso (R26)</label>
-                            <select onchange="handleInformeFilter('proceso', this.value)" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;background:white;box-sizing:border-box;">
+                            <label class="dm-text-muted" style="font-size:11px;font-weight:600;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Proceso (R26)</label>
+                            <select class="dm-input" onchange="handleInformeFilter('proceso', this.value)" style="width:100%;padding:8px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;">
                                 <option value="">Todos los procesos</option>
                                 ${procOptsHtml}
                             </select>
                         </div>
                         <div>
-                            <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Estado del informe</label>
-                            <select onchange="handleInformeFilter('status', this.value)" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;background:white;box-sizing:border-box;">
+                            <label class="dm-text-muted" style="font-size:11px;font-weight:600;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Estado del informe</label>
+                            <select class="dm-input" onchange="handleInformeFilter('status', this.value)" style="width:100%;padding:8px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;">
                                 <option value="all" ${f.status === 'all' ? 'selected' : ''}>Todos los estados</option>
                                 <option value="disponible" ${f.status === 'disponible' ? 'selected' : ''}>Disponible</option>
                                 <option value="no_disponible" ${f.status === 'no_disponible' ? 'selected' : ''}>No disponible</option>
                             </select>
                         </div>
                         <div>
-                            <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Ordenar por</label>
-                            <select onchange="handleInformeFilter('orderBy', this.value)" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;background:white;box-sizing:border-box;">
+                            <label class="dm-text-muted" style="font-size:11px;font-weight:600;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Ordenar por</label>
+                            <select class="dm-input" onchange="handleInformeFilter('orderBy', this.value)" style="width:100%;padding:8px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;">
                                 <option value="recent" ${f.orderBy === 'recent' ? 'selected' : ''}>Más recientes</option>
                                 <option value="oldest" ${f.orderBy === 'oldest' ? 'selected' : ''}>Más antiguos</option>
                                 <option value="name" ${f.orderBy === 'name' ? 'selected' : ''}>Por número de proceso</option>
@@ -1295,32 +1318,29 @@
                         </div>
                     </div>
                     <div style="text-align:right;">
-                        <button onclick="limpiarFiltrosInformes()" style="padding:6px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:12px;font-weight:600;color:#475569;background:white;cursor:pointer;">✕ Limpiar filtros</button>
+                        <button onclick="limpiarFiltrosInformes()" class="dm-btn-outline" style="padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">✕ Limpiar filtros</button>
                     </div>
                 </div>
 
-                <!-- Resultados -->
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
-                    <div style="font-size:14px;color:#475569;">
+                    <div class="dm-text-secondary" style="font-size:14px;">
                         📋 <strong>${filtered.length}</strong> informe${filtered.length !== 1 ? 's' : ''} encontrado${filtered.length !== 1 ? 's' : ''}
                     </div>
                 </div>
 
-                <!-- Grid de cards -->
                 ${filtered.length > 0 ? `
                     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-bottom:24px;">
                         ${cards}
                     </div>
-                    <!-- Paginación -->
                     ${totalPages > 1 ? `
                     <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:16px;">
-                        <button onclick="InformeGoPage(${informesPage - 1})" ${informesPage <= 1 ? 'disabled' : ''} style="padding:6px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:white;cursor:pointer;${informesPage <= 1 ? 'opacity:0.4;cursor:not-allowed;' : ''}">← Anterior</button>
+                        <button onclick="InformeGoPage(${informesPage - 1})" ${informesPage <= 1 ? 'disabled' : ''} class="dm-btn-outline" style="padding:6px 12px;border-radius:6px;font-size:13px;cursor:pointer;${informesPage <= 1 ? 'opacity:0.4;cursor:not-allowed;' : ''}">← Anterior</button>
                         ${Array.from({length: totalPages}, (_, i) => i + 1).map(p => `
-                            <button onclick="InformeGoPage(${p})" style="min-width:36px;height:36px;border-radius:6px;font-size:13px;font-weight:${p === informesPage ? '700' : '500'};border:1px solid ${p === informesPage ? '#2563eb' : '#d1d5db'};background:${p === informesPage ? '#2563eb' : 'white'};color:${p === informesPage ? 'white' : '#475569'};cursor:pointer;">${p}</button>
+                            <button onclick="InformeGoPage(${p})" class="${p === informesPage ? 'dm-tab-active' : 'dm-btn-outline'}" style="min-width:36px;height:36px;border-radius:6px;font-size:13px;font-weight:${p === informesPage ? '700' : '500'};cursor:pointer;">${p}</button>
                         `).join('')}
-                        <button onclick="InformeGoPage(${informesPage + 1})" ${informesPage >= totalPages ? 'disabled' : ''} style="padding:6px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:white;cursor:pointer;${informesPage >= totalPages ? 'opacity:0.4;cursor:not-allowed;' : ''}">Siguiente →</button>
+                        <button onclick="InformeGoPage(${informesPage + 1})" ${informesPage >= totalPages ? 'disabled' : ''} class="dm-btn-outline" style="padding:6px 12px;border-radius:6px;font-size:13px;cursor:pointer;${informesPage >= totalPages ? 'opacity:0.4;cursor:not-allowed;' : ''}">Siguiente →</button>
                     </div>
-                    <div style="text-align:center;font-size:12px;color:#94a3b8;margin-top:8px;">Mostrando ${startIdx + 1} a ${Math.min(startIdx + informesPerPage, filtered.length)} de ${filtered.length} informes</div>
+                    <div style="text-align:center;font-size:12px;margin-top:8px;" class="dm-text-secondary">Mostrando ${startIdx + 1} a ${Math.min(startIdx + informesPerPage, filtered.length)} de ${filtered.length} informes</div>
                     ` : ''}
                 ` : emptyState}
             </div>`;
@@ -1420,34 +1440,34 @@
 
             const summaryCards = `
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px;">
-                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;display:flex;align-items:center;gap:14px;">
-                        <div style="width:48px;height:48px;background:#eff6ff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <div class="dm-card" style="border-radius:12px;padding:20px;display:flex;align-items:center;gap:14px;">
+                        <div class="dm-bg-blue" style="width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                             <i data-lucide="file-text" class="w-6 h-6 text-blue-600"></i>
                         </div>
                         <div>
-                            <div style="font-size:13px;color:#64748b;font-weight:600;">Solicitudes Totales</div>
-                            <div style="font-size:28px;font-weight:800;color:#1e293b;">${totalCount}</div>
-                            <div style="font-size:11px;color:#2563eb;font-weight:600;">Todas las solicitudes registradas</div>
+                            <div class="dm-text-secondary" style="font-size:13px;font-weight:600;">Solicitudes Totales</div>
+                            <div class="dm-text-primary" style="font-size:28px;font-weight:800;">${totalCount}</div>
+                            <div class="dm-text-link" style="font-size:11px;font-weight:600;">Todas las solicitudes registradas</div>
                         </div>
                     </div>
-                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;display:flex;align-items:center;gap:14px;">
-                        <div style="width:48px;height:48px;background:#fff7ed;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <div class="dm-card" style="border-radius:12px;padding:20px;display:flex;align-items:center;gap:14px;">
+                        <div class="dm-bg-amber" style="width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                             <i data-lucide="clock" class="w-6 h-6 text-amber-600"></i>
                         </div>
                         <div>
-                            <div style="font-size:13px;color:#64748b;font-weight:600;">En Proceso</div>
-                            <div style="font-size:28px;font-weight:800;color:#1e293b;">${enProcesoCount}</div>
-                            <div style="font-size:11px;color:#d97706;font-weight:600;">Actualmente en ejecución</div>
+                            <div class="dm-text-secondary" style="font-size:13px;font-weight:600;">En Proceso</div>
+                            <div class="dm-text-primary" style="font-size:28px;font-weight:800;">${enProcesoCount}</div>
+                            <div class="dm-text-amber" style="font-size:11px;font-weight:600;">Actualmente en ejecución</div>
                         </div>
                     </div>
-                    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;display:flex;align-items:center;gap:14px;">
-                        <div style="width:48px;height:48px;background:#faf5ff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <div class="dm-card" style="border-radius:12px;padding:20px;display:flex;align-items:center;gap:14px;">
+                        <div class="dm-bg-purple" style="width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                             <i data-lucide="flag" class="w-6 h-6 text-purple-600"></i>
                         </div>
                         <div>
-                            <div style="font-size:13px;color:#64748b;font-weight:600;">Finalizadas</div>
-                            <div style="font-size:28px;font-weight:800;color:#1e293b;">${finalizadasCount}</div>
-                            <div style="font-size:11px;color:#9333ea;font-weight:600;">Procesos completados</div>
+                            <div class="dm-text-secondary" style="font-size:13px;font-weight:600;">Finalizadas</div>
+                            <div class="dm-text-primary" style="font-size:28px;font-weight:800;">${finalizadasCount}</div>
+                            <div class="dm-text-purple" style="font-size:11px;font-weight:600;">Procesos completados</div>
                         </div>
                     </div>
                 </div>
@@ -1461,8 +1481,7 @@
             ];
             const tabsHtml = tabs.map(t => {
                 const isActive = filterStatus === t.id || (filterStatus === 'all' && t.id === 'all');
-                const activeStyle = isActive ? 'background:#2563eb;color:#fff;border-color:#2563eb;' : 'background:#fff;color:#475569;border-color:#e2e8f0;';
-                return `<button onclick="filterRequests('${t.id}')" style="padding:8px 16px;border-radius:8px;border:1px solid #e2e8f0;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;${activeStyle}" onmouseover="${isActive ? '' : 'this.style.background=\'#f8fafc\';'}" onmouseout="${isActive ? '' : 'this.style.background=\'#fff\';'}">${t.label}</button>`;
+                return `<button onclick="filterRequests('${t.id}')" class="${isActive ? 'dm-tab-active' : 'dm-tab'}" style="padding:8px 16px;border-radius:8px;border:1px solid;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;">${t.label}</button>`;
             }).join('');
 
             const stepDefs = [
@@ -1525,27 +1544,27 @@
                 else if (isRecepcion) { rightStatus = 'EN PROCESO'; rightSub = 'En espera de recepción'; rightColor = '#3b82f6'; }
                 else { rightStatus = 'EN PROCESO'; rightSub = 'En espera'; rightColor = '#64748b'; }
 
-                return `<div class="req-card">
+                return `<div class="req-card dm-card" style="border-radius:12px;">
                     <div class="req-left">
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-                            <span style="font-size:16px;font-weight:800;color:#1e293b;font-family:monospace;">${req.id}</span>
+                            <span class="dm-text-primary" style="font-size:16px;font-weight:800;font-family:monospace;">${req.id}</span>
                             <span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;${badgeStyle}">${badgeText}</span>
                         </div>
-                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px;color:#64748b;">
-                            <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i>
+                        <div class="dm-text-secondary" style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px;">
+                            <i data-lucide="user" class="w-3.5 h-3.5"></i>
                             <span>Cliente: ${req.client || clientData.user.name || 'ONAC'}</span>
                         </div>
-                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px;color:#64748b;">
-                            <i data-lucide="file-text" class="w-3.5 h-3.5 text-slate-400"></i>
+                        <div class="dm-text-secondary" style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px;">
+                            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
                             <span>Informe a nombre de: ${req.informe_a_nombre_de || req.client || clientData.user.name || '—'}</span>
                         </div>
-                        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#64748b;">
-                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400"></i>
+                        <div class="dm-text-secondary" style="display:flex;align-items:center;gap:6px;font-size:12px;">
+                            <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
                             <span>Fecha: ${req.date}</span>
                         </div>
                     </div>
                     <div class="req-center">
-                        <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;">Estado del Proceso</div>
+                        <div class="dm-text-secondary" style="font-size:12px;font-weight:700;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;">Estado del Proceso</div>
                         <div class="timeline-container">${timelineHtml}</div>
                     </div>
                     <div class="req-right">
@@ -1553,36 +1572,36 @@
                             <div style="width:8px;height:8px;background:${rightColor};border-radius:50%;"></div>
                             <span style="font-size:12px;font-weight:800;color:${rightColor};">${rightStatus}</span>
                         </div>
-                        <div style="font-size:12px;color:#64748b;margin-bottom:12px;">${rightSub}</div>
-                        <button onclick="openRequestDetail('${req.id}')" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background='#dbeafe';" onmouseout="this.style.background='#eff6ff';">Ver detalle <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
+                        <div class="dm-text-secondary" style="font-size:12px;margin-bottom:12px;">${rightSub}</div>
+                        <button onclick="openRequestDetail('${req.id}')" class="dm-btn-blue" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">Ver detalle <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
                     </div>
                 </div>`;
             }).join('');
 
-            const emptyState = `<div style="text-align:center;padding:48px 16px;color:#94a3b8;">
-                <div style="width:64px;height:64px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-                    <i data-lucide="clipboard-list" class="w-8 h-8 text-slate-300"></i>
+            const emptyState = `<div style="text-align:center;padding:48px 16px;" class="dm-text-secondary">
+                <div class="dm-empty-icon" style="width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                    <i data-lucide="clipboard-list" class="w-8 h-8"></i>
                 </div>
-                <h3 style="font-size:16px;font-weight:600;color:#475569;margin-bottom:8px;">No hay solicitudes activas</h3>
-                <p style="font-size:13px;color:#94a3b8;max-width:360px;margin:0 auto;">Los ensayos en curso aparecerán aquí para su seguimiento.</p>
+                <h3 style="font-size:16px;font-weight:600;margin-bottom:8px;" class="dm-text-primary">No hay solicitudes activas</h3>
+                <p style="font-size:13px;max-width:360px;margin:0 auto;" class="dm-text-secondary">Los ensayos en curso aparecerán aquí para su seguimiento.</p>
             </div>`;
 
             return `<div class="space-y-6 fade-in">
                 <div style="margin-bottom:24px;">
-                    <h2 style="font-size:24px;font-weight:800;color:#1e293b;margin:0 0 4px;">Estado de Solicitudes</h2>
-                    <p style="font-size:14px;color:#64748b;margin:0;">Consulta el estado actual de tus ensayos y solicitudes.</p>
+                    <h2 class="dm-text-primary" style="font-size:24px;font-weight:800;margin:0 0 4px;">Estado de Solicitudes</h2>
+                    <p class="dm-text-secondary" style="font-size:14px;margin:0;">Consulta el estado actual de tus ensayos y solicitudes.</p>
                 </div>
                 ${summaryCards}
                 <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
                     ${tabsHtml}
                 </div>
                 ${filtered.length > 0 ? cards : emptyState}
-                <div style="display:flex;align-items:center;gap:8px;margin-top:24px;padding:16px;background:#eff6ff;border:1px solid #dbeafe;border-radius:8px;">
+                <div class="dm-banner" style="display:flex;align-items:center;gap:8px;margin-top:24px;padding:16px;border-radius:8px;">
                     <div style="width:20px;height:20px;background:#2563eb;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                     </div>
-                    <p style="font-size:13px;color:#1e40af;margin:0;flex:1;">Los estados se actualizan automáticamente. Si tienes dudas sobre tu solicitud, contáctanos.</p>
-                    <a href="mailto:contacto@hightestsas.com" style="padding:8px 16px;background:#fff;color:#2563eb;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+                    <p style="font-size:13px;margin:0;flex:1;">Los estados se actualizan automáticamente. Si tienes dudas sobre tu solicitud, contáctanos.</p>
+                    <a href="https://wa.me/573115514940?text=Hola%2C%20necesito%20informaci%C3%B3n%20sobre%20un%20servicio" target="_blank" class="dm-btn-blue" style="padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
                         <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
                         Contáctanos
                     </a>
@@ -1622,18 +1641,18 @@
                     else if (i.status === 'En Proceso') statusColor = 'blue';
                     else if (i.status === 'Cancelado') statusColor = 'red';
                     
-                    return `<div class="flex flex-col p-6 bg-white rounded-xl border-l-4 border-l-${statusColor}-500 shadow-sm border border-slate-100 mb-4 transition-colors hover:shadow-md">
+                    return `<div class="flex flex-col p-6 dm-card rounded-xl border-l-4 border-l-${statusColor}-500 shadow-sm mb-4 transition-colors hover:shadow-md">
                         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2">
-                            <h4 class="text-lg font-bold text-slate-800">${i.service}</h4>
+                            <h4 class="text-lg font-bold dm-text-primary">${i.service}</h4>
                             <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-${statusColor}-100 text-${statusColor}-800 border border-${statusColor}-200 w-max">${i.status}</span>
                         </div>
-                        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-500 mb-4">
-                            <span class="flex items-center gap-1.5 font-medium"><i data-lucide="hash" class="w-4 h-4 text-slate-400"></i> ${i.id}</span>
-                            <span class="flex items-center gap-1.5"><i data-lucide="calendar" class="w-4 h-4 text-slate-400"></i> ${i.date}</span>
-                            ${i.informe ? `<span class="flex items-center gap-1.5"><i data-lucide="file-text" class="w-4 h-4 text-slate-400"></i> Inf: ${i.informe}</span>` : ''}
+                        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm dm-text-secondary mb-4">
+                            <span class="flex items-center gap-1.5 font-medium"><i data-lucide="hash" class="w-4 h-4"></i> ${i.id}</span>
+                            <span class="flex items-center gap-1.5"><i data-lucide="calendar" class="w-4 h-4"></i> ${i.date}</span>
+                            ${i.informe ? `<span class="flex items-center gap-1.5"><i data-lucide="file-text" class="w-4 h-4"></i> Inf: ${i.informe}</span>` : ''}
                         </div>
-                        <div class="flex items-center justify-end pt-3 border-t border-slate-100">
-                            <button class="text-sm text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1.5 px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors" onclick="openHistoryModal('${i.id}')">Ver detalles <i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                        <div class="flex items-center justify-end pt-3 dm-border border-t">
+                            <button class="text-sm dm-text-link font-semibold flex items-center gap-1.5 px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors" onclick="openHistoryModal('${i.id}')">Ver detalles <i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                         </div>
                     </div>`;
                 }).join('');
@@ -1643,8 +1662,8 @@
                         <div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center mr-3">
                             <span class="text-sm font-bold text-blue-700">${year}</span>
                         </div>
-                        <div class="flex-1 h-px bg-slate-200"></div>
-                        <span class="text-xs text-slate-400 ml-3 font-medium">${grouped[year].length} ensayo${grouped[year].length !== 1 ? 's' : ''}</span>
+                        <div class="flex-1 h-px dm-border bg-slate-200"></div>
+                        <span class="text-xs dm-text-muted ml-3 font-medium">${grouped[year].length} ensayo${grouped[year].length !== 1 ? 's' : ''}</span>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                         ${items}
@@ -1653,25 +1672,25 @@
             }).join('');
 
             const emptyState = `<div class="text-center py-12">
-                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i data-lucide="history" class="w-8 h-8 text-slate-400"></i>
+                <div class="w-16 h-16 dm-empty-icon rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="history" class="w-8 h-8 dm-text-secondary"></i>
                 </div>
-                <h3 class="text-lg font-medium text-slate-800 mb-1">Sin historial registrado</h3>
-                <p class="text-sm text-slate-500 max-w-md mx-auto">El historial de ensayos acreditados aparecerá aquí una vez que se registren servicios a nombre de su empresa.</p>
+                <h3 class="text-lg font-medium dm-text-primary mb-1">Sin historial registrado</h3>
+                <p class="text-sm dm-text-secondary max-w-md mx-auto">El historial de ensayos acreditados aparecerá aquí una vez que se registren servicios a nombre de su empresa.</p>
             </div>`;
 
             return `<div class="space-y-8 fade-in">
                 <div class="flex flex-col lg:flex-row justify-between lg:items-end gap-5">
                     <div>
-                        <h2 class="text-2xl font-bold text-slate-800">Historial de Servicios</h2>
-                        <p class="text-slate-500 mt-1">Ensayos acreditados registrados a nombre de <span class="font-semibold text-slate-700">${clientData.user.name || 'su empresa'}</span>.</p>
+                        <h2 class="text-2xl font-bold dm-text-primary">Historial de Servicios</h2>
+                        <p class="dm-text-secondary mt-1">Ensayos acreditados registrados a nombre de <span class="font-semibold dm-text-primary">${clientData.user.name || 'su empresa'}</span>.</p>
                     </div>
-                    <div class="bg-white rounded-xl border border-slate-200 px-5 py-3.5 shadow-sm">
-                        <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Total ensayos</p>
-                        <p class="text-2xl font-bold text-slate-800 mt-0.5">${sorted.length}</p>
+                    <div class="dm-card rounded-xl px-5 py-3.5 shadow-sm">
+                        <p class="text-xs dm-text-secondary font-medium uppercase tracking-wider">Total ensayos</p>
+                        <p class="text-2xl font-bold dm-text-primary mt-0.5">${sorted.length}</p>
                     </div>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-7">
+                <div class="dm-card rounded-xl shadow-sm overflow-hidden p-7">
                     ${sorted.length > 0 ? yearsHtml : emptyState}
                 </div>
             </div>`;
@@ -1695,13 +1714,12 @@
             const u = clientData.user;
             return `<div class="space-y-6 fade-in max-w-4xl">
                 <div>
-                    <h2 class="text-2xl font-bold text-slate-800">Perfil de Empresa</h2>
-                    <p class="text-slate-600 mt-1">Información de contacto y datos corporativos.</p>
+                    <h2 class="text-2xl font-bold dm-text-primary">Perfil de Empresa</h2>
+                    <p class="dm-text-secondary mt-1">Información de contacto y datos corporativos.</p>
                 </div>
                 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Tarjeta de empresa -->
-                    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="lg:col-span-2 dm-card rounded-xl shadow-sm overflow-hidden">
                         <div class="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-8 text-white">
                             <div class="flex items-center">
                                 <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mr-4">
@@ -1717,61 +1735,60 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="space-y-4">
                                     <div>
-                                        <label class="block text-sm font-medium text-slate-500 mb-1">Razón Social</label>
-                                        <div class="text-slate-800 font-medium p-3 bg-slate-50 rounded-lg border border-slate-100">${u.name || '—'}</div>
+                                        <label class="block text-sm font-medium dm-text-secondary mb-1">Razón Social</label>
+                                        <div class="dm-text-primary font-medium p-3 dm-bg-light rounded-lg dm-border border">${u.name || '—'}</div>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-slate-500 mb-1">Contacto Principal</label>
-                                        <div class="text-slate-800 font-medium p-3 bg-slate-50 rounded-lg border border-slate-100">${u.contact || '—'}</div>
+                                        <label class="block text-sm font-medium dm-text-secondary mb-1">Contacto Principal</label>
+                                        <div class="dm-text-primary font-medium p-3 dm-bg-light rounded-lg dm-border border">${u.contact || '—'}</div>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-slate-500 mb-1">Correo Electrónico</label>
-                                        <div class="text-slate-800 font-medium p-3 bg-slate-50 rounded-lg border border-slate-100">${u.email || '—'}</div>
+                                        <label class="block text-sm font-medium dm-text-secondary mb-1">Correo Electrónico</label>
+                                        <div class="dm-text-primary font-medium p-3 dm-bg-light rounded-lg dm-border border">${u.email || '—'}</div>
                                     </div>
                                 </div>
                                 <div class="space-y-4">
                                     <div>
-                                        <label class="block text-sm font-medium text-slate-500 mb-1">Teléfono</label>
-                                        <div class="text-slate-800 font-medium p-3 bg-slate-50 rounded-lg border border-slate-100">${u.phone || '—'}</div>
+                                        <label class="block text-sm font-medium dm-text-secondary mb-1">Teléfono</label>
+                                        <div class="dm-text-primary font-medium p-3 dm-bg-light rounded-lg dm-border border">${u.phone || '—'}</div>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-slate-500 mb-1">Dirección</label>
-                                        <div class="text-slate-800 font-medium p-3 bg-slate-50 rounded-lg border border-slate-100">${u.address || '—'}</div>
+                                        <label class="block text-sm font-medium dm-text-secondary mb-1">Dirección</label>
+                                        <div class="dm-text-primary font-medium p-3 dm-bg-light rounded-lg dm-border border">${u.address || '—'}</div>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-slate-500 mb-1">NIT</label>
-                                        <div class="text-slate-800 font-medium p-3 bg-slate-50 rounded-lg border border-slate-100">${u.nit || '—'}</div>
+                                        <label class="block text-sm font-medium dm-text-secondary mb-1">NIT</label>
+                                        <div class="dm-text-primary font-medium p-3 dm-bg-light rounded-lg dm-border border">${u.nit || '—'}</div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="mt-6 pt-6 border-t border-slate-100 flex items-center text-sm text-slate-500">
+                            <div class="mt-6 pt-6 dm-border border-t flex items-center text-sm dm-text-secondary">
                                 <i data-lucide="calendar" class="w-4 h-4 mr-2"></i>
                                 <span>Miembro desde: ${u.joined || '—'}</span>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Sidebar de contacto -->
                     <div class="space-y-6">
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                            <h3 class="text-lg font-bold text-slate-800 mb-4">Contacto Soporte</h3>
+                        <div class="dm-card rounded-xl shadow-sm p-6">
+                            <h3 class="text-lg font-bold dm-text-primary mb-4">Contacto Soporte</h3>
                             <div class="space-y-3">
-                                <a href="mailto:reportes.hightest@gmail.com" class="flex items-center p-3 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 transition-colors">
+                                <a href="https://wa.me/573115514940?text=Hola%2C%20necesito%20soporte" target="_blank" class="flex items-center p-3 dm-bg-light rounded-lg dm-border border hover:bg-slate-100 transition-colors">
+                                    <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-3">
+                                        <i data-lucide="message-circle" class="w-4 h-4 text-green-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium dm-text-primary">WhatsApp</p>
+                                        <p class="text-xs dm-text-secondary">+57 311 5514940</p>
+                                    </div>
+                                </a>
+                                <a href="mailto:reportes.hightest@gmail.com" class="flex items-center p-3 dm-bg-light rounded-lg dm-border border hover:bg-slate-100 transition-colors">
                                     <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
                                         <i data-lucide="mail" class="w-4 h-4 text-blue-600"></i>
                                     </div>
                                     <div>
-                                        <p class="text-sm font-medium text-slate-800">Correo</p>
-                                        <p class="text-xs text-slate-500">reportes.hightest@gmail.com</p>
-                                    </div>
-                                </a>
-                                <a href="tel:+573226197864" class="flex items-center p-3 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 transition-colors">
-                                    <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-3">
-                                        <i data-lucide="phone" class="w-4 h-4 text-green-600"></i>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm font-medium text-slate-800">Teléfono</p>
-                                        <p class="text-xs text-slate-500">+57 322 619 7864</p>
+                                        <p class="text-sm font-medium dm-text-primary">Correo</p>
+                                        <p class="text-xs dm-text-secondary">reportes.hightest@gmail.com</p>
                                     </div>
                                 </a>
                             </div>
