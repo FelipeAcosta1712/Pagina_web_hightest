@@ -1431,17 +1431,37 @@ exports.handler = async (event) => {
 
             // ── STATS DE INFORMES ──
             if (payload.action === 'get_informes_stats') {
-                const { data, error } = await supabase
+                // Traer todos los procesos acreditados
+                const { data: todosProcesos, error: errorProcesos } = await supabase
+                    .from('procesos_acreditados')
+                    .select('id');
+
+                if (errorProcesos) return jsonResponse(500, { ok: false, error: errorProcesos.message });
+
+                const procesos = todosProcesos || [];
+
+                // Traer informes para saber qué procesos tienen registro en la tabla de informes
+                const { data: informesRows, error: errorInformes } = await supabase
                     .from('informes_ensayo_ac')
                     .select('id, version, activo, created_at, proceso_id');
 
-                if (error) return jsonResponse(500, { ok: false, error: error.message });
+                if (errorInformes) return jsonResponse(500, { ok: false, error: errorInformes.message });
 
-                const rows = data || [];
-                const total = rows.length;
-                const vigentes = rows.filter(r => r.activo === true).length;
-                const versionados = rows.filter(r => (r.version || 1) > 1).length;
+                const rows = informesRows || [];
 
+                // Procesos que tienen al menos un registro en informes_ensayo_ac
+                const procesosConInforme = new Set(rows.map(r => r.proceso_id).filter(Boolean));
+
+                // TOTAL = todos los procesos acreditados
+                const total = procesos.length;
+
+                // VIGENTES = procesos que tienen al menos un informe subido
+                const vigentes = procesos.filter(p => procesosConInforme.has(p.id)).length;
+
+                // SIN INFORME = los que no tienen ningún registro en informes_ensayo_ac
+                const sinInforme = total - vigentes;
+
+                // Último informe cargado
                 let ultimoCargado = null;
                 rows.forEach(r => {
                     if (r.created_at && (!ultimoCargado || r.created_at > ultimoCargado)) {
@@ -1449,14 +1469,8 @@ exports.handler = async (event) => {
                     }
                 });
 
-                // Procesos sin informe
-                const procesoIdsConInforme = new Set(rows.map(r => r.proceso_id).filter(Boolean));
-                const { data: todosProcesos } = await supabase
-                    .from('procesos_acreditados')
-                    .select('id');
-
-                const totalProcesos = (todosProcesos || []).length;
-                const procesosSinInforme = (todosProcesos || []).filter(p => !procesoIdsConInforme.has(p.id)).length;
+                // Versionados
+                const versionados = rows.filter(r => (r.version || 1) > 1).length;
 
                 return jsonResponse(200, {
                     ok: true,
@@ -1465,10 +1479,72 @@ exports.handler = async (event) => {
                         vigentes,
                         versionados,
                         ultimo_cargado: ultimoCargado,
-                        procesos_sin_informe: procesosSinInforme,
-                        total_procesos: totalProcesos
+                        procesos_sin_informe: sinInforme,
+                        total_procesos: total
                     }
                 });
+            }
+
+            // ── INFORMES POR CLIENTE (para portal cliente) ──
+            if (payload.action === 'get_informes_cliente') {
+                try {
+                    const cliente = normalizeText(payload.cliente);
+                    if (!cliente) return jsonResponse(400, { ok: false, error: 'cliente requerido' });
+
+                // 1. Traer procesos del cliente (solo los que tengan n_informe lleno, no guiones ni vacíos)
+                const { data: todosProcesos, error: errProc } = await supabase
+                    .from('procesos_acreditados')
+                    .select('*')
+                    .ilike('cliente', `%${cliente}%`);
+
+                if (errProc) return jsonResponse(500, { ok: false, error: 'Error procesos: ' + errProc.message });
+
+                // Filtrar solo los que tengan n_informe real (no null, vacío ni guión)
+                const procesosRows = (todosProcesos || []).filter(p => {
+                    const ni = (p.n_informe || '').trim();
+                    return ni && ni !== '-' && ni !== '—';
+                });
+                    if (procesosRows.length === 0) return jsonResponse(200, { ok: true, informes: [] });
+
+                    const procesoIds = procesosRows.map(p => p.id);
+
+                    // 2. Traer informes de esos procesos
+                    const { data: informes, error: errInf } = await supabase
+                        .from('informes_ensayo_ac')
+                        .select('*')
+                        .in('proceso_id', procesoIds)
+                        .order('created_at', { ascending: false });
+
+                    if (errInf) return jsonResponse(500, { ok: false, error: 'Error informes: ' + errInf.message });
+
+                    // 3. Cruzar datos
+                    const procMap = {};
+                    procesosRows.forEach(p => { procMap[p.id] = p; });
+
+                    const result = (informes || []).map(inf => {
+                        const proc = procMap[inf.proceso_id] || {};
+                        return {
+                            id: inf.id,
+                            proceso_id: inf.proceso_id,
+                            numero_proceso: proc.numero_proceso || '',
+                            cliente: proc.cliente || cliente,
+                            informe_a_nombre_de: proc.informe_a_nombre_de || proc.cliente || cliente,
+                            n_informe: proc.n_informe || '',
+                            nombre_documento: inf.nombre_documento || '',
+                            archivo_pdf: inf.archivo_pdf || '',
+                            version: inf.version || 1,
+                            activo: inf.activo || false,
+                            created_at: inf.created_at || '',
+                            fecha_entrega: proc.fecha_entrega_cliente || '',
+                            estado: proc.estado || '',
+                            tipo: proc.tipo || 'Ensayo'
+                        };
+                    });
+
+                    return jsonResponse(200, { ok: true, informes: result });
+                } catch (innerErr) {
+                    return jsonResponse(500, { ok: false, error: 'Error interno get_informes_cliente: ' + innerErr.message });
+                }
             }
 
             // ── IMPORTAR INFORMES EXISTENTES DESDE STORAGE ──
@@ -1544,6 +1620,14 @@ exports.handler = async (event) => {
 
                     // Construir URL pública
                     const fileUrl = `${supabaseStorageUrl}/${encodeURIComponent(fileName)}`;
+
+                    // Desactivar informe activo anterior del mismo proceso y documento
+                    await supabase
+                        .from('informes_ensayo_ac')
+                        .update({ activo: false })
+                        .eq('proceso_id', procesoId)
+                        .eq('nombre_documento', fileNameNoExt.trim())
+                        .eq('activo', true);
 
                     // Insertar registro
                     const { error: insertError } = await supabase
@@ -1692,7 +1776,6 @@ exports.handler = async (event) => {
                             .from('informes_ensayo_ac')
                             .update({ activo: false })
                             .eq('proceso_id', procesoId)
-                            .eq('nombre_documento', fileNameNoExt.trim())
                             .eq('activo', true);
                     }
 

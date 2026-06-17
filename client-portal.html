@@ -772,6 +772,12 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <script>
+        // --- Utilidad ---
+        function escapeHtml(s) {
+            if (!s) return '';
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+
         // --- 1. Datos del portal ---
         const clientData = {
             user: { name: '', contact: '', email: '', plan: '', joined: '', phone: '', address: '', nit: '' },
@@ -831,7 +837,8 @@
             }
 
             updateUserDisplay();
-            await loadClientHistory();
+            try { await loadClientHistory(); } catch(e) { console.warn('Error loadClientHistory:', e); }
+            try { await loadInformesCliente(); } catch(e) { console.warn('Error loadInformesCliente:', e); }
             setTab(activeTab);
         }
 
@@ -966,6 +973,11 @@
         let activeTab = 'dashboard';
         let searchQuery = '';
         let filterStatus = 'all';
+        // Filtros informes
+        let informesData = [];
+        let informesFilter = { search: '', dateFrom: '', dateTo: '', month: '', proceso: '', status: 'all', orderBy: 'recent' };
+        let informesPage = 1;
+        const informesPerPage = 12;
 
         function renderDashboard() {
             const currentDate = new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -1143,105 +1155,203 @@
         }
 
         function renderReports() {
-            const filtered = clientData.reports.filter(r => {
-                const matchesSearch = searchQuery === '' || r.id.toLowerCase().includes(searchQuery.toLowerCase()) || r.project.toLowerCase().includes(searchQuery.toLowerCase());
-                const matchesFilter = filterStatus === 'all' || r.status === filterStatus;
-                return matchesSearch && matchesFilter;
+            const f = informesFilter;
+            const filtered = informesData.filter(r => {
+                const matchSearch = !f.search || 
+                    (r.numero_proceso || '').toLowerCase().includes(f.search.toLowerCase()) ||
+                    (r.n_informe || '').toLowerCase().includes(f.search.toLowerCase()) ||
+                    (r.nombre_documento || '').toLowerCase().includes(f.search.toLowerCase()) ||
+                    (r.cliente || '').toLowerCase().includes(f.search.toLowerCase());
+                const matchDateFrom = !f.dateFrom || (r.created_at || '').substring(0, 10) >= f.dateFrom;
+                const matchDateTo = !f.dateTo || (r.created_at || '').substring(0, 10) <= f.dateTo;
+                const matchMonth = !f.month || (r.created_at || '').substring(0, 7) === f.month;
+                const matchProceso = !f.proceso || r.numero_proceso === f.proceso;
+                const matchStatus = f.status === 'all' || (f.status === 'disponible' && r.activo) || (f.status === 'no_disponible' && !r.activo);
+                return matchSearch && matchDateFrom && matchDateTo && matchMonth && matchProceso && matchStatus;
             });
-            
-            const rows = filtered.map(r => {
-                let statusBadge = '';
-                if (r.status === 'Completado') {
-                    statusBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Completado</span>`;
-                } else if (r.status === 'En Proceso') {
-                    statusBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">En Proceso</span>`;
-                } else {
-                    statusBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">${r.status}</span>`;
-                }
-                
-                return `<tr class="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
-                    <td class="p-4"><span class="font-medium text-blue-600">${r.id}</span></td>
-                    <td class="p-4 text-slate-600">${r.date}</td>
-                    <td class="p-4 text-slate-800 font-medium">${r.project}</td>
-                    <td class="p-4 text-slate-600">${r.type}</td>
-                    <td class="p-4">${statusBadge}</td>
-                    <td class="p-4 text-center">
-                        <button class="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium" onclick="downloadReport('${r.id}')">
-                            <i data-lucide="download" class="w-4 h-4 mr-1.5"></i> PDF
-                        </button>
-                    </td>
-                </tr>`;
+
+            // Ordenar
+            if (f.orderBy === 'recent') filtered.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+            else if (f.orderBy === 'oldest') filtered.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+            else if (f.orderBy === 'name') filtered.sort((a, b) => (a.numero_proceso || '').localeCompare(b.numero_proceso || ''));
+
+            // Procesos únicos para el filtro
+            const procesoSet = new Map();
+            informesData.forEach(r => { if (r.numero_proceso) procesoSet.set(r.numero_proceso, r); });
+            const procesoOptions = Array.from(procesoSet.values()).sort((a, b) => (a.numero_proceso || '').localeCompare(b.numero_proceso || ''));
+
+            // Paginación
+            const totalPages = Math.ceil(filtered.length / informesPerPage) || 1;
+            if (informesPage > totalPages) informesPage = totalPages;
+            const startIdx = (informesPage - 1) * informesPerPage;
+            const paged = filtered.slice(startIdx, startIdx + informesPerPage);
+
+            const cards = paged.map(r => {
+                const fecha = r.fecha_entrega ? new Date(r.fecha_entrega).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : (r.created_at ? new Date(r.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—');
+                const numProc = r.numero_proceso || '—';
+                const cliente = r.cliente || '—';
+                const aNombreDe = r.informe_a_nombre_de || cliente;
+                const infName = r.n_informe || r.nombre_documento || 'Informe de Ensayo';
+                const badge = r.activo 
+                    ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#dcfce7;color:#166534;border-radius:12px;font-size:11px;font-weight:600;">✅ Disponible</span>'
+                    : '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#fef3c7;color:#92400e;border-radius:12px;font-size:11px;font-weight:600;">⏳ Versión anterior</span>';
+                const archivoUrl = r.archivo_pdf || '';
+
+                return `<div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:0;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
+                    <div style="padding:20px;flex:1;">
+                        <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px;">
+                            <div style="width:48px;height:56px;background:#fee2e2;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:#dc2626;">PDF</div>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-size:16px;font-weight:800;color:#1e293b;margin-bottom:2px;font-family:monospace;">${escapeHtml(infName)}</div>
+                                <div style="font-size:12px;color:#64748b;">Informe a nombre de: <strong style="color:#475569;">${escapeHtml(aNombreDe)}</strong></div>
+                                <div style="font-size:12px;color:#64748b;">Cliente: <strong style="color:#475569;">${escapeHtml(cliente)}</strong> — Proceso: <strong style="color:#475569;">${escapeHtml(numProc)}</strong></div>
+                                <div style="margin-top:6px;">${badge}</div>
+                            </div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#64748b;">
+                            <div style="display:flex;align-items:center;gap:6px;">📅 <span>Fecha de entrega: ${fecha}</span></div>
+                        </div>
+                    </div>
+                    <div style="border-top:1px solid #f1f5f9;padding:12px 20px;display:flex;gap:8px;">
+                        ${archivoUrl ? `<button onclick="window.open('${escapeHtml(archivoUrl)}', '_blank')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:600;color:#2563eb;background:white;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">👁️ Ver PDF</button>` : ''}
+                        ${archivoUrl ? `<button onclick="window.open('${escapeHtml(archivoUrl)}', '_blank')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:600;color:#475569;background:white;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">📥 Descargar</button>` : ''}
+                    </div>
+                </div>`;
             }).join('');
 
-            const emptyState = `<div class="text-center py-12">
-                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i data-lucide="file-x" class="w-8 h-8 text-slate-400"></i>
-                </div>
-                <h3 class="text-lg font-medium text-slate-800 mb-1">No se encontraron informes</h3>
-                <p class="text-sm text-slate-500 max-w-md mx-auto">Los informes de ensayos aparecerán aquí una vez que estén disponibles para descarga.</p>
+            const emptyState = `<div style="text-align:center;padding:48px 16px;color:#94a3b8;">
+                <div style="width:64px;height:64px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px;">📄</div>
+                <h3 style="font-size:16px;font-weight:600;color:#475569;margin-bottom:8px;">No se encontraron informes</h3>
+                <p style="font-size:13px;color:#94a3b8;max-width:360px;margin:0 auto;">Los informes de ensayos aparecerán aquí una vez que estén disponibles para descarga.</p>
             </div>`;
-            
-            return `<div class="space-y-6 fade-in">
-                <div class="flex flex-col lg:flex-row justify-between lg:items-end gap-4">
-                    <div>
-                        <h2 class="text-2xl font-bold text-slate-800">Informes de Ensayos</h2>
-                        <p class="text-slate-600 mt-1">Descargue los resultados oficiales de sus solicitudes.</p>
-                    </div>
-                    <div class="flex flex-col sm:flex-row gap-3">
-                        <div class="relative">
-                            <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4"></i>
-                            <input type="text" id="search-input" placeholder="Buscar por ID o proyecto..." class="w-full sm:w-64 pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" value="${searchQuery}" oninput="handleSearch(this.value)"/>
+
+            const procOptsHtml = procesoOptions.map(p => `<option value="${escapeHtml(p.numero_proceso)}" ${f.proceso === p.numero_proceso ? 'selected' : ''}>${escapeHtml(p.numero_proceso)} — ${escapeHtml(p.cliente || '')}</option>`).join('');
+
+            return `<div style="space-y:6;">
+                <div style="margin-bottom:24px;">
+                    <h2 style="font-size:24px;font-weight:800;color:#1e293b;margin:0 0 4px;">Informes de Ensayos</h2>
+                    <p style="font-size:14px;color:#64748b;margin:0;">Descargue los resultados oficiales de sus solicitudes.</p>
+                </div>
+
+                <!-- Filtros -->
+                <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:20px;">
+                    <div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:14px;">🔍 Filtros de Búsqueda</div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:12px;">
+                        <div>
+                            <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Buscar</label>
+                            <input type="text" placeholder="Buscar por ID, proceso o cliente..." value="${escapeHtml(f.search)}" onchange="handleInformeFilter('search', this.value)" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;"/>
                         </div>
-                        <select class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" onchange="handleFilter(this.value)">
-                            <option value="all" ${filterStatus === 'all' ? 'selected' : ''}>Todos los estados</option>
-                            <option value="Completado" ${filterStatus === 'Completado' ? 'selected' : ''}>Completado</option>
-                            <option value="En Proceso" ${filterStatus === 'En Proceso' ? 'selected' : ''}>En Proceso</option>
-                        </select>
+                        <div>
+                            <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Fecha desde</label>
+                            <input type="date" value="${f.dateFrom}" onchange="handleInformeFilter('dateFrom', this.value)" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;"/>
+                        </div>
+                        <div>
+                            <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Fecha hasta</label>
+                            <input type="date" value="${f.dateTo}" onchange="handleInformeFilter('dateTo', this.value)" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;"/>
+                        </div>
+                        <div>
+                            <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Mes</label>
+                            <input type="month" value="${f.month}" onchange="handleInformeFilter('month', this.value)" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;"/>
+                        </div>
+                        <div>
+                            <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Proceso (R26)</label>
+                            <select onchange="handleInformeFilter('proceso', this.value)" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;background:white;box-sizing:border-box;">
+                                <option value="">Todos los procesos</option>
+                                ${procOptsHtml}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Estado del informe</label>
+                            <select onchange="handleInformeFilter('status', this.value)" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;background:white;box-sizing:border-box;">
+                                <option value="all" ${f.status === 'all' ? 'selected' : ''}>Todos los estados</option>
+                                <option value="disponible" ${f.status === 'disponible' ? 'selected' : ''}>Disponible</option>
+                                <option value="no_disponible" ${f.status === 'no_disponible' ? 'selected' : ''}>No disponible</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Ordenar por</label>
+                            <select onchange="handleInformeFilter('orderBy', this.value)" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;background:white;box-sizing:border-box;">
+                                <option value="recent" ${f.orderBy === 'recent' ? 'selected' : ''}>Más recientes</option>
+                                <option value="oldest" ${f.orderBy === 'oldest' ? 'selected' : ''}>Más antiguos</option>
+                                <option value="name" ${f.orderBy === 'name' ? 'selected' : ''}>Por número de proceso</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <button onclick="limpiarFiltrosInformes()" style="padding:6px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:12px;font-weight:600;color:#475569;background:white;cursor:pointer;">✕ Limpiar filtros</button>
                     </div>
                 </div>
-                
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    ${filtered.length > 0 ? `
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-50 border-b border-slate-200 text-sm font-medium text-slate-500 uppercase tracking-wider">
-                                    <th class="p-4">ID Informe</th>
-                                    <th class="p-4">Fecha</th>
-                                    <th class="p-4">Proyecto</th>
-                                    <th class="p-4">Tipo de Ensayo</th>
-                                    <th class="p-4">Estado</th>
-                                    <th class="p-4 text-center">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody>${rows}</tbody>
-                        </table>
+
+                <!-- Resultados -->
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+                    <div style="font-size:14px;color:#475569;">
+                        📋 <strong>${filtered.length}</strong> informe${filtered.length !== 1 ? 's' : ''} encontrado${filtered.length !== 1 ? 's' : ''}
                     </div>
-                    <div class="px-4 py-3 bg-slate-50 border-t border-slate-200 text-sm text-slate-500">
-                        Mostrando ${filtered.length} de ${clientData.reports.length} informes
-                    </div>
-                    ` : emptyState}
                 </div>
+
+                <!-- Grid de cards -->
+                ${filtered.length > 0 ? `
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-bottom:24px;">
+                        ${cards}
+                    </div>
+                    <!-- Paginación -->
+                    ${totalPages > 1 ? `
+                    <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:16px;">
+                        <button onclick="InformeGoPage(${informesPage - 1})" ${informesPage <= 1 ? 'disabled' : ''} style="padding:6px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:white;cursor:pointer;${informesPage <= 1 ? 'opacity:0.4;cursor:not-allowed;' : ''}">← Anterior</button>
+                        ${Array.from({length: totalPages}, (_, i) => i + 1).map(p => `
+                            <button onclick="InformeGoPage(${p})" style="min-width:36px;height:36px;border-radius:6px;font-size:13px;font-weight:${p === informesPage ? '700' : '500'};border:1px solid ${p === informesPage ? '#2563eb' : '#d1d5db'};background:${p === informesPage ? '#2563eb' : 'white'};color:${p === informesPage ? 'white' : '#475569'};cursor:pointer;">${p}</button>
+                        `).join('')}
+                        <button onclick="InformeGoPage(${informesPage + 1})" ${informesPage >= totalPages ? 'disabled' : ''} style="padding:6px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:white;cursor:pointer;${informesPage >= totalPages ? 'opacity:0.4;cursor:not-allowed;' : ''}">Siguiente →</button>
+                    </div>
+                    <div style="text-align:center;font-size:12px;color:#94a3b8;margin-top:8px;">Mostrando ${startIdx + 1} a ${Math.min(startIdx + informesPerPage, filtered.length)} de ${filtered.length} informes</div>
+                    ` : ''}
+                ` : emptyState}
             </div>`;
         }
 
-        window.handleSearch = function(val) { 
-            searchQuery = val; 
-            const c = document.getElementById('dynamic-content'); 
-            c.innerHTML = renderReports(); 
-            const i = document.getElementById('search-input'); 
-            if(i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
-        };
-        
-        window.handleFilter = function(val) {
-            filterStatus = val;
+        window.handleInformeFilter = function(key, val) {
+            informesFilter[key] = val;
+            if (key !== 'search') { informesPage = 1; }
             const c = document.getElementById('dynamic-content');
             c.innerHTML = renderReports();
+            lucide.createIcons();
         };
-        
-        window.downloadReport = function(reportId) {
-            alert('Descargando informe ' + reportId + '...\n\nEn producción, esto descargaría el PDF real.');
+
+        window.limpiarFiltrosInformes = function() {
+            informesFilter = { search: '', dateFrom: '', dateTo: '', month: '', proceso: '', status: 'all', orderBy: 'recent' };
+            informesPage = 1;
+            const c = document.getElementById('dynamic-content');
+            c.innerHTML = renderReports();
+            lucide.createIcons();
         };
+
+        window.InformeGoPage = function(page) {
+            informesPage = page;
+            const c = document.getElementById('dynamic-content');
+            c.innerHTML = renderReports();
+            lucide.createIcons();
+            document.getElementById('scroll-container')?.scrollTo(0, 0);
+        };
+
+        async function loadInformesCliente() {
+            const clientName = clientData.user.name;
+            console.log('loadInformesCliente - clientName:', clientName);
+            if (!clientName) return;
+            try {
+                const result = await fetchFromDatabase('get_informes_cliente', { cliente: clientName });
+                console.log('loadInformesCliente - result:', result);
+                if (result.ok && Array.isArray(result.informes)) {
+                    informesData = result.informes;
+                    console.log('loadInformesCliente - informesData count:', informesData.length);
+                } else {
+                    console.warn('loadInformesCliente - error from backend:', result.error);
+                    informesData = [];
+                }
+            } catch (err) {
+                console.warn('No se pudieron cargar informes del cliente:', err.message);
+                informesData = [];
+            }
+        }
 
         function renderRequests() {
             const filtered = filterStatus === 'all' ? clientData.requests : clientData.requests.filter(r => r.status === filterStatus);
