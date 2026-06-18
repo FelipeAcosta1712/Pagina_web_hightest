@@ -50,12 +50,12 @@
 
         <!-- Sidebar Navigation -->
         <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-in-out flex flex-col">
-            <div class="h-16 flex items-center px-6 border-b border-slate-200 shrink-0">
-                <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center mr-3">
+            <div class="h-16 flex items-center px-6 shrink-0" style="border-bottom:1px solid #e8ecf1;">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center mr-3" style="background:linear-gradient(135deg,#003A80,#0052a3);box-shadow:0 2px 6px rgba(0,58,128,0.2);">
                     <i data-lucide="activity" class="text-white w-5 h-5"></i>
                 </div>
                 <span id="sidebar-welcome" class="text-sm font-bold text-slate-800 tracking-tight">Bienvenido</span>
-                <button class="ml-auto lg:hidden text-slate-400 hover:text-slate-600" onclick="toggleMobileMenu(false)">
+                <button class="ml-auto lg:hidden text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors" onclick="toggleMobileMenu(false)">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -82,14 +82,14 @@
 
             <div class="p-4 border-t border-slate-200 shrink-0">
                 <div class="flex items-center px-4 py-2">
-                    <div class="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 mr-3">
-                        <i data-lucide="user" class="w-4 h-4"></i>
+                    <div class="w-9 h-9 rounded-full flex items-center justify-center mr-3" style="background:linear-gradient(135deg,#003A80,#0052a3);">
+                        <i data-lucide="user" class="w-4 h-4 text-white"></i>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p id="sidebar-user-name" class="text-sm font-medium text-slate-900 truncate">Empresa</p>
+                        <p id="sidebar-user-name" class="text-sm font-bold text-slate-800 truncate">Empresa</p>
                     </div>
                 </div>
-                <button class="w-full mt-2 flex items-center px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors" onclick="clientLogout()">
+                <button class="w-full mt-2 flex items-center px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors" onclick="clientLogout()">
                     <i data-lucide="log-out" class="mr-3 w-4 h-4"></i> Cerrar Sesión
                 </button>
             </div>
@@ -98,17 +98,17 @@
         <!-- Main Content -->
         <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
             <!-- Top Header (Mobile) -->
-            <header class="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:hidden shrink-0">
+            <header class="h-14 flex items-center justify-between px-4 lg:hidden shrink-0" style="background:linear-gradient(135deg,#003A80 0%,#0052a3 100%);border-bottom:1px solid rgba(253,183,26,0.3);box-shadow:0 2px 8px rgba(0,58,128,0.15);">
                 <div class="flex items-center">
-                    <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center mr-2">
+                    <div class="w-8 h-8 rounded flex items-center justify-center mr-2" style="background:rgba(255,255,255,0.15);">
                         <i data-lucide="activity" class="text-white w-5 h-5"></i>
                     </div>
-                    <span id="mobile-welcome" class="text-sm font-bold text-slate-800">Bienvenido</span>
+                    <span id="mobile-welcome" class="text-sm font-bold text-white">Bienvenido</span>
                 </div>
                 <div class="flex items-center gap-2">
-                    <a href="index.html" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors no-underline" style="text-decoration:none;">Inicio</a>
-                    <button id="mobileThemeToggleBtn" class="p-2 rounded-lg text-lg hover:bg-slate-100 transition-colors" aria-label="Cambiar tema" title="Cambiar tema">🌙</button>
-                    <button onclick="toggleMobileMenu(true)" class="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg focus:outline-none">
+                    <a href="index.html" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors no-underline" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.25);text-decoration:none;">Inicio</a>
+                    <button id="mobileThemeToggleBtn" class="p-2 rounded-lg text-lg transition-colors" style="color:#fff;" aria-label="Cambiar tema" title="Cambiar tema">🌙</button>
+                    <button onclick="toggleMobileMenu(true)" class="p-2 rounded-lg transition-colors" style="color:rgba(255,255,255,0.8);" aria-label="Menú">
                         <i data-lucide="menu" class="w-6 h-6"></i>
                     </button>
                 </div>
@@ -125,7 +125,13 @@
         /* ===== RESET & BASE ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html { scroll-behavior: smooth; }
-        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; line-height: 1.6; color: #1e293b; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            background: linear-gradient(135deg, #f0f4ff 0%, #f8fafc 30%, #f0fdf4 70%, #fefce8 100%);
+            background-attachment: fixed;
+        }
         a { text-decoration: none; color: inherit; }
         button { cursor: pointer; border: none; background: none; font-family: inherit; }
         ul { list-style: none; }
@@ -139,9 +145,10 @@
             left: 0;
             right: 0;
             z-index: 1000;
-            background: #fff;
-            border-bottom: 1px solid #e2e8f0;
+            background: linear-gradient(135deg, #003A80 0%, #0052a3 50%, #003A80 100%);
+            border-bottom: 1px solid rgba(253,183,26,0.3);
             height: 64px;
+            box-shadow: 0 2px 12px rgba(0,58,128,0.15);
         }
         .header__container {
             max-width: 100%;
@@ -163,12 +170,14 @@
         .header__logo-image {
             height: 40px;
             width: auto;
+            filter: brightness(0) invert(1);
         }
         .theme-dark .header__logo-image {
             background: #fff;
             border-radius: 6px;
             padding: 4px 8px;
             height: 36px;
+            filter: none;
         }
         .header__nav {
             display: flex;
@@ -184,13 +193,13 @@
             padding: 8px 16px;
             font-size: 14px;
             font-weight: 500;
-            color: #475569;
+            color: rgba(255,255,255,0.85);
             border-radius: 8px;
             transition: all 0.2s;
         }
         .header__link:hover {
-            background: #f1f5f9;
-            color: #0f172a;
+            background: rgba(255,255,255,0.15);
+            color: #fff;
         }
         .header__menu-toggle {
             display: none;
@@ -210,10 +219,11 @@
             padding: 8px;
             border-radius: 8px;
             font-size: 18px;
+            color: #fff;
             transition: background 0.2s;
         }
         .header__icon-btn:hover {
-            background: #f1f5f9;
+            background: rgba(255,255,255,0.2);
         }
         .header__user-info {
             display: flex;
@@ -237,6 +247,14 @@
             font-weight: 600;
             border-radius: 8px;
             transition: all 0.2s;
+        }
+        .header__cta--primary {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.25);
+        }
+        .header__cta--primary:hover {
+            background: rgba(255,255,255,0.25);
         }
         .header__cta--logout {
             background: #fee2e2;
@@ -267,12 +285,12 @@
                 top: 64px;
                 left: 0;
                 right: 0;
-                background: #fff;
-                border-bottom: 1px solid #e2e8f0;
+                background: linear-gradient(135deg, #003A80 0%, #0052a3 100%);
+                border-bottom: 1px solid rgba(253,183,26,0.3);
                 flex-direction: column;
                 padding: 16px;
                 gap: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                box-shadow: 0 4px 16px rgba(0,58,128,0.2);
             }
             .header__menu.is-open { display: flex; }
             .header__link { width: 100%; }
@@ -295,13 +313,14 @@
             left: 0;
             bottom: 0;
             width: 260px;
-            background: #fff;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
             border-right: 1px solid #e2e8f0;
             display: flex;
             flex-direction: column;
             z-index: 50;
             transition: transform 0.3s;
             overflow-y: auto;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.03);
         }
 
         .nav-btn {
@@ -310,19 +329,23 @@
             padding: 12px 16px;
             font-size: 14px;
             font-weight: 500;
-            border-radius: 8px;
+            border-radius: 10px;
             color: #475569;
             transition: all 0.2s;
             width: 100%;
             text-align: left;
+            border: 1px solid transparent;
         }
         .nav-btn:hover {
-            background: #f8fafc;
+            background: #f1f5f9;
             color: #0f172a;
+            border-color: #e2e8f0;
         }
         .nav-btn.bg-blue-50 {
-            background: #eff6ff;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
             color: #1d4ed8;
+            border-color: #bfdbfe;
+            box-shadow: 0 1px 3px rgba(37,99,235,0.08);
         }
         .nav-icon {
             width: 20px;
@@ -427,38 +450,48 @@
         /* ===== SCROLLBAR ===== */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #cbd5e1, #94a3b8); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
         /* ===== DARK MODE ===== */
-        body.theme-dark { background-color: #0f172a; color: #e2e8f0; }
-        .theme-dark .header { background: rgba(15, 23, 42, 0.96); border-color: #1e293b; }
+        body.theme-dark { background: #0f172a; color: #e2e8f0; }
+        .theme-dark .header { background: rgba(15, 23, 42, 0.96); border-color: #1e293b; box-shadow: none; }
         .theme-dark .header__link { color: #e2e8f0; }
-        .theme-dark .header__link:hover { color: #facc15; }
+        .theme-dark .header__link:hover { color: #facc15; background: rgba(255,255,255,0.08); }
+        .theme-dark .header__cta--primary { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.12); color: #e2e8f0; }
+        .theme-dark .header__cta--primary:hover { background: rgba(255,255,255,0.15); }
+        .theme-dark .header__icon-btn { color: #e2e8f0; }
+        .theme-dark .header__icon-btn:hover { background: rgba(255,255,255,0.1); }
         .theme-dark .header__user-info .user-info__name { color: #e2e8f0; }
         .theme-dark .header__user-info .user-info__company { color: #94a3b8; }
-        .theme-dark #sidebar { background: #1e293b; border-color: #334155; }
-        .theme-dark #sidebar .nav-btn { color: #94a3b8; }
-        .theme-dark #sidebar .nav-btn:hover { background: #334155; color: #e2e8f0; }
-        .theme-dark #sidebar .nav-btn.bg-blue-50 { background: #1e3a5f; color: #93c5fd; }
+        .theme-dark #sidebar { background: #1e293b; border-color: #334155; box-shadow: none; }
+        .theme-dark #sidebar .nav-btn { color: #94a3b8; border-color: transparent; }
+        .theme-dark #sidebar .nav-btn:hover { background: #334155; color: #e2e8f0; border-color: #475569; }
+        .theme-dark #sidebar .nav-btn.bg-blue-50 { background: #1e3a5f; color: #93c5fd; border-color: #1e40af; box-shadow: none; }
         .theme-dark #sidebar .nav-btn.bg-blue-50 .nav-icon { color: #60a5fa; }
         .theme-dark #sidebar p { color: #e2e8f0; }
         .theme-dark #sidebar span { color: #e2e8f0; }
+        .theme-dark #sidebar .h-16 { border-color: #334155; }
+        .theme-dark #sidebar .h-16 > div:first-child { background: #334155; box-shadow: none; }
+        .theme-dark #sidebar button.text-red-600:hover { background: rgba(239,68,68,0.1); }
         .theme-dark main { background: #0f172a; }
-        .theme-dark main > header { background: #1e293b; border-color: #334155; }
+        .theme-dark main > header { background: #1e293b; border-color: #334155; box-shadow: none; }
         .theme-dark #scroll-container { scrollbar-color: #475569 #1e293b; }
         .theme-dark #scroll-container::-webkit-scrollbar-track { background: #1e293b; }
-        .theme-dark #scroll-container::-webkit-scrollbar-thumb { background: #475569; }
+        .theme-dark #scroll-container::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #475569, #334155); }
         .theme-dark input, .theme-dark select { background: #0f172a; border-color: #334155; color: #e2e8f0; }
         .theme-dark table { color: #e2e8f0; }
         .theme-dark thead tr { background: #1e293b; }
 
         /* ===== DARK MODE - Componentes reutilizables ===== */
-        .theme-dark .req-card { background: #1e293b; border-color: #334155; }
+        .theme-dark .req-card { background: #1e293b; border-color: #334155; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .theme-dark .req-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
         .theme-dark .timeline-connector { background: #334155; }
         .theme-dark .timeline-circle-empty { background: #334155; border-color: #475569; }
-        .theme-dark .dm-card { background: #1e293b; border-color: #334155; }
+        .theme-dark .dm-card { background: #1e293b; border-color: #334155; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
         .theme-dark .dm-card-white { background: #1e293b; border-color: #334155; }
+        .theme-dark .dm-shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .theme-dark .dm-shadow-hover:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.4); transform: none; }
         .theme-dark .dm-text-primary { color: #e2e8f0; }
         .theme-dark .dm-text-secondary { color: #94a3b8; }
         .theme-dark .dm-text-muted { color: #64748b; }
@@ -489,30 +522,86 @@
         .theme-dark .dm-badge-red { background: #450a0a; color: #fca5a5; }
         .theme-dark .dm-tab { background: #1e293b; border-color: #334155; color: #94a3b8; }
         .theme-dark .dm-tab:hover { background: #334155; }
-        .theme-dark .dm-tab-active { background: #2563eb; border-color: #2563eb; color: #fff; }
+        .theme-dark .dm-tab-active { background: #2563eb; border-color: #2563eb; color: #fff; box-shadow: 0 2px 6px rgba(37,99,235,0.25); }
         .theme-dark .dm-input { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+        .theme-dark .dm-input:focus { border-color: #60a5fa; box-shadow: 0 0 0 3px rgba(96,165,250,0.15); }
         .theme-dark .dm-input::placeholder { color: #64748b; }
         .theme-dark .dm-empty-icon { background: #334155; }
         .theme-dark .dm-activity-item:hover { background: #334155; }
-        .theme-dark .dm-quick-card { background: #1e293b; border-color: #334155; }
-        .theme-dark .dm-quick-card:hover { background: #334155; border-color: #60a5fa; }
+        .theme-dark .dm-quick-card { background: #1e293b; border-color: #334155; box-shadow: none; }
+        .theme-dark .dm-quick-card:hover { background: #334155; border-color: #60a5fa; transform: none; }
         .theme-dark .dm-banner { background: #1e3a5f; border-color: #1e40af; }
         .theme-dark .dm-banner p { color: #93c5fd; }
         .theme-dark .dm-banner a { color: #60a5fa; }
         .theme-dark .dm-timeline-empty { background: #334155; border-color: #475569; }
         .theme-dark .dm-btn-outline { background: #1e293b; border-color: #334155; color: #94a3b8; }
-        .theme-dark .dm-btn-outline:hover { background: #334155; }
-        .theme-dark .dm-btn-blue { background: #1e3a5f; border-color: #1e40af; color: #60a5fa; }
-        .theme-dark .dm-btn-blue:hover { background: #1e40af; }
+        .theme-dark .dm-btn-outline:hover { background: #334155; transform: none; }
+        .theme-dark .dm-btn-blue { background: #1e3a5f; border-color: #1e40af; color: #60a5fa; box-shadow: none; }
+        .theme-dark .dm-btn-blue:hover { background: #1e40af; transform: none; }
         .theme-dark .dm-info-text { color: #94a3b8; }
         .theme-dark .dm-dark-bg { background: #0f172a; }
+
+        /* ===== LIGHT MODE - Componentes reutilizables ===== */
+        .dm-card { background: #fff; border: 1px solid #e8ecf1; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.02); }
+        .dm-card-white { background: #fff; border: 1px solid #e8ecf1; }
+        .dm-shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.03); }
+        .dm-shadow-hover { transition: box-shadow 0.25s, transform 0.25s; }
+        .dm-shadow-hover:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.04); transform: translateY(-1px); }
+        .dm-text-primary { color: #1e293b; }
+        .dm-text-secondary { color: #475569; }
+        .dm-text-muted { color: #94a3b8; }
+        .dm-text-link { color: #2563eb; }
+        .dm-text-link:hover { color: #1d4ed8; }
+        .dm-border { border-color: #e2e8f0; }
+        .dm-border-light { border-color: #f1f5f9; }
+        .dm-bg-light { background: #f8fafc; }
+        .dm-bg-lighter { background: #f1f5f9; }
+        .dm-bg-blue { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); }
+        .dm-bg-amber { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); }
+        .dm-bg-green { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); }
+        .dm-bg-purple { background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); }
+        .dm-bg-red { background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); }
+        .dm-bg-pdf { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #dc2626; }
+        .dm-text-pdf { color: #dc2626; }
+        .dm-text-blue { color: #2563eb; }
+        .dm-text-amber { color: #d97706; }
+        .dm-text-green { color: #16a34a; }
+        .dm-text-purple { color: #9333ea; }
+        .dm-text-red { color: #dc2626; }
+        .dm-badge-green { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .dm-badge-amber { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+        .dm-badge-blue { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+        .dm-badge-purple { background: #faf5ff; color: #9333ea; border: 1px solid #e9d5ff; }
+        .dm-badge-red { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .dm-tab { background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; transition: all 0.2s; }
+        .dm-tab:hover { background: #f1f5f9; border-color: #cbd5e1; }
+        .dm-tab-active { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-color: #2563eb; color: #fff; box-shadow: 0 2px 6px rgba(37,99,235,0.25); }
+        .dm-input { background: #f8fafc; border: 1px solid #e2e8f0; color: #1e293b; border-radius: 8px; transition: border-color 0.2s, box-shadow 0.2s; }
+        .dm-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); outline: none; }
+        .dm-input::placeholder { color: #94a3b8; }
+        .dm-empty-icon { background: #f1f5f9; }
+        .dm-activity-item { border-radius: 8px; }
+        .dm-activity-item:hover { background: #f8fafc; }
+        .dm-quick-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; transition: all 0.2s; }
+        .dm-quick-card:hover { background: #fff; border-color: #93c5fd; box-shadow: 0 2px 8px rgba(37,99,235,0.08); }
+        .dm-banner { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #bfdbfe; border-radius: 10px; }
+        .dm-banner p { color: #1e40af; }
+        .dm-banner a { color: #2563eb; }
+        .dm-timeline-empty { background: #f1f5f9; border: 1px solid #e2e8f0; }
+        .dm-btn-outline { background: #fff; border: 1px solid #e2e8f0; color: #475569; transition: all 0.2s; }
+        .dm-btn-outline:hover { background: #f8fafc; border-color: #cbd5e1; color: #1e293b; }
+        .dm-btn-blue { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border: 1px solid #2563eb; color: #fff; box-shadow: 0 2px 6px rgba(37,99,235,0.2); transition: all 0.2s; }
+        .dm-btn-blue:hover { box-shadow: 0 4px 12px rgba(37,99,235,0.3); transform: translateY(-1px); }
+        .dm-info-text { color: #475569; }
+        .dm-dark-bg { background: #f8fafc; }
 
         /* ===== MODAL ===== */
         .modal-overlay {
             position: fixed;
             inset: 0;
             z-index: 2000;
-            background: rgba(0,0,0,0.5);
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -528,7 +617,7 @@
         .modal-content {
             background: #fff;
             border-radius: 16px;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
             width: 100%;
             max-width: 560px;
             max-height: 85vh;
@@ -539,8 +628,8 @@
         .modal-overlay.active .modal-content {
             transform: scale(1);
         }
-        .theme-dark .modal-content { background: #1e293b; border: 1px solid #334155; }
-        .theme-dark .modal-overlay { background: rgba(0,0,0,0.7); }
+        .theme-dark .modal-content { background: #1e293b; border: 1px solid #334155; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
+        .theme-dark .modal-overlay { background: rgba(0,0,0,0.7); backdrop-filter: none; }
 
         /* ===== GRID & FLEX (Tailwind-like) ===== */
         .grid { display: grid; }
@@ -777,14 +866,15 @@
         }
 
         /* ===== ESTADO DE SOLICITUDES ===== */
-        .req-card { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 12px; }
+        .req-card { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; background: #fff; border: 1px solid #e8ecf1; border-radius: 14px; padding: 20px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.02); transition: box-shadow 0.2s, transform 0.2s; }
+        .req-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.03); transform: translateY(-1px); }
         .req-left { flex: 0 0 200px; min-width: 200px; }
         .req-center { flex: 1; min-width: 300px; }
         .req-right { flex: 0 0 200px; min-width: 200px; text-align: right; }
         .timeline-container { display: flex; align-items: flex-start; position: relative; padding: 0 10px; }
         .timeline-step { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
-        .timeline-connector { position: absolute; top: 11px; left: 50%; right: -50%; height: 2px; z-index: 0; }
-        .timeline-circle { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 2; }
+        .timeline-connector { position: absolute; top: 11px; left: 50%; right: -50%; height: 2px; z-index: 0; border-radius: 1px; }
+        .timeline-circle { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
         @media (max-width: 1024px) {
             .req-card { flex-direction: column; align-items: flex-start; }
             .req-right { text-align: left; flex: 1; min-width: 100%; }
@@ -1090,22 +1180,22 @@
 
             return `<div class="space-y-6 fade-in">
                 <div class="dashboard-stats" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:16px;">
-                    <div class="dm-card dm-shadow" style="border-radius:12px; padding:20px;">
+                    <div class="dm-card dm-shadow" style="border-radius:14px; padding:20px; border-left:4px solid #2563eb;">
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-                            <div class="dm-bg-blue" style="width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
-                                <span style="font-size:18px;">📄</span>
+                            <div class="dm-bg-blue" style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                                <span style="font-size:20px;">📄</span>
                             </div>
                             <div>
                                 <div class="dm-text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Informes Disponibles</div>
                                 <div class="dm-text-primary" style="font-size:28px; font-weight:800; line-height:1;">${informesDisponibles.length}</div>
                             </div>
                         </div>
-                        <a href="#" onclick="setTab('reports'); return false;" class="dm-text-link" style="font-size:11px; font-weight:600; text-decoration:none;">Listos para consultar →</a>
+                        <a href="#" onclick="setTab('reports'); return false;" class="dm-text-link" style="font-size:11px; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">Listos para consultar →</a>
                     </div>
-                    <div class="dm-card dm-shadow" style="border-radius:12px; padding:20px;">
+                    <div class="dm-card dm-shadow" style="border-radius:14px; padding:20px; border-left:4px solid #f59e0b;">
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-                            <div class="dm-bg-amber" style="width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
-                                <span style="font-size:18px;">⏳</span>
+                            <div class="dm-bg-amber" style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                                <span style="font-size:20px;">⏳</span>
                             </div>
                             <div>
                                 <div class="dm-text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Procesos en Curso</div>
@@ -1114,10 +1204,10 @@
                         </div>
                         <span class="dm-text-amber" style="font-size:11px; font-weight:600;">En ejecución</span>
                     </div>
-                    <div class="dm-card dm-shadow" style="border-radius:12px; padding:20px;">
+                    <div class="dm-card dm-shadow" style="border-radius:14px; padding:20px; border-left:4px solid #22c55e;">
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-                            <div class="dm-bg-green" style="width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
-                                <span style="font-size:18px;">✅</span>
+                            <div class="dm-bg-green" style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                                <span style="font-size:20px;">✅</span>
                             </div>
                             <div>
                                 <div class="dm-text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Informes Emitidos</div>
@@ -1126,10 +1216,10 @@
                         </div>
                         <span class="dm-text-green" style="font-size:11px; font-weight:600;">Servicios finalizados</span>
                     </div>
-                    <div class="dm-card dm-shadow" style="border-radius:12px; padding:20px;">
+                    <div class="dm-card dm-shadow" style="border-radius:14px; padding:20px; border-left:4px solid #9333ea;">
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-                            <div class="dm-bg-purple" style="width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
-                                <span style="font-size:18px;">📅</span>
+                            <div class="dm-bg-purple" style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                                <span style="font-size:20px;">📅</span>
                             </div>
                             <div>
                                 <div class="dm-text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Último Informe</div>
@@ -1142,32 +1232,35 @@
 
                 <div class="dashboard-cols" style="display:grid; grid-template-columns:1fr 1.2fr; gap:20px;">
                     <div style="display:flex; flex-direction:column; gap:20px;">
-                        <div class="dm-card dm-shadow" style="border-radius:12px; padding:20px;">
-                            <h3 class="dm-text-primary" style="font-size:15px; font-weight:700; margin:0 0 12px 0;">Accesos Rápidos</h3>
+                        <div class="dm-card dm-shadow" style="border-radius:14px; padding:20px;">
+                            <h3 class="dm-text-primary" style="font-size:15px; font-weight:700; margin:0 0 14px 0; display:flex; align-items:center; gap:8px;">
+                                <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#eff6ff,#dbeafe);font-size:14px;">⚡</span>
+                                Accesos Rápidos
+                            </h3>
                             <div class="quick-access" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                                <a href="#" onclick="setTab('reports'); return false;" class="dm-quick-card" style="display:flex; align-items:center; gap:10px; padding:12px; border-radius:10px; text-decoration:none; transition:all 0.15s;">
-                                    <span style="font-size:16px;">📋</span>
+                                <a href="#" onclick="setTab('reports'); return false;" class="dm-quick-card" style="display:flex; align-items:center; gap:10px; padding:14px; text-decoration:none;">
+                                    <span style="font-size:18px;">📋</span>
                                     <div>
                                         <div class="dm-text-primary" style="font-size:12px; font-weight:700;">Ver mis informes</div>
                                         <div class="dm-text-muted" style="font-size:10px;">Consulta todos tus informes</div>
                                     </div>
                                 </a>
-                                <a href="#" onclick="setTab('requests'); return false;" class="dm-quick-card" style="display:flex; align-items:center; gap:10px; padding:12px; border-radius:10px; text-decoration:none; transition:all 0.15s;">
-                                    <span style="font-size:16px;">📊</span>
+                                <a href="#" onclick="setTab('requests'); return false;" class="dm-quick-card" style="display:flex; align-items:center; gap:10px; padding:14px; text-decoration:none;">
+                                    <span style="font-size:18px;">📊</span>
                                     <div>
                                         <div class="dm-text-primary" style="font-size:12px; font-weight:700;">Estado de solicitudes</div>
                                         <div class="dm-text-muted" style="font-size:10px;">Consulta el estado de tus procesos</div>
                                     </div>
                                 </a>
-                                <a href="#" onclick="setTab('profile'); return false;" class="dm-quick-card" style="display:flex; align-items:center; gap:10px; padding:12px; border-radius:10px; text-decoration:none; transition:all 0.15s;">
-                                    <span style="font-size:16px;">👤</span>
+                                <a href="#" onclick="setTab('profile'); return false;" class="dm-quick-card" style="display:flex; align-items:center; gap:10px; padding:14px; text-decoration:none;">
+                                    <span style="font-size:18px;">👤</span>
                                     <div>
                                         <div class="dm-text-primary" style="font-size:12px; font-weight:700;">Mi perfil</div>
                                         <div class="dm-text-muted" style="font-size:10px;">Actualiza la información de tu empresa</div>
                                     </div>
                                 </a>
-                                <a href="https://wa.me/573115514940?text=Hola%2C%20necesito%20informaci%C3%B3n%20sobre%20un%20servicio" target="_blank" class="dm-quick-card" style="display:flex; align-items:center; gap:10px; padding:12px; border-radius:10px; text-decoration:none; transition:all 0.15s;">
-                                    <span style="font-size:16px;">💬</span>
+                                <a href="https://wa.me/573115514940?text=Hola%2C%20necesito%20informaci%C3%B3n%20sobre%20un%20servicio" target="_blank" class="dm-quick-card" style="display:flex; align-items:center; gap:10px; padding:14px; text-decoration:none;">
+                                    <span style="font-size:18px;">💬</span>
                                     <div>
                                         <div class="dm-text-primary" style="font-size:12px; font-weight:700;">Contactar laboratorio</div>
                                         <div class="dm-text-muted" style="font-size:10px;">+57 311 5514940</div>
@@ -1175,19 +1268,25 @@
                                 </a>
                             </div>
                         </div>
-                        <div class="dm-card dm-shadow" style="border-radius:12px; padding:20px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                                <h3 class="dm-text-primary" style="font-size:15px; font-weight:700; margin:0;">Actividad Reciente</h3>
+                        <div class="dm-card dm-shadow" style="border-radius:14px; padding:20px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                                <h3 class="dm-text-primary" style="font-size:15px; font-weight:700; margin:0; display:flex; align-items:center; gap:8px;">
+                                    <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);font-size:14px;">🔔</span>
+                                    Actividad Reciente
+                                </h3>
                                 <a href="#" onclick="setTab('requests'); return false;" class="dm-text-link" style="font-size:11px; font-weight:600; text-decoration:none;">Ver todo →</a>
                             </div>
                             ${activityHtml}
                         </div>
                     </div>
 
-                    <div class="dm-card dm-shadow" style="border-radius:12px; padding:20px;">
+                    <div class="dm-card dm-shadow" style="border-radius:14px; padding:20px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                            <h3 class="dm-text-primary" style="font-size:15px; font-weight:700; margin:0;">Últimos Informes Disponibles</h3>
-                            <a href="#" onclick="setTab('reports'); return false;" class="dm-text-link" style="font-size:12px; font-weight:600; text-decoration:none;">Ver todos los informes →</a>
+                            <h3 class="dm-text-primary" style="font-size:15px; font-weight:700; margin:0; display:flex; align-items:center; gap:8px;">
+                                <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#fef2f2,#fecaca);font-size:14px;">📑</span>
+                                Últimos Informes Disponibles
+                            </h3>
+                            <a href="#" onclick="setTab('reports'); return false;" class="dm-text-link" style="font-size:12px; font-weight:600; text-decoration:none;">Ver todos →</a>
                         </div>
                         ${informesList || emptyInforme}
                     </div>
@@ -1234,28 +1333,28 @@
                 const aNombreDe = r.informe_a_nombre_de || cliente;
                 const infName = r.n_informe || r.nombre_documento || 'Informe de Ensayo';
                 const badge = r.activo 
-                    ? '<span class="dm-badge-green" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;">✅ Disponible</span>'
-                    : '<span class="dm-badge-amber" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;">⏳ Versión anterior</span>';
+                    ? '<span class="dm-badge-green" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;">✅ Disponible</span>'
+                    : '<span class="dm-badge-amber" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;">⏳ Versión anterior</span>';
                 const archivoUrl = r.archivo_pdf || '';
 
-                return `<div class="dm-card dm-shadow-hover" style="border-radius:12px;padding:0;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow 0.2s;">
+                return `<div class="dm-card dm-shadow-hover" style="border-radius:14px;padding:0;overflow:hidden;display:flex;flex-direction:column;">
                     <div style="padding:20px;flex:1;">
                         <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px;">
-                            <div class="dm-bg-pdf" style="width:48px;height:56px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;">PDF</div>
+                            <div class="dm-bg-pdf" style="width:48px;height:56px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;box-shadow:0 2px 6px rgba(220,38,38,0.12);">PDF</div>
                             <div style="flex:1;min-width:0;">
-                                <div class="dm-text-primary" style="font-size:16px;font-weight:800;margin-bottom:2px;font-family:monospace;">${escapeHtml(infName)}</div>
+                                <div class="dm-text-primary" style="font-size:15px;font-weight:800;margin-bottom:2px;font-family:monospace;">${escapeHtml(infName)}</div>
                                 <div class="dm-text-secondary" style="font-size:12px;">Informe a nombre de: <strong class="dm-text-primary">${escapeHtml(aNombreDe)}</strong></div>
                                 <div class="dm-text-secondary" style="font-size:12px;">Cliente: <strong class="dm-text-primary">${escapeHtml(cliente)}</strong> — Proceso: <strong class="dm-text-primary">${escapeHtml(numProc)}</strong></div>
-                                <div style="margin-top:6px;">${badge}</div>
+                                <div style="margin-top:8px;">${badge}</div>
                             </div>
                         </div>
                         <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;" class="dm-text-secondary">
                             <div style="display:flex;align-items:center;gap:6px;">📅 <span>Fecha de entrega: ${fecha}</span></div>
                         </div>
                     </div>
-                    <div class="dm-border" style="border-top:1px solid #f1f5f9;padding:12px 20px;display:flex;gap:8px;">
-                        ${archivoUrl ? `<button onclick="window.open('${escapeHtml(archivoUrl)}', '_blank')" class="dm-btn-blue" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">👁️ Ver PDF</button>` : ''}
-                        ${archivoUrl ? `<button onclick="window.open('${escapeHtml(archivoUrl)}', '_blank')" class="dm-btn-outline" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">📥 Descargar</button>` : ''}
+                    <div class="dm-border" style="border-top:1px solid #f1f5f9;padding:12px 20px;display:flex;gap:8px;background:#fafbfc;">
+                        ${archivoUrl ? `<button onclick="window.open('${escapeHtml(archivoUrl)}', '_blank')" class="dm-btn-blue" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">👁️ Ver PDF</button>` : ''}
+                        ${archivoUrl ? `<button onclick="window.open('${escapeHtml(archivoUrl)}', '_blank')" class="dm-btn-outline" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">📥 Descargar</button>` : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -1274,8 +1373,11 @@
                     <p class="dm-text-secondary" style="font-size:14px;margin:0;">Descargue los resultados oficiales de sus solicitudes.</p>
                 </div>
 
-                <div class="dm-card" style="border-radius:12px;padding:20px;margin-bottom:20px;">
-                    <div class="dm-text-primary" style="font-size:14px;font-weight:700;margin-bottom:14px;">🔍 Filtros de Búsqueda</div>
+                <div class="dm-card" style="border-radius:14px;padding:20px;margin-bottom:20px;">
+                    <div class="dm-text-primary" style="font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+                        <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,#eff6ff,#dbeafe);font-size:12px;">🔍</span>
+                        Filtros de Búsqueda
+                    </div>
                     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:12px;">
                         <div>
                             <label class="dm-text-muted" style="font-size:11px;font-weight:600;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Buscar</label>
@@ -1318,7 +1420,7 @@
                         </div>
                     </div>
                     <div style="text-align:right;">
-                        <button onclick="limpiarFiltrosInformes()" class="dm-btn-outline" style="padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">✕ Limpiar filtros</button>
+                        <button onclick="limpiarFiltrosInformes()" class="dm-btn-outline" style="padding:8px 16px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">✕ Limpiar filtros</button>
                     </div>
                 </div>
 
@@ -1334,11 +1436,11 @@
                     </div>
                     ${totalPages > 1 ? `
                     <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:16px;">
-                        <button onclick="InformeGoPage(${informesPage - 1})" ${informesPage <= 1 ? 'disabled' : ''} class="dm-btn-outline" style="padding:6px 12px;border-radius:6px;font-size:13px;cursor:pointer;${informesPage <= 1 ? 'opacity:0.4;cursor:not-allowed;' : ''}">← Anterior</button>
+                        <button onclick="InformeGoPage(${informesPage - 1})" ${informesPage <= 1 ? 'disabled' : ''} class="dm-btn-outline" style="padding:8px 16px;border-radius:10px;font-size:13px;cursor:pointer;${informesPage <= 1 ? 'opacity:0.4;cursor:not-allowed;' : ''}">← Anterior</button>
                         ${Array.from({length: totalPages}, (_, i) => i + 1).map(p => `
-                            <button onclick="InformeGoPage(${p})" class="${p === informesPage ? 'dm-tab-active' : 'dm-btn-outline'}" style="min-width:36px;height:36px;border-radius:6px;font-size:13px;font-weight:${p === informesPage ? '700' : '500'};cursor:pointer;">${p}</button>
+                            <button onclick="InformeGoPage(${p})" class="${p === informesPage ? 'dm-tab-active' : 'dm-btn-outline'}" style="min-width:40px;height:40px;border-radius:10px;font-size:13px;font-weight:${p === informesPage ? '700' : '500'};cursor:pointer;">${p}</button>
                         `).join('')}
-                        <button onclick="InformeGoPage(${informesPage + 1})" ${informesPage >= totalPages ? 'disabled' : ''} class="dm-btn-outline" style="padding:6px 12px;border-radius:6px;font-size:13px;cursor:pointer;${informesPage >= totalPages ? 'opacity:0.4;cursor:not-allowed;' : ''}">Siguiente →</button>
+                        <button onclick="InformeGoPage(${informesPage + 1})" ${informesPage >= totalPages ? 'disabled' : ''} class="dm-btn-outline" style="padding:8px 16px;border-radius:10px;font-size:13px;cursor:pointer;${informesPage >= totalPages ? 'opacity:0.4;cursor:not-allowed;' : ''}">Siguiente →</button>
                     </div>
                     <div style="text-align:center;font-size:12px;margin-top:8px;" class="dm-text-secondary">Mostrando ${startIdx + 1} a ${Math.min(startIdx + informesPerPage, filtered.length)} de ${filtered.length} informes</div>
                     ` : ''}
@@ -1439,19 +1541,19 @@
             }).length;
 
             const summaryCards = `
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px;">
-                    <div class="dm-card" style="border-radius:12px;padding:20px;display:flex;align-items:center;gap:14px;">
-                        <div class="dm-bg-blue" style="width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px;">
+                    <div class="dm-card" style="border-radius:14px;padding:20px;display:flex;align-items:center;gap:14px;border-left:4px solid #2563eb;">
+                        <div class="dm-bg-blue" style="width:50px;height:50px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                             <i data-lucide="file-text" class="w-6 h-6 text-blue-600"></i>
                         </div>
                         <div>
                             <div class="dm-text-secondary" style="font-size:13px;font-weight:600;">Solicitudes Totales</div>
                             <div class="dm-text-primary" style="font-size:28px;font-weight:800;">${totalCount}</div>
-                            <div class="dm-text-link" style="font-size:11px;font-weight:600;">Todas las solicitudes registradas</div>
+                            <div class="dm-text-link" style="font-size:11px;font-weight:600;">Todas las solicitudes</div>
                         </div>
                     </div>
-                    <div class="dm-card" style="border-radius:12px;padding:20px;display:flex;align-items:center;gap:14px;">
-                        <div class="dm-bg-amber" style="width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <div class="dm-card" style="border-radius:14px;padding:20px;display:flex;align-items:center;gap:14px;border-left:4px solid #f59e0b;">
+                        <div class="dm-bg-amber" style="width:50px;height:50px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                             <i data-lucide="clock" class="w-6 h-6 text-amber-600"></i>
                         </div>
                         <div>
@@ -1460,8 +1562,8 @@
                             <div class="dm-text-amber" style="font-size:11px;font-weight:600;">Actualmente en ejecución</div>
                         </div>
                     </div>
-                    <div class="dm-card" style="border-radius:12px;padding:20px;display:flex;align-items:center;gap:14px;">
-                        <div class="dm-bg-purple" style="width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <div class="dm-card" style="border-radius:14px;padding:20px;display:flex;align-items:center;gap:14px;border-left:4px solid #9333ea;">
+                        <div class="dm-bg-purple" style="width:50px;height:50px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                             <i data-lucide="flag" class="w-6 h-6 text-purple-600"></i>
                         </div>
                         <div>
@@ -1481,7 +1583,7 @@
             ];
             const tabsHtml = tabs.map(t => {
                 const isActive = filterStatus === t.id || (filterStatus === 'all' && t.id === 'all');
-                return `<button onclick="filterRequests('${t.id}')" class="${isActive ? 'dm-tab-active' : 'dm-tab'}" style="padding:8px 16px;border-radius:8px;border:1px solid;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;">${t.label}</button>`;
+                return `<button onclick="filterRequests('${t.id}')" class="${isActive ? 'dm-tab-active' : 'dm-tab'}" style="padding:10px 18px;border-radius:10px;border:1px solid;font-size:13px;font-weight:600;cursor:pointer;">${t.label}</button>`;
             }).join('');
 
             const stepDefs = [
@@ -1519,7 +1621,7 @@
                         circleHtml = `<div class="timeline-circle" style="background:${step.bg};border:2px solid ${step.color};"><div style="width:8px;height:8px;background:${step.color};border-radius:50%;"></div></div>`;
                         labelStyle = `color:${step.color};font-weight:700;`;
                     } else {
-                        circleHtml = `<div class="timeline-circle" style="background:#fff;border:2px solid #e2e8f0;"></div>`;
+                        circleHtml = `<div class="timeline-circle" style="background:#fff;border:2px solid #e2e8f0;box-shadow:0 1px 2px rgba(0,0,0,0.05);"></div>`;
                         labelStyle = 'color:#94a3b8;font-weight:500;';
                     }
 
@@ -1531,9 +1633,9 @@
                 }).join('');
 
                 let badgeStyle = '', badgeText = '';
-                if (isFinalizado) { badgeStyle = 'background:#d1fae5;color:#059669;border:1px solid #a7f3d0;'; badgeText = 'Finalizada'; }
-                else if (isEntrega || isInforme) { badgeStyle = 'background:#d1fae5;color:#059669;border:1px solid #a7f3d0;'; badgeText = 'Entrega cliente'; }
-                else { badgeStyle = 'background:#fef3c7;color:#b45309;border:1px solid #fde68a;'; badgeText = 'En proceso'; }
+                if (isFinalizado) { badgeStyle = 'background:linear-gradient(135deg,#f0fdf4,#dcfce7);color:#059669;border:1px solid #a7f3d0;'; badgeText = 'Finalizada'; }
+                else if (isEntrega || isInforme) { badgeStyle = 'background:linear-gradient(135deg,#f0fdf4,#dcfce7);color:#059669;border:1px solid #a7f3d0;'; badgeText = 'Entrega cliente'; }
+                else { badgeStyle = 'background:linear-gradient(135deg,#fffbeb,#fef3c7);color:#b45309;border:1px solid #fde68a;'; badgeText = 'En proceso'; }
 
                 let rightStatus = '', rightSub = '', rightColor = '';
                 if (isFinalizado) { rightStatus = 'FINALIZADA'; rightSub = 'Proceso completado'; rightColor = '#15803d'; }
@@ -1573,7 +1675,7 @@
                             <span style="font-size:12px;font-weight:800;color:${rightColor};">${rightStatus}</span>
                         </div>
                         <div class="dm-text-secondary" style="font-size:12px;margin-bottom:12px;">${rightSub}</div>
-                        <button onclick="openRequestDetail('${req.id}')" class="dm-btn-blue" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">Ver detalle <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
+                        <button onclick="openRequestDetail('${req.id}')" class="dm-btn-blue" style="display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;">Ver detalle <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
                     </div>
                 </div>`;
             }).join('');
@@ -1596,12 +1698,12 @@
                     ${tabsHtml}
                 </div>
                 ${filtered.length > 0 ? cards : emptyState}
-                <div class="dm-banner" style="display:flex;align-items:center;gap:8px;margin-top:24px;padding:16px;border-radius:8px;">
-                    <div style="width:20px;height:20px;background:#2563eb;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <div class="dm-banner" style="display:flex;align-items:center;gap:10px;margin-top:24px;padding:16px 20px;border-radius:12px;">
+                    <div style="width:24px;height:24px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 4px rgba(37,99,235,0.2);">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                     </div>
                     <p style="font-size:13px;margin:0;flex:1;">Los estados se actualizan automáticamente. Si tienes dudas sobre tu solicitud, contáctanos.</p>
-                    <a href="https://wa.me/573115514940?text=Hola%2C%20necesito%20informaci%C3%B3n%20sobre%20un%20servicio" target="_blank" class="dm-btn-blue" style="padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+                    <a href="https://wa.me/573115514940?text=Hola%2C%20necesito%20informaci%C3%B3n%20sobre%20un%20servicio" target="_blank" class="dm-btn-blue" style="padding:10px 18px;border-radius:10px;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;">
                         <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
                         Contáctanos
                     </a>
@@ -1641,10 +1743,10 @@
                     else if (i.status === 'En Proceso') statusColor = 'blue';
                     else if (i.status === 'Cancelado') statusColor = 'red';
                     
-                    return `<div class="flex flex-col p-6 dm-card rounded-xl border-l-4 border-l-${statusColor}-500 shadow-sm mb-4 transition-colors hover:shadow-md">
+                    return `<div class="flex flex-col p-6 dm-card rounded-xl border-l-4 shadow-sm mb-4 transition-colors hover:shadow-md" style="border-left-color:${statusColor === 'green' ? '#22c55e' : statusColor === 'amber' ? '#f59e0b' : statusColor === 'blue' ? '#2563eb' : '#ef4444'};">
                         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2">
                             <h4 class="text-lg font-bold dm-text-primary">${i.service}</h4>
-                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-${statusColor}-100 text-${statusColor}-800 border border-${statusColor}-200 w-max">${i.status}</span>
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold" style="background:${statusColor === 'green' ? 'linear-gradient(135deg,#f0fdf4,#dcfce7)' : statusColor === 'amber' ? 'linear-gradient(135deg,#fffbeb,#fef3c7)' : statusColor === 'blue' ? 'linear-gradient(135deg,#eff6ff,#dbeafe)' : 'linear-gradient(135deg,#fef2f2,#fecaca)'};color:${statusColor === 'green' ? '#16a34a' : statusColor === 'amber' ? '#d97706' : statusColor === 'blue' ? '#2563eb' : '#dc2626'};border:1px solid ${statusColor === 'green' ? '#bbf7d0' : statusColor === 'amber' ? '#fde68a' : statusColor === 'blue' ? '#bfdbfe' : '#fecaca'};">${i.status}</span>
                         </div>
                         <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm dm-text-secondary mb-4">
                             <span class="flex items-center gap-1.5 font-medium"><i data-lucide="hash" class="w-4 h-4"></i> ${i.id}</span>
@@ -1659,7 +1761,7 @@
                 
                 return `<div class="mb-10">
                     <div class="flex items-center mb-5">
-                        <div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center mr-3">
+                        <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);box-shadow:0 1px 3px rgba(37,99,235,0.1);">
                             <span class="text-sm font-bold text-blue-700">${year}</span>
                         </div>
                         <div class="flex-1 h-px dm-border bg-slate-200"></div>
@@ -1685,7 +1787,7 @@
                         <h2 class="text-2xl font-bold dm-text-primary">Historial de Servicios</h2>
                         <p class="dm-text-secondary mt-1">Ensayos acreditados registrados a nombre de <span class="font-semibold dm-text-primary">${clientData.user.name || 'su empresa'}</span>.</p>
                     </div>
-                    <div class="dm-card rounded-xl px-5 py-3.5 shadow-sm">
+                    <div class="dm-card rounded-xl px-5 py-3.5" style="border-left:4px solid #2563eb;">
                         <p class="text-xs dm-text-secondary font-medium uppercase tracking-wider">Total ensayos</p>
                         <p class="text-2xl font-bold dm-text-primary mt-0.5">${sorted.length}</p>
                     </div>
@@ -1720,14 +1822,14 @@
                 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-2 dm-card rounded-xl shadow-sm overflow-hidden">
-                        <div class="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-8 text-white">
+                        <div class="px-6 py-8 text-white" style="background:linear-gradient(135deg,#003A80 0%,#0052a3 50%,#003A80 100%);">
                             <div class="flex items-center">
-                                <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mr-4">
+                                <div class="w-16 h-16 rounded-full flex items-center justify-center mr-4" style="background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.25);">
                                     <i data-lucide="building-2" class="w-8 h-8 text-white"></i>
                                 </div>
                                 <div>
                                     <h3 class="text-xl font-bold">${u.name || 'Nombre de Empresa'}</h3>
-                                    <p class="text-blue-100 text-sm">${u.nit ? 'NIT: ' + u.nit : ''}</p>
+                                    <p class="text-sm" style="color:rgba(255,255,255,0.75);">${u.nit ? 'NIT: ' + u.nit : ''}</p>
                                 </div>
                             </div>
                         </div>
@@ -1771,20 +1873,23 @@
                     
                     <div class="space-y-6">
                         <div class="dm-card rounded-xl shadow-sm p-6">
-                            <h3 class="text-lg font-bold dm-text-primary mb-4">Contacto Soporte</h3>
+                            <h3 class="text-lg font-bold dm-text-primary mb-4" style="display:flex;align-items:center;gap:8px;">
+                                <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);font-size:14px;">📞</span>
+                                Contacto Soporte
+                            </h3>
                             <div class="space-y-3">
-                                <a href="https://wa.me/573115514940?text=Hola%2C%20necesito%20soporte" target="_blank" class="flex items-center p-3 dm-bg-light rounded-lg dm-border border hover:bg-slate-100 transition-colors">
-                                    <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-3">
-                                        <i data-lucide="message-circle" class="w-4 h-4 text-green-600"></i>
+                                <a href="https://wa.me/573115514940?text=Hola%2C%20necesito%20soporte" target="_blank" class="flex items-center p-3 dm-bg-light rounded-xl dm-border border hover:bg-green-50 transition-colors">
+                                    <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);">
+                                        <i data-lucide="message-circle" class="w-5 h-5 text-green-600"></i>
                                     </div>
                                     <div>
                                         <p class="text-sm font-medium dm-text-primary">WhatsApp</p>
                                         <p class="text-xs dm-text-secondary">+57 311 5514940</p>
                                     </div>
                                 </a>
-                                <a href="mailto:reportes.hightest@gmail.com" class="flex items-center p-3 dm-bg-light rounded-lg dm-border border hover:bg-slate-100 transition-colors">
-                                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                                        <i data-lucide="mail" class="w-4 h-4 text-blue-600"></i>
+                                <a href="mailto:reportes.hightest@gmail.com" class="flex items-center p-3 dm-bg-light rounded-xl dm-border border hover:bg-blue-50 transition-colors">
+                                    <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);">
+                                        <i data-lucide="mail" class="w-5 h-5 text-blue-600"></i>
                                     </div>
                                     <div>
                                         <p class="text-sm font-medium dm-text-primary">Correo</p>
@@ -1881,30 +1986,30 @@
             const stateLabel = formatStatusLabel(item.statusRaw || '') || item.status;
             document.getElementById('historyModalBody').innerHTML = `
                 <div class="flex items-center gap-4">
-                    <div class="w-16 h-16 rounded-full bg-${statusColor}-100 flex items-center justify-center">
+                    <div class="w-16 h-16 rounded-full flex items-center justify-center" style="background:linear-gradient(135deg,${statusColor === 'green' ? '#f0fdf4' : statusColor === 'amber' ? '#fffbeb' : statusColor === 'blue' ? '#eff6ff' : '#fef2f2'},${statusColor === 'green' ? '#dcfce7' : statusColor === 'amber' ? '#fef3c7' : statusColor === 'blue' ? '#dbeafe' : '#fecaca'});">
                         <i data-lucide="${statusIcon}" class="w-8 h-8 text-${statusColor}-600"></i>
                     </div>
                     <div>
-                        <h4 class="text-xl font-bold text-slate-800">${item.service}</h4>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-${statusColor}-100 text-${statusColor}-800 border border-${statusColor}-200 mt-1">${stateLabel}</span>
+                        <h4 class="text-xl font-bold dm-text-primary">${item.service}</h4>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mt-1" style="background:linear-gradient(135deg,${statusColor === 'green' ? '#f0fdf4' : statusColor === 'amber' ? '#fffbeb' : statusColor === 'blue' ? '#eff6ff' : '#fef2f2'},${statusColor === 'green' ? '#dcfce7' : statusColor === 'amber' ? '#fef3c7' : statusColor === 'blue' ? '#dbeafe' : '#fecaca'});color:${statusColor === 'green' ? '#16a34a' : statusColor === 'amber' ? '#d97706' : statusColor === 'blue' ? '#2563eb' : '#dc2626'};border:1px solid ${statusColor === 'green' ? '#bbf7d0' : statusColor === 'amber' ? '#fde68a' : statusColor === 'blue' ? '#bfdbfe' : '#fecaca'};">${stateLabel}</span>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="p-4 bg-slate-50 rounded-xl">
-                        <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Proceso</p>
-                        <p class="text-sm font-bold text-slate-800">${item.id}</p>
+                    <div class="p-4 dm-bg-light rounded-xl">
+                        <p class="text-xs dm-text-muted uppercase tracking-wider font-semibold mb-1">Proceso</p>
+                        <p class="text-sm font-bold dm-text-primary">${item.id}</p>
                     </div>
-                    <div class="p-4 bg-slate-50 rounded-xl">
-                        <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Fecha</p>
-                        <p class="text-sm font-bold text-slate-800">${item.date}</p>
+                    <div class="p-4 dm-bg-light rounded-xl">
+                        <p class="text-xs dm-text-muted uppercase tracking-wider font-semibold mb-1">Fecha</p>
+                        <p class="text-sm font-bold dm-text-primary">${item.date}</p>
                     </div>
-                    <div class="p-4 bg-slate-50 rounded-xl">
-                        <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Informe</p>
-                        <p class="text-sm font-bold text-slate-800">${item.informe || '—'}</p>
+                    <div class="p-4 dm-bg-light rounded-xl">
+                        <p class="text-xs dm-text-muted uppercase tracking-wider font-semibold mb-1">Informe</p>
+                        <p class="text-sm font-bold dm-text-primary">${item.informe || '—'}</p>
                     </div>
-                    <div class="p-4 bg-slate-50 rounded-xl">
-                        <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Estado</p>
-                        <p class="text-sm font-bold text-slate-800">${item.status}</p>
+                    <div class="p-4 dm-bg-light rounded-xl">
+                        <p class="text-xs dm-text-muted uppercase tracking-wider font-semibold mb-1">Estado</p>
+                        <p class="text-sm font-bold dm-text-primary">${item.status}</p>
                     </div>
                 </div>
             `;
@@ -1930,10 +2035,10 @@
 
     <div id="historyModal" class="modal-overlay" onclick="if(event.target===this)closeHistoryModal()">
         <div class="modal-content">
-            <div class="flex items-center justify-between p-6 border-b border-slate-200">
-                <h3 class="text-lg font-bold text-slate-800">Detalle del Ensayo</h3>
-                <button onclick="closeHistoryModal()" class="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-                    <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+            <div class="flex items-center justify-between p-6" style="border-bottom:1px solid #f1f5f9;">
+                <h3 class="text-lg font-bold dm-text-primary">Detalle del Ensayo</h3>
+                <button onclick="closeHistoryModal()" class="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+                    <i data-lucide="x" class="w-5 h-5 dm-text-muted"></i>
                 </button>
             </div>
             <div id="historyModalBody" class="p-6 space-y-5">
