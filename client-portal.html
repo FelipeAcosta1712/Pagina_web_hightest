@@ -11,6 +11,9 @@
     <link rel="apple-touch-icon" href="https://hightestsas.com/image/logo.png">
     <title>Portal de Cliente | HIGH TEST SAS</title>
     <style>
+        @media (max-width: 1280px) {
+            .dashboard-stats { grid-template-columns: repeat(3, 1fr) !important; }
+        }
         @media (max-width: 1024px) {
             .dashboard-stats { grid-template-columns: repeat(2, 1fr) !important; }
             .dashboard-cols { grid-template-columns: 1fr !important; }
@@ -540,6 +543,66 @@
         .theme-dark .dm-btn-blue:hover { background: #1e40af; transform: none; }
         .theme-dark .dm-info-text { color: #94a3b8; }
         .theme-dark .dm-dark-bg { background: #0f172a; }
+
+        /* ===== Historial - Base (Light) ===== */
+        .h-card { border: 1px solid #e2e8f0; }
+        .h-card h4 { color: #1e293b; }
+        .h-card p { color: #1e293b; }
+        .h-card .h-label { color: #64748b; }
+        .h-card .h-value { color: #1e293b; }
+        .h-card .h-badge { background: #dcfce7; color: #16a34a; }
+        .h-card .h-border { border-color: #f1f5f9; }
+        .h-title { color: #1e293b; }
+        .h-subtitle { color: #64748b; }
+        .h-subtitle span { color: #1e293b; }
+        .h-stat-value { color: #1e293b; }
+        .h-stat-label { color: #64748b; }
+        .h-year-label { color: #1e293b; }
+        .h-year-line { background: #e2e8f0; }
+        .h-month-item { color: #1e293b; }
+        .h-month-item-inactive { color: #94a3b8; }
+        .h-month-active { background: #eff6ff !important; }
+        .h-month-close { color: #94a3b8; }
+        .h-month-close:hover { color: #ef4444; }
+        .h-search { background: #fff; border-color: #e2e8f0; color: #1e293b; }
+        .h-search::placeholder { color: #94a3b8; }
+        .h-search-icon { color: #94a3b8; }
+        .h-empty-icon { background: #f1f5f9; }
+        .h-empty-title { color: #1e293b; }
+        .h-empty-text { color: #94a3b8; }
+        .h-btn { background: #fff; border-color: #e2e8f0; color: #64748b; }
+        .h-btn:hover { background: #f8fafc; }
+        .h-btn-active { background: #2563eb; border-color: #2563eb; color: #fff; }
+
+        /* ===== DARK MODE - Historial ===== */
+        .theme-dark .h-card { background: #1e293b; border-color: #334155; }
+        .theme-dark .h-card h4 { color: #e2e8f0; }
+        .theme-dark .h-card p { color: #e2e8f0; }
+        .theme-dark .h-card .h-label { color: #94a3b8; }
+        .theme-dark .h-card .h-value { color: #e2e8f0; }
+        .theme-dark .h-card .h-badge { background: #14532d; color: #86efac; }
+        .theme-dark .h-card .h-border { border-color: #334155; }
+        .theme-dark .h-title { color: #e2e8f0; }
+        .theme-dark .h-subtitle { color: #94a3b8; }
+        .theme-dark .h-subtitle span { color: #e2e8f0; }
+        .theme-dark .h-stat-value { color: #e2e8f0; }
+        .theme-dark .h-stat-label { color: #94a3b8; }
+        .theme-dark .h-year-label { color: #e2e8f0; }
+        .theme-dark .h-year-line { background: #334155; }
+        .theme-dark .h-month-item { color: #e2e8f0; }
+        .theme-dark .h-month-item-inactive { color: #64748b; }
+        .theme-dark .h-month-active { background: #1e3a5f !important; }
+        .theme-dark .h-month-close { color: #94a3b8; }
+        .theme-dark .h-month-close:hover { color: #f87171; }
+        .theme-dark .h-search { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+        .theme-dark .h-search::placeholder { color: #64748b; }
+        .theme-dark .h-search-icon { color: #64748b; }
+        .theme-dark .h-empty-icon { background: #334155; }
+        .theme-dark .h-empty-title { color: #e2e8f0; }
+        .theme-dark .h-empty-text { color: #94a3b8; }
+        .theme-dark .h-btn { background: #1e293b; border-color: #334155; color: #94a3b8; }
+        .theme-dark .h-btn:hover { background: #334155; }
+        .theme-dark .h-btn-active { background: #2563eb; border-color: #2563eb; color: #fff; }
 
         /* ===== LIGHT MODE - Componentes reutilizables ===== */
         .dm-card { background: #fff; border: 1px solid #e8ecf1; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.02); }
@@ -1075,7 +1138,9 @@
                             amount: valor ? `${Number(String(valor).replace(/[^0-9.]/g,'')).toLocaleString('es-CO')}` : '0',
                             informe: informe,
                             client: p.cliente || '',
-                            informe_a_nombre_de: p.informe_a_nombre_de || p.cliente || ''
+                            informe_a_nombre_de: p.informe_a_nombre_de || p.cliente || '',
+                            fechaRecepcion: formatDateShort(fechaRecepcion),
+                            fechaEntrega: formatDateShort(fechaEntrega)
                         };
                     });
 
@@ -1097,6 +1162,10 @@
         let informesFilter = { search: '', dateFrom: '', dateTo: '', month: '', proceso: '', status: 'all', orderBy: 'recent' };
         let informesPage = 1;
         const informesPerPage = 12;
+        // Filtros historial
+        let historySearch = '';
+        let historyYearFilter = 'todos';
+        let historyMonthFilter = 'todos';
 
         function renderDashboard() {
             const currentDate = new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -1179,18 +1248,18 @@
                 : `<div style="text-align:center; padding:24px; color:#94a3b8; font-size:13px;">No hay actividad reciente.</div>`;
 
             return `<div class="space-y-6 fade-in">
-                <div class="dashboard-stats" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:16px;">
+                <div class="dashboard-stats" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:16px;">
                     <div class="dm-card dm-shadow" style="border-radius:14px; padding:20px; border-left:4px solid #2563eb;">
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
                             <div class="dm-bg-blue" style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
-                                <span style="font-size:20px;">📄</span>
+                                <span style="font-size:20px;">📊</span>
                             </div>
                             <div>
-                                <div class="dm-text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Informes Disponibles</div>
-                                <div class="dm-text-primary" style="font-size:28px; font-weight:800; line-height:1;">${informesDisponibles.length}</div>
+                                <div class="dm-text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Procesos Totales</div>
+                                <div class="dm-text-primary" style="font-size:28px; font-weight:800; line-height:1;">${totalCount}</div>
                             </div>
                         </div>
-                        <a href="#" onclick="setTab('reports'); return false;" class="dm-text-link" style="font-size:11px; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">Listos para consultar →</a>
+                        <span class="dm-text-link" style="font-size:11px; font-weight:600;">Todos los procesos</span>
                     </div>
                     <div class="dm-card dm-shadow" style="border-radius:14px; padding:20px; border-left:4px solid #f59e0b;">
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
@@ -1204,17 +1273,29 @@
                         </div>
                         <span class="dm-text-amber" style="font-size:11px; font-weight:600;">En ejecución</span>
                     </div>
-                    <div class="dm-card dm-shadow" style="border-radius:14px; padding:20px; border-left:4px solid #22c55e;">
+                    <div class="dm-card dm-shadow" style="border-radius:14px; padding:20px; border-left:4px solid #10b981;">
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-                            <div class="dm-bg-green" style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                            <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:#d1fae5;">
                                 <span style="font-size:20px;">✅</span>
                             </div>
                             <div>
-                                <div class="dm-text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Informes Emitidos</div>
+                                <div class="dm-text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Procesos Finalizados</div>
                                 <div class="dm-text-primary" style="font-size:28px; font-weight:800; line-height:1;">${completedCount}</div>
                             </div>
                         </div>
-                        <span class="dm-text-green" style="font-size:11px; font-weight:600;">Servicios finalizados</span>
+                        <span style="font-size:11px; font-weight:600; color:#059669;">Completados</span>
+                    </div>
+                    <div class="dm-card dm-shadow" style="border-radius:14px; padding:20px; border-left:4px solid #22c55e;">
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+                            <div class="dm-bg-green" style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                                <span style="font-size:20px;">📄</span>
+                            </div>
+                            <div>
+                                <div class="dm-text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Informes Disponibles</div>
+                                <div class="dm-text-primary" style="font-size:28px; font-weight:800; line-height:1;">${informesDisponibles.length}</div>
+                            </div>
+                        </div>
+                        <a href="#" onclick="setTab('reports'); return false;" class="dm-text-link" style="font-size:11px; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">Listos para consultar →</a>
                     </div>
                     <div class="dm-card dm-shadow" style="border-radius:14px; padding:20px; border-left:4px solid #9333ea;">
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
@@ -1223,7 +1304,7 @@
                             </div>
                             <div>
                                 <div class="dm-text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Último Informe</div>
-                                <div class="dm-text-primary" style="font-size:16px; font-weight:800; font-family:monospace;">${latestNumber}</div>
+                                <div class="dm-text-primary" style="font-size:16px; font-weight:800; font-family:monospace; white-space:nowrap;">${latestNumber}</div>
                             </div>
                         </div>
                         <div class="dm-text-secondary" style="font-size:11px;">${latestDate}</div>
@@ -1728,72 +1809,225 @@
                 const db = b.dateRaw || b.date || '';
                 return db.localeCompare(da);
             });
-            const grouped = sorted.reduce((acc, item) => {
-                const dateStr = item.dateRaw || item.date || '';
-                const year = (dateStr.match(/^(\d{4})/) || ['','2025'])[1];
-                if (!acc[year]) acc[year] = [];
-                acc[year].push(item);
-                return acc;
-            }, {});
-            
-            const yearsHtml = Object.keys(grouped).sort((a, b) => b - a).map(year => {
-                const items = grouped[year].map(i => {
-                    let statusColor = 'green';
-                    if (i.status === 'Pendiente') statusColor = 'amber';
-                    else if (i.status === 'En Proceso') statusColor = 'blue';
-                    else if (i.status === 'Cancelado') statusColor = 'red';
-                    
-                    return `<div class="flex flex-col p-6 dm-card rounded-xl border-l-4 shadow-sm mb-4 transition-colors hover:shadow-md" style="border-left-color:${statusColor === 'green' ? '#22c55e' : statusColor === 'amber' ? '#f59e0b' : statusColor === 'blue' ? '#2563eb' : '#ef4444'};">
-                        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2">
-                            <h4 class="text-lg font-bold dm-text-primary">${i.service}</h4>
-                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold" style="background:${statusColor === 'green' ? 'linear-gradient(135deg,#f0fdf4,#dcfce7)' : statusColor === 'amber' ? 'linear-gradient(135deg,#fffbeb,#fef3c7)' : statusColor === 'blue' ? 'linear-gradient(135deg,#eff6ff,#dbeafe)' : 'linear-gradient(135deg,#fef2f2,#fecaca)'};color:${statusColor === 'green' ? '#16a34a' : statusColor === 'amber' ? '#d97706' : statusColor === 'blue' ? '#2563eb' : '#dc2626'};border:1px solid ${statusColor === 'green' ? '#bbf7d0' : statusColor === 'amber' ? '#fde68a' : statusColor === 'blue' ? '#bfdbfe' : '#fecaca'};">${i.status}</span>
+
+            let filtered = sorted;
+            if (historySearch) {
+                const q = historySearch.toLowerCase();
+                filtered = filtered.filter(i =>
+                    (i.informe || '').toLowerCase().includes(q) ||
+                    (i.id || '').toLowerCase().includes(q)
+                );
+            }
+            if (historyYearFilter && historyYearFilter !== 'todos') {
+                filtered = filtered.filter(i => (i.dateRaw || i.date || '').startsWith(historyYearFilter));
+            }
+            if (historyMonthFilter && historyMonthFilter !== 'todos') {
+                filtered = filtered.filter(i => {
+                    const monthIdx = parseInt((i.dateRaw || i.date || '').substring(5, 7), 10);
+                    return String(monthIdx) === historyMonthFilter;
+                });
+            }
+
+            const completedCount = sorted.length;
+            const latestService = sorted.length > 0 ? sorted[0] : null;
+            const years = [...new Set(sorted.map(i => (i.dateRaw || i.date || '').substring(0, 4)))].filter(Boolean).sort((a, b) => b - a);
+            const uniqueYears = years.length || 1;
+            const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+            function setHistoryFilter(year) {
+                historyYearFilter = year;
+                historyMonthFilter = 'todos';
+                const c = document.getElementById('dynamic-content');
+                c.innerHTML = renderHistory();
+                lucide.createIcons();
+            }
+            function setMonthFilter(monthNum) {
+                historyMonthFilter = monthNum;
+                const c = document.getElementById('dynamic-content');
+                c.innerHTML = renderHistory();
+                lucide.createIcons();
+            }
+            function setHistorySearch(val) {
+                historySearch = val;
+                const c = document.getElementById('dynamic-content');
+                c.innerHTML = renderHistory();
+                lucide.createIcons();
+                const inp = document.getElementById('historySearchInput');
+                if (inp) { inp.value = val; inp.focus(); }
+            }
+
+            window.setHistoryFilter = setHistoryFilter;
+            window.setMonthFilter = setMonthFilter;
+            window.setHistorySearch = setHistorySearch;
+            window.clearMonthFilter = function() {
+                historyMonthFilter = 'todos';
+                const c = document.getElementById('dynamic-content');
+                c.innerHTML = renderHistory();
+                lucide.createIcons();
+            };
+
+            const groupedFiltered = {};
+            filtered.forEach(i => {
+                const dateStr = i.dateRaw || i.date || '';
+                const year = dateStr.substring(0, 4) || '2025';
+                const monthIdx = parseInt(dateStr.substring(5, 7), 10) - 1;
+                if (!groupedFiltered[year]) groupedFiltered[year] = {};
+                const mKey = monthNames[monthIdx] || 'Sin fecha';
+                if (!groupedFiltered[year][mKey]) groupedFiltered[year][mKey] = [];
+                groupedFiltered[year][mKey].push(i);
+            });
+
+            Object.keys(groupedFiltered).forEach(year => {
+                Object.keys(groupedFiltered[year]).forEach(month => {
+                    groupedFiltered[year][month].sort((a, b) => {
+                        const numA = (a.informe || a.id || '').replace(/\D/g, '');
+                        const numB = (b.informe || b.id || '').replace(/\D/g, '');
+                        return parseInt(numB) - parseInt(numA);
+                    });
+                });
+            });
+
+            const yearsHtml = Object.keys(groupedFiltered).sort((a, b) => b - a).map(year => {
+                const yearMonths = groupedFiltered[year];
+                const monthKeys = Object.keys(yearMonths).sort((a, b) => {
+                    const ma = monthNames.indexOf(a);
+                    const mb = monthNames.indexOf(b);
+                    return mb - ma;
+                });
+
+                const allYearItems = sorted.filter(i => (i.dateRaw || i.date || '').startsWith(year));
+                const monthCounts = {};
+                allYearItems.forEach(i => {
+                    const monthIdx = parseInt((i.dateRaw || i.date || '').substring(5, 7), 10);
+                    if (monthIdx >= 1 && monthIdx <= 12) {
+                        if (!monthCounts[monthIdx]) monthCounts[monthIdx] = 0;
+                        monthCounts[monthIdx]++;
+                    }
+                });
+
+                const activeMonths = Object.keys(monthCounts).map(Number).sort((a, b) => b - a);
+
+                const monthListHtml = activeMonths.map(m => {
+                    const count = monthCounts[m];
+                    const isActive = historyMonthFilter === String(m);
+                    return `<div class="${isActive ? 'h-month-active' : ''}" style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;cursor:pointer;transition:background 0.15s;">
+                        <div onclick="setMonthFilter('${m}')" style="display:flex;align-items:center;gap:8px;flex:1;">
+                            <div style="width:6px;height:6px;border-radius:50%;background:#22c55e;flex-shrink:0;"></div>
+                            <span class="${isActive ? 'dm-text-link' : 'h-month-item'}" style="font-size:13px;font-weight:600;">${monthNames[m - 1]} (${count})</span>
                         </div>
-                        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm dm-text-secondary mb-4">
-                            <span class="flex items-center gap-1.5 font-medium"><i data-lucide="hash" class="w-4 h-4"></i> ${i.id}</span>
-                            <span class="flex items-center gap-1.5"><i data-lucide="calendar" class="w-4 h-4"></i> ${i.date}</span>
-                            ${i.informe ? `<span class="flex items-center gap-1.5"><i data-lucide="file-text" class="w-4 h-4"></i> Inf: ${i.informe}</span>` : ''}
-                        </div>
-                        <div class="flex items-center justify-end pt-3 dm-border border-t">
-                            <button class="text-sm dm-text-link font-semibold flex items-center gap-1.5 px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors" onclick="openHistoryModal('${i.id}')">Ver detalles <i data-lucide="chevron-right" class="w-4 h-4"></i></button>
-                        </div>
+                        ${isActive ? `<span onclick="clearMonthFilter()" class="h-month-close" style="font-size:14px;cursor:pointer;padding:0 2px;line-height:1;transition:color 0.15s;">✕</span>` : ''}
                     </div>`;
                 }).join('');
-                
-                return `<div class="mb-10">
-                    <div class="flex items-center mb-5">
-                        <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);box-shadow:0 1px 3px rgba(37,99,235,0.1);">
-                            <span class="text-sm font-bold text-blue-700">${year}</span>
+
+                const cardsHtml = monthKeys.map(m => {
+                    return yearMonths[m].map(i => {
+                        return `<div class="dm-card h-card" style="border-radius:14px;padding:16px;transition:box-shadow 0.2s;min-width:0;overflow:hidden;">
+                            <div style="margin-bottom:6px;">
+                                <div style="display:flex;align-items:baseline;gap:6px;white-space:nowrap;overflow:hidden;">
+                                    <span class="h-label" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;flex-shrink:0;">Proceso</span>
+                                    <h4 class="dm-text-primary" style="font-size:15px;font-weight:700;font-family:monospace;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${i.id}</h4>
+                                </div>
+                                <div style="display:flex;align-items:baseline;gap:6px;white-space:nowrap;overflow:hidden;margin-top:2px;">
+                                    <span class="h-label" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;flex-shrink:0;">Informe n.</span>
+                                    <p class="dm-text-link" style="font-size:12px;font-weight:600;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${i.informe || '—'}</p>
+                                </div>
+                            </div>
+                            <div class="h-badge" style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;margin-bottom:10px;">Proceso finalizado</div>
+                            <div style="display:flex;gap:8px;margin-bottom:10px;">
+                                <div style="flex:1;min-width:0;">
+                                    <div class="h-label" style="display:flex;align-items:center;gap:3px;font-size:10px;margin-bottom:2px;">
+                                        <span>📅</span> Recepción
+                                    </div>
+                                    <div class="dm-text-primary" style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${i.fechaRecepcion || i.date || '—'}</div>
+                                </div>
+                                <div style="flex:1;min-width:0;">
+                                    <div class="h-label" style="display:flex;align-items:center;gap:3px;font-size:10px;margin-bottom:2px;">
+                                        <span>📦</span> Entrega
+                                    </div>
+                                    <div class="dm-text-primary" style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${i.fechaEntrega || '—'}</div>
+                                </div>
+                            </div>
+                            <div style="margin-bottom:6px;">
+                                <div class="h-label" style="display:flex;align-items:center;gap:3px;font-size:10px;margin-bottom:2px;">
+                                    <span>👤</span> Cliente
+                                </div>
+                                <div class="dm-text-primary" style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${i.client || clientData.user.name || '—'}</div>
+                            </div>
+                            <div style="margin-bottom:10px;">
+                                <div class="h-label" style="display:flex;align-items:center;gap:3px;font-size:10px;margin-bottom:2px;">
+                                    <span>📋</span> Inf. a nombre de
+                                </div>
+                                <div class="dm-text-primary" style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${i.informe_a_nombre_de || clientData.user.name || '—'}</div>
+                            </div>
+                            <div class="h-border" style="border-top:1px solid;padding-top:10px;">
+                                <button onclick="openHistoryModal('${i.id}')" class="dm-text-link" style="font-size:12px;font-weight:600;cursor:pointer;background:none;border:none;padding:0;display:flex;align-items:center;gap:4px;">Ver detalle <span style="font-size:14px;">›</span></button>
+                            </div>
+                        </div>`;
+                    }).join('');
+                }).join('');
+
+                return `<div style="margin-bottom:32px;">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <span style="font-size:14px;">📅</span>
+                            <span class="h-year-label" style="font-size:16px;font-weight:700;">${year}</span>
                         </div>
-                        <div class="flex-1 h-px dm-border bg-slate-200"></div>
-                        <span class="text-xs dm-text-muted ml-3 font-medium">${grouped[year].length} ensayo${grouped[year].length !== 1 ? 's' : ''}</span>
+                        <div class="h-year-line" style="flex:1;height:1px;"></div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                        ${items}
+                    <div style="display:flex;gap:24px;">
+                        <div style="width:140px;flex-shrink:0;">
+                            ${monthListHtml}
+                        </div>
+                        <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+                            ${cardsHtml}
+                        </div>
                     </div>
                 </div>`;
             }).join('');
 
-            const emptyState = `<div class="text-center py-12">
-                <div class="w-16 h-16 dm-empty-icon rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i data-lucide="history" class="w-8 h-8 dm-text-secondary"></i>
-                </div>
-                <h3 class="text-lg font-medium dm-text-primary mb-1">Sin historial registrado</h3>
-                <p class="text-sm dm-text-secondary max-w-md mx-auto">El historial de ensayos acreditados aparecerá aquí una vez que se registren servicios a nombre de su empresa.</p>
+            const emptyState = `<div style="text-align:center;padding:48px 16px;">
+                <div class="h-empty-icon" style="width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:24px;">📋</div>
+                <h3 class="h-empty-title" style="font-size:16px;font-weight:600;margin:0 0 8px 0;">Sin historial registrado</h3>
+                <p class="h-empty-text" style="font-size:13px;max-width:400px;margin:0 auto;">El historial de ensayos acreditados aparecerá aquí una vez que se registren servicios a nombre de su empresa.</p>
             </div>`;
 
-            return `<div class="space-y-8 fade-in">
-                <div class="flex flex-col lg:flex-row justify-between lg:items-end gap-5">
+            const yearButtons = `<button onclick="setHistoryFilter('todos')" class="${historyYearFilter === 'todos' ? 'h-btn-active' : 'h-btn'}" style="padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid;cursor:pointer;">Todos</button>
+                ${years.map(y => `<button onclick="setHistoryFilter('${y}')" class="${historyYearFilter === y ? 'h-btn-active' : 'h-btn'}" style="padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid;cursor:pointer;">${y}</button>`).join('')}`;
+
+            return `<div class="fade-in">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
                     <div>
-                        <h2 class="text-2xl font-bold dm-text-primary">Historial de Servicios</h2>
-                        <p class="dm-text-secondary mt-1">Ensayos acreditados registrados a nombre de <span class="font-semibold dm-text-primary">${clientData.user.name || 'su empresa'}</span>.</p>
+                        <h2 class="h-title" style="font-size:24px;font-weight:800;margin:0;">Historial de Servicios</h2>
+                        <p class="h-subtitle" style="font-size:14px;margin:6px 0 0 0;">Ensayos acreditados registrados a nombre de <span style="font-weight:600;">${clientData.user.name || 'su empresa'}</span>.</p>
                     </div>
-                    <div class="dm-card rounded-xl px-5 py-3.5" style="border-left:4px solid #2563eb;">
-                        <p class="text-xs dm-text-secondary font-medium uppercase tracking-wider">Total ensayos</p>
-                        <p class="text-2xl font-bold dm-text-primary mt-0.5">${sorted.length}</p>
+                    <div style="display:flex;gap:12px;">
+                        <div class="dm-card" style="border-radius:12px;padding:14px 20px;border-left:4px solid #2563eb;">
+                            <p class="h-stat-label" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 4px 0;">Procesos finalizados</p>
+                            <p class="h-stat-value" style="font-size:24px;font-weight:800;margin:0;">${completedCount}</p>
+                        </div>
+                        <div class="dm-card" style="border-radius:12px;padding:14px 20px;border-left:4px solid #22c55e;">
+                            <p class="h-stat-label" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 4px 0;">Último proceso finalizado</p>
+                            <p class="dm-text-primary" style="font-size:12px;margin:0;"><span class="h-stat-label">Proceso:</span> <strong class="h-stat-value" style="font-family:monospace;">${latestService ? latestService.id : '—'}</strong></p>
+                            <p class="dm-text-primary" style="font-size:12px;margin:2px 0 0 0;"><span class="h-stat-label">Informe:</span> <strong class="dm-text-link" style="font-family:monospace;">${latestService ? (latestService.informe || '—') : '—'}</strong></p>
+                            <p class="h-stat-label" style="font-size:11px;margin:4px 0 0 0;">${latestService ? latestService.date : '—'}</p>
+                        </div>
+                        <div class="dm-card" style="border-radius:12px;padding:14px 20px;border-left:4px solid #9333ea;">
+                            <p class="h-stat-label" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 4px 0;">Años con historial</p>
+                            <p class="h-stat-value" style="font-size:24px;font-weight:800;margin:0;">${uniqueYears}</p>
+                        </div>
                     </div>
                 </div>
-                <div class="dm-card rounded-xl shadow-sm overflow-hidden p-7">
-                    ${sorted.length > 0 ? yearsHtml : emptyState}
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+                    <div style="flex:1;position:relative;">
+                        <input id="historySearchInput" class="h-search" type="text" placeholder="Buscar por número de informe..." value="${historySearch}" oninput="setHistorySearch(this.value)" style="width:100%;padding:10px 16px 10px 40px;border:1px solid;border-radius:10px;font-size:14px;outline:none;" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor=''" />
+                        <span class="h-search-icon" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;">🔍</span>
+                    </div>
+                    <div style="display:flex;gap:6px;">
+                        ${yearButtons}
+                    </div>
+                </div>
+                <div class="dm-card dm-shadow" style="border-radius:16px;padding:24px;">
+                    ${filtered.length > 0 ? yearsHtml : emptyState}
                 </div>
             </div>`;
         }
