@@ -172,8 +172,9 @@ const PROCESOS_STORE = {
         finalized: [],
     },
     pagination: {
-        page: 1,
-        pageSize: null,
+        pageActive: 1,
+        pageFinalized: 1,
+        pageSize: 15,
     },
 };
 
@@ -439,11 +440,11 @@ function matchesProcesoFilters(row, filters) {
     return matchesStatus && matchesClient && matchesSearch && matchesMonth && matchesDate;
 }
 
-function applyProcesoPagination(rows = []) {
+function applyProcesoPagination(rows = [], pageNum) {
     const pageSize = Number(PROCESOS_STORE.pagination.pageSize);
     if (!pageSize || pageSize <= 0) return rows;
 
-    const page = Math.max(1, Number(PROCESOS_STORE.pagination.page) || 1);
+    const page = Math.max(1, Number(pageNum) || 1);
     const start = (page - 1) * pageSize;
     return rows.slice(start, start + pageSize);
 }
@@ -452,11 +453,14 @@ function renderTabla() {
     const activeRows = sortProcesosByNumeroDesc(PROCESOS_STORE.filtered.active || []);
     const finalizedRows = sortProcesosByNumeroDesc(PROCESOS_STORE.filtered.finalized || []);
 
-    const activeVisible = applyProcesoPagination(activeRows);
-    const finalizedVisible = applyProcesoPagination(finalizedRows);
+    const activeVisible = applyProcesoPagination(activeRows, PROCESOS_STORE.pagination.pageActive);
+    const finalizedVisible = applyProcesoPagination(finalizedRows, PROCESOS_STORE.pagination.pageFinalized);
 
     renderProcesosToTable('certificatesTableBody', activeVisible);
     renderProcesosToTable('finalizedCertificatesTableBody', finalizedVisible);
+
+    renderPaginationControls('paginacionProcesosActivos', activeRows.length, 'active');
+    renderPaginationControls('paginacionProcesosFinalizados', finalizedRows.length, 'finalized');
 
     const totalEl = document.getElementById('statTotalCerts');
     const completedEl = document.getElementById('statCompletedCerts');
@@ -476,6 +480,41 @@ function renderTabla() {
     } catch (err) {
         console.warn('Error actualizando resúmenes mensuales:', err);
     }
+}
+
+function renderPaginationControls(containerId, totalItems, type) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const pageSize = Number(PROCESOS_STORE.pagination.pageSize) || 15;
+    const totalPages = Math.ceil(totalItems / pageSize);
+    const currentPage = Math.max(1, Number(type === 'active' ? PROCESOS_STORE.pagination.pageActive : PROCESOS_STORE.pagination.pageFinalized) || 1);
+
+    if (totalPages <= 1) { container.innerHTML = ''; return; }
+
+    const paginarFn = type === 'active' ? 'paginarProcesosActivos' : 'paginarProcesosFinalizados';
+    let html = `<span style="font-size: 13px; color: #666;">Mostrando ${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, totalItems)} de ${totalItems}</span>`;
+    html += `<button type="button" class="btn btn-small" onclick="${paginarFn}(1)" ${currentPage === 1 ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">«</button>`;
+    html += `<button type="button" class="btn btn-small" onclick="${paginarFn}(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">‹</button>`;
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+    for (let i = startPage; i <= endPage; i++) {
+        html += `<button type="button" class="btn btn-small" onclick="${paginarFn}(${i})" style="padding: 4px 10px; font-size: 13px; ${i === currentPage ? 'background: #022859; color: white;' : ''}">${i}</button>`;
+    }
+    html += `<button type="button" class="btn btn-small" onclick="${paginarFn}(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">›</button>`;
+    html += `<button type="button" class="btn btn-small" onclick="${paginarFn}(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">»</button>`;
+    container.innerHTML = html;
+}
+
+function paginarProcesosActivos(pagina) {
+    PROCESOS_STORE.pagination.pageActive = pagina;
+    renderTabla();
+}
+
+function paginarProcesosFinalizados(pagina) {
+    PROCESOS_STORE.pagination.pageFinalized = pagina;
+    renderTabla();
 }
 
 function filtrarProcesos() {
@@ -500,7 +539,8 @@ async function cargarProcesos() {
         const rows = await getProcesosAcreditados({});
         PROCESOS_STORE.all = sortProcesosByNumeroDesc(rows);
         PROCESOS_STORE.loaded = true;
-        PROCESOS_STORE.pagination.page = 1;
+        PROCESOS_STORE.pagination.pageActive = 1;
+        PROCESOS_STORE.pagination.pageFinalized = 1;
         populateClientFilterOptions();
         filtrarProcesos();
         if (typeof GestionInformesModule !== 'undefined') {

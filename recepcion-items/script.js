@@ -4890,8 +4890,8 @@ function loadFormData(data, skipDates = false, isFromCompleted = false) {
     if (consentRecEl) toggleConsentFields('Recepcion');
     if (consentEntEl) toggleConsentFields('Entrega');
     if (remisionEl) remisionEl.value = data.facturar || '';
-    if (informeNombreEl) informeNombreEl.value = data.informeNombre || data.informe || '';
-    if (facturarNombreEl) facturarNombreEl.value = data.facturarNombre || '';
+    if (informeNombreEl) informeNombreEl.value = (data.informeNombre || data.informe || '').toUpperCase();
+    if (facturarNombreEl) facturarNombreEl.value = (data.facturarNombre || '').toUpperCase();
     if (obsEl) obsEl.value = data.observaciones || '';
     if (cliEmailEl) cliEmailEl.value = data.clienteEmail || '';
     if (empEmailEl) empEmailEl.value = data.empresaEmail || '';
@@ -7203,8 +7203,8 @@ async function crearProcesoEnPanelAdmin() {
         const insertData = {
             numero_proceso: numeroProceso,
             cliente: clienteNombre,
-            informe_a_nombre_de: document.getElementById('informeNombre')?.value || clienteNombre,
-            facturar_a_nombre_de: document.getElementById('facturarNombre')?.value || clienteNombre,
+            informe_a_nombre_de: (document.getElementById('informeNombre')?.value || clienteNombre).toUpperCase(),
+            facturar_a_nombre_de: (document.getElementById('facturarNombre')?.value || clienteNombre).toUpperCase(),
             estado: 'recepcion',
             fecha_recepcion: fechaRecepcion,
             fecha_entrega_cliente: null,
@@ -7957,7 +7957,7 @@ function setFacturarOption(opcion) {
     if (opcion === 'mismo') {
         btnMismo.classList.add('active');
         // Usar el mismo cliente seleccionado
-        inputFacturar.value = nombreEmpresa;
+        inputFacturar.value = nombreEmpresa.toUpperCase();
         inputFacturar.readOnly = true;
         inputFacturar.placeholder = 'Se usará el nombre del cliente seleccionado';
     } else {
@@ -7967,6 +7967,7 @@ function setFacturarOption(opcion) {
         inputFacturar.readOnly = false;
         inputFacturar.placeholder = 'Escriba el nombre para facturación';
         inputFacturar.focus();
+        inputFacturar.oninput = function() { this.value = this.value.toUpperCase(); };
     }
 }
 
@@ -8003,7 +8004,7 @@ function setInformeOption(opcion) {
     if (opcion === 'mismo') {
         btnMismo.classList.add('active');
         // Usar el mismo cliente seleccionado
-        inputInforme.value = nombreEmpresa;
+        inputInforme.value = nombreEmpresa.toUpperCase();
         inputInforme.readOnly = true;
         inputInforme.placeholder = 'Se usará el nombre del cliente seleccionado';
     } else {
@@ -8013,6 +8014,7 @@ function setInformeOption(opcion) {
         inputInforme.readOnly = false;
         inputInforme.placeholder = 'Escriba el nombre para el informe';
         inputInforme.focus();
+        inputInforme.oninput = function() { this.value = this.value.toUpperCase(); };
     }
 }
 
@@ -8072,7 +8074,7 @@ function actualizarCamposSegunEmpresa() {
     if (btnFacturarMismo && btnFacturarMismo.classList.contains('active')) {
         const facturarEl = document.getElementById('facturarNombre');
         if (facturarEl && !facturarEl.value) {
-            facturarEl.value = nombreEmpresa;
+            facturarEl.value = nombreEmpresa.toUpperCase();
         }
     }
     
@@ -8081,7 +8083,7 @@ function actualizarCamposSegunEmpresa() {
     if (btnInformeMismo && btnInformeMismo.classList.contains('active')) {
         const informeEl = document.getElementById('informeNombre');
         if (informeEl && !informeEl.value) {
-            informeEl.value = nombreEmpresa;
+            informeEl.value = nombreEmpresa.toUpperCase();
         }
     }
 }
@@ -8443,14 +8445,15 @@ window._callbacksRender = window._callbacksRender || [];
 function procesoACaso(p) {
     if (!p) return null;
     const nroProceso = p.numero_proceso || '';
+    const estadoRaw = p.estado || '';
     return {
         cotizacion: nroProceso,
         quoteNumber: nroProceso,
         cliente: p.cliente || '',
         fechaRecepcion: p.fecha_recepcion || '',
         fechaEntrega: p.fecha_entrega_cliente || '',
-        status: (p.estado === 'finalizado' || p.estado === 'entrega-cliente') ? 'entrega' : (p.estado || 'recepcion'),
-        estado: p.estado || '',
+        status: (estadoRaw === 'finalizado' || estadoRaw === 'entrega-cliente') ? 'entrega' : (estadoRaw || 'recepcion'),
+        estado: estadoRaw || 'recepcion',
         items: [],
         n_informe: p.n_informe || '',
         numero_proceso: nroProceso,
@@ -8476,10 +8479,13 @@ function _insertIfNewer(map, caso) {
     } else {
         const tsNew = caso.timestamp || caso.updated_at || caso.created_at || '';
         const tsOld = existing.timestamp || existing.updated_at || existing.created_at || '';
-        if (tsNew > tsOld) {
+        const casoIsProceso = caso._source === 'supabase_proceso';
+        const existingIsProceso = existing._source === 'supabase_proceso';
+        const shouldOverwrite = casoIsProceso || tsNew > tsOld;
+        if (shouldOverwrite) {
             const preserveFields = [
                 'signatureData', 'items', 'formData', 'cotizacion',
-                'cliente', 'nitEmpresa', 'facturar', 'informeNombre', 'facturarNombre',
+                'cliente', 'nitEmpresa', 'facturar',
                 'informe', 'observaciones', 'clienteEmail', 'empresaEmail', 'copiaEmail',
                 'lavado', 'elementosLavados', 'tipoLavado', 'fechaLavado', 'responsableLavado', 'observacionesLavado',
                 'inspeccionVisual', 'pruebasFuncionales', 'inspectorCalidad', 'fechaInspeccion', 'observacionesCalidad', 'estadoCalidad',
@@ -8640,10 +8646,8 @@ function showReportsTab(tabName) {
 // Refrescar y mostrar historial
 function refrescarHistorial() {
     const tbody = document.getElementById('historialTableBody');
-    if (!tbody) return; // Si la tabla no existe (pestaña no activa), no hacer nada
+    if (!tbody) return;
 
-    // Obtener casos (devuelve localStorage inmediatamente, Supabase en background)
-    // Registrar re-render automático cuando lleguen datos de Supabase
     const casos = obtenerCasosUnificadosConRender(() => {
         const el = document.getElementById('historialTableBody');
         if (el) refrescarHistorial();
@@ -8653,39 +8657,51 @@ function refrescarHistorial() {
     tbody.innerHTML = '';
     
     if (!casos || casos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="padding: 20px; text-align: center; color: #999;">No hay casos registrados</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="padding: 20px; text-align: center; color: #999;">No hay casos registrados</td></tr>';
         return;
     }
     
-    // Ordenar casos descendentemente por Nº de Recepción
-    const casosOrdenados = casos.sort((a, b) => {
+    const casosFiltrados = casos.filter(caso => {
+        if (!searchValue) return true;
+        return JSON.stringify(caso).toLowerCase().includes(searchValue);
+    });
+
+    const casosOrdenados = casosFiltrados.sort((a, b) => {
         const numA = (a.cotizacion || a.quoteNumber || a.numero_proceso || '');
         const numB = (b.cotizacion || b.quoteNumber || b.numero_proceso || '');
         return String(numB).localeCompare(String(numA));
     });
+
+    const itemsPorPagina = 20;
+    const totalPaginas = Math.ceil(casosOrdenados.length / itemsPorPagina);
+    let pagina = window._paginaHistorial || 1;
+    if (pagina > totalPaginas) pagina = totalPaginas;
+    if (pagina < 1) pagina = 1;
+    window._paginaHistorial = pagina;
+    const inicio = (pagina - 1) * itemsPorPagina;
+    const paginados = casosOrdenados.slice(inicio, inicio + itemsPorPagina);
     
-    casosOrdenados.forEach((caso, index) => {
-        // Filtrar por búsqueda rápida
-        if (searchValue && !JSON.stringify(caso).toLowerCase().includes(searchValue)) {
-            return;
-        }
-        
+    paginados.forEach((caso, index) => {
         const clienteNombre = caso.cliente || caso.clienteRecepcionNombre || 'N/A';
         const informeNombre = caso.informeNombre || 'N/A';
+        const facturarNombre = caso.facturarNombre || 'N/A';
         const numRecepcion = caso.cotizacion || caso.quoteNumber || 'N/A';
         const fechaRecepcion = caso.fechaRecepcion || 'N/A';
         const fechaEntrega = caso.fechaEntrega || 'N/A';
         const itemCount = (caso.items ? caso.items.length : 0);
         
-        // Determinar estado
-        let estado = caso.status || 'En Progreso';
+        let estadoRaw = caso.estado || caso.status || 'recepcion';
         let estadoColor = '#ff9800';
-        if (estado === 'entrega') {
-            estado = 'Completado';
+        let estadoLabel = estadoRaw || 'Sin estado';
+        const e = estadoRaw.toLowerCase();
+        if (e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente') {
             estadoColor = '#28a745';
-        } else if (estado === 'recepcion') {
-            estado = 'Recepción Registrada';
+        } else if (e === 'recepcion') {
             estadoColor = '#007bff';
+        } else if (e === 'informe-de-ensayo' || e === 'informe') {
+            estadoColor = '#9c27b0';
+        } else if (e === 'inspeccion') {
+            estadoColor = '#ff5722';
         }
         
         const row = `
@@ -8693,12 +8709,13 @@ function refrescarHistorial() {
                 <td style="padding: 10px; border: 1px solid #ddd;">${numRecepcion}</td>
                 <td style="padding: 10px; border: 1px solid #ddd;">${clienteNombre}</td>
                 <td style="padding: 10px; border: 1px solid #ddd;">${informeNombre}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">${facturarNombre}</td>
                 <td style="padding: 10px; border: 1px solid #ddd;">${fechaRecepcion}</td>
                 <td style="padding: 10px; border: 1px solid #ddd;">${fechaEntrega}</td>
                 <td style="padding: 10px; border: 1px solid #ddd; text-align: center;"><strong>${itemCount}</strong></td>
                 <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">
                     <span style="background: ${estadoColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
-                        ${estado}
+                        ${estadoLabel}
                     </span>
                 </td>
                 <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">
@@ -8712,6 +8729,29 @@ function refrescarHistorial() {
         `;
         tbody.innerHTML += row;
     });
+
+    const pagDiv = document.getElementById('paginacionHistorial');
+    if (pagDiv) {
+        if (totalPaginas <= 1) { pagDiv.innerHTML = ''; return; }
+        let html = `<span style="font-size: 13px; color: #666;">Mostrando ${inicio + 1}-${Math.min(inicio + itemsPorPagina, casosOrdenados.length)} de ${casosOrdenados.length}</span>`;
+        html += `<button type="button" class="btn btn-small" onclick="paginarHistorial(1)" ${pagina === 1 ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">«</button>`;
+        html += `<button type="button" class="btn btn-small" onclick="paginarHistorial(${pagina - 1})" ${pagina === 1 ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">‹</button>`;
+        let startPage = Math.max(1, pagina - 2);
+        let endPage = Math.min(totalPaginas, startPage + 4);
+        if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+        for (let i = startPage; i <= endPage; i++) {
+            html += `<button type="button" class="btn btn-small" onclick="paginarHistorial(${i})" style="padding: 4px 10px; font-size: 13px; ${i === pagina ? 'background: #022859; color: white;' : ''}">${i}</button>`;
+        }
+        html += `<button type="button" class="btn btn-small" onclick="paginarHistorial(${pagina + 1})" ${pagina === totalPaginas ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">›</button>`;
+        html += `<button type="button" class="btn btn-small" onclick="paginarHistorial(${totalPaginas})" ${pagina === totalPaginas ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">»</button>`;
+        pagDiv.innerHTML = html;
+    }
+}
+
+function paginarHistorial(pagina) {
+    window._paginaHistorial = pagina;
+    refrescarHistorial();
+    document.getElementById('historialContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // Actualizar estadísticas
@@ -8722,7 +8762,10 @@ function actualizarEstadisticas() {
     });
     
     let totalCasos = casos.length;
-    let completados = casos.filter(c => c.status === 'entrega' || (c.signatureData?.Recepcion?.isSignature && c.signatureData?.Entrega?.isSignature)).length;
+    let completados = casos.filter(c => {
+        const e = (c.estado || c.status || '').toLowerCase();
+        return e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente' || (c.signatureData?.Recepcion?.isSignature && c.signatureData?.Entrega?.isSignature);
+    }).length;
     let enProgreso = totalCasos - completados;
     let discrepancias = 0;
     
@@ -8743,11 +8786,13 @@ function actualizarEstadisticas() {
         const cotizacion = caso.cotizacion || caso.quoteNumber || 'N/A';
         const cliente = caso.cliente || caso.clienteRecepcionNombre || 'N/A';
         const informeNombre = caso.informeNombre || caso.empresa || 'N/A';
+        const facturarNombre = caso.facturarNombre || 'N/A';
         
         if (!caseStats[cotizacion]) {
             caseStats[cotizacion] = {
                 cliente: cliente,
                 informeNombre: informeNombre,
+                facturarNombre: facturarNombre,
                 totalRecibidos: 0,
                 totalEntregados: 0,
                 items: {},
@@ -8809,7 +8854,7 @@ function actualizarEstadisticas() {
     const paginadosEst = casesArray.slice(inicioEst, inicioEst + itemsPorPagina);
     
     if (casesArray.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="padding: 16px; text-align: center; color: #666;">No hay registros</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="padding: 16px; text-align: center; color: #666;">No hay registros</td></tr>';
     } else {
         paginadosEst.forEach(([cotizacion, stats]) => {
             const diferencia = stats.totalEntregados - stats.totalRecibidos;
@@ -8820,6 +8865,7 @@ function actualizarEstadisticas() {
                     <td style="padding: 10px; border: 1px solid #ddd;">${cotizacion}</td>
                     <td style="padding: 10px; border: 1px solid #ddd;">${stats.cliente}</td>
                     <td style="padding: 10px; border: 1px solid #ddd;">${stats.informeNombre}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${stats.facturarNombre}</td>
                     <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${stats.totalItems}</td>
                     <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${stats.totalRecibidos}</td>
                     <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${stats.totalEntregados}</td>
@@ -8910,13 +8956,14 @@ function _renderBusquedaAvanzada() {
     });
 
     // Paginación
-    const totalPaginas = Math.ceil(resultados.length / 40);
+    const itemsPorPagina = 20;
+    const totalPaginas = Math.ceil(resultados.length / itemsPorPagina);
     let pagina = window._paginaBusqueda || 1;
     if (pagina > totalPaginas) pagina = totalPaginas;
     if (pagina < 1) pagina = 1;
     window._paginaBusqueda = pagina;
-    const inicio = (pagina - 1) * 40;
-    const paginados = resultados.slice(inicio, inicio + 40);
+    const inicio = (pagina - 1) * itemsPorPagina;
+    const paginados = resultados.slice(inicio, inicio + itemsPorPagina);
 
     // Mostrar resultados
     const tbody = document.getElementById('resultadosBusquedaBody');
@@ -8932,9 +8979,19 @@ function _renderBusquedaAvanzada() {
         const itemCount = (caso.items ? caso.items.length : 0) || ((caso.savedRowsData?.ensayos_acreditados ? Object.keys(caso.savedRowsData.ensayos_acreditados).length : 0) +
                          (caso.savedRowsData?.ensayos_no_acreditados ? Object.keys(caso.savedRowsData.ensayos_no_acreditados).length : 0));
 
-        const isCompletado = (caso.status === 'entrega') || (caso.signatureData?.Recepcion?.isSignature && caso.signatureData?.Entrega?.isSignature);
-        const estado = isCompletado ? 'Completado' : (caso.status === 'recepcion' ? 'Recepción' : 'En Progreso');
-        const estadoColor = isCompletado ? '#28a745' : '#ff9800';
+        let estadoRaw = caso.estado || caso.status || 'recepcion';
+        let estadoColor = '#ff9800';
+        let estadoLabel = estadoRaw || 'Sin estado';
+        const e = estadoRaw.toLowerCase();
+        if (e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente') {
+            estadoColor = '#28a745';
+        } else if (e === 'recepcion') {
+            estadoColor = '#007bff';
+        } else if (e === 'informe-de-ensayo' || e === 'informe') {
+            estadoColor = '#9c27b0';
+        } else if (e === 'inspeccion') {
+            estadoColor = '#ff5722';
+        }
 
         const num = caso.cotizacion || caso.quoteNumber || 'N/A';
         const clienteDisp = caso.cliente || caso.clienteRecepcionNombre || 'N/A';
@@ -8951,7 +9008,7 @@ function _renderBusquedaAvanzada() {
                 <td style="padding: 10px; border: 1px solid #ddd; width: 140px;">${caso.fechaEntrega || 'N/A'}</td>
                 <td style="padding: 10px; border: 1px solid #ddd; text-align: center;"><strong>${itemCount}</strong></td>
                 <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">
-                    <span style="background: ${estadoColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${estado}</span>
+                    <span style="background: ${estadoColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${estadoLabel}</span>
                 </td>
                 <td style="padding: 10px; border: 1px solid #ddd; text-align: center; width: 80px; min-width: 80px;">
                     <button type="button" class="btn btn-small" onclick="mostrarVistaPrevia('${num}')" style="padding: 4px 8px; font-size: 12px; margin-right:4px;">👁️ Ver</button>
@@ -8966,7 +9023,7 @@ function _renderBusquedaAvanzada() {
     const pagDiv = document.getElementById('paginacionBusqueda');
     if (totalPaginas <= 1) { pagDiv.innerHTML = ''; return; }
 
-    let html = `<span style="font-size: 13px; color: #666;">Mostrando ${inicio + 1}-${Math.min(inicio + 40, resultados.length)} de ${resultados.length}</span>`;
+    let html = `<span style="font-size: 13px; color: #666;">Mostrando ${inicio + 1}-${Math.min(inicio + itemsPorPagina, resultados.length)} de ${resultados.length}</span>`;
     html += `<button type="button" class="btn btn-small" onclick="paginarBusqueda(1)" ${pagina === 1 ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">«</button>`;
     html += `<button type="button" class="btn btn-small" onclick="paginarBusqueda(${pagina - 1})" ${pagina === 1 ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">‹</button>`;
 
