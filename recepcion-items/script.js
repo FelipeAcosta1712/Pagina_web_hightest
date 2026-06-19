@@ -6440,6 +6440,8 @@ async function recuperarCaso(numeroProceso) {
             status: (proceso.estado || 'recepcion').toLowerCase(),
             fechaRecepcion: proceso.fecha_recepcion || '',
             fechaEntrega: proceso.fecha_entrega_cliente || '',
+            informeNombre: proceso.informe_a_nombre_de || '',
+            facturarNombre: proceso.facturar_a_nombre_de || '',
             items: (detalle || []).map(d => ({
                 id: d.ensayo_id,
                 quantity: d.cantidad,
@@ -7202,6 +7204,7 @@ async function crearProcesoEnPanelAdmin() {
             numero_proceso: numeroProceso,
             cliente: clienteNombre,
             informe_a_nombre_de: document.getElementById('informeNombre')?.value || clienteNombre,
+            facturar_a_nombre_de: document.getElementById('facturarNombre')?.value || clienteNombre,
             estado: 'recepcion',
             fecha_recepcion: fechaRecepcion,
             fecha_entrega_cliente: null,
@@ -8067,13 +8070,19 @@ function actualizarCamposSegunEmpresa() {
     // Si está seleccionado "Mismo Cliente" para facturación, actualizar
     const btnFacturarMismo = document.getElementById('btnFacturarMismoCliente');
     if (btnFacturarMismo && btnFacturarMismo.classList.contains('active')) {
-        document.getElementById('facturarNombre').value = nombreEmpresa;
+        const facturarEl = document.getElementById('facturarNombre');
+        if (facturarEl && !facturarEl.value) {
+            facturarEl.value = nombreEmpresa;
+        }
     }
     
     // Si está seleccionado "Mismo Cliente" para informe, actualizar
     const btnInformeMismo = document.getElementById('btnInformeMismoCliente');
     if (btnInformeMismo && btnInformeMismo.classList.contains('active')) {
-        document.getElementById('informeNombre').value = nombreEmpresa;
+        const informeEl = document.getElementById('informeNombre');
+        if (informeEl && !informeEl.value) {
+            informeEl.value = nombreEmpresa;
+        }
     }
 }
 
@@ -8445,6 +8454,8 @@ function procesoACaso(p) {
         items: [],
         n_informe: p.n_informe || '',
         numero_proceso: nroProceso,
+        informeNombre: p.informe_a_nombre_de || '',
+        facturarNombre: p.facturar_a_nombre_de || '',
         timestamp: p.updated_at || p.created_at || '',
         _source: 'supabase_proceso',
         caso_activo: p.caso_activo !== undefined ? p.caso_activo : true

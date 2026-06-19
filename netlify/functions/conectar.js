@@ -451,7 +451,7 @@ exports.handler = async (event) => {
                 if (!numero) return jsonResponse(400, { ok: false, error: 'numero_proceso requerido' });
 
                 // Permitir actualizar solo campos autorizados
-                const allowed = ['numero_proceso','cliente','cliente_id','tipo','estado','fecha_recepcion','fecha_entrega_cliente','fecha_finalizado','valor','caso_activo','informe_a_nombre_de'];
+                const allowed = ['numero_proceso','cliente','cliente_id','tipo','estado','fecha_recepcion','fecha_entrega_cliente','fecha_finalizado','valor','caso_activo','informe_a_nombre_de','facturar_a_nombre_de'];
                 const updateData = {};
                 for (const key of allowed) {
                     if (payload[key] !== undefined) updateData[key] = payload[key];
