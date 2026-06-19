@@ -1173,34 +1173,37 @@
             const completedCount = clientData.history.filter(r => r.status === 'Completado').length;
             const totalCount = activeCount + completedCount;
 
-            const informesDisponibles = clientData.history.filter(h => h.informe && h.status === 'Completado');
+            const informesConPdf = informesData.filter(i => i.activo && i.archivo_pdf);
+            const informesDisponibles = informesConPdf
+                .filter(i => {
+                    const estado = (i.estado || '').toLowerCase();
+                    return estado.includes('informe') || estado.includes('finalizado');
+                })
+                .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
             const latestInforme = informesDisponibles.length > 0 ? informesDisponibles[0] : null;
-            const latestDate = latestInforme ? latestInforme.date : '—';
-            const latestNumber = latestInforme ? latestInforme.informe : '—';
+            const latestDate = latestInforme ? (latestInforme.fecha_entrega || (latestInforme.created_at || '').substring(0, 10)) : '—';
+            const latestNumber = latestInforme ? (latestInforme.n_informe || latestInforme.nombre_documento || '—') : '—';
 
             const emptyInforme = `<div style="text-align:center; padding:32px 16px; color:#94a3b8;">
                 <div class="dm-empty-icon" style="width:48px; height:48px; background:#f1f5f9; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">📋</div>
                 <p style="font-size:13px;">No hay informes disponibles aún.</p>
             </div>`;
 
-            const getInformePdfUrl = (numeroProceso) => {
-                if (!Array.isArray(informesData)) return '';
-                const inf = informesData.find(i => i.numero_proceso === numeroProceso && i.activo);
-                return inf ? (inf.archivo_pdf || '') : '';
-            };
-
             const informesList = informesDisponibles.length > 0
-                ? informesDisponibles.slice(0, 5).map(h => {
-                    const pdfUrl = getInformePdfUrl(h.id);
+                ? informesDisponibles.slice(0, 5).map(i => {
+                    const pdfUrl = i.archivo_pdf || '';
+                    const infName = i.n_informe || i.nombre_documento || 'Informe';
+                    const numProceso = i.numero_proceso || '—';
+                    const fecha = i.fecha_entrega || (i.created_at || '').substring(0, 10);
                     return `
                 <div class="dm-activity-item" style="display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid #f1f5f9; transition:background 0.15s; cursor:pointer;" onclick="${pdfUrl ? `window.open('${pdfUrl}', '_blank')` : `setTab('reports')`}">
                     <div class="dm-bg-red" style="width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                         <span style="font-size:18px;">📄</span>
                     </div>
                     <div style="flex:1; min-width:0;">
-                        <div class="dm-text-primary" style="font-size:14px; font-weight:700; font-family:monospace;">${h.informe || 'Informe'}</div>
-                        <div class="dm-text-secondary" style="font-size:12px;">Proceso: ${h.id}</div>
-                        <div class="dm-text-muted" style="font-size:11px;">📅 ${h.date}</div>
+                        <div class="dm-text-primary" style="font-size:14px; font-weight:700; font-family:monospace;">${escapeHtml(infName)}</div>
+                        <div class="dm-text-secondary" style="font-size:12px;">Proceso: ${escapeHtml(numProceso)}</div>
+                        <div class="dm-text-muted" style="font-size:11px;">📅 ${fecha}</div>
                     </div>
                     <div style="text-align:right; flex-shrink:0;">
                         <span class="dm-badge-green" style="display:inline-block; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:600;">✅ Disponible</span>
@@ -1211,13 +1214,13 @@
                 : emptyInforme;
 
             const recentActivity = [
-                ...informesDisponibles.slice(0, 3).map(h => ({
+                ...informesDisponibles.slice(0, 3).map(i => ({
                     icon: '📄', iconBg: '#dcfce7', iconColor: '#16a34a',
-                    text: `<strong>Informe ${h.informe || ''}</strong> disponible`,
-                    sub: 'Haz clic para ver el estado.',
-                    date: h.date,
-                    action: `setTab('requests')`,
-                    actionLabel: 'Ver estado'
+                    text: `<strong>Informe ${i.n_informe || i.nombre_documento || ''}</strong> disponible`,
+                    sub: `Proceso: ${i.numero_proceso || ''}`,
+                    date: i.fecha_entrega || (i.created_at || '').substring(0, 10),
+                    action: i.archivo_pdf ? `window.open('${i.archivo_pdf}', '_blank')` : `setTab('reports')`,
+                    actionLabel: i.archivo_pdf ? 'Ver PDF' : 'Ver detalle'
                 })),
                 ...clientData.requests.slice(0, 3).map(r => ({
                     icon: '🧪', iconBg: '#fef3c7', iconColor: '#d97706',
