@@ -3982,20 +3982,14 @@ const AdminPanelManager = {
     },
 
     renderMonthlySummary() {
-        this.renderMonthlySummaryByType('monthlySummaryListAcreditados', [
-            'certificatesTableBody',
-            'finalizedCertificatesTableBody'
-        ]);
+        this.renderMonthlySummaryByType('monthlySummaryListAcreditados');
     },
 
     renderMonthlySummaryNoAcreditados() {
-        this.renderMonthlySummaryByType('monthlySummaryListNoAcreditados', [
-            'certificatesTableBodyNoAcreditados',
-            'finalizedCertificatesTableBodyNoAcreditados'
-        ]);
+        this.renderMonthlySummaryByType('monthlySummaryListNoAcreditados');
     },
 
-    renderMonthlySummaryByType(containerId, tableBodyIds = [], emptyMessage = 'No hay datos suficientes para mostrar resumen por mes.') {
+    renderMonthlySummaryByType(containerId, emptyMessage = 'No hay datos suficientes para mostrar resumen por mes.') {
         const container = document.getElementById(containerId);
         if (!container) return;
 
@@ -4005,39 +3999,39 @@ const AdminPanelManager = {
         };
         const monthsMap = new Map();
 
-        tableBodyIds.forEach((tbodyId) => {
-            const tbody = document.getElementById(tbodyId);
-            if (!tbody) return;
+        const isAcreditado = containerId === 'monthlySummaryListAcreditados';
 
-            Array.from(tbody.querySelectorAll('tr')).forEach((row) => {
-                if (row.classList.contains('empty-state')) return;
-                if (!row.cells || row.cells.length < 7) return;
+        let allRows = [];
+        if (isAcreditado) {
+            allRows = [...(PROCESOS_STORE.filtered.active || []), ...(PROCESOS_STORE.filtered.finalized || [])];
+        } else {
+            allRows = (this.certificates || []).filter(c => c.type === 'no-acreditado');
+        }
 
-                const statusText = (row.cells[3]?.textContent || '').toLowerCase();
-                const dateValues = [
-                    row.cells[4]?.textContent || '',
-                    row.cells[5]?.textContent || '',
-                    row.cells[6]?.textContent || ''
-                ]
-                    .map((value) => String(value).trim())
-                    .filter((value) => value && value !== '-');
+        allRows.forEach(row => {
+            let dateBase = '';
+            let estado = '';
+            if (isAcreditado) {
+                dateBase = row.fecha_entrega_cliente || row.fecha_recepcion || '';
+                estado = (row.estado || '').toLowerCase();
+            } else {
+                dateBase = row.deliveryDate || row.receptionDate || '';
+                estado = (row.status || '').toLowerCase();
+            }
+            if (!dateBase || !/^\d{4}-\d{2}/.test(dateBase)) return;
 
-                const baseDate = dateValues.find((value) => /^\d{4}-\d{2}-\d{2}/.test(value));
-                if (!baseDate) return;
+            const monthKey = dateBase.slice(0, 7);
+            if (!monthsMap.has(monthKey)) {
+                monthsMap.set(monthKey, { total: 0, completed: 0, pending: 0 });
+            }
 
-                const monthKey = baseDate.slice(0, 7);
-                if (!monthsMap.has(monthKey)) {
-                    monthsMap.set(monthKey, { total: 0, completed: 0, pending: 0 });
-                }
-
-                const bucket = monthsMap.get(monthKey);
-                bucket.total += 1;
-                if (statusText.includes('finalizado')) {
-                    bucket.completed += 1;
-                } else {
-                    bucket.pending += 1;
-                }
-            });
+            const bucket = monthsMap.get(monthKey);
+            bucket.total += 1;
+            if (estado === 'finalizado') {
+                bucket.completed += 1;
+            } else {
+                bucket.pending += 1;
+            }
         });
 
         const entries = Array.from(monthsMap.entries())
@@ -6840,6 +6834,7 @@ function initializePage() {
         MobileMenu.init();
         StickyHeader.init();
         AdminPanelManager.init();
+        AnalisisProcesosModule.init();
     } else if (hasChecklist) {
         console.log('📋 Inicializando lista de chequeo de ensayos en sitio (por DOM)');
         ThemeManager.init();
@@ -7055,10 +7050,19 @@ const GestionInformesModule = {
         if (closeHistory) closeHistory.addEventListener('click', () => this.closeModal('informeHistoryModal'));
         if (closeHistoryBtn) closeHistoryBtn.addEventListener('click', () => this.closeModal('informeHistoryModal'));
 
+        // Botón procesos sin informe
+        const btnFaltantes = document.getElementById('btnVerFaltantes');
+        const closeFaltantes = document.getElementById('closeFaltantesModal');
+        const closeFaltantesBtn = document.getElementById('closeFaltantesBtn');
+        if (btnFaltantes) btnFaltantes.addEventListener('click', () => this.showProcesosFaltantes());
+        if (closeFaltantes) closeFaltantes.addEventListener('click', () => this.closeModal('faltantesModal'));
+        if (closeFaltantesBtn) closeFaltantesBtn.addEventListener('click', () => this.closeModal('faltantesModal'));
+
         // Cerrar modales con Escape
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.closeModal('informeHistoryModal');
+                this.closeModal('faltantesModal');
             }
         });
     },
@@ -7714,6 +7718,116 @@ const GestionInformesModule = {
         }
     },
 
+    async showProcesosFaltantes() {
+        const content = document.getElementById('faltantesContent');
+        if (!content) return;
+        content.innerHTML = '<div style="text-align:center; padding:24px; color:#666;">Cargando procesos sin informe...</div>';
+        this.openModal('faltantesModal');
+
+        try {
+            const result = await fetchFromDatabase('get_procesos_sin_informe', {});
+            const procesos = result?.procesos || [];
+
+            if (procesos.length === 0) {
+                content.innerHTML = `
+                    <div style="text-align:center; padding:32px; color:#28a745;">
+                        <div style="font-size:48px; margin-bottom:12px;">✅</div>
+                        <p style="font-size:16px; font-weight:600;">Todos los procesos tienen informe</p>
+                        <p style="font-size:13px; color:#666;">No hay procesos pendientes por informe</p>
+                    </div>`;
+                return;
+            }
+
+            let html = `
+                <div style="margin-bottom:12px; padding:10px; background:#fff3e0; border-radius:6px; border-left:3px solid #ff9800;">
+                    <span style="font-weight:600; color:#e65100;">${procesos.length}</span> proceso(s) sin informe cargado
+                </div>
+                <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+                    <input type="text" id="faltantesSearch" placeholder="🔍 Buscar por número o cliente..." 
+                        style="flex:1; min-width:200px; padding:6px 10px; border:1px solid #ddd; border-radius:4px; font-size:12px;"
+                        oninput="GestionInformesModule.filterFaltantes()">
+                </div>
+                <div id="faltantesTableContainer">
+                    ${this._renderFaltantesTable(procesos)}
+                </div>`;
+
+            content.innerHTML = html;
+            this._faltantesData = procesos;
+
+        } catch (err) {
+            console.error('Error cargando procesos sin informe:', err);
+            content.innerHTML = `<div style="padding:16px; border:1px solid #c62828; border-radius:8px; background:#ffebee; color:#c62828;">
+                <strong>Error:</strong> ${err.message}
+            </div>`;
+        }
+    },
+
+    _renderFaltantesTable(procesos) {
+        if (!procesos || procesos.length === 0) {
+            return '<div style="text-align:center; padding:24px; color:#999;">No se encontraron resultados</div>';
+        }
+
+        let html = `
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                    <thead style="background:#f5f5f5; border-bottom:2px solid #022859;">
+                        <tr>
+                            <th style="padding:8px; text-align:left; border:1px solid #ddd;">N° Proceso</th>
+                            <th style="padding:8px; text-align:left; border:1px solid #ddd;">Cliente</th>
+                            <th style="padding:8px; text-align:left; border:1px solid #ddd;">Fecha Recepción</th>
+                            <th style="padding:8px; text-align:left; border:1px solid #ddd;">Fecha Entrega</th>
+                            <th style="padding:8px; text-align:center; border:1px solid #ddd;">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+        procesos.forEach(p => {
+            const num = p.numero_proceso || '-';
+            const cliente = p.cliente || p.empresa || '-';
+            const fechaRec = p.fecha_recepcion ? new Date(p.fecha_recepcion).toLocaleDateString('es-CO') : '-';
+            const fechaEnt = p.fecha_entrega_cliente ? new Date(p.fecha_entrega_cliente).toLocaleDateString('es-CO') : '-';
+            const dias = p.fecha_entrega_cliente ? Math.ceil((new Date() - new Date(p.fecha_entrega_cliente)) / (1000 * 60 * 60 * 24)) : 0;
+            const alerta = dias > 0 ? `color:#c62828; font-weight:600;` : '';
+
+            html += `
+                <tr style="border-bottom:1px solid #ddd;">
+                    <td style="padding:8px; border:1px solid #ddd; font-weight:600;">${escapeHtml(num)}</td>
+                    <td style="padding:8px; border:1px solid #ddd;">${escapeHtml(cliente)}</td>
+                    <td style="padding:8px; border:1px solid #ddd;">${fechaRec}</td>
+                    <td style="padding:8px; border:1px solid #ddd; ${alerta}">${fechaEnt}${dias > 0 ? ' (' + dias + ' días)' : ''}</td>
+                    <td style="padding:8px; border:1px solid #ddd; text-align:center;">
+                        <button class="btn btn--small btn--primary" onclick="GestionInformesModule.irACargarInforme('${escapeHtml(p.id)}')" style="font-size:11px; padding:2px 8px;">
+                            📄 Cargar
+                        </button>
+                    </td>
+                </tr>`;
+        });
+
+        html += '</tbody></table></div>';
+        return html;
+    },
+
+    filterFaltantes() {
+        const search = (document.getElementById('faltantesSearch')?.value || '').toLowerCase();
+        const data = this._faltantesData || [];
+        const filtered = data.filter(p => {
+            const num = (p.numero_proceso || '').toLowerCase();
+            const cliente = (p.cliente || p.empresa || '').toLowerCase();
+            return num.includes(search) || cliente.includes(search);
+        });
+        const container = document.getElementById('faltantesTableContainer');
+        if (container) container.innerHTML = this._renderFaltantesTable(filtered);
+    },
+
+    irACargarInforme(procesoId) {
+        this.closeModal('faltantesModal');
+        const select = document.getElementById('informesProcesoSelect');
+        if (select) {
+            select.value = procesoId;
+            this.onProcesoChange();
+        }
+    },
+
     openModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) {
@@ -7734,3 +7848,363 @@ const GestionInformesModule = {
 };
 
 window.GestionInformesModule = GestionInformesModule;
+
+// ===============================
+// ANÁLISIS DE PROCESOS (modal)
+// ===============================
+const AnalisisProcesosModule = {
+    init() {
+        const btn = document.getElementById('btnAnalisisProcesos');
+        const close = document.getElementById('closeAnalisisProcesos');
+        const closeBtn = document.getElementById('closeAnalisisBtn');
+        const search = document.getElementById('analisisSearch');
+        const filterEstado = document.getElementById('analisisFilterEstado');
+        const filterMes = document.getElementById('analisisFilterMes');
+        const closeVP = document.getElementById('closeVistaPreviaProceso');
+        const closeVPBtn = document.getElementById('closeVistaPreviaBtn');
+
+        if (btn) btn.addEventListener('click', () => this.open());
+        if (close) close.addEventListener('click', () => this.close());
+        if (closeBtn) closeBtn.addEventListener('click', () => this.close());
+        if (search) search.addEventListener('input', () => this.render());
+        if (filterEstado) filterEstado.addEventListener('change', () => this.render());
+        if (filterMes) filterMes.addEventListener('change', () => this.render());
+        if (closeVP) closeVP.addEventListener('click', () => this.closeVistaPrevia());
+        if (closeVPBtn) closeVPBtn.addEventListener('click', () => this.closeVistaPrevia());
+    },
+
+    open() {
+        const modal = document.getElementById('analisisProcesosModal');
+        if (modal) {
+            modal.classList.add('modal--open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+        this.render();
+    },
+
+    close() {
+        const modal = document.getElementById('analisisProcesosModal');
+        if (modal) {
+            modal.classList.remove('modal--open');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+    },
+
+    getFilteredProcesses() {
+        const search = (document.getElementById('analisisSearch')?.value || '').toLowerCase();
+        const filtroEstado = (document.getElementById('analisisFilterEstado')?.value || '').toLowerCase();
+        const filtroMes = document.getElementById('analisisFilterMes')?.value || '';
+
+        const allRows = [
+            ...(PROCESOS_STORE.filtered.active || []),
+            ...(PROCESOS_STORE.filtered.finalized || [])
+        ];
+
+        const normalize = str => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[\s_]+/g, '-');
+        const aliasMap = { 'proceso-de-ensayo': 'en-proceso-de-ensayo', 'informe': 'informe-de-ensayo' };
+        const normFiltro = aliasMap[normalize(filtroEstado)] || normalize(filtroEstado);
+
+        return allRows.filter(row => {
+            const num = (row.numero_proceso || '').toLowerCase();
+            const cliente = (row.cliente || row.empresa || '').toLowerCase();
+            const estado = normalize(row.estado || row.status || '');
+            const fecha = row.fecha_entrega_cliente || row.fecha_recepcion || '';
+
+            if (search && !num.includes(search) && !cliente.includes(search)) return false;
+            if (normFiltro && estado !== normFiltro) return false;
+            if (filtroMes && !(fecha || '').startsWith(filtroMes)) return false;
+            return true;
+        });
+    },
+
+    render() {
+        const rows = this.getFilteredProcesses();
+        const statsContainer = document.getElementById('analisisStatsResumen');
+        const tableContainer = document.getElementById('analisisTablaContainer');
+        if (!statsContainer || !tableContainer) return;
+
+        const total = rows.length;
+        const finalizados = rows.filter(r => (r.estado || '').toLowerCase() === 'finalizado').length;
+        const pendientes = total - finalizados;
+
+        statsContainer.innerHTML = `
+            <div style="flex:1; min-width:100px; padding:8px 12px; background:#f0f4fa; border-radius:6px; border-left:3px solid #022859;">
+                <div style="font-size:10px; color:#666; text-transform:uppercase;">Total</div>
+                <div style="font-size:20px; font-weight:700; color:#022859;">${total}</div>
+            </div>
+            <div style="flex:1; min-width:100px; padding:8px 12px; background:#e8f5e9; border-radius:6px; border-left:3px solid #28a745;">
+                <div style="font-size:10px; color:#666; text-transform:uppercase;">Finalizados</div>
+                <div style="font-size:20px; font-weight:700; color:#28a745;">${finalizados}</div>
+            </div>
+            <div style="flex:1; min-width:100px; padding:8px 12px; background:#fff3e0; border-radius:6px; border-left:3px solid #ff9800;">
+                <div style="font-size:10px; color:#666; text-transform:uppercase;">Pendientes</div>
+                <div style="font-size:20px; font-weight:700; color:#ff9800;">${pendientes}</div>
+            </div>`;
+
+        if (rows.length === 0) {
+            tableContainer.innerHTML = '<div style="text-align:center; padding:24px; color:#999;">No hay procesos con los filtros seleccionados</div>';
+            return;
+        }
+
+        const monthNames = { '01':'Ene','02':'Feb','03':'Mar','04':'Abr','05':'May','06':'Jun','07':'Jul','08':'Ago','09':'Sep','10':'Oct','11':'Nov','12':'Dic' };
+        const normalize = str => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[\s_]+/g, '-');
+
+        let html = `<table style="width:100%; border-collapse:collapse; font-size:12px;">
+            <thead style="background:#f5f5f5; border-bottom:2px solid #022859;">
+                <tr>
+                    <th style="padding:8px; text-align:left; border:1px solid #ddd;">N° Proceso</th>
+                    <th style="padding:8px; text-align:left; border:1px solid #ddd;">Cliente</th>
+                    <th style="padding:8px; text-align:left; border:1px solid #ddd;">Informe a Nombre de</th>
+                    <th style="padding:8px; text-align:left; border:1px solid #ddd;">Recepción</th>
+                    <th style="padding:8px; text-align:left; border:1px solid #ddd;">Entrega</th>
+                    <th style="padding:8px; text-align:center; border:1px solid #ddd;">Estado</th>
+                    <th style="padding:8px; text-align:center; border:1px solid #ddd;">Informe</th>
+                    <th style="padding:8px; text-align:center; border:1px solid #ddd;">Acción</th>
+                </tr>
+            </thead><tbody>`;
+
+        rows.forEach(row => {
+            const num = row.numero_proceso || '-';
+            const cliente = row.cliente || row.empresa || '-';
+            const informeNombre = row.informe_a_nombre_de || row.informeNombre || '-';
+            const fechaRec = row.fecha_recepcion ? row.fecha_recepcion.substring(0, 10) : '-';
+            const fechaEnt = row.fecha_entrega_cliente ? row.fecha_entrega_cliente.substring(0, 10) : '-';
+            const estado = normalize(row.estado || row.status || '');
+            const nInforme = row.n_informe || '-';
+
+            let estadoLabel = row.estado || row.status || '-';
+            let estadoColor = '#ff9800';
+            if (estado === 'finalizado') { estadoColor = '#28a745'; }
+            else if (estado === 'entrega-cliente') { estadoColor = '#17a2b8'; }
+            else if (estado === 'en-proceso-de-ensayo') { estadoColor = '#6f42c1'; }
+            else if (estado === 'recepcion') { estadoColor = '#007bff'; }
+            else if (estado === 'lavado') { estadoColor = '#fd7e14'; }
+            else if (estado === 'informe-de-ensayo') { estadoColor = '#e83e8c'; }
+
+            html += `<tr style="border-bottom:1px solid #ddd;">
+                <td style="padding:6px 8px; border:1px solid #ddd; font-weight:600;">${escapeHtml(num)}</td>
+                <td style="padding:6px 8px; border:1px solid #ddd;">${escapeHtml(cliente)}</td>
+                <td style="padding:6px 8px; border:1px solid #ddd;">${escapeHtml(informeNombre)}</td>
+                <td style="padding:6px 8px; border:1px solid #ddd;">${fechaRec}</td>
+                <td style="padding:6px 8px; border:1px solid #ddd;">${fechaEnt}</td>
+                <td style="padding:6px 8px; border:1px solid #ddd; text-align:center;">
+                    <span style="background:${estadoColor}; color:#fff; padding:2px 6px; border-radius:3px; font-size:10px; font-weight:600;">${escapeHtml(estadoLabel)}</span>
+                </td>
+                <td style="padding:6px 8px; border:1px solid #ddd; text-align:center;">${escapeHtml(nInforme)}</td>
+                <td style="padding:6px 8px; border:1px solid #ddd; text-align:center;">
+                    <button class="btn btn--small btn--primary" onclick="AnalisisProcesosModule.verVistaPrevia('${escapeHtml(num)}')" style="font-size:11px; padding:2px 8px;">👁️ Ver</button>
+                </td>
+            </tr>`;
+        });
+
+        html += '</tbody></table>';
+        tableContainer.innerHTML = html;
+    },
+
+    async verVistaPrevia(numProceso) {
+        const content = document.getElementById('vistaPreviaProcesoContent');
+        const modal = document.getElementById('vistaPreviaProcesoModal');
+        if (!content || !modal) return;
+
+        content.innerHTML = '<div style="text-align:center; padding:24px; color:#666;">Cargando datos del proceso...</div>';
+        modal.classList.add('modal--open');
+        modal.setAttribute('aria-hidden', 'false');
+
+        try {
+            const result = await fetchFromDatabase('get_proceso', { numero_proceso: numProceso });
+            if (!result?.ok || !result.proceso) {
+                content.innerHTML = '<div style="text-align:center; padding:24px; color:#c62828;">No se encontraron datos para este proceso</div>';
+                return;
+            }
+
+            const p = result.proceso;
+
+            // Intentar traer NIT desde la tabla clientes
+            let nitEmpresa = '-';
+            try {
+                const clienteNombre = p.cliente || '';
+                if (clienteNombre) {
+                    const cliResult = await fetchFromDatabase('get_cliente_by_nombre', { nombre: clienteNombre });
+                    if (cliResult?.ok && cliResult.cliente) {
+                        nitEmpresa = cliResult.cliente.nit || cliResult.cliente.nit_empresa || '-';
+                    }
+                }
+            } catch (e) { /* continuar sin NIT */ }
+
+            // Intentar traer borradores para obtener items, lavados, firmas, etc.
+            let borradorData = null;
+            try {
+                const borrResult = await fetchFromDatabase('get_borradores', {});
+                if (borrResult?.ok && Array.isArray(borrResult.data)) {
+                    borradorData = borrResult.data.find(d => (d.numero_proceso || d.cotizacion || d.quoteNumber || '') === numProceso);
+                }
+            } catch (e) { /* no hay borradores, continuar sin ellos */ }
+
+            const items = borradorData?.items || borradorData?.savedRowsData?.ensayos_acreditados || [];
+            const itemsNoAc = borradorData?.savedRowsData?.ensayos_no_acreditados || [];
+            const allItems = Array.isArray(items) ? items : Object.values(items);
+            const allItemsNoAc = Array.isArray(itemsNoAc) ? itemsNoAc : Object.values(itemsNoAc);
+            const totalItems = [...allItems, ...allItemsNoAc];
+
+            const normalize = str => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[\s_]+/g, '-');
+            const estado = normalize(p.estado || p.status || '');
+            let estadoLabel = p.estado || p.status || '-';
+            let estadoColor = '#ff9800';
+            if (estado === 'finalizado') estadoColor = '#28a745';
+            else if (estado === 'entrega-cliente') estadoColor = '#17a2b8';
+            else if (estado === 'en-proceso-de-ensayo') estadoColor = '#6f42c1';
+            else if (estado === 'recepcion') estadoColor = '#007bff';
+            else if (estado === 'lavado') estadoColor = '#fd7e14';
+            else if (estado === 'informe-de-ensayo') estadoColor = '#e83e8c';
+
+            const num = p.numero_proceso || '-';
+            const cliente = p.cliente || p.empresa || '-';
+            const informeNombre = p.informe_a_nombre_de || '-';
+            const facturarNombre = p.facturar_a_nombre_de || '-';
+            const nRemision = p.n_remision || '-';
+            const fechaRec = p.fecha_recepcion ? p.fecha_recepcion.substring(0, 10) : '-';
+            const fechaEnt = p.fecha_entrega_cliente ? p.fecha_entrega_cliente.substring(0, 10) : '-';
+            const nInforme = p.n_informe || '-';
+            const lavado = borradorData?.lavado || '-';
+            const responsableLavado = borradorData?.responsableLavado || '-';
+            const observaciones = borradorData?.observaciones || p.observaciones || '';
+            const signatureData = borradorData?.signatureData || {};
+
+            // Calcular totales de items
+            const totalRecibidos = totalItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+            const totalEntregados = totalItems.reduce((sum, item) => sum + (Number(item.quantity2) || 0), 0);
+            const totalLavadosItems = totalItems.reduce((sum, item) => sum + (Number(item.status) || 0), 0);
+
+            // Helper marcas
+            const getBrandText = (brandSummary) => {
+                if (!brandSummary) return '-';
+                if (Array.isArray(brandSummary)) return brandSummary.map(b => `${b.count || 0} ${b.brand || ''}`).join(', ');
+                return String(brandSummary || '-');
+            };
+
+            // Generar tabla de items
+            let itemsHTML = '';
+            if (totalItems.length > 0) {
+                itemsHTML = `<table style="width:100%; border-collapse:collapse; font-size:12px; margin-top:8px;">
+                    <thead style="background:#f5f5f5; border-bottom:2px solid #022859;">
+                        <tr>
+                            <th style="padding:6px 8px; border:1px solid #ddd; text-align:left;">Elemento</th>
+                            <th style="padding:6px 8px; border:1px solid #ddd; text-align:center;">Recibidos</th>
+                            <th style="padding:6px 8px; border:1px solid #ddd; text-align:center;">Entregados</th>
+                            <th style="padding:6px 8px; border:1px solid #ddd; text-align:left;">Marcas</th>
+                            <th style="padding:6px 8px; border:1px solid #ddd; text-align:center;">No Usado</th>
+                            <th style="padding:6px 8px; border:1px solid #ddd; text-align:center;">Usado</th>
+                            <th style="padding:6px 8px; border:1px solid #ddd; text-align:center;">Lavados</th>
+                        </tr>
+                    </thead><tbody>`;
+                totalItems.forEach(item => {
+                    itemsHTML += `<tr style="border-bottom:1px solid #ddd;">
+                        <td style="padding:5px 8px; border:1px solid #ddd;">${escapeHtml(item.name || item.elemento || '-')}</td>
+                        <td style="padding:5px 8px; border:1px solid #ddd; text-align:center;">${item.quantity || 0}</td>
+                        <td style="padding:5px 8px; border:1px solid #ddd; text-align:center;">${item.quantity2 || 0}</td>
+                        <td style="padding:5px 8px; border:1px solid #ddd;">${escapeHtml(getBrandText(item.brandSummary))}</td>
+                        <td style="padding:5px 8px; border:1px solid #ddd; text-align:center;">${item.quantity3 || '-'}</td>
+                        <td style="padding:5px 8px; border:1px solid #ddd; text-align:center;">${item.quantity4 || '-'}</td>
+                        <td style="padding:5px 8px; border:1px solid #ddd; text-align:center;">${item.status || 0}</td>
+                    </tr>`;
+                });
+                itemsHTML += '</tbody></table>';
+            }
+
+            // Firmas
+            const sigRec = (signatureData.signatureCanvasRecepcion || signatureData.signatureCanvas || (signatureData.Recepcion && signatureData.Recepcion.data)) || null;
+            const sigEnt = (signatureData.signatureCanvasEntrega || signatureData.signatureCanvas || (signatureData.Entrega && signatureData.Entrega.data)) || null;
+
+            const html = `
+                <div style="border:1px solid #ddd; padding:20px; background:white; border-radius:8px;">
+                    <h2 style="color:#022859; text-align:center; margin:0 0 20px 0;">FORMATO DE RECEPCIÓN Y ENTREGA DE ITEMS</h2>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
+                        <div>
+                            <p><strong>N° de Recepción:</strong> ${escapeHtml(num)}</p>
+                            <p><strong>Cliente:</strong> ${escapeHtml(cliente)}</p>
+                            <p><strong>NIT:</strong> ${escapeHtml(nitEmpresa)}</p>
+                            <p><strong>Informe a Nombre de:</strong> ${escapeHtml(informeNombre)}</p>
+                            <p><strong>Facturar a Nombre de:</strong> ${escapeHtml(facturarNombre)}</p>
+                        </div>
+                        <div>
+                            <p><strong>N° de Remisión:</strong> ${escapeHtml(nRemision)}</p>
+                            <p><strong>Fecha Recepción:</strong> ${fechaRec}</p>
+                            <p><strong>Fecha Entrega:</strong> ${fechaEnt}</p>
+                            <p><strong>N° Informe:</strong> ${escapeHtml(nInforme)}</p>
+                            <p><strong>Estado:</strong> <span style="background:${estadoColor}; color:#fff; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:600;">${escapeHtml(estadoLabel)}</span></p>
+                        </div>
+                    </div>
+
+                    <h3 style="color:#022859;">📦 Elementos de Ensayo:</h3>
+                    ${itemsHTML || '<p style="text-align:center; color:#666;">No hay elementos registrados.</p>'}
+
+                    <div style="margin-top:14px; display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                        <div><strong>Total Recibidos:</strong> ${totalRecibidos}</div>
+                        <div><strong>Total Entregados:</strong> ${totalEntregados}</div>
+                    </div>
+
+                    <div style="margin-top:14px;">
+                        <div><strong>🧽 LAVADO:</strong> ${escapeHtml(lavado)}</div>
+                        <div style="margin-top:4px; display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                            <div><strong>Cantidad de Lavados:</strong> <span style="color:#022859; font-weight:bold;">${totalLavadosItems}</span></div>
+                            <div><strong>Responsables del Lavado:</strong> ${escapeHtml(responsableLavado)}</div>
+                        </div>
+                    </div>
+
+                    ${observaciones ? `<div style="margin-top:16px;"><strong>Observaciones:</strong><br>${escapeHtml(observaciones)}</div>` : ''}
+
+                    <div style="margin-top:20px;">
+                        <h4>Firmas: (Cliente)</h4>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                            <div style="text-align:center;">
+                                <h5>Firma Recepción</h5>
+                                ${sigRec ? `<img src="${sigRec}" style="max-width:100%; max-height:150px; border:1px solid #ccc; border-radius:8px;">` : '<em>Sin firma</em>'}
+                                <div><strong>Nombre:</strong> ${escapeHtml(borradorData?.clienteRecepcionNombre || '-')}</div>
+                                <div><strong>Cédula:</strong> ${escapeHtml(borradorData?.clienteRecepcionCedula || '-')}</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <h5>Firma Entrega</h5>
+                                ${sigEnt ? `<img src="${sigEnt}" style="max-width:100%; max-height:150px; border:1px solid #ccc; border-radius:8px;">` : '<em>Sin firma</em>'}
+                                <div><strong>Nombre:</strong> ${escapeHtml(borradorData?.clienteEntregaNombre || '-')}</div>
+                                <div><strong>Cédula:</strong> ${escapeHtml(borradorData?.clienteEntregaCedula || '-')}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:20px;">
+                        <h4>🏢 Representante HIGH TEST</h4>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                            <div>
+                                <div><strong>Nombre (Recepción):</strong> ${escapeHtml(borradorData?.highTestRecepcionNombre || '-')}</div>
+                                <div><strong>Cargo:</strong> ${escapeHtml(borradorData?.highTestRecepcionCargo || '-')}</div>
+                            </div>
+                            <div>
+                                <div><strong>Nombre (Entrega):</strong> ${escapeHtml(borradorData?.highTestEntregaNombre || '-')}</div>
+                                <div><strong>Cargo:</strong> ${escapeHtml(borradorData?.highTestEntregaCargo || '-')}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+            content.innerHTML = html;
+
+        } catch (err) {
+            console.error('Error cargando vista previa:', err);
+            content.innerHTML = `<div style="padding:16px; border:1px solid #c62828; border-radius:8px; background:#ffebee; color:#c62828;">
+                <strong>Error:</strong> ${err.message}
+            </div>`;
+        }
+    },
+
+    closeVistaPrevia() {
+        const modal = document.getElementById('vistaPreviaProcesoModal');
+        if (modal) {
+            modal.classList.remove('modal--open');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+    }
+};
+
+window.AnalisisProcesosModule = AnalisisProcesosModule;

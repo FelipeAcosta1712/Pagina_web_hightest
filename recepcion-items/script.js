@@ -8929,6 +8929,8 @@ function _renderBusquedaAvanzada() {
         numRecepcion: document.getElementById('filtroNumRecepcion')?.value.toLowerCase() || '',
         cliente: document.getElementById('filtroCliente')?.value.toLowerCase() || '',
         empresa: document.getElementById('filtroEmpresa')?.value.toLowerCase() || '',
+        estado: document.getElementById('filtroEstado')?.value.toLowerCase() || '',
+        mes: document.getElementById('filtroMes')?.value || '',
         fechaDesde: document.getElementById('filtroFechaDesde')?.value || '',
         fechaHasta: document.getElementById('filtroFechaHasta')?.value || ''
     };
@@ -8938,10 +8940,40 @@ function _renderBusquedaAvanzada() {
         const cliente = (caso.cliente || caso.clienteRecepcionNombre || '').toLowerCase();
         const empresaNombre = (caso.informeNombre || caso.empresa || '').toLowerCase();
         const fechaRecepcion = caso.fechaRecepcion || '';
+        const fechaEntrega = caso.fechaEntrega || '';
 
         if (filtros.numRecepcion && !numRecepcion.includes(filtros.numRecepcion)) return false;
         if (filtros.cliente && !cliente.includes(filtros.cliente)) return false;
         if (filtros.empresa && !empresaNombre.includes(filtros.empresa)) return false;
+        if (filtros.estado) {
+            const normalize = str => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[\s_]+/g, '-');
+            const aliasMap = {
+                'proceso-de-ensayo': 'en-proceso-de-ensayo',
+                'informe': 'informe-de-ensayo'
+            };
+            const filtro = aliasMap[normalize(filtros.estado)] || normalize(filtros.estado);
+            const e = aliasMap[normalize(caso.estado || '')] || normalize(caso.estado || '');
+            const s = aliasMap[normalize(caso.status || '')] || normalize(caso.status || '');
+
+            let match = false;
+
+            if (e && e === filtro) {
+                match = true;
+            }
+            else if (s && s === filtro) {
+                match = true;
+            }
+            else if (s === 'entrega') {
+                if (filtro === 'entrega-cliente') match = true;
+                if (filtro === 'finalizado') match = true;
+            }
+
+            if (!match) return false;
+        }
+        if (filtros.mes) {
+            const fechaEntregaMes = (fechaEntrega || fechaRecepcion || '').substring(0, 7);
+            if (fechaEntregaMes !== filtros.mes) return false;
+        }
         if (filtros.fechaDesde && fechaRecepcion < filtros.fechaDesde) return false;
         if (filtros.fechaHasta && fechaRecepcion > filtros.fechaHasta) return false;
 
@@ -9045,6 +9077,8 @@ function limpiarFiltros() {
     document.getElementById('filtroNumRecepcion').value = '';
     document.getElementById('filtroCliente').value = '';
     document.getElementById('filtroEmpresa').value = '';
+    document.getElementById('filtroEstado').value = '';
+    document.getElementById('filtroMes').value = '';
     document.getElementById('filtroFechaDesde').value = '';
     document.getElementById('filtroFechaHasta').value = '';
     ejecutarBusquedaAvanzada();

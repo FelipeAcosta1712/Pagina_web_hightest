@@ -233,6 +233,23 @@ exports.handler = async (event) => {
                 return jsonResponse(200, { ok: true, clientes: data || [] });
             }
 
+            // Obtener cliente por nombre (para buscar NIT)
+            if (payload.action === 'get_cliente_by_nombre') {
+                const nombre = normalizeText(payload.nombre || '');
+                if (!nombre) return jsonResponse(400, { ok: false, error: 'nombre requerido' });
+
+                const { data, error } = await supabase
+                    .from('clientes')
+                    .select('*')
+                    .ilike('nombre_empresa', `%${nombre}%`)
+                    .limit(1);
+
+                if (error) return jsonResponse(500, { ok: false, error: error.message });
+                if (!data || data.length === 0) return jsonResponse(200, { ok: false, error: 'Cliente no encontrado' });
+
+                return jsonResponse(200, { ok: true, cliente: data[0] });
+            }
+
             // Obtener lista de ensayos acreditados
             if (payload.action === 'get_ensayos_acreditados') {
                 const { data, error } = await supabase
@@ -1483,6 +1500,36 @@ exports.handler = async (event) => {
                         total_procesos: total
                     }
                 });
+            }
+
+            // ── PROCESOS SIN INFORME ──
+            if (payload.action === 'get_procesos_sin_informe') {
+                try {
+                    // Traer todos los procesos acreditados
+                    const { data: todosProcesos, error: errorProcesos } = await supabase
+                        .from('procesos_acreditados')
+                        .select('*');
+
+                    if (errorProcesos) return jsonResponse(500, { ok: false, error: errorProcesos.message });
+
+                    const procesos = todosProcesos || [];
+
+                    // Traer procesos que tienen al menos un informe
+                    const { data: informesRows, error: errorInformes } = await supabase
+                        .from('informes_ensayo_ac')
+                        .select('proceso_id');
+
+                    if (errorInformes) return jsonResponse(500, { ok: false, error: errorInformes.message });
+
+                    const procesosConInforme = new Set((informesRows || []).map(r => r.proceso_id).filter(Boolean));
+
+                    // Filtrar solo los que NO tienen informe
+                    const sinInforme = procesos.filter(p => !procesosConInforme.has(p.id));
+
+                    return jsonResponse(200, { ok: true, procesos: sinInforme });
+                } catch (err) {
+                    return jsonResponse(500, { ok: false, error: err.message });
+                }
             }
 
             // ── INFORMES POR CLIENTE (para portal cliente) ──

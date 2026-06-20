@@ -112,7 +112,10 @@
                         <h2 class="admin-section__title">Resumen Operativo</h2>
                         <p class="admin-section__subtitle" id="statsPeriodLabel">Mostrando totales generales</p>
                     </div>
-                    <div class="admin-stats__filters">
+                    <div class="admin-stats__filters" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                        <button type="button" class="btn btn--secondary" id="btnAnalisisProcesos" title="Ver análisis detallado de procesos" style="font-size:12px; padding:6px 12px;">
+                            📈 Análisis de Procesos
+                        </button>
                         <label for="statsMonthFilter" class="admin-stats__filters-label">Ver por mes</label>
                         <div class="admin-stats__filters-row">
                             <input type="month" id="statsMonthFilter" class="control__input control__input--month" aria-label="Filtrar resumen por mes">
@@ -793,6 +796,9 @@
                         <button type="button" class="btn btn--primary" id="btnCargaMasiva" title="Seleccionar múltiples PDFs y subirlos" style="font-size:12px; padding:6px 12px;">
                             📁 Carga Masiva
                         </button>
+                        <button type="button" class="btn btn--secondary" id="btnVerFaltantes" title="Ver procesos que no tienen informe cargado" style="font-size:12px; padding:6px 12px; border-color:#c62828; color:#c62828;">
+                            ⚠️ Procesos sin Informe
+                        </button>
                     </div>
                     <input type="file" id="bulkFileInput" accept=".pdf" multiple style="display:none;">
 
@@ -916,6 +922,24 @@
                 </div>
             </div>
 
+            <!-- MODAL: PROCESOS SIN INFORME -->
+            <div class="modal" id="faltantesModal" aria-hidden="true">
+                <div class="modal__content" role="dialog" aria-modal="true" aria-labelledby="faltantesModalTitle" style="max-width:900px;">
+                    <div class="modal__header">
+                        <h3 id="faltantesModalTitle">⚠️ Procesos sin Informe</h3>
+                        <button type="button" class="modal__close" id="closeFaltantesModal" aria-label="Cerrar">✕</button>
+                    </div>
+                    <div class="modal__body">
+                        <div id="faltantesContent" style="max-height:500px; overflow-y:auto;">
+                            <div style="text-align:center; padding:24px; color:#666;">Cargando...</div>
+                        </div>
+                    </div>
+                    <div class="modal__actions">
+                        <button type="button" class="btn btn--secondary" id="closeFaltantesBtn">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- REPORTES Y ANALÍTICAS - NO ACREDITADOS -->
             <section class="admin-section admin-reports" id="reports-no-acreditados">
                 <div class="admin-section__header">
@@ -934,6 +958,63 @@
             </section>
         </div>
     </main>
+
+    <!-- MODAL: ANÁLISIS DE PROCESOS -->
+    <div class="modal" id="analisisProcesosModal" aria-hidden="true">
+        <div class="modal__content" role="dialog" aria-modal="true" aria-labelledby="analisisProcesosTitle" style="max-width:1100px;">
+            <div class="modal__header">
+                <h3 id="analisisProcesosTitle">📈 Análisis de Procesos</h3>
+                <button type="button" class="modal__close" id="closeAnalisisProcesos" aria-label="Cerrar">✕</button>
+            </div>
+            <div class="modal__body" style="max-height:70vh; overflow-y:auto;">
+                <!-- Filtros -->
+                <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:flex-end;">
+                    <div style="flex:1; min-width:150px;">
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:3px;">🔍 Buscar</label>
+                        <input type="text" id="analisisSearch" placeholder="Número o cliente..." style="width:100%; padding:6px 8px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
+                    </div>
+                    <div style="flex:0 0 140px;">
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:3px;">Estado</label>
+                        <select id="analisisFilterEstado" style="width:100%; padding:6px 8px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
+                            <option value="">Todos</option>
+                            <option value="recepcion">Recepción</option>
+                            <option value="lavado">Lavado</option>
+                            <option value="en-proceso-de-ensayo">En Proceso</option>
+                            <option value="entrega-cliente">Entrega Cliente</option>
+                            <option value="informe-de-ensayo">Informe</option>
+                            <option value="finalizado">Finalizado</option>
+                        </select>
+                    </div>
+                    <div style="flex:0 0 130px;">
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:3px;">Mes</label>
+                        <input type="month" id="analisisFilterMes" style="width:100%; padding:6px 8px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
+                    </div>
+                </div>
+                <!-- Stats resumen -->
+                <div id="analisisStatsResumen" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;"></div>
+                <!-- Tabla -->
+                <div id="analisisTablaContainer" style="overflow-x:auto;"></div>
+            </div>
+            <div class="modal__actions">
+                <button type="button" class="btn btn--secondary" id="closeAnalisisBtn">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: VISTA PREVIA DEL PROCESO -->
+    <div class="modal" id="vistaPreviaProcesoModal" aria-hidden="true">
+        <div class="modal__content" role="dialog" aria-modal="true" aria-labelledby="vistaPreviaProcesoTitle" style="max-width:900px;">
+            <div class="modal__header">
+                <h3 id="vistaPreviaProcesoTitle">👁️ Vista Previa del Proceso</h3>
+                <button type="button" class="modal__close" id="closeVistaPreviaProceso" aria-label="Cerrar">✕</button>
+            </div>
+            <div class="modal__body" id="vistaPreviaProcesoContent" style="max-height:70vh; overflow-y:auto;">
+            </div>
+            <div class="modal__actions">
+                <button type="button" class="btn btn--secondary" id="closeVistaPreviaBtn">Cerrar</button>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL: NUEVO / EDITAR PROCESO -->
     <div class="modal" id="certificateProcessModal" aria-hidden="true">

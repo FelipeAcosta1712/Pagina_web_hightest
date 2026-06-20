@@ -238,7 +238,22 @@
                             <option value="">Todas</option>
                         </select>
                     </div>
-                    <!-- 'Tipo de Ensayo' eliminado por simplificación -->
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Estado:</label>
+                        <select id="filtroEstado" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                            <option value="">Todos</option>
+                            <option value="recepcion">Recepción</option>
+                            <option value="lavado">Lavado</option>
+                            <option value="en-proceso-de-ensayo">En Proceso de Ensayo</option>
+                            <option value="entrega-cliente">Entrega Cliente</option>
+                            <option value="informe-de-ensayo">Informe de Ensayo</option>
+                            <option value="finalizado">Finalizado</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Mes:</label>
+                        <input type="month" id="filtroMes" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
                     <div>
                         <label style="display: block; margin-bottom: 5px; font-weight: bold;">Fecha Desde:</label>
                         <input type="date" id="filtroFechaDesde" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
