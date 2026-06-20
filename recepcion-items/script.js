@@ -10958,8 +10958,11 @@ function mostrarVistaPrevia(numRecepcion) {
     }
     
     // Generar HTML de vista previa
-    const itemsHTML = generarHTMLItems(caso.items || [], caso.status);
-    const totalLavados = (caso.items || []).filter(i => i.status).length;
+    const items = caso.items || [];
+    const itemsHTML = generarHTMLItems(items, caso.status);
+    const totalRecibidos = items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+    const totalEntregados = items.reduce((sum, item) => sum + (Number(item.quantity2) || 0), 0);
+    const totalLavados = items.reduce((sum, item) => sum + (Number(item.status) || 0), 0);
     const lavadoValor = caso.lavado || '-';
     const responsableLavado = caso.responsableLavado || '-';
     
@@ -10988,8 +10991,8 @@ function mostrarVistaPrevia(numRecepcion) {
 
             <!-- Resumen de elementos -->
             <div style="margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                <div><strong>Total Elementos:</strong> <span>${caso.items ? caso.items.length : 0}</span></div>
-                <div><strong>Estado:</strong> <span style="background: ${caso.status === 'entrega' ? '#28a745' : caso.status === 'recepcion' ? '#007bff' : '#ff9800'}; color: white; padding: 4px 8px; border-radius: 4px;">${caso.status === 'entrega' ? 'Completado' : caso.status === 'recepcion' ? 'Recepción Registrada' : 'Borrador'}</span></div>
+                <div><strong>Total Elementos Recepción:</strong> <span>${totalRecibidos}</span></div>
+                <div><strong>Total Elementos Entrega:</strong> <span>${totalEntregados}</span></div>
             </div>
 
             <!-- Lavados -->
@@ -11095,8 +11098,13 @@ function generarHTMLItems(items, status) {
         html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Entregados</th>';
         html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Marcas</th>';
     } else {
-        // Borrador: mostrar solo cantidad
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Cantidad</th>';
+        // Borrador: mostrar todas las columnas como en completado
+        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Recibidos</th>';
+        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Entregados</th>';
+        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Marcas</th>';
+        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">No Usado</th>';
+        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Usado</th>';
+        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Lavados</th>';
     }
     html += '</tr></thead><tbody>';
     
@@ -11118,8 +11126,13 @@ function generarHTMLItems(items, status) {
             html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity2 || 0}</td>`;
             html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${escapeHtml(getBrandText(item.brandSummary))}</td>`;
         } else {
-            // Mostrar solo quantity
+            // Borrador: mostrar todas las columnas
             html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity || 0}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity2 || 0}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${escapeHtml(getBrandText(item.brandSummary))}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity3 || '-'}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity4 || '-'}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.status || 0}</td>`;
         }
         html += '</tr>';
     });
