@@ -633,6 +633,26 @@
         </div>
     </div>
 
+    <!-- Modal de selección de proceso para marcación -->
+    <div id="marcacionSelectModal" class="marcacion-modal-overlay" hidden>
+        <div class="marcacion-modal-panel" style="max-width:800px;" role="dialog" aria-modal="true">
+            <div class="marcacion-modal-header">
+                <div>
+                    <h3>📋 Seleccionar Proceso para Marcación</h3>
+                    <p>Elija un proceso con recepción para comenzar a marcar elementos.</p>
+                </div>
+                <button type="button" class="marcacion-modal-close" onclick="closeMarcacionSelect()" aria-label="Cerrar">✕</button>
+            </div>
+            <div style="margin-bottom:12px;">
+                <input type="text" id="marcacionSearchProcesos" placeholder="🔍 Buscar por número, cliente..."
+                       oninput="filterMarcacionProcesos()" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;box-sizing:border-box;">
+            </div>
+            <div id="marcacionProcesosList" style="max-height:60vh;overflow-y:auto;">
+                <div style="text-align:center;padding:30px;color:#64748b;">Cargando procesos...</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal de Marcación de Elementos -->
     <div id="marcacionModal" class="marcacion-modal-overlay" hidden>
         <div class="marcacion-modal-panel" role="dialog" aria-modal="true" aria-labelledby="marcacionModalTitle">
@@ -659,12 +679,24 @@
                     <span class="marcacion-process-value" id="marcacionFecha">-</span>
                 </div>
                 <div class="marcacion-process-field">
-                    <span class="marcacion-process-label">Norma</span>
-                    <span class="marcacion-process-value" id="marcacionNorma">-</span>
-                </div>
-                <div class="marcacion-process-field">
                     <span class="marcacion-process-label">Estado del proceso</span>
                     <span class="marcacion-process-value marcacion-status-badge" id="marcacionEstado">Recepción</span>
+                </div>
+                <div class="marcacion-process-field">
+                    <span class="marcacion-process-label">Informe a nombre de</span>
+                    <span class="marcacion-process-value">
+                        <input type="text" id="marcacionInformeNombre" placeholder="Nombre del informe..."
+                            onchange="guardarCampoProceso('informe_a_nombre_de', this.value)"
+                            style="border:1px solid #d1d5db; border-radius:6px; padding:4px 8px; font-size:13px; width:180px;">
+                    </span>
+                </div>
+                <div class="marcacion-process-field">
+                    <span class="marcacion-process-label">Fecha de ejecución</span>
+                    <span class="marcacion-process-value">
+                        <input type="date" id="marcacionFechaEjecucion"
+                            onchange="guardarCampoProceso('fecha_ejecucion', this.value)"
+                            style="border:1px solid #d1d5db; border-radius:6px; padding:4px 8px; font-size:13px;">
+                    </span>
                 </div>
             </div>
 
@@ -693,7 +725,6 @@
                                     <th style="width:15%">Cantidad recibida</th>
                                     <th style="width:20%">Unidades ensayables</th>
                                     <th style="width:15%">Total a generar</th>
-                                    <th style="width:15%">Estado</th>
                                 </tr>
                             </thead>
                             <tbody id="marcacionTableBody">
@@ -731,13 +762,14 @@
                                     <th>Consecutivo</th>
                                     <th>Elemento</th>
                                     <th>Descripción / Sección</th>
-                                    <th>Estado</th>
+                                    <th>Observaciones</th>
+                                    <th>NCI / NCE</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="marcacionConsecutivosBody">
                                 <tr>
-                                    <td colspan="5" class="marcacion-empty">
+                                    <td colspan="6" class="marcacion-empty">
                                         <i class="fas fa-clipboard-list"></i>
                                         Genere la marcación para ver los consecutivos
                                     </td>

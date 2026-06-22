@@ -7359,6 +7359,7 @@ async function guardarDetalleProceso(procesoId) {
                         detalle.push({
                             proceso_id: procesoId,
                             ensayo_id: ensayoId,
+                            ensayo_nombre: ensayo?.nombre || '',
                             cantidad,
                             marca: marca || '',
                             observaciones: obs || ''
@@ -7371,6 +7372,7 @@ async function guardarDetalleProceso(procesoId) {
                     detalle.push({
                         proceso_id: procesoId,
                         ensayo_id: ensayoId,
+                        ensayo_nombre: ensayo?.nombre || '',
                         cantidad,
                         marca: '',
                         observaciones: obs || ''
@@ -11458,109 +11460,266 @@ function exportarCasoJSON(numRecepcion) {
 let marcacionData = [];
 let marcacionProcesoPrefix = 'R26';
 let marcacionConsecutivos = [];
+let marcacionProcesosList = [];
+let marcacionProcesosFiltered = [];
 
 /**
- * Abre la vista de Marcación de Elementos.
- * Sin restricciones: lee datos del formulario directamente.
+ * Abre el selector de procesos para marcación.
+ * Carga todos los procesos desde la BD y muestra la lista.
  */
-function verMarcacion() {
-    const formData = collectFormData();
-    const numeroProceso = formData.cotizacion || document.getElementById('quoteNumber')?.value || '';
+async function verMarcacion() {
+    const listEl = document.getElementById('marcacionProcesosList');
+    if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:30px;color:#64748b;">Cargando procesos...</div>';
+    const modal = document.getElementById('marcacionSelectModal');
+    if (modal) { modal.hidden = false; document.body.style.overflow = 'hidden'; }
 
-    // Extraer prefijo del proceso (ej: "R26" de "R26 0013")
+    try {
+        const resp = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_procesos_acreditados' })
+        });
+        const result = await resp.json();
+        if (result.ok && Array.isArray(result.procesos)) {
+            marcacionProcesosList = result.procesos;
+            marcacionProcesosFiltered = [...marcacionProcesosList];
+        } else {
+            marcacionProcesosList = [];
+            marcacionProcesosFiltered = [];
+        }
+    } catch (e) {
+        console.warn('Error cargando procesos:', e);
+        marcacionProcesosList = [];
+        marcacionProcesosFiltered = [];
+    }
+
+    renderMarcacionProcesosList();
+}
+
+/**
+ * Renderiza la lista de procesos en el selector.
+ */
+function renderMarcacionProcesosList() {
+    const listEl = document.getElementById('marcacionProcesosList');
+    if (!listEl) return;
+
+    if (marcacionProcesosFiltered.length === 0) {
+        listEl.innerHTML = '<div style="text-align:center;padding:30px;color:#64748b;">No se encontraron procesos</div>';
+        return;
+    }
+
+    listEl.innerHTML = marcacionProcesosFiltered.map(p => {
+        const num = p.numero_proceso || '—';
+        const cliente = p.cliente || '—';
+        const estado = p.estado || '—';
+        const fecha = (p.fecha_recepcion || '').substring(0, 10);
+        const tipo = p.tipo || 'Ensayo';
+        const informe = p.n_informe || '';
+        const upperEstado = String(estado).toLowerCase();
+        let badge = '<span class="marcacion-estado-badge pendiente">Pendiente</span>';
+        if (upperEstado.includes('recepcion')) badge = '<span class="marcacion-estado-badge pendiente">Recepción</span>';
+        else if (upperEstado.includes('marcacion') || upperEstado.includes('marcación')) badge = '<span class="marcacion-estado-badge marcado">Marcación</span>';
+        else if (upperEstado.includes('ensayo') || upperEstado.includes('proceso')) badge = '<span class="marcacion-estado-badge revisado">Ensayo</span>';
+        else if (upperEstado.includes('finalizado')) badge = '<span class="marcacion-estado-badge no-conforme">Finalizado</span>';
+        else if (upperEstado.includes('informe') || upperEstado.includes('entrega')) badge = '<span class="marcacion-estado-badge marcado">Entrega</span>';
+
+        return `
+        <div class="marcacion-process-select-item" onclick="selectProcesoMarcacion('${escapeHtml(num)}')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all 0.15s;background:#fff;" onmouseover="this.style.background='#f0f7ff';this.style.borderColor='#93c5fd'" onmouseout="this.style.background='#fff';this.style.borderColor='#e2e8f0'">
+            <div style="flex:1;min-width:0;">
+                <div style="font-weight:700;font-family:monospace;font-size:14px;color:#022859;">${escapeHtml(num)}</div>
+                <div style="font-size:12px;color:#475569;margin-top:2px;">${escapeHtml(cliente)} — ${escapeHtml(tipo)}</div>
+                <div style="font-size:11px;color:#94a3b8;margin-top:2px;">📅 ${fecha}${informe ? ' · 📄 ' + escapeHtml(informe) : ''}</div>
+            </div>
+            <div>${badge}</div>
+            <div style="color:#94a3b8;font-size:18px;">›</div>
+        </div>`;
+    }).join('');
+}
+
+/**
+ * Filtra procesos por búsqueda de texto.
+ */
+function filterMarcacionProcesos() {
+    const q = (document.getElementById('marcacionSearchProcesos')?.value || '').toLowerCase();
+    if (!q) {
+        marcacionProcesosFiltered = [...marcacionProcesosList];
+    } else {
+        marcacionProcesosFiltered = marcacionProcesosList.filter(p => {
+            const num = (p.numero_proceso || '').toLowerCase();
+            const cliente = (p.cliente || '').toLowerCase();
+            const tipo = (p.tipo || '').toLowerCase();
+            return num.includes(q) || cliente.includes(q) || tipo.includes(q);
+        });
+    }
+    renderMarcacionProcesosList();
+}
+
+/**
+ * Cierra el selector de procesos.
+ */
+function closeMarcacionSelect() {
+    const modal = document.getElementById('marcacionSelectModal');
+    if (modal) { modal.hidden = true; document.body.style.overflow = ''; }
+}
+
+/**
+ * Selecciona un proceso y carga sus items para marcación.
+ */
+async function selectProcesoMarcacion(numeroProceso) {
+    closeMarcacionSelect();
+
+    const proceso = marcacionProcesosList.find(p => p.numero_proceso === numeroProceso);
+    if (!proceso) { alert('Proceso no encontrado.'); return; }
+
+    const procesoId = proceso.id;
     const prefixMatch = numeroProceso.match(/^([A-Za-z]+\s*)/);
     marcacionProcesoPrefix = prefixMatch ? prefixMatch[1].trim() : 'R26';
 
-    // Poblar barra de info del proceso
-    document.getElementById('marcacionProcesoNum').textContent = numeroProceso || '-';
-    document.getElementById('marcacionCliente').textContent = formData.cliente || '-';
-    document.getElementById('marcacionFecha').textContent = formData.fechaRecepcion || '-';
-    document.getElementById('marcacionNorma').textContent = 'NTC 2190 / ASTM D120';
-    document.getElementById('marcacionEstado').textContent = 'Recepción';
+    // Poblar barra de info
+    document.getElementById('marcacionProcesoNum').textContent = numeroProceso;
+    document.getElementById('marcacionCliente').textContent = proceso.cliente || '-';
+    document.getElementById('marcacionInformeNombre').value = proceso.informe_a_nombre_de || proceso.cliente || '';
+    document.getElementById('marcacionFecha').textContent = (proceso.fecha_recepcion || '').substring(0, 10) || '-';
+    document.getElementById('marcacionEstado').textContent = proceso.estado || 'Recepción';
+    document.getElementById('marcacionFechaEjecucion').value = (proceso.fecha_ejecucion || '').substring(0, 10) || '';
 
-    // Construir items desde savedRowsData (ambas tablas)
+    // Intentar cargar detalle del proceso desde la BD
+    let detalle = [];
+    if (procesoId) {
+        try {
+            const resp = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_detalle_proceso', proceso_id: procesoId })
+            });
+            const result = await resp.json();
+            if (result.ok && Array.isArray(result.detalle)) {
+                detalle = result.detalle;
+            }
+        } catch (e) {
+            console.warn('Error obteniendo detalle:', e);
+        }
+    }
+
+    // Buscar borrador de la recepción en cmr_drafts para obtener nombres reales
+    const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
+    const draft = drafts.find(d =>
+        (d.cotizacion || '').toUpperCase() === numeroProceso.toUpperCase() ||
+        (d.numero_proceso || '').toUpperCase() === numeroProceso.toUpperCase()
+    );
+    const draftItems = (draft && Array.isArray(draft.items)) ? draft.items : [];
+
+    // Construir marcacionData
     marcacionData = [];
     let numCounter = 1;
 
-    const acred = (savedRowsData?.ensayos_acreditados) || {};
-    const noAcred = (savedRowsData?.ensayos_no_acreditados) || {};
-
-    const allItems = [];
-    Object.entries(acred).forEach(([key, row]) => {
-        if (!row) return;
-        const idx = parseInt(key.replace(/^row_/, ''));
-        const nombre = typeof getElementName === 'function' ? getElementName('ensayos_acreditados', idx) : (predefinedItemsData?.[idx]?.nombre || `Elemento ${idx + 1}`);
-        allItems.push({ name: nombre, ...row, _source: 'ensayos_acreditados', _index: idx });
-    });
-    Object.entries(noAcred).forEach(([key, row]) => {
-        if (!row) return;
-        const idx = parseInt(key.replace(/^row_/, ''));
-        const nombre = typeof getElementName === 'function' ? getElementName('ensayos_no_acreditados', idx) : (predefinedItemsDataNoAcreditados?.[idx]?.nombre || `Elemento ${idx + 1}`);
-        allItems.push({ name: nombre, ...row, _source: 'ensayos_no_acreditados', _index: idx });
-    });
-
-    allItems.forEach((row, idx) => {
-        if (!row) return;
-        const nombre = row.name || `Elemento ${idx + 1}`;
-        const cantidad = parseInt(row.cantRecibida, 10) || 0;
-        if (cantidad === 0) return; // saltar items sin cantidad
-        const marca = row.brandDistribution || '';
-        const observacion = row.observaciones || '';
-
-        // Determinar unidades ensayables
-        const upper = nombre.toUpperCase();
-        let unidadesEnsayables = 1;
-        let tipoUnidad = 'unidad';
-
-        if (upper.includes('PAR') || upper.includes('PARES')) {
-            unidadesEnsayables = 2;
-            tipoUnidad = 'por par';
-        } else if (upper.includes('SECCION')) {
-            unidadesEnsayables = cantidad;
-            tipoUnidad = 'N° de secciones';
-        } else if (upper.includes('CUERPO') || upper.includes('PÉRTIGA') || upper.includes('PERTIGA')) {
-            unidadesEnsayables = 4;
-            tipoUnidad = 'N° de cuerpos';
-        } else {
-            unidadesEnsayables = cantidad;
-        }
-
-        const totalGenerar = (upper.includes('PAR') || upper.includes('PARES'))
-            ? cantidad * 2
-            : (upper.includes('SECCION') || upper.includes('CUERPO') || upper.includes('PÉRTIGA') || upper.includes('PERTIGA'))
-                ? unidadesEnsayables
-                : cantidad;
-
-        marcacionData.push({
-            id: idx,
-            _source: row._source,
-            _index: row._index,
-            elemento: nombre,
-            marca: marca,
-            cantidad: cantidad,
-            unidadesEnsayables: unidadesEnsayables,
-            tipoUnidad: tipoUnidad,
-            totalGenerar: totalGenerar,
-            observacion_tecnica: observacion,
-            marcacion: 'Pendiente',
-            consecutivoStart: numCounter,
-            consecutivoEnd: numCounter + totalGenerar - 1
+    if (detalle.length > 0) {
+        // Agrupar detalle por ensayo_id (puede haber varias filas por marca)
+        const groups = {};
+        const groupOrder = [];
+        detalle.forEach(item => {
+            const key = item.ensayo_id || ('_idx_' + groupOrder.length);
+            if (!groups[key]) {
+                groups[key] = { ensayo_id: item.ensayo_id, totalCantidad: 0, marcaCantidades: {}, ensayo_nombre: item.ensayo_nombre || '' };
+                groupOrder.push(key);
+            }
+            groups[key].totalCantidad += (item.cantidad || 0);
+            // Guardar cantidad por marca
+            const mk = (item.marca || '').trim();
+            if (mk) {
+                groups[key].marcaCantidades[mk] = (groups[key].marcaCantidades[mk] || 0) + (item.cantidad || 0);
+            }
+            if (!groups[key].ensayo_nombre && item.ensayo_nombre) groups[key].ensayo_nombre = item.ensayo_nombre;
         });
 
-        numCounter += totalGenerar;
-    });
+        // Emparejar por posición: cada grupo del BD ↔ cada item del borrador
+        groupOrder.forEach((key, index) => {
+            const g = groups[key];
+            const draftItem = draftItems[index] || null;
+            const nombre = draftItem?.name || g.ensayo_nombre || `Elemento ${index + 1}`;
+            const cantidad = g.totalCantidad || 0;
+            if (cantidad === 0) return;
 
-    // Render paneles izquierdo y derecho
+            // Desglose de marcas: cantidades reales
+            const marcaDesglose = Object.entries(g.marcaCantidades)
+                .map(([marca, cant]) => `${cant} ${marca}`)
+                .join(', ') || 'Sin marca';
+
+            const observacion = '';
+
+            const upper = nombre.toUpperCase();
+            let unidadesEnsayables = 1;
+            let tipoUnidad = 'unidad';
+            if (upper.includes('PAR DE') || upper.includes('PARES DE')) { unidadesEnsayables = cantidad * 2; tipoUnidad = 'par'; }
+            else if (upper.includes('SECCION')) {
+                const match = upper.match(/(\d+)\s*SECCION/);
+                const numSecciones = match ? parseInt(match[1], 10) : cantidad;
+                unidadesEnsayables = cantidad * numSecciones;
+                tipoUnidad = 'Secc';
+            }
+            else if (upper.includes('CUERPO') || upper.includes('PÉRTIGA') || upper.includes('PERTIGA')) {
+                const match = upper.match(/(\d+)\s*(CUERPO|PÉRTIGA|PERTIGA)/);
+                const numCuerpos = match ? parseInt(match[1], 10) : 4;
+                unidadesEnsayables = cantidad * numCuerpos;
+                tipoUnidad = 'cuerpos';
+            }
+            else { unidadesEnsayables = cantidad; tipoUnidad = 'und'; }
+
+            const totalGenerar = unidadesEnsayables;
+
+            marcacionData.push({
+                id: g.ensayo_id || index, elemento: nombre, marca: marcaDesglose, marcaDesglose, cantidad, unidadesEnsayables, tipoUnidad,
+                totalGenerar, observacion_tecnica: observacion, marcacion: 'Pendiente',
+                consecutivoStart: numCounter, consecutivoEnd: numCounter + totalGenerar - 1
+            });
+            numCounter += totalGenerar;
+        });
+    }
+
+    // Si no hay detalle de BD, usar items del borrador directamente
+    if (marcacionData.length === 0 && draftItems.length > 0) {
+        draftItems.forEach((item, idx) => {
+            const nombre = item.name || `Elemento ${idx + 1}`;
+            const cantidad = item.quantity || 0;
+            if (cantidad === 0) return;
+            const marcaDesglose = item.brandSummary || item.brand || 'Sin marca';
+            const observacion = item.observaciones || '';
+
+            const upper = nombre.toUpperCase();
+            let unidadesEnsayables = 1;
+            let tipoUnidad = 'unidad';
+            if (upper.includes('PAR DE') || upper.includes('PARES DE')) { unidadesEnsayables = cantidad * 2; tipoUnidad = 'par'; }
+            else if (upper.includes('SECCION')) {
+                const match = upper.match(/(\d+)\s*SECCION/);
+                const numSecciones = match ? parseInt(match[1], 10) : cantidad;
+                unidadesEnsayables = cantidad * numSecciones;
+                tipoUnidad = 'Secc';
+            }
+            else if (upper.includes('CUERPO') || upper.includes('PÉRTIGA') || upper.includes('PERTIGA')) {
+                const match = upper.match(/(\d+)\s*(CUERPO|PÉRTIGA|PERTIGA)/);
+                const numCuerpos = match ? parseInt(match[1], 10) : 4;
+                unidadesEnsayables = cantidad * numCuerpos;
+                tipoUnidad = 'cuerpos';
+            }
+            else { unidadesEnsayables = cantidad; tipoUnidad = 'und'; }
+
+            const totalGenerar = unidadesEnsayables;
+
+            marcacionData.push({
+                id: idx, elemento: nombre, marca: marcaDesglose, marcaDesglose, cantidad, unidadesEnsayables, tipoUnidad,
+                totalGenerar, observacion_tecnica: observacion, marcacion: 'Pendiente',
+                consecutivoStart: numCounter, consecutivoEnd: numCounter + totalGenerar - 1
+            });
+            numCounter += totalGenerar;
+        });
+    }
+
     renderMarcacionLeftPanel();
     renderConsecutivos();
     renderSummaryCards();
 
-    // Abrir modal
     const modal = document.getElementById('marcacionModal');
-    if (modal) {
-        modal.hidden = false;
-        document.body.style.overflow = 'hidden';
-    }
+    if (modal) { modal.hidden = false; document.body.style.overflow = 'hidden'; }
 }
 
 /**
@@ -11571,32 +11730,76 @@ function renderMarcacionLeftPanel() {
     if (!tbody) return;
 
     if (marcacionData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="marcacion-empty"><i class="fas fa-clipboard-list"></i>No hay elementos para mostrar</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="marcacion-empty"><i class="fas fa-clipboard-list"></i>No hay elementos para mostrar</td></tr>`;
         return;
     }
 
     tbody.innerHTML = marcacionData.map((item, i) => {
-        const estadoClass = item.marcacion.toLowerCase().replace(/\s+/g, '-');
+        const maxUnidades = item.cantidad || 1;
+        const upper = item.elemento.toUpperCase();
+        let unidadLabel = 'und';
+        if (upper.includes('PAR DE') || upper.includes('PARES DE')) unidadLabel = 'par';
+        else if (upper.includes('SECCION')) unidadLabel = 'Secc';
+        const marcaDesglose = item.marcaDesglose || item.marca || '';
         return `
         <tr>
             <td style="text-align:center; font-weight:700; color:#022859;">${i + 1}</td>
             <td>
                 <div style="font-weight:600;">${escapeHtml(item.elemento)}</div>
-                ${item.marca ? `<small style="color:#64748b;">${escapeHtml(item.marca)}</small>` : ''}
+                ${marcaDesglose ? `<small style="color:#64748b;">${escapeHtml(marcaDesglose)}</small>` : ''}
             </td>
-            <td style="text-align:center;">${item.cantidad} <small style="color:#64748b;">par</small></td>
-            <td style="text-align:center;">${item.unidadesEnsayables} <small style="color:#64748b;">(${item.tipoUnidad})</small></td>
-            <td style="text-align:center; font-weight:700;">${item.totalGenerar}</td>
+            <td style="text-align:center;">${item.cantidad} <small style="color:#64748b;">${unidadLabel}</small></td>
             <td style="text-align:center;">
-                <select class="marcacion-select" data-value="${item.marcacion}" onchange="updateMarcacionEstado(${i}, this.value, this)">
-                    <option value="Pendiente" ${item.marcacion === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
-                    <option value="Marcado" ${item.marcacion === 'Marcado' ? 'selected' : ''}>✅ Marcado</option>
-                    <option value="Revisado" ${item.marcacion === 'Revisado' ? 'selected' : ''}>🔍 Revisado</option>
-                    <option value="No Conforme" ${item.marcacion === 'No Conforme' ? 'selected' : ''}>❌ No Conforme</option>
-                </select>
+                <input type="number" min="1" max="${maxUnidades}" value="${item.unidadesEnsayables}"
+                    style="width:70px; text-align:center; padding:6px 4px; border:2px solid #cbd5e1; border-radius:8px; font-size:14px; font-weight:700; background:#f8fafc;"
+                    onchange="updateUnidadesEnsayables(${i}, this.value)">
             </td>
+            <td style="text-align:center; font-weight:700;" id="totalGen_${i}">${item.totalGenerar}</td>
         </tr>`;
     }).join('');
+}
+
+/**
+ * Actualiza las unidades ensayables de un elemento y recalcula el total.
+ */
+function updateUnidadesEnsayables(index, value) {
+    if (!marcacionData[index]) return;
+    const nuevas = parseInt(value, 10) || 1;
+    const item = marcacionData[index];
+
+    item.unidadesEnsayables = nuevas;
+    item.totalGenerar = nuevas;
+
+    // Actualizar total visual
+    const totalEl = document.getElementById('totalGen_' + index);
+    if (totalEl) totalEl.textContent = item.totalGenerar;
+
+    // Recalcular consecutivos
+    recalcularConsecutivos();
+    renderSummaryCards();
+}
+
+async function guardarCampoProceso(campo, valor) {
+    if (!marcacionProcesoNumero) return;
+    try {
+        await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update_proceso', numero_proceso: marcacionProcesoNumero, [campo]: valor })
+        });
+    } catch (e) { console.error('Error guardando campo:', e); }
+}
+
+/**
+ * Recalcula los consecutivos basándose en los datos actuales de marcacionData.
+ */
+function recalcularConsecutivos() {
+    let numCounter = 1;
+    marcacionData.forEach(item => {
+        item.consecutivoStart = numCounter;
+        item.consecutivoEnd = numCounter + item.totalGenerar - 1;
+        numCounter += item.totalGenerar;
+    });
 }
 
 /**
@@ -11612,25 +11815,13 @@ function generarMarcacion() {
     let globalNum = 1;
 
     marcacionData.forEach((item, itemIdx) => {
-        const upper = item.elemento.toUpperCase();
-        const esPares = upper.includes('PAR') || upper.includes('PARES');
-        const esSecciones = upper.includes('SECCION');
-        const esCuerpos = upper.includes('CUERPO') || upper.includes('PÉRTIGA') || upper.includes('PERTIGA');
+        const numUnidades = item.unidadesEnsayables || 1;
 
-        let numUnidades = 1;
-        if (esPares) numUnidades = 2;
-        else if (esSecciones) numUnidades = item.cantidad || 1;
-        else if (esCuerpos) numUnidades = item.cantidad || 4;
-        else numUnidades = item.cantidad || 1;
-
-        for (let u = 0; u < numUnidades; u++) {
+            for (let u = 0; u < numUnidades; u++) {
             const numStr = String(globalNum).padStart(3, '0');
-            const consecutivo = `${marcacionProcesoPrefix} ${numStr}`;
+            const consecutivo = numStr;
             let desc = item.elemento;
-            if (esPares) desc += ` - ${u === 0 ? 'Izquierdo' : 'Derecho'}`;
-            else if (esSecciones) desc += ` - Sección ${u + 1} de ${numUnidades}`;
-            else if (esCuerpos) desc += ` - Cuerpo ${u + 1}`;
-            else if (numUnidades > 1) desc += ` - Unidad ${u + 1}`;
+            if (numUnidades > 1) desc += ` - Unidad ${u + 1}`;
 
             marcacionConsecutivos.push({
                 consecutivo: consecutivo,
@@ -11667,28 +11858,35 @@ function renderConsecutivos(filter) {
     }
 
     if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="marcacion-empty"><i class="fas fa-clipboard-list"></i>${marcacionConsecutivos.length === 0 ? 'Genere la marcación para ver los consecutivos' : 'No se encontraron resultados'}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="marcacion-empty"><i class="fas fa-clipboard-list"></i>${marcacionConsecutivos.length === 0 ? 'Genere la marcación para ver los consecutivos' : 'No se encontraron resultados'}</td></tr>`;
         return;
     }
 
     tbody.innerHTML = data.map((c, i) => {
-        const estadoClass = c.estado.toLowerCase().replace(/\s+/g, '-');
         return `
         <tr>
             <td class="marcacion-row-num">${c.consecutivo}</td>
             <td>${escapeHtml(c.elemento)}</td>
             <td>${escapeHtml(c.descripcion)}</td>
-            <td style="text-align:center;">
-                <select class="marcacion-select" data-value="${c.estado}" onchange="updateConsecutivoEstado('${c.consecutivo}', this.value, this)" style="width:auto; min-width:100px;">
+            <td>
+                <input type="text" class="marcacion-obs-input" value="${escapeHtml(c.observaciones || '')}"
+                    placeholder="Observación..." onchange="updateConsecutivoObs('${c.consecutivo}', this.value)">
+            </td>
+            <td>
+                <select class="marcacion-select" data-value="${c.nci || ''}" onchange="updateConsecutivoNCI('${c.consecutivo}', this.value, this)" style="width:auto; min-width:90px;">
+                    <option value="" ${!c.nci ? 'selected' : ''}>—</option>
+                    <option value="NCI" ${c.nci === 'NCI' ? 'selected' : ''}>NCI</option>
+                    <option value="NCE" ${c.nci === 'NCE' ? 'selected' : ''}>NCE</option>
+                </select>
+            </td>
+            <td style="text-align:center; white-space:nowrap;">
+                <select class="marcacion-select" data-value="${c.estado}" onchange="updateConsecutivoEstado('${c.consecutivo}', this.value, this)" style="width:auto; min-width:90px; font-size:11px; padding:3px 6px;">
                     <option value="Pendiente" ${c.estado === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
                     <option value="Marcado" ${c.estado === 'Marcado' ? 'selected' : ''}>✅ Marcado</option>
                     <option value="Revisado" ${c.estado === 'Revisado' ? 'selected' : ''}>🔍 Revisado</option>
                     <option value="No Conforme" ${c.estado === 'No Conforme' ? 'selected' : ''}>❌ No Conforme</option>
                 </select>
-            </td>
-            <td style="text-align:center;">
-                <button class="marcacion-action-btn" title="Configurar" onclick="showNotification('Configurar consecutivo ${c.consecutivo}', 'info')"><i class="fas fa-cog"></i></button>
-                <button class="marcacion-action-btn" title="Más opciones" onclick="showNotification('Opciones ${c.consecutivo}', 'info')"><i class="fas fa-ellipsis-v"></i></button>
+                <button class="marcacion-action-btn" title="Eliminar" onclick="eliminarConsecutivo('${c.consecutivo}')" style="margin-left:4px;color:#ef4444;"><i class="fas fa-trash"></i></button>
             </td>
         </tr>`;
     }).join('');
@@ -11703,6 +11901,26 @@ function updateConsecutivoEstado(consecutivo, value, selectEl) {
         c.estado = value;
         if (selectEl) selectEl.setAttribute('data-value', value);
     }
+    updateGenCounter();
+}
+
+function updateConsecutivoObs(consecutivo, value) {
+    const c = marcacionConsecutivos.find(x => x.consecutivo === consecutivo);
+    if (c) c.observaciones = value;
+}
+
+function updateConsecutivoNCI(consecutivo, value, selectEl) {
+    const c = marcacionConsecutivos.find(x => x.consecutivo === consecutivo);
+    if (c) {
+        c.nci = value;
+        if (selectEl) selectEl.setAttribute('data-value', value);
+    }
+}
+
+function eliminarConsecutivo(consecutivo) {
+    if (!confirm(`¿Eliminar el consecutivo ${consecutivo}?`)) return;
+    marcacionConsecutivos = marcacionConsecutivos.filter(c => c.consecutivo !== consecutivo);
+    renderConsecutivos(document.getElementById('marcacionFilterInput')?.value || '');
     updateGenCounter();
 }
 
