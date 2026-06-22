@@ -3215,12 +3215,24 @@ function openNuevoClienteModal() {
                                 <input id="nuevoClienteNombre" type="text" placeholder="Empresa S.A.S" style="width:100%" />
                             </div>
                             <div>
-                                <label>NIT</label>
-                                <input id="nuevoClienteNIT" type="text" placeholder="900000000-1" style="width:100%" />
+                                <label>NIT / CC</label>
+                                <input id="nuevoClienteNIT" type="text" placeholder="NIT o Cédula (Ej: 900000000-1 o 1234567890)" style="width:100%" />
                             </div>
                             <div>
                                 <label>Correo electrónico</label>
                                 <input id="nuevoClienteEmail" type="email" placeholder="cliente@empresa.com" style="width:100%" />
+                            </div>
+                            <div>
+                                <label>Teléfono</label>
+                                <input id="nuevoClienteTelefono" type="text" placeholder="Ej: 300 123 4567" style="width:100%" />
+                            </div>
+                            <div>
+                                <label>Dirección</label>
+                                <input id="nuevoClienteDireccion" type="text" placeholder="Ej: Carrera 10 #5-20, Bogotá" style="width:100%" />
+                            </div>
+                            <div>
+                                <label>Contacto Principal</label>
+                                <input id="nuevoClienteContacto" type="text" placeholder="Nombre del contacto" style="width:100%" />
                             </div>
                         </div>
                         <div style="display:flex; gap:8px; justify-content:space-between; align-items:center; margin-top:14px; flex-wrap:wrap;">
@@ -3343,8 +3355,11 @@ async function guardarNuevoClienteLocal() {
     const nombre = nombreRaw.toUpperCase();
     const nit = document.getElementById('nuevoClienteNIT')?.value?.trim();
     const email = document.getElementById('nuevoClienteEmail')?.value?.trim();
+    const telefono = document.getElementById('nuevoClienteTelefono')?.value?.trim() || '';
+    const direccion = document.getElementById('nuevoClienteDireccion')?.value?.trim() || '';
+    const contacto = document.getElementById('nuevoClienteContacto')?.value?.trim() || '';
     // Validaciones básicas
-    if (!email || !nombre || !nit) { showNotification('Complete Correo, Nombre y NIT', 'warning'); return; }
+    if (!email || !nombre || !nit) { showNotification('Complete Correo, Nombre y NIT / CC', 'warning'); return; }
     // Validar formato de email simple
     const emailRe = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
     if (!emailRe.test(email)) { showNotification('Correo inválido', 'warning'); return; }
@@ -3361,7 +3376,10 @@ async function guardarNuevoClienteLocal() {
                 nombre_empresa: nombre,
                 nit,
                 email,
-                password: passwordTemporal
+                password: passwordTemporal,
+                telefono,
+                direccion,
+                contacto_principal: contacto
             })
         });
 
@@ -3373,7 +3391,10 @@ async function guardarNuevoClienteLocal() {
                 ID: String(clienteDb.id || clienteDb.ID || Date.now()),
                 EMPRESA: String(clienteDb.nombre_empresa || nombre).toUpperCase(),
                 NIT: String(clienteDb.nit || clienteDb.nit_empresa || nit || ''),
-                CORREO: String(clienteDb.email || email || '')
+                CORREO: String(clienteDb.email || email || ''),
+                TELEFONO: String(clienteDb.telefono || telefono || ''),
+                DIRECCION: String(clienteDb.direccion || direccion || ''),
+                CONTACTO: String(clienteDb.contacto_principal || contacto || '')
             };
 
             const selectEmpresa = document.getElementById('empresaSelect');
@@ -5320,7 +5341,7 @@ function previewDocument() {
                 <div>
                     <p><strong>Nº de Recepción:</strong> ${formData.cotizacion || '-'}</p>
                     <p><strong>Cliente:</strong> ${formData.cliente || '-'}</p>
-                    <p><strong>NIT:</strong> ${formData.nitEmpresa || '-'}</p>
+                    <p><strong>NIT / CC:</strong> ${formData.nitEmpresa || '-'}</p>
                     <p><strong>Informe a Nombre de:</strong> ${formData.informeNombre || '-'}</p>
                     <p><strong>Facturar a Nombre de:</strong> ${formData.facturarNombre || '-'}</p>
                 </div>
@@ -5395,7 +5416,7 @@ function previewDocument() {
  * Genera un documento PDF basado en los datos recopilados del formulario.
  * Requiere que la librería jsPDF esté cargada.
  */
-let __pdfGenerating = false;
+var __pdfGenerating = false;
 function generatePDF() {
     if (__pdfGenerating) { showNotification('Generación de PDF en curso, por favor espera...', 'info'); return; }
     __pdfGenerating = true;
@@ -5492,7 +5513,7 @@ function generatePDF() {
     doc.text(`Cliente: ${formData.cliente || '-'}`, col2X, y);
     y += lineGap;
     doc.text(`Fecha Recepción: ${formData.fechaRecepcion || '-'}`, col1X, y);
-    doc.text(`NIT: ${formData.nitEmpresa || '-'}`, col2X, y);
+    doc.text(`NIT / CC: ${formData.nitEmpresa || '-'}`, col2X, y);
     y += lineGap;
     doc.text(`Fecha Entrega: ${formData.fechaEntrega || '-'}`, col1X, y);
     doc.text(`Nº de Remisión: ${formData.facturar || '-'}`, col2X, y);
@@ -5851,7 +5872,7 @@ function generatePDFRecepcion() {
     doc.text(`Nº Recepción: ${formData.cotizacion || '-'}`, col1X, y);
     doc.text(`Cliente: ${formData.cliente || '-'}`, col2X, y); y += lineGap;
     doc.text(`Fecha Recepción: ${formData.fechaRecepcion || '-'}`, col1X, y);
-    doc.text(`NIT: ${formData.nitEmpresa || '-'}`, col2X, y); y += lineGap;
+    doc.text(`NIT / CC: ${formData.nitEmpresa || '-'}`, col2X, y); y += lineGap;
     doc.text(`Informe a Nombre de: ${formData.informeNombre || '-'}`, col1X, y);
     doc.text(`Facturar a Nombre de: ${formData.facturarNombre || '-'}`, col2X, y); y += 8;
 
@@ -6181,31 +6202,70 @@ function showCompletedModal(cases) {
     if (!modal) return;
     const tbody = modal.querySelector('tbody');
     tbody.innerHTML = '';
-    if (cases.length === 0) {
+
+    const sorted = cases.sort((a, b) => {
+        const na = parseInt(String(a.cotizacion || a.quoteNumber || '0').replace(/\D/g, ''), 10) || 0;
+        const nb = parseInt(String(b.cotizacion || b.quoteNumber || '0').replace(/\D/g, ''), 10) || 0;
+        return nb - na;
+    });
+
+    window._completedCasesData = sorted;
+
+    if (sorted.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:10px; color:#666;">No hay casos terminados</td></tr>';
     } else {
-        cases.forEach(c => {
-            const num = c.cotizacion || c.quoteNumber || 'N/A';
-            const cliente = c.cliente || c.clienteRecepcionNombre || 'N/A';
-            const empresa = c.informeNombre || c.empresa || 'N/A';
-            const fecha = c.fechaEntrega || c.fechaRecepcion || '-';
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${num}</td>
-                <td>${cliente}</td>
-                <td>${empresa}</td>
-                <td>Finalizado</td>
-                <td>${fecha}</td>
-                <td style="text-align:center;">${(c.items && c.items.some(it=>it.images && it.images.length)) ? `<button class='btn btn-mini' onclick='viewCaseImages(${JSON.stringify(c)})'>📷</button>` : '-'}</td>
-                <td style="white-space:nowrap;">
-                    <button class="btn btn-small" onclick='loadFormData(${JSON.stringify(c)}, false, true)'>👁️ Ver</button>
-                    <button class="btn btn-small" onclick="deleteCaseByReception('${num}')" style="margin-left:4px;">🗑️ Eliminar</button>
-                </td>
-            `;
-            tbody.appendChild(row);
-        });
+        renderCompletedCasesRows(sorted);
     }
     modal.style.display = 'flex';
+}
+
+function renderCompletedCasesRows(cases) {
+    const modal = document.getElementById('completedCasesModal');
+    if (!modal) return;
+    const tbody = modal.querySelector('tbody');
+    tbody.innerHTML = '';
+
+    if (cases.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:10px; color:#666;">No se encontraron resultados</td></tr>';
+        return;
+    }
+
+    cases.forEach(c => {
+        const num = c.cotizacion || c.quoteNumber || 'N/A';
+        const cliente = c.cliente || c.clienteRecepcionNombre || 'N/A';
+        const empresa = c.informeNombre || c.empresa || 'N/A';
+        const fecha = c.fechaEntrega || c.fechaRecepcion || '-';
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${num}</td>
+            <td>${cliente}</td>
+            <td>${empresa}</td>
+            <td>Finalizado</td>
+            <td>${fecha}</td>
+            <td style="text-align:center;">${(c.items && c.items.some(it=>it.images && it.images.length)) ? `<button class='btn btn-mini' onclick='viewCaseImages(${JSON.stringify(c)})'>📷</button>` : '-'}</td>
+            <td style="white-space:nowrap;">
+                <button class="btn btn-small" onclick='loadFormData(${JSON.stringify(c)}, false, true)'>👁️ Ver</button>
+                <button class="btn btn-small" onclick="deleteCaseByReception('${num}')" style="margin-left:4px;">🗑️ Eliminar</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function filterCompletedCases() {
+    const search = (document.getElementById('searchCompletedCases')?.value || '').toLowerCase();
+    const data = window._completedCasesData || [];
+    if (!search) {
+        renderCompletedCasesRows(data);
+        return;
+    }
+    const filtered = data.filter(c => {
+        const num = (c.cotizacion || c.quoteNumber || '').toLowerCase();
+        const cliente = (c.cliente || c.clienteRecepcionNombre || '').toLowerCase();
+        const empresa = (c.informeNombre || c.empresa || '').toLowerCase();
+        return num.includes(search) || cliente.includes(search) || empresa.includes(search);
+    });
+    renderCompletedCasesRows(filtered);
 }
 
 function closeCompletedModal() {
@@ -8703,6 +8763,7 @@ function refrescarHistorial() {
         } else if (e === 'inspeccion') {
             estadoColor = '#ff5722';
         }
+        const esEntrega = e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente';
         
         const row = `
             <tr style="border-bottom: 1px solid #ddd;">
@@ -9024,6 +9085,7 @@ function _renderBusquedaAvanzada() {
         } else if (e === 'inspeccion') {
             estadoColor = '#ff5722';
         }
+        const esEntregaBusqueda = e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente';
 
         const num = caso.cotizacion || caso.quoteNumber || 'N/A';
         const clienteDisp = caso.cliente || caso.clienteRecepcionNombre || 'N/A';
@@ -11009,7 +11071,7 @@ function mostrarVistaPrevia(numRecepcion) {
                 <div>
                     <p><strong>Nº de Recepción:</strong> ${caso.cotizacion || '-'}</p>
                     <p><strong>Cliente:</strong> ${caso.cliente || '-'}</p>
-                    <p><strong>NIT:</strong> ${caso.nitEmpresa || '-'}</p>
+                    <p><strong>NIT / CC:</strong> ${caso.nitEmpresa || '-'}</p>
                     <p><strong>Informe a Nombre de:</strong> ${caso.informeNombre || '-'}</p>
                     <p><strong>Facturar a Nombre de:</strong> ${caso.facturarNombre || '-'}</p>
                 </div>
@@ -11390,88 +11452,108 @@ function exportarCasoJSON(numRecepcion) {
 }
 
 // =======================================================
-// FUNCIONES DE MARCACIÓN DE ÍTEMS
+// FUNCIONES DE MARCACIÓN DE ELEMENTOS
 // =======================================================
 
 let marcacionData = [];
 let marcacionProcesoPrefix = 'R26';
+let marcacionConsecutivos = [];
 
 /**
- * Abre el modal de marcación de ítems.
- * Carga el detalle del proceso desde la BD y lo muestra ordenado.
+ * Abre la vista de Marcación de Elementos.
+ * Sin restricciones: lee datos del formulario directamente.
  */
-async function verMarcacion() {
-    const numeroProceso = document.getElementById('quoteNumber')?.value;
-    if (!numeroProceso) {
-        alert('Primero debe ingresar un número de recepción.');
-        return;
-    }
+function verMarcacion() {
+    const formData = collectFormData();
+    const numeroProceso = formData.cotizacion || document.getElementById('quoteNumber')?.value || '';
 
-    // Extraer prefijo del proceso (ej: "R26" de "R26 0010")
+    // Extraer prefijo del proceso (ej: "R26" de "R26 0013")
     const prefixMatch = numeroProceso.match(/^([A-Za-z]+\s*)/);
     marcacionProcesoPrefix = prefixMatch ? prefixMatch[1].trim() : 'R26';
 
-    // Buscar el proceso en la BD para obtener su ID
-    let procesoId = null;
-    try {
-        const resp = await fetch('/.netlify/functions/conectar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'get_proceso', numero_proceso: numeroProceso })
-        });
-        const result = await resp.json();
-        if (result.ok && result.proceso) {
-            procesoId = result.proceso.id;
-        }
-    } catch (e) {
-        console.warn('Error buscando proceso:', e);
-    }
+    // Poblar barra de info del proceso
+    document.getElementById('marcacionProcesoNum').textContent = numeroProceso || '-';
+    document.getElementById('marcacionCliente').textContent = formData.cliente || '-';
+    document.getElementById('marcacionFecha').textContent = formData.fechaRecepcion || '-';
+    document.getElementById('marcacionNorma').textContent = 'NTC 2190 / ASTM D120';
+    document.getElementById('marcacionEstado').textContent = 'Recepción';
 
-    if (!procesoId) {
-        alert('No se encontró un proceso asociado a este número de recepción.\nPrimero genere el PDF de Recepción.');
-        return;
-    }
+    // Construir items desde savedRowsData (ambas tablas)
+    marcacionData = [];
+    let numCounter = 1;
 
-    // Obtener el detalle del proceso
-    let detalle = [];
-    try {
-        const resp = await fetch('/.netlify/functions/conectar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'get_detalle_proceso', proceso_id: procesoId })
-        });
-        const result = await resp.json();
-        if (result.ok && Array.isArray(result.detalle)) {
-            detalle = result.detalle;
-        }
-    } catch (e) {
-        console.warn('Error obteniendo detalle:', e);
-    }
+    const acred = (savedRowsData?.ensayos_acreditados) || {};
+    const noAcred = (savedRowsData?.ensayos_no_acreditados) || {};
 
-    if (detalle.length === 0) {
-        alert('No hay ítems registrados para este proceso.\nPrimero guarde los items en la recepción.');
-        return;
-    }
-
-    // Enriquecer con nombres de ensayo
-    const itemsData = Array.isArray(predefinedItemsData) ? predefinedItemsData : [];
-    marcacionData = detalle.map((item, index) => {
-        const ensayo = itemsData.find(e => e.id === item.ensayo_id);
-        return {
-            id: item.id,
-            ensayo_id: item.ensayo_id,
-            elemento: ensayo?.nombre || `Ítem ${item.ensayo_id}`,
-            cantidad: item.cantidad || 0,
-            marca: item.marca || '',
-            marcacion: item.marcacion || 'Pendiente',
-            observacion_tecnica: item.observacion_tecnica || item.observaciones || '',
-            index: index
-        };
+    const allItems = [];
+    Object.entries(acred).forEach(([key, row]) => {
+        if (!row) return;
+        const idx = parseInt(key.replace(/^row_/, ''));
+        const nombre = typeof getElementName === 'function' ? getElementName('ensayos_acreditados', idx) : (predefinedItemsData?.[idx]?.nombre || `Elemento ${idx + 1}`);
+        allItems.push({ name: nombre, ...row, _source: 'ensayos_acreditados', _index: idx });
+    });
+    Object.entries(noAcred).forEach(([key, row]) => {
+        if (!row) return;
+        const idx = parseInt(key.replace(/^row_/, ''));
+        const nombre = typeof getElementName === 'function' ? getElementName('ensayos_no_acreditados', idx) : (predefinedItemsDataNoAcreditados?.[idx]?.nombre || `Elemento ${idx + 1}`);
+        allItems.push({ name: nombre, ...row, _source: 'ensayos_no_acreditados', _index: idx });
     });
 
-    // Poblar tabla
-    renderMarcacionTable();
-    updateMarcacionStats();
+    allItems.forEach((row, idx) => {
+        if (!row) return;
+        const nombre = row.name || `Elemento ${idx + 1}`;
+        const cantidad = parseInt(row.cantRecibida, 10) || 0;
+        if (cantidad === 0) return; // saltar items sin cantidad
+        const marca = row.brandDistribution || '';
+        const observacion = row.observaciones || '';
+
+        // Determinar unidades ensayables
+        const upper = nombre.toUpperCase();
+        let unidadesEnsayables = 1;
+        let tipoUnidad = 'unidad';
+
+        if (upper.includes('PAR') || upper.includes('PARES')) {
+            unidadesEnsayables = 2;
+            tipoUnidad = 'por par';
+        } else if (upper.includes('SECCION')) {
+            unidadesEnsayables = cantidad;
+            tipoUnidad = 'N° de secciones';
+        } else if (upper.includes('CUERPO') || upper.includes('PÉRTIGA') || upper.includes('PERTIGA')) {
+            unidadesEnsayables = 4;
+            tipoUnidad = 'N° de cuerpos';
+        } else {
+            unidadesEnsayables = cantidad;
+        }
+
+        const totalGenerar = (upper.includes('PAR') || upper.includes('PARES'))
+            ? cantidad * 2
+            : (upper.includes('SECCION') || upper.includes('CUERPO') || upper.includes('PÉRTIGA') || upper.includes('PERTIGA'))
+                ? unidadesEnsayables
+                : cantidad;
+
+        marcacionData.push({
+            id: idx,
+            _source: row._source,
+            _index: row._index,
+            elemento: nombre,
+            marca: marca,
+            cantidad: cantidad,
+            unidadesEnsayables: unidadesEnsayables,
+            tipoUnidad: tipoUnidad,
+            totalGenerar: totalGenerar,
+            observacion_tecnica: observacion,
+            marcacion: 'Pendiente',
+            consecutivoStart: numCounter,
+            consecutivoEnd: numCounter + totalGenerar - 1
+        });
+
+        numCounter += totalGenerar;
+    });
+
+    // Render paneles izquierdo y derecho
+    renderMarcacionLeftPanel();
+    renderConsecutivos();
+    renderSummaryCards();
 
     // Abrir modal
     const modal = document.getElementById('marcacionModal');
@@ -11482,138 +11564,228 @@ async function verMarcacion() {
 }
 
 /**
- * Renderiza la tabla de marcación con los datos cargados.
- * Los ítems con "PARES" en el nombre generan 2 filas consecutivas.
+ * Renderiza el panel izquierdo: tabla de elementos recibidos.
  */
-function renderMarcacionTable() {
+function renderMarcacionLeftPanel() {
     const tbody = document.getElementById('marcacionTableBody');
     if (!tbody) return;
 
     if (marcacionData.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="5" class="marcacion-empty">
-                    <i class="fas fa-clipboard-list"></i>
-                    No hay ítems para mostrar
-                </td>
-            </tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="marcacion-empty"><i class="fas fa-clipboard-list"></i>No hay elementos para mostrar</td></tr>`;
         return;
     }
 
-    // Construir filas expandiendo SECCIONES y PARES
-    const filas = [];
-    let numCounter = 1;
-
-    marcacionData.forEach((item, i) => {
-        const upper = item.elemento.toUpperCase();
-        const esPares = upper.includes('PARES');
-        const esSecciones = upper.includes('SECCIONES');
-        const esTramos = upper.includes('TRAMOS');
-        let cantidadFilas = 1;
-        let labelExtra = '';
-
-        if (esSecciones || esTramos) {
-            cantidadFilas = item.cantidad || 1;
-            labelExtra = esSecciones ? 'sección' : 'tramo';
-        } else if (esPares) {
-            cantidadFilas = 2;
-            labelExtra = 'par';
-        }
-
-        for (let f = 0; f < cantidadFilas; f++) {
-            const num = String(numCounter).padStart(3, '0');
-            const label = `${marcacionProcesoPrefix} ${num}`;
-            const subLabel = (esSecciones || esTramos)
-                ? ` <small style="color:#64748b">(${labelExtra} ${f + 1})</small>`
-                : esPares
-                    ? ` <small style="color:#64748b">(${labelExtra} ${f + 1})</small>`
-                    : '';
-
-            filas.push(`
-            <tr data-index="${i}" data-par="${f}">
-                <td class="marcacion-row-num">${label}${subLabel}</td>
-                <td class="marcacion-row-name">${escapeHtml(item.elemento)}${item.marca ? ' <small style="color:#64748b">(' + escapeHtml(item.marca) + ')</small>' : ''}</td>
-                <td class="marcacion-row-qty">${(esSecciones || esPares || esTramos) ? '1' : item.cantidad}</td>
-                <td>
-                    <input type="text" class="marcacion-obs-input" 
-                        value="${escapeHtml(item.observacion_tecnica)}" 
-                        placeholder="Observación técnica..."
-                        onchange="updateMarcacionObs(${i}, this.value)">
-                </td>
-                <td>
-                    <select class="marcacion-select" data-value="${item.marcacion}"
-                        onchange="updateMarcacionEstado(${i}, this.value, this)">
-                        <option value="Pendiente" ${item.marcacion === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
-                        <option value="Marcado" ${item.marcacion === 'Marcado' ? 'selected' : ''}>✅ Marcado</option>
-                        <option value="Revisado" ${item.marcacion === 'Revisado' ? 'selected' : ''}>🔍 Revisado</option>
-                        <option value="No Conforme" ${item.marcacion === 'No Conforme' ? 'selected' : ''}>❌ No Conforme</option>
-                    </select>
-                </td>
-            </tr>`);
-            numCounter++;
-        }
-    });
-
-    tbody.innerHTML = filas.join('');
+    tbody.innerHTML = marcacionData.map((item, i) => {
+        const estadoClass = item.marcacion.toLowerCase().replace(/\s+/g, '-');
+        return `
+        <tr>
+            <td style="text-align:center; font-weight:700; color:#022859;">${i + 1}</td>
+            <td>
+                <div style="font-weight:600;">${escapeHtml(item.elemento)}</div>
+                ${item.marca ? `<small style="color:#64748b;">${escapeHtml(item.marca)}</small>` : ''}
+            </td>
+            <td style="text-align:center;">${item.cantidad} <small style="color:#64748b;">par</small></td>
+            <td style="text-align:center;">${item.unidadesEnsayables} <small style="color:#64748b;">(${item.tipoUnidad})</small></td>
+            <td style="text-align:center; font-weight:700;">${item.totalGenerar}</td>
+            <td style="text-align:center;">
+                <select class="marcacion-select" data-value="${item.marcacion}" onchange="updateMarcacionEstado(${i}, this.value, this)">
+                    <option value="Pendiente" ${item.marcacion === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
+                    <option value="Marcado" ${item.marcacion === 'Marcado' ? 'selected' : ''}>✅ Marcado</option>
+                    <option value="Revisado" ${item.marcacion === 'Revisado' ? 'selected' : ''}>🔍 Revisado</option>
+                    <option value="No Conforme" ${item.marcacion === 'No Conforme' ? 'selected' : ''}>❌ No Conforme</option>
+                </select>
+            </td>
+        </tr>`;
+    }).join('');
 }
 
 /**
- * Actualiza el estado de marcación de un ítem.
+ * Genera los consecutivos para cada elemento.
+ */
+function generarMarcacion() {
+    if (marcacionData.length === 0) {
+        alert('No hay elementos para generar marcación.');
+        return;
+    }
+
+    marcacionConsecutivos = [];
+    let globalNum = 1;
+
+    marcacionData.forEach((item, itemIdx) => {
+        const upper = item.elemento.toUpperCase();
+        const esPares = upper.includes('PAR') || upper.includes('PARES');
+        const esSecciones = upper.includes('SECCION');
+        const esCuerpos = upper.includes('CUERPO') || upper.includes('PÉRTIGA') || upper.includes('PERTIGA');
+
+        let numUnidades = 1;
+        if (esPares) numUnidades = 2;
+        else if (esSecciones) numUnidades = item.cantidad || 1;
+        else if (esCuerpos) numUnidades = item.cantidad || 4;
+        else numUnidades = item.cantidad || 1;
+
+        for (let u = 0; u < numUnidades; u++) {
+            const numStr = String(globalNum).padStart(3, '0');
+            const consecutivo = `${marcacionProcesoPrefix} ${numStr}`;
+            let desc = item.elemento;
+            if (esPares) desc += ` - ${u === 0 ? 'Izquierdo' : 'Derecho'}`;
+            else if (esSecciones) desc += ` - Sección ${u + 1} de ${numUnidades}`;
+            else if (esCuerpos) desc += ` - Cuerpo ${u + 1}`;
+            else if (numUnidades > 1) desc += ` - Unidad ${u + 1}`;
+
+            marcacionConsecutivos.push({
+                consecutivo: consecutivo,
+                elemento: item.elemento,
+                descripcion: desc,
+                estado: item.marcacion || 'Pendiente',
+                itemIndex: itemIdx,
+                accion: true
+            });
+            globalNum++;
+        }
+    });
+
+    renderConsecutivos();
+    renderSummaryCards();
+    updateGenCounter();
+}
+
+/**
+ * Renderiza la tabla de consecutivos generados (panel derecho).
+ */
+function renderConsecutivos(filter) {
+    const tbody = document.getElementById('marcacionConsecutivosBody');
+    if (!tbody) return;
+
+    let data = marcacionConsecutivos || [];
+    if (filter) {
+        const q = filter.toLowerCase();
+        data = data.filter(c =>
+            c.consecutivo.toLowerCase().includes(q) ||
+            c.elemento.toLowerCase().includes(q) ||
+            c.descripcion.toLowerCase().includes(q)
+        );
+    }
+
+    if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="marcacion-empty"><i class="fas fa-clipboard-list"></i>${marcacionConsecutivos.length === 0 ? 'Genere la marcación para ver los consecutivos' : 'No se encontraron resultados'}</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = data.map((c, i) => {
+        const estadoClass = c.estado.toLowerCase().replace(/\s+/g, '-');
+        return `
+        <tr>
+            <td class="marcacion-row-num">${c.consecutivo}</td>
+            <td>${escapeHtml(c.elemento)}</td>
+            <td>${escapeHtml(c.descripcion)}</td>
+            <td style="text-align:center;">
+                <select class="marcacion-select" data-value="${c.estado}" onchange="updateConsecutivoEstado('${c.consecutivo}', this.value, this)" style="width:auto; min-width:100px;">
+                    <option value="Pendiente" ${c.estado === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
+                    <option value="Marcado" ${c.estado === 'Marcado' ? 'selected' : ''}>✅ Marcado</option>
+                    <option value="Revisado" ${c.estado === 'Revisado' ? 'selected' : ''}>🔍 Revisado</option>
+                    <option value="No Conforme" ${c.estado === 'No Conforme' ? 'selected' : ''}>❌ No Conforme</option>
+                </select>
+            </td>
+            <td style="text-align:center;">
+                <button class="marcacion-action-btn" title="Configurar" onclick="showNotification('Configurar consecutivo ${c.consecutivo}', 'info')"><i class="fas fa-cog"></i></button>
+                <button class="marcacion-action-btn" title="Más opciones" onclick="showNotification('Opciones ${c.consecutivo}', 'info')"><i class="fas fa-ellipsis-v"></i></button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+/**
+ * Actualiza el estado de un consecutivo específico.
+ */
+function updateConsecutivoEstado(consecutivo, value, selectEl) {
+    const c = marcacionConsecutivos.find(x => x.consecutivo === consecutivo);
+    if (c) {
+        c.estado = value;
+        if (selectEl) selectEl.setAttribute('data-value', value);
+    }
+    updateGenCounter();
+}
+
+/**
+ * Actualiza el contador de consecutivos generados.
+ */
+function updateGenCounter() {
+    const total = marcacionConsecutivos.length;
+    const itemsTotal = marcacionData.reduce((sum, item) => sum + item.totalGenerar, 0);
+    const pct = itemsTotal > 0 ? Math.round((total / itemsTotal) * 100) : 0;
+
+    const counter = document.getElementById('marcacionGenCounter');
+    const percent = document.getElementById('marcacionGenPercent');
+    if (counter) counter.textContent = `Generados: ${total} de ${itemsTotal}`;
+    if (percent) percent.textContent = `${pct}%`;
+}
+
+/**
+ * Renderiza las cards de resumen por elemento (parte inferior del panel izquierdo).
+ */
+function renderSummaryCards() {
+    const container = document.getElementById('marcacionSummaryCards');
+    if (!container) return;
+
+    if (marcacionData.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+    let totalConsecutivos = 0;
+
+    marcacionData.forEach(item => {
+        totalConsecutivos += item.totalGenerar;
+        const start = String(item.consecutivoStart).padStart(3, '0');
+        const end = String(item.consecutivoEnd).padStart(3, '0');
+        html += `
+        <div class="marcacion-summary-card">
+            <div class="marcacion-summary-card-title">${escapeHtml(item.elemento)}</div>
+            <div class="marcacion-summary-card-sub">${item.totalGenerar} consecutivos</div>
+            <div class="marcacion-summary-card-range">${start} → ${end}</div>
+        </div>`;
+    });
+
+    html += `
+    <div class="marcacion-summary-card-total">
+        <div class="marcacion-summary-card-title">Total</div>
+        <div class="marcacion-summary-card-range">${totalConsecutivos}</div>
+    </div>`;
+
+    container.innerHTML = html;
+}
+
+/**
+ * Actualiza el estado de marcación de un ítem del panel izquierdo.
  */
 function updateMarcacionEstado(index, value, selectEl) {
     if (!marcacionData[index]) return;
     marcacionData[index].marcacion = value;
     if (selectEl) selectEl.setAttribute('data-value', value);
-    updateMarcacionStats();
-}
 
-/**
- * Actualiza la observación técnica de un ítem.
- */
-function updateMarcacionObs(index, value) {
-    if (!marcacionData[index]) return;
-    marcacionData[index].observacion_tecnica = value;
-}
-
-/**
- * Actualiza las estadísticas del resumen.
- * Cuenta filas visuales (SECCIONES = cantidad filas, PARES = 2 filas).
- */
-function updateMarcacionStats() {
-    let totalVisuales = 0;
-    let pendientes = 0;
-    let marcados = 0;
-    let revisados = 0;
-    let noConforme = 0;
-
-    marcacionData.forEach(item => {
-        const upper = item.elemento.toUpperCase();
-        const esPares = upper.includes('PARES');
-        const esSecciones = upper.includes('SECCIONES');
-        const esTramos = upper.includes('TRAMOS');
-        let filas = 1;
-
-        if (esSecciones || esTramos) filas = item.cantidad || 1;
-        else if (esPares) filas = 2;
-
-        totalVisuales += filas;
-
-        if (item.marcacion === 'Pendiente') pendientes += filas;
-        else if (item.marcacion === 'Marcado') marcados += filas;
-        else if (item.marcacion === 'Revisado') revisados += filas;
-        else if (item.marcacion === 'No Conforme') noConforme += filas;
+    // Actualizar todos los consecutivos asociados a este ítem
+    marcacionConsecutivos.forEach(c => {
+        if (c.itemIndex === index) c.estado = value;
     });
 
-    const setVal = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = val;
-    };
+    renderConsecutivos(document.getElementById('marcacionFilterInput')?.value || '');
+}
 
-    setVal('marcacionTotalItems', totalVisuales);
-    setVal('marcacionPendientes', pendientes);
-    setVal('marcacionMarcados', marcados);
-    setVal('marcacionRevisados', revisados);
-    setVal('marcacionNoConforme', noConforme);
+/**
+ * Toggle barra de filtro de consecutivos.
+ */
+function toggleFilterConsecutivos() {
+    const bar = document.getElementById('marcacionFilterBar');
+    if (bar) bar.style.display = bar.style.display === 'none' ? 'block' : 'none';
+}
+
+/**
+ * Filtra consecutivos según texto de búsqueda.
+ */
+function filterConsecutivos() {
+    const q = document.getElementById('marcacionFilterInput')?.value || '';
+    renderConsecutivos(q);
 }
 
 /**
@@ -11661,5 +11833,403 @@ function closeMarcacion() {
         document.body.style.overflow = '';
     }
     marcacionData = [];
+    marcacionConsecutivos = [];
+}
+
+// =======================================================
+// GENERACIÓN DE PDF DESDE CASO (sin depender del DOM/formulario)
+// =======================================================
+
+function generatePDFFromCase(caso, tipo) {
+    if (__pdfGenerating) { showNotification('Generación de PDF en curso, por favor espera...', 'info'); return; }
+    __pdfGenerating = true;
+
+    if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
+        alert('Error: jsPDF no está disponible.');
+        __pdfGenerating = false; return;
+    }
+
+    if (!caso || (!caso.items || caso.items.length === 0)) {
+        alert('Este caso no tiene items registrados. No se puede generar el PDF.');
+        __pdfGenerating = false; return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const margin = 15;
+    let y = margin;
+
+    const numRecepcion = caso.cotizacion || caso.quoteNumber || caso.numero_proceso || 'N/A';
+    const cliente = caso.cliente || caso.clienteRecepcionNombre || 'N/A';
+    const nitEmpresa = caso.nitEmpresa || '-';
+    const fechaRecepcion = caso.fechaRecepcion || '-';
+    const fechaEntrega = caso.fechaEntrega || '-';
+    const informeNombre = caso.informeNombre || '-';
+    const facturarNombre = caso.facturarNombre || '-';
+    const facturar = caso.facturar || '-';
+    const observaciones = caso.observaciones || '';
+
+    const items = caso.items.map(it => ({
+        name: it.name || it.elemento || it.nombre || '-',
+        quantity: parseInt(it.quantity) || parseInt(it.cantRecibida) || 0,
+        quantity2: parseInt(it.quantity2) || parseInt(it.cantEntregada) || 0,
+        quantity3: parseInt(it.quantity3) || parseInt(it.cantNoUsado) || 0,
+        quantity4: parseInt(it.quantity4) || parseInt(it.cantUsado) || 0,
+        status: parseInt(it.status) || parseInt(it.cantLavados) || 0,
+        observaciones: it.observaciones || '',
+        brandSummary: it.brandSummary || it.marcas || it.brandDistribution || [],
+        type: it.type || 'Ensayos Alcance'
+    }));
+
+    const addFooter = () => {
+        const pageSize = doc.internal.pageSize;
+        const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
+        const pageWidth = pageSize.width ? pageSize.width : pageSize.getWidth();
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        const pageCount = doc.getNumberOfPages();
+        doc.text(`Página ${pageCount}`, pageWidth - margin - 20, pageHeight - 8);
+    };
+
+    const addWatermark = () => {
+        const pageSize = doc.internal.pageSize;
+        const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
+        const pageWidth = pageSize.width ? pageSize.width : pageSize.getWidth();
+        const prevFont = doc.getFont();
+        const prevFontSize = doc.getFontSize();
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(200, 200, 200);
+        doc.setFontSize(40);
+        const watermarkText = tipo === 'recepcion' ? 'RECEPCION HIGH TEST' : 'ENTREGADO HIGH TEST';
+        doc.text(watermarkText, pageWidth / 2, pageHeight / 2, { align: 'center', angle: 45 });
+        doc.setFont(prevFont.fontName || 'helvetica', prevFont.fontStyle || 'normal');
+        doc.setFontSize(prevFontSize);
+        doc.setTextColor(0, 0, 0);
+    };
+
+    const maybeAddPage = (limit = 265) => {
+        if (y > limit) { addFooter(); doc.addPage(); addWatermark(); y = margin; }
+    };
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text('RECEPCIÓN Y ENTREGA', 105, y, { align: 'center' });
+    doc.text('DE ITEMS', 105, y += 6, { align: 'center' });
+    y = 6;
+
+    try { const logo = new Image(); logo.src = 'Logo.png'; doc.addImage(logo, 'PNG', margin, y + 4, 28, 22); } catch (_) {}
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6);
+    doc.text('CÓDIGO: FR-7.4.1', 210 - margin, y + 16, { align: 'right' });
+    doc.text('VERSIÓN: 01', 210 - margin, y + 19, { align: 'right' });
+    doc.text('FECHA: 2025-07-07', 210 - margin, y + 22, { align: 'right' });
+    y += 26; doc.setLineWidth(0.5); doc.line(margin, y, 210 - margin, y); y += 6;
+
+    addWatermark();
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('INFORMACIÓN GENERAL', margin, y);
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    const col1X = margin, col2X = 110, lineGap = 6;
+    doc.text(`Nº de Recepción: ${numRecepcion}`, col1X, y);
+    doc.text(`Cliente: ${cliente}`, col2X, y); y += lineGap;
+    doc.text(`Fecha Recepción: ${fechaRecepcion}`, col1X, y);
+    doc.text(`NIT / CC: ${nitEmpresa}`, col2X, y); y += lineGap;
+    if (tipo === 'entrega') {
+        doc.text(`Fecha Entrega: ${fechaEntrega}`, col1X, y);
+    }
+    doc.text(`Nº de Remisión: ${facturar}`, col2X, y); y += lineGap;
+    doc.text(`Informe a Nombre de: ${informeNombre}`, col1X, y);
+    doc.text(`Facturar a Nombre de: ${facturarNombre}`, col2X, y); y += 8;
+
+    const totalRecep = items.reduce((s, it) => s + it.quantity, 0);
+    const totalEnt = items.reduce((s, it) => s + it.quantity2, 0);
+    let estado = 'Pendiente';
+    if (totalRecep === 0) estado = 'Pendiente';
+    else if (totalEnt === 0) estado = 'En Proceso';
+    else if (totalRecep === totalEnt) estado = 'Completo';
+    else estado = 'Parcial';
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('RESUMEN', margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Total Recepción: ${totalRecep}`, margin + 25, y);
+    if (tipo === 'entrega') {
+        doc.text(`Total Entrega: ${totalEnt}`, margin + 80, y);
+    }
+    doc.text(`Estado: ${tipo === 'recepcion' ? 'Recepción' : estado}`, margin + (tipo === 'entrega' ? 140 : 90), y);
+    y += 10;
+
+    const acc = items.filter(i => i.type === 'Ensayos Alcance');
+    const noAcc = items.filter(i => i.type !== 'Ensayos Alcance');
+
+    function drawTableEntrega(title, tableItems) {
+        if (!tableItems || tableItems.length === 0) return;
+        maybeAddPage();
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text(title, margin, y); y += 6;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+        const headerDefs = [
+            { key: 'elemento', label: 'Elemento', w: 70, align: 'left' },
+            { key: 'cant_recibida', label: 'Cant.\nRecibida', w: 18, align: 'center' },
+            { key: 'cant_entregada', label: 'Cant.\nEntregada', w: 18, align: 'center' },
+            { key: 'marcas', label: 'Marcas', w: 22, align: 'left' },
+            { key: 'no_usado', label: 'No Usado', w: 15, align: 'center' },
+            { key: 'usado', label: 'Usado', w: 15, align: 'center' },
+            { key: 'lavados', label: 'Lavados', w: 12, align: 'center' },
+            { key: 'observaciones', label: 'Observaciones', w: 25, align: 'center' }
+        ];
+        const lineHeight = 3;
+        const headerLines = headerDefs.map(def => {
+            const available = Math.max(def.w - 2, 6);
+            const lines = doc.splitTextToSize(def.label, available);
+            return Array.isArray(lines) ? lines : [def.label];
+        });
+        const headerHeight = Math.max(...headerLines.map(ls => ls.length)) * lineHeight + 4;
+        doc.setFillColor(240, 240, 240);
+        doc.rect(margin, y, 195, headerHeight, 'F');
+        let colX = margin;
+        const cols = headerDefs.map((def, i) => {
+            const c = { x: colX, w: def.w, align: def.align };
+            const lines = headerLines[i];
+            const contentH = lines.length * lineHeight;
+            const startY = y + (headerHeight - contentH) / 2 + 1;
+            lines.forEach((ln, idx) => {
+                const tx = def.align === 'left' ? c.x + 2 : c.x + c.w / 2;
+                const ty = startY + idx * lineHeight + 1;
+                doc.text(ln, tx, ty, { align: def.align === 'left' ? 'left' : 'center' });
+            });
+            colX += def.w; return c;
+        });
+        y += headerHeight + 2;
+        const fmt = (v) => (v === undefined || v === null || v === '' || Number(v) === 0 ? '-' : String(v));
+        doc.setFontSize(9);
+        tableItems.forEach((it, idx) => {
+            maybeAddPage(270);
+            if (idx % 2 === 0) { doc.setFillColor(250, 250, 250); doc.rect(margin, y - 3, 195, 7, 'F'); }
+            const desc = (doc.splitTextToSize(it.name, cols[0].w - 4)[0]) || '';
+            doc.text(desc, cols[0].x + 2, y);
+            doc.text(fmt(it.quantity), cols[1].x + cols[1].w / 2, y, { align: 'center' });
+            doc.text(fmt(it.quantity2), cols[2].x + cols[2].w / 2, y, { align: 'center' });
+            const marcasText = (function(b) { if (!b) return '-'; if (Array.isArray(b)) return b.map(x => `${x.brand || ''} x${x.count || 0}`).join(', '); return String(b || '-'); })(it.brandSummary);
+            const marcasLines = doc.splitTextToSize(marcasText, cols[3].w - 4);
+            doc.text(marcasLines, cols[3].x + 2, y);
+            doc.text(fmt(it.quantity3), cols[4].x + cols[4].w / 2, y, { align: 'center' });
+            doc.text(fmt(it.quantity4), cols[5].x + cols[5].w / 2, y, { align: 'center' });
+            doc.text(fmt(it.status), cols[6].x + cols[6].w / 2, y, { align: 'center' });
+            const obs = (doc.splitTextToSize(it.observaciones.toString(), cols[7].w - 4)[0]) || '-';
+            doc.text(obs, cols[7].x + 2, y);
+            y += 7;
+        });
+        y += 4;
+    }
+
+    function drawTableRecepcion(title, tableItems) {
+        if (!tableItems || tableItems.length === 0) return;
+        maybeAddPage();
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text(title, margin, y); y += 6;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+        const headerDefs = [
+            { key: 'elemento', label: 'Elemento', w: 78, align: 'left' },
+            { key: 'cant_recibida', label: 'Cant.\nRecibida', w: 20, align: 'center' },
+            { key: 'usados', label: 'Usados', w: 22, align: 'center' },
+            { key: 'no_usados', label: 'No\nusados', w: 20, align: 'center' },
+            { key: 'lavados', label: 'Lavados', w: 20, align: 'center' },
+            { key: 'observaciones', label: 'Observaciones', w: 31, align: 'right' }
+        ];
+        const lineHeight = 3;
+        const headerLines = headerDefs.map(def => {
+            const available = Math.max(def.w - 2, 6);
+            const lines = doc.splitTextToSize(def.label, available);
+            return Array.isArray(lines) ? lines : [def.label];
+        });
+        const headerHeight = Math.max(...headerLines.map(ls => ls.length)) * lineHeight + 4;
+        doc.setFillColor(240, 240, 240);
+        doc.rect(margin, y, 195, headerHeight, 'F');
+        let colX = margin;
+        const cols = headerDefs.map((def, i) => {
+            const c = { x: colX, w: def.w, align: def.align };
+            const lines = headerLines[i];
+            const contentH = lines.length * lineHeight;
+            const startY = y + (headerHeight - contentH) / 2 + 1;
+            lines.forEach((ln, idx) => {
+                const tx = def.align === 'left' ? c.x + 2 : c.x + c.w / 2;
+                const ty = startY + idx * lineHeight + 1;
+                doc.text(ln, tx, ty, { align: def.align === 'left' ? 'left' : 'center' });
+            });
+            colX += def.w; return c;
+        });
+        y += headerHeight + 2;
+        const fmt = (v) => (v === undefined || v === null || v === '' || Number(v) === 0 ? '-' : String(v));
+        doc.setFontSize(9);
+        tableItems.forEach((it, idx) => {
+            maybeAddPage(270);
+            if (idx % 2 === 0) { doc.setFillColor(250, 250, 250); doc.rect(margin, y - 3, 195, 7, 'F'); }
+            const desc = (doc.splitTextToSize(it.name, cols[0].w - 4)[0]) || '';
+            doc.text(desc, cols[0].x + 2, y);
+            doc.text(fmt(it.quantity), cols[1].x + cols[1].w / 2, y, { align: 'center' });
+            doc.text(fmt(it.quantity4), cols[2].x + cols[2].w / 2, y, { align: 'center' });
+            doc.text(fmt(it.quantity3), cols[3].x + cols[3].w / 2, y, { align: 'center' });
+            doc.text(fmt(it.status), cols[4].x + cols[4].w / 2, y, { align: 'center' });
+            const obs = (doc.splitTextToSize(it.observaciones.toString(), cols[5].w - 4)[0]) || '-';
+            doc.text(obs, cols[5].x + 2, y);
+            y += 7;
+        });
+        y += 4;
+    }
+
+    if (tipo === 'entrega') {
+        drawTableEntrega('ENSAYOS ALCANCE', acc);
+        drawTableEntrega('ENSAYOS NO ACREDITADOS', noAcc);
+    } else {
+        drawTableRecepcion('ENSAYOS ALCANCE', acc);
+        drawTableRecepcion('ENSAYOS NO ACREDITADOS', noAcc);
+    }
+
+    const totalLavados = items.reduce((s, it) => s + it.status, 0);
+    const hasLavadoData = caso.lavado || caso.elementosLavados || caso.tipoLavado || caso.fechaLavado || caso.observacionesLavado;
+    if (hasLavadoData) {
+        maybeAddPage(250);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.text('LAVADO', margin, y); y += 6;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+        doc.text(`Se realizó lavado: ${caso.lavado || '-'}    Elementos lavados: ${caso.elementosLavados || '-'}`, margin, y); y += 5;
+        if (caso.observacionesLavado) {
+            const obsLav = doc.splitTextToSize(`Observaciones: ${caso.observacionesLavado}`, 195);
+            doc.text(obsLav, margin, y); y += obsLav.length * 5;
+        }
+        y += 2;
+    } else {
+        maybeAddPage(250);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text('Lavados', margin, y); y += 6;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+        doc.text(`Cantidad de Lavados: ${totalLavados}`, margin, y); y += 10;
+    }
+
+    if (observaciones) {
+        maybeAddPage(250);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.text('OBSERVACIONES GENERALES', margin, y); y += 6;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+        const obsLines = doc.splitTextToSize(observaciones, 195);
+        doc.text(obsLines, margin, y); y += obsLines.length * 5 + 2;
+    }
+
+    maybeAddPage(220);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+    if (tipo === 'recepcion') {
+        doc.text('FIRMA / DATOS CLIENTE (RECEPCIÓN)', margin, y); y += 8;
+    } else {
+        doc.text('Representantes (CLIENTE)', margin, y); y += 8;
+    }
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+
+    const sigRec = caso.signatureData?.['signatureCanvasRecepcion'] || caso.signatureData?.Recepcion?.data || null;
+    const sigEnt = caso.signatureData?.['signatureCanvasEntrega'] || caso.signatureData?.Entrega?.data || null;
+
+    if (tipo === 'entrega') {
+        doc.text('Cliente (Recepción)', margin + 2, y + 6);
+        doc.text('Cliente (Entrega)', margin + 102, y + 6);
+        if (sigRec) try { doc.addImage(sigRec, 'PNG', margin + 5, y + 10, 70, 25); } catch (_) {}
+        if (sigEnt) try { doc.addImage(sigEnt, 'PNG', margin + 105, y + 10, 70, 25); } catch (_) {}
+        doc.line(margin + 5, y + 38, margin + 75, y + 38);
+        doc.line(margin + 105, y + 38, margin + 175, y + 38);
+        doc.setFontSize(9);
+        const recepX = margin + 2, entreX = margin + 102, baseY = y + 44;
+        doc.text(`Nombre: ${caso.clienteRecepcionNombre || '-'}   Cédula: ${caso.clienteRecepcionCedula || '-'}`, recepX, baseY);
+        doc.text(`Cargo: ${caso.clienteRecepcionCargo || '-'}`, recepX, baseY + 5);
+        doc.text(`Nombre: ${caso.clienteEntregaNombre || '-'}   Cédula: ${caso.clienteEntregaCedula || '-'}`, entreX, baseY);
+        doc.text(`Cargo: ${caso.clienteEntregaCargo || '-'}`, entreX, baseY + 5);
+        y += 58;
+    } else {
+        doc.text('Cliente (Recepción)', margin + 2, y + 6);
+        if (sigRec) try { doc.addImage(sigRec, 'PNG', margin + 5, y + 10, 70, 25); } catch (_) {}
+        doc.line(margin + 5, y + 38, margin + 75, y + 38);
+        doc.setFontSize(9);
+        const baseY = y + 44;
+        doc.text(`Nombre: ${caso.clienteRecepcionNombre || '-'}   Cédula: ${caso.clienteRecepcionCedula || '-'}`, margin + 2, baseY);
+        doc.text(`Cargo: ${caso.clienteRecepcionCargo || '-'}`, margin + 2, baseY + 5);
+        y += 58;
+    }
+
+    maybeAddPage(240);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+    if (tipo === 'entrega') {
+        doc.text('Representantes (HIGH TEST)', margin, y); y += 6;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+        doc.text(`Recepción: ${caso.highTestRecepcionNombre || '-'}  |  ${caso.highTestRecepcionCargo || '-'}`, margin, y); y += 5;
+        doc.text(`Entrega: ${caso.highTestEntregaNombre || '-'}  |  ${caso.highTestEntregaCargo || '-'}`, margin, y);
+    } else {
+        doc.text('REPRESENTANTE HIGH TEST (RECEPCIÓN)', margin, y); y += 6;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+        doc.text(`Recepción: ${caso.highTestRecepcionNombre || '-'}  |  ${caso.highTestRecepcionCargo || '-'}`, margin, y);
+    }
+    y += 8;
+
+    maybeAddPage(260);
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.text('Fin Del Documento', 105, y, { align: 'center' }); y += 6;
+    addFooter();
+
+    const now = new Date();
+    const safeCliente = cliente.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g, '_').substring(0, 30);
+    const safeCot = numRecepcion.replace(/\s+/g, '_');
+    const fechaRef = tipo === 'recepcion' ? fechaRecepcion : fechaEntrega;
+    const fechaStr = (fechaRef && fechaRef !== '-') ? fechaRef : now.toISOString().split('T')[0];
+    const sufijo = tipo === 'recepcion' ? 'Recepcion' : 'Entrega';
+    const pdfName = `${safeCot}_${fechaStr}_${safeCliente}_${sufijo}.pdf`;
+
+    try {
+        doc.save(pdfName);
+        showNotification(`✅ PDF de ${sufijo.toLowerCase()} generado: ${pdfName}`, 'success');
+    } catch (e) {
+        console.error('Error guardando PDF:', e);
+        showNotification('Error al descargar el PDF. Inténtalo de nuevo.', 'error');
+    } finally {
+        __pdfGenerating = false;
+    }
+}
+
+function descargarPDFFromCase(numRecepcion, tipo) {
+    const casos = obtenerCasosUnificados();
+    const caso = casos.find(c => (c.cotizacion || c.quoteNumber || c.numero_proceso) === numRecepcion);
+    if (!caso) {
+        showNotification('Caso no encontrado.', 'error');
+        return;
+    }
+    generatePDFFromCase(caso, tipo);
+}
+
+function descargarTodosPDFs(tipo) {
+    const casos = obtenerCasosUnificados();
+    const casosValidos = casos.filter(c => {
+        if (!c.items || c.items.length === 0) return false;
+        if (tipo === 'entrega') {
+            const e = (c.estado || c.status || '').toLowerCase();
+            return e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente';
+        }
+        return true;
+    });
+
+    if (casosValidos.length === 0) {
+        showNotification(`No hay casos con datos para descargar PDFs de ${tipo === 'recepcion' ? 'recepción' : 'entrega'}.`, 'info');
+        return;
+    }
+
+    const confirmMsg = tipo === 'recepcion'
+        ? `Se descargarán ${casosValidos.length} PDFs de recepción. ¿Continuar?`
+        : `Se descargarán ${casosValidos.length} PDFs de entrega (solo casos finalizados). ¿Continuar?`;
+    if (!confirm(confirmMsg)) return;
+
+    let index = 0;
+    function downloadNext() {
+        if (index >= casosValidos.length) {
+            showNotification(`✅ Se descargaron ${casosValidos.length} PDFs de ${tipo === 'recepcion' ? 'recepción' : 'entrega'}.`, 'success');
+            return;
+        }
+        generatePDFFromCase(casosValidos[index], tipo);
+        index++;
+        setTimeout(downloadNext, 1500);
+    }
+    downloadNext();
 }
 

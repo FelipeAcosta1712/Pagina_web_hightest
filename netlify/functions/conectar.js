@@ -605,7 +605,7 @@ exports.handler = async (event) => {
 
             // Agregar nuevo cliente
             if (payload.action === 'add_cliente') {
-                const { nombre_empresa, nit, email, password } = payload;
+                const { nombre_empresa, nit, email, password, telefono, direccion, contacto_principal } = payload;
 
                 if (!nombre_empresa || !nit || !email || !password) {
                     return jsonResponse(400, { ok: false, error: 'Faltan campos requeridos' });
@@ -614,7 +614,10 @@ exports.handler = async (event) => {
                 const baseInsert = {
                     nombre_empresa: nombre_empresa.trim(),
                     email: email.trim().toLowerCase(),
-                    password
+                    password,
+                    telefono: telefono || '',
+                    direccion: direccion || '',
+                    contacto_principal: contacto_principal || ''
                 };
 
                 const insertCandidates = [
@@ -656,7 +659,7 @@ exports.handler = async (event) => {
 
             // Actualizar cliente
             if (payload.action === 'update_cliente') {
-                const { id, nombre_empresa, nit, email, password } = payload;
+                const { id, nombre_empresa, nit, email, password, telefono, direccion, contacto_principal } = payload;
 
                 if (!id || !nombre_empresa || !nit || !email) {
                     return jsonResponse(400, { ok: false, error: 'Faltan campos requeridos' });
@@ -664,7 +667,10 @@ exports.handler = async (event) => {
 
                 const baseUpdate = {
                     nombre_empresa: nombre_empresa.trim(),
-                    email: email.trim().toLowerCase()
+                    email: email.trim().toLowerCase(),
+                    telefono: telefono || '',
+                    direccion: direccion || '',
+                    contacto_principal: contacto_principal || ''
                 };
                 if (password && password.trim()) {
                     baseUpdate.password = password;

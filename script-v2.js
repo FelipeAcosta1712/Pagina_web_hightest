@@ -4478,7 +4478,7 @@ const AdminPanelManager = {
         if (!tbody) return;
 
         if (!Array.isArray(clientes) || clientes.length === 0) {
-            tbody.innerHTML = '<tr class="empty-state"><td colspan="6" style="text-align: center; padding: 2rem;">ℹ️ No hay clientes registrados</td></tr>';
+            tbody.innerHTML = '<tr class="empty-state"><td colspan="9" style="text-align: center; padding: 2rem;">ℹ️ No hay clientes registrados</td></tr>';
             return;
         }
 
@@ -4519,26 +4519,32 @@ const AdminPanelManager = {
             const pwd = cliente.password ? String(cliente.password) : '';
             const pwdEsc = escapeHtml(pwd);
             const idEsc = escapeHtml(cliente.id);
+            const telEsc = escapeHtml(cliente.telefono || cliente.phone || '');
+            const dirEsc = escapeHtml(cliente.direccion || cliente.address || '');
+            const contactEsc = escapeHtml(cliente.contacto_principal || cliente.contacto || '');
 
             // Escapes para pasar en onclick (single-quoted)
             const escForOnclick = (v) => String(v || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
             return `
-            <tr>
-                <td><strong>${nombreEsc}</strong></td>
-                <td>${nitEsc || '-'}</td>
-                <td>${emailEsc}</td>
-                <td>
+            <tr style="font-size: 12px;">
+                <td style="padding: 5px 6px;"><strong style="font-size: 11px;">${nombreEsc}</strong></td>
+                <td style="padding: 5px 6px; min-width: 110px;">${nitEsc || '-'}</td>
+                <td style="padding: 5px 6px; word-break: break-word;">${emailEsc}</td>
+                <td style="padding: 5px 6px;">
                     <div class="password-cell">
-                        <span class="password-mask" data-password="${pwdEsc}">${pwd ? '*'.repeat(Math.max(6, pwd.length)) : ''}</span>
-                        <button type="button" class="password-toggle-small" onclick="AdminPanelManager.toggleTablePasswordVisibility(this)" title="Ver contraseña">👁️</button>
+                        <span class="password-mask" data-password="${pwdEsc}" style="font-size: 11px;">${pwd ? '*'.repeat(Math.max(4, pwd.length)) : ''}</span>
+                        <button type="button" class="password-toggle-small" onclick="AdminPanelManager.toggleTablePasswordVisibility(this)" title="Ver contraseña" style="font-size: 10px;">👁️</button>
                     </div>
                 </td>
-                <td>${fecha}</td>
-                <td>
-                    <div class="action-buttons">
-                        <button class="btn btn--small btn--outline" onclick="AdminPanelManager.editCliente('${escForOnclick(idEsc)}', '${escForOnclick(cliente.nombre_empresa)}', '${escForOnclick(nitEsc)}', '${escForOnclick(cliente.email)}', '${escForOnclick(pwd)}')">✏️</button>
-                        <button class="btn btn--small btn--error" onclick="AdminPanelManager.deleteCliente('${escForOnclick(idEsc)}', '${escForOnclick(cliente.nombre_empresa)}')">🗑️</button>
+                <td style="padding: 5px 6px; white-space: nowrap;">${telEsc || '-'}</td>
+                <td style="padding: 5px 6px; word-break: break-word;">${dirEsc || '-'}</td>
+                <td style="padding: 5px 6px; word-break: break-word;">${contactEsc || '-'}</td>
+                <td style="padding: 5px 6px; white-space: nowrap; font-size: 11px;">${fecha}</td>
+                <td style="padding: 5px 6px;">
+                    <div class="action-buttons" style="gap: 3px;">
+                        <button class="btn btn--small btn--outline" onclick="AdminPanelManager.editCliente('${escForOnclick(idEsc)}', '${escForOnclick(cliente.nombre_empresa)}', '${escForOnclick(nitEsc)}', '${escForOnclick(cliente.email)}', '${escForOnclick(pwd)}', '${escForOnclick(cliente.telefono || '')}', '${escForOnclick(cliente.direccion || '')}', '${escForOnclick(cliente.contacto_principal || '')}')" style="padding: 3px 6px; font-size: 11px;">✏️</button>
+                        <button class="btn btn--small btn--error" onclick="AdminPanelManager.deleteCliente('${escForOnclick(idEsc)}', '${escForOnclick(cliente.nombre_empresa)}')" style="padding: 3px 6px; font-size: 11px;">🗑️</button>
                     </div>
                 </td>
             </tr>
@@ -4601,6 +4607,9 @@ const AdminPanelManager = {
         const nit = document.getElementById('clientNit')?.value.trim();
         let email = document.getElementById('clientEmail').value.trim().toLowerCase();
         const password = document.getElementById('clientPassword').value;
+        const telefono = document.getElementById('clientTelefono')?.value.trim() || '';
+        const direccion = document.getElementById('clientDireccion')?.value.trim() || '';
+        const contacto = document.getElementById('clientContacto')?.value.trim() || '';
 
         if (!nombre || !nit || !email || !password) {
             alert('Por favor completa todos los campos');
@@ -4618,7 +4627,10 @@ const AdminPanelManager = {
                     nombre_empresa: nombre,
                     nit,
                     email: email,
-                    password: password
+                    password: password,
+                    telefono,
+                    direccion,
+                    contacto_principal: contacto
                 })
             });
 
@@ -4640,13 +4652,16 @@ const AdminPanelManager = {
         }
     },
 
-    editCliente(id, nombre, nit, email, password) {
+    editCliente(id, nombre, nit, email, password, telefono, direccion, contacto) {
         const title = document.getElementById('clientModalTitle');
         const editId = document.getElementById('clientEditId');
         const nombreInput = document.getElementById('clientNombre');
         const nitInput = document.getElementById('clientNit');
         const emailInput = document.getElementById('clientEmail');
         const passwordInput = document.getElementById('clientPassword');
+        const telInput = document.getElementById('clientTelefono');
+        const dirInput = document.getElementById('clientDireccion');
+        const contactInput = document.getElementById('clientContacto');
 
         if (!title || !editId || !nombreInput || !nitInput || !emailInput || !passwordInput) return;
 
@@ -4656,6 +4671,9 @@ const AdminPanelManager = {
         nitInput.value = String(nit || '');
         emailInput.value = String(email || '').toLowerCase();
         passwordInput.value = String(password || '');
+        if (telInput) telInput.value = String(telefono || '');
+        if (dirInput) dirInput.value = String(direccion || '');
+        if (contactInput) contactInput.value = String(contacto || '');
 
         this.openClientModal();
     },
@@ -4674,7 +4692,7 @@ const AdminPanelManager = {
         modal.setAttribute('aria-hidden', 'true');
     },
 
-    async updateCliente(id, nombre, nit, email, password) {
+    async updateCliente(id, nombre, nit, email, password, telefono, direccion, contacto) {
         try {
             const response = await fetch('/.netlify/functions/conectar', {
                 method: 'POST',
@@ -4685,7 +4703,10 @@ const AdminPanelManager = {
                     nombre_empresa: nombre,
                     nit: nit,
                     email: email,
-                    password: password
+                    password: password,
+                    telefono: telefono || '',
+                    direccion: direccion || '',
+                    contacto_principal: contacto || ''
                 })
             });
 
@@ -7921,27 +7942,12 @@ const AnalisisProcesosModule = {
 
     render() {
         const rows = this.getFilteredProcesses();
-        const statsContainer = document.getElementById('analisisStatsResumen');
         const tableContainer = document.getElementById('analisisTablaContainer');
-        if (!statsContainer || !tableContainer) return;
+        if (!tableContainer) return;
 
         const total = rows.length;
         const finalizados = rows.filter(r => (r.estado || '').toLowerCase() === 'finalizado').length;
         const pendientes = total - finalizados;
-
-        statsContainer.innerHTML = `
-            <div style="flex:1; min-width:100px; padding:8px 12px; background:#f0f4fa; border-radius:6px; border-left:3px solid #022859;">
-                <div style="font-size:10px; color:#666; text-transform:uppercase;">Total</div>
-                <div style="font-size:20px; font-weight:700; color:#022859;">${total}</div>
-            </div>
-            <div style="flex:1; min-width:100px; padding:8px 12px; background:#e8f5e9; border-radius:6px; border-left:3px solid #28a745;">
-                <div style="font-size:10px; color:#666; text-transform:uppercase;">Finalizados</div>
-                <div style="font-size:20px; font-weight:700; color:#28a745;">${finalizados}</div>
-            </div>
-            <div style="flex:1; min-width:100px; padding:8px 12px; background:#fff3e0; border-radius:6px; border-left:3px solid #ff9800;">
-                <div style="font-size:10px; color:#666; text-transform:uppercase;">Pendientes</div>
-                <div style="font-size:20px; font-weight:700; color:#ff9800;">${pendientes}</div>
-            </div>`;
 
         if (rows.length === 0) {
             tableContainer.innerHTML = '<div style="text-align:center; padding:24px; color:#999;">No hay procesos con los filtros seleccionados</div>';
@@ -8124,7 +8130,7 @@ const AnalisisProcesosModule = {
                         <div>
                             <p><strong>N° de Recepción:</strong> ${escapeHtml(num)}</p>
                             <p><strong>Cliente:</strong> ${escapeHtml(cliente)}</p>
-                            <p><strong>NIT:</strong> ${escapeHtml(nitEmpresa)}</p>
+                            <p><strong>NIT / CC:</strong> ${escapeHtml(nitEmpresa)}</p>
                             <p><strong>Informe a Nombre de:</strong> ${escapeHtml(informeNombre)}</p>
                             <p><strong>Facturar a Nombre de:</strong> ${escapeHtml(facturarNombre)}</p>
                         </div>

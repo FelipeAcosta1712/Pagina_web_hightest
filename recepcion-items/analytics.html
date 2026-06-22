@@ -145,6 +145,9 @@
                     <button type="button" class="btn btn-warning" onclick="refrescarHistorial()">
                         🔄 Refrescar
                     </button>
+                    <button type="button" class="btn btn-primary" onclick="abrirModalDescargaPDFs()" style="background: #022859; color: white; font-weight: 600;">
+                        📄 Descargar PDFs
+                    </button>
                 </div>
 
                 <div id="historialContainer" style="overflow-x: auto;">
@@ -344,7 +347,58 @@
         </div>
     </div>
 
+    <!-- Modal Descarga de PDFs -->
+    <div id="modalDescargaPDFs" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
+        <div style="background: white; margin: 30px auto; max-width: 980px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+            <div style="padding: 20px; border-bottom: 2px solid #022859; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0;">📄 Descarga de PDFs</h2>
+                <button type="button" style="background: none; border: none; font-size: 24px; cursor: pointer;" onclick="cerrarModalDescargaPDFs()">✕</button>
+            </div>
+            <div style="padding: 20px;">
+                <!-- Filtros -->
+                <div style="display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
+                    <input type="text" id="busquedaPDFModal" placeholder="🔍 Buscar por número o cliente..." 
+                           style="flex: 1; min-width: 200px; padding: 8px 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 13px;"
+                           oninput="renderizarListaPDFs()">
+                    <select id="filtroEstadoPDFModal" style="padding: 8px 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 13px;" onchange="renderizarListaPDFs()">
+                        <option value="">Todos los estados</option>
+                        <option value="recepcion">Recepción</option>
+                        <option value="entrega">Entrega</option>
+                        <option value="finalizado">Finalizado</option>
+                    </select>
+                </div>
+                <!-- Acciones masivas -->
+                <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
+                    <label style="font-size: 12px; font-weight: 600; color: #333;">Seleccionados: <span id="contadorSeleccionados">0</span></label>
+                    <button type="button" onclick="descargarSeleccionados('recepcion')" style="padding: 6px 12px; background: #1565c0; color: white; border: none; border-radius: 5px; font-size: 12px; cursor: pointer; font-weight: 600;">
+                        📥 Recepción
+                    </button>
+                    <button type="button" onclick="descargarSeleccionados('entrega')" style="padding: 6px 12px; background: #2e7d32; color: white; border: none; border-radius: 5px; font-size: 12px; cursor: pointer; font-weight: 600;">
+                        📥 Entrega
+                    </button>
+                    <button type="button" onclick="descargarSeleccionados('ambos')" style="padding: 6px 12px; background: #6a1b9a; color: white; border: none; border-radius: 5px; font-size: 12px; cursor: pointer; font-weight: 600;">
+                        📥 Rec + Ent
+                    </button>
+                    <span style="color: #ccc;">|</span>
+                    <button type="button" onclick="descargarTodosLosPDFs()" style="padding: 6px 14px; background: #022859; color: white; border: none; border-radius: 5px; font-size: 12px; cursor: pointer; font-weight: 700;">
+                        📥 Descargar Todos
+                    </button>
+                </div>
+                <!-- Contador -->
+                <div id="contadorPDFModal" style="font-size: 11px; color: #888; margin-bottom: 8px;"></div>
+                <!-- Lista de casos -->
+                <div id="listaPDFsModal" style="max-height: 50vh; overflow-y: auto;">
+                    <!-- Se llenará dinámicamente -->
+                </div>
+            </div>
+            <div style="padding: 15px 20px; border-top: 1px solid #eee; text-align: right;">
+                <button type="button" onclick="cerrarModalDescargaPDFs()" style="padding: 8px 20px; background: #6c757d; color: white; border: none; border-radius: 5px; font-size: 13px; cursor: pointer;">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="auth.js"></script>
     <script src="script.js"></script>
     <script>
@@ -396,6 +450,281 @@
                 }
             } catch(e) {}
         }, 1000);
+
+        // =======================================================
+        // MODAL DE DESCARGA DE PDFs
+        // =======================================================
+
+        var _casosSeleccionados = {};
+
+        function abrirModalDescargaPDFs() {
+            _casosSeleccionados = {};
+            document.getElementById('modalDescargaPDFs').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            renderizarListaPDFs();
+        }
+
+        function cerrarModalDescargaPDFs() {
+            document.getElementById('modalDescargaPDFs').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        function toggleSeleccionarTodos(chk) {
+            var checkboxes = document.querySelectorAll('.pdf-modal-chk');
+            checkboxes.forEach(function(cb) {
+                cb.checked = chk.checked;
+                _casosSeleccionados[cb.dataset.num] = chk.checked;
+            });
+            actualizarContadorSeleccionados();
+        }
+
+        function toggleCaso(num, checked) {
+            _casosSeleccionados[num] = checked;
+            var checkboxes = document.querySelectorAll('.pdf-modal-chk');
+            var todos = checkboxes.length > 0 && Array.from(checkboxes).every(function(cb) { return cb.checked; });
+            var selectAll = document.getElementById('selectAllPDFChk');
+            if (selectAll) selectAll.checked = todos;
+            actualizarContadorSeleccionados();
+        }
+
+        function actualizarContadorSeleccionados() {
+            var count = 0;
+            for (var k in _casosSeleccionados) {
+                if (_casosSeleccionados[k]) count++;
+            }
+            var el = document.getElementById('contadorSeleccionados');
+            if (el) el.textContent = count;
+        }
+
+        function renderizarListaPDFs() {
+            var container = document.getElementById('listaPDFsModal');
+            var contador = document.getElementById('contadorPDFModal');
+            if (!container) return;
+
+            var casos = [];
+            try { casos = obtenerCasosUnificados(); } catch(e) { console.error(e); }
+
+            var busqueda = (document.getElementById('busquedaPDFModal')?.value || '').toLowerCase();
+            var filtroEstado = (document.getElementById('filtroEstadoPDFModal')?.value || '').toLowerCase();
+
+            var filtrados = casos.filter(function(caso) {
+                var num = (caso.cotizacion || caso.quoteNumber || caso.numero_proceso || '').toLowerCase();
+                var cliente = (caso.cliente || caso.clienteRecepcionNombre || '').toLowerCase();
+                var estado = (caso.estado || caso.status || '').toLowerCase();
+
+                if (busqueda && !num.includes(busqueda) && !cliente.includes(busqueda)) return false;
+                if (filtroEstado) {
+                    if (filtroEstado === 'entrega') {
+                        if (estado !== 'entrega' && estado !== 'entrega-cliente') return false;
+                    } else if (filtroEstado === 'finalizado') {
+                        if (estado !== 'finalizado') return false;
+                    } else if (filtroEstado === 'recepcion') {
+                        if (estado !== 'recepcion') return false;
+                    }
+                }
+                return true;
+            });
+
+            filtrados.sort(function(a, b) {
+                var numA = a.cotizacion || a.quoteNumber || '';
+                var numB = b.cotizacion || b.quoteNumber || '';
+                return String(numB).localeCompare(String(numA));
+            });
+
+            var totalConItems = filtrados.filter(function(c) { return c.items && c.items.length > 0; }).length;
+            var conEntrega = filtrados.filter(function(c) {
+                var e = (c.estado || c.status || '').toLowerCase();
+                return (c.items && c.items.length > 0) && (e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente');
+            }).length;
+
+            if (contador) {
+                contador.textContent = filtrados.length + ' casos mostrados — ' + totalConItems + ' con items — ' + conEntrega + ' con entrega completada';
+            }
+
+            if (filtrados.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:30px; color:#999;">No hay casos que coincidan con los filtros</div>';
+                return;
+            }
+
+            var html = '<table style="width:100%; border-collapse:collapse; font-size:13px;">';
+            html += '<thead style="background:#f5f5f5; border-bottom:2px solid #022859;"><tr>';
+            html += '<th style="padding:8px; text-align:center; border:1px solid #ddd; width:36px;"><input type="checkbox" id="selectAllPDFChk" onchange="toggleSeleccionarTodos(this)" style="cursor:pointer;"></th>';
+            html += '<th style="padding:8px; text-align:left; border:1px solid #ddd; width:90px;">N° Proceso</th>';
+            html += '<th style="padding:8px; text-align:left; border:1px solid #ddd;">Cliente</th>';
+            html += '<th style="padding:8px; text-align:left; border:1px solid #ddd;">Fecha Rec.</th>';
+            html += '<th style="padding:8px; text-align:left; border:1px solid #ddd;">Fecha Ent.</th>';
+            html += '<th style="padding:8px; text-align:center; border:1px solid #ddd;">Items</th>';
+            html += '<th style="padding:8px; text-align:center; border:1px solid #ddd;">Estado</th>';
+            html += '<th style="padding:8px; text-align:center; border:1px solid #ddd; width:150px;">Descargar</th>';
+            html += '</tr></thead><tbody>';
+
+            filtrados.forEach(function(caso) {
+                var num = caso.cotizacion || caso.quoteNumber || 'N/A';
+                var cliente = caso.cliente || caso.clienteRecepcionNombre || 'N/A';
+                var fechaRec = caso.fechaRecepcion || '-';
+                var fechaEnt = caso.fechaEntrega || '-';
+                var itemCount = (caso.items ? caso.items.length : 0);
+                var estado = (caso.estado || caso.status || 'recepcion').toLowerCase();
+                var esEntrega = estado === 'entrega' || estado === 'finalizado' || estado === 'entrega-cliente';
+
+                var estadoColor = '#ff9800';
+                if (esEntrega) estadoColor = '#28a745';
+                else if (estado === 'recepcion') estadoColor = '#007bff';
+                else if (estado === 'informe-de-ensayo') estadoColor = '#9c27b0';
+
+                var checked = _casosSeleccionados[num] ? 'checked' : '';
+
+                html += '<tr style="border-bottom:1px solid #eee;">';
+                html += '<td style="padding:6px 8px; border:1px solid #ddd; text-align:center;"><input type="checkbox" class="pdf-modal-chk" data-num="' + num + '" ' + checked + ' onchange="toggleCaso(\'' + num + '\', this.checked)" style="cursor:pointer;"></td>';
+                html += '<td style="padding:6px 8px; border:1px solid #ddd; font-weight:600;">' + num + '</td>';
+                html += '<td style="padding:6px 8px; border:1px solid #ddd;">' + cliente + '</td>';
+                html += '<td style="padding:6px 8px; border:1px solid #ddd; white-space:nowrap;">' + fechaRec + '</td>';
+                html += '<td style="padding:6px 8px; border:1px solid #ddd; white-space:nowrap;">' + fechaEnt + '</td>';
+                html += '<td style="padding:6px 8px; border:1px solid #ddd; text-align:center;">' + itemCount + '</td>';
+                html += '<td style="padding:6px 8px; border:1px solid #ddd; text-align:center;">';
+                html += '<span style="background:' + estadoColor + '; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">' + (caso.estado || caso.status || '-') + '</span>';
+                html += '</td>';
+                html += '<td style="padding:6px 8px; border:1px solid #ddd; text-align:center;">';
+                var tieneItems = caso.items && caso.items.length > 0;
+                if (tieneItems) {
+                    html += '<button type="button" onclick="descargaIndividualPDF(\'' + num + '\', \'recepcion\')" style="padding:3px 7px; font-size:10px; margin-right:3px; background:#e3f2fd; color:#1565c0; border:1px solid #bbdefb; border-radius:3px; cursor:pointer;" title="PDF Recepción">📄 Rec</button>';
+                    if (esEntrega) {
+                        html += '<button type="button" onclick="descargaIndividualPDF(\'' + num + '\', \'entrega\')" style="padding:3px 7px; font-size:10px; background:#e8f5e9; color:#2e7d32; border:1px solid #c8e6c9; border-radius:3px; cursor:pointer;" title="PDF Entrega">📄 Ent</button>';
+                    }
+                }
+                html += '</td></tr>';
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+            actualizarContadorSeleccionados();
+        }
+
+        function descargarSeleccionados(tipo) {
+            var seleccionados = [];
+            for (var k in _casosSeleccionados) {
+                if (_casosSeleccionados[k]) seleccionados.push(k);
+            }
+            if (seleccionados.length === 0) {
+                alert('No hay casos seleccionados. Marca los casos con el checkbox.');
+                return;
+            }
+
+            var casos = [];
+            try { casos = obtenerCasosUnificados(); } catch(e) { console.error(e); }
+
+            var casosFiltrados = casos.filter(function(caso) {
+                var num = caso.cotizacion || caso.quoteNumber || caso.numero_proceso;
+                return seleccionados.indexOf(num) !== -1 && caso.items && caso.items.length > 0;
+            });
+
+            if (tipo === 'entrega') {
+                casosFiltrados = casosFiltrados.filter(function(c) {
+                    var e = (c.estado || c.status || '').toLowerCase();
+                    return e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente';
+                });
+            }
+
+            if (casosFiltrados.length === 0) {
+                alert('No hay casos seleccionados válidos para PDFs de ' + (tipo === 'recepcion' ? 'recepción' : tipo === 'entrega' ? 'entrega' : 'recepción y entrega') + '.');
+                return;
+            }
+
+            if (tipo === 'ambos') {
+                var total = casosFiltrados.length * 2;
+                if (!confirm('Se descargarán ' + casosFiltrados.length + ' casos x 2 PDFs (recepción + entrega) = ' + total + ' archivos. ¿Continuar?')) return;
+                var index = 0;
+                function downloadNextAmbos() {
+                    if (index >= casosFiltrados.length) {
+                        alert('✅ Se descargaron ' + total + ' PDFs.');
+                        return;
+                    }
+                    generarPDFFromCasoDirecto(casosFiltrados[index], 'recepcion');
+                    setTimeout(function() {
+                        generarPDFFromCasoDirecto(casosFiltrados[index], 'entrega');
+                        index++;
+                        setTimeout(downloadNextAmbos, 1500);
+                    }, 1500);
+                }
+                downloadNextAmbos();
+            } else {
+                var msg = 'Se descargarán ' + casosFiltrados.length + ' PDFs de ' + (tipo === 'recepcion' ? 'recepción' : 'entrega') + '. ¿Continuar?';
+                if (!confirm(msg)) return;
+                var index2 = 0;
+                function downloadNext() {
+                    if (index2 >= casosFiltrados.length) {
+                        alert('✅ Se descargaron ' + casosFiltrados.length + ' PDFs de ' + (tipo === 'recepcion' ? 'recepción' : 'entrega') + '.');
+                        return;
+                    }
+                    generarPDFFromCasoDirecto(casosFiltrados[index2], tipo);
+                    index2++;
+                    setTimeout(downloadNext, 1500);
+                }
+                downloadNext();
+            }
+        }
+
+        function descargaIndividualPDF(numRecepcion, tipo) {
+            var casos = [];
+            try { casos = obtenerCasosUnificados(); } catch(e) { console.error(e); }
+            var caso = casos.find(function(c) { return (c.cotizacion || c.quoteNumber || c.numero_proceso) === numRecepcion; });
+            if (!caso) {
+                alert('Caso no encontrado.');
+                return;
+            }
+            generarPDFFromCasoDirecto(caso, tipo);
+        }
+
+        function descargarTodosLosPDFs() {
+            var casos = [];
+            try { casos = obtenerCasosUnificados(); } catch(e) { console.error(e); }
+
+            var conItems = casos.filter(function(c) { return c.items && c.items.length > 0; });
+
+            if (conItems.length === 0) {
+                alert('No hay casos con items para descargar.');
+                return;
+            }
+
+            if (!confirm('Se descargarán ' + conItems.length + ' PDFs de recepción y ' + conItems.length + ' PDFs de entrega (total ' + (conItems.length * 2) + ' archivos). ¿Continuar?')) return;
+
+            var total = conItems.length * 2;
+            var descargados = 0;
+            var index = 0;
+
+            function downloadNext() {
+                if (index >= conItems.length) {
+                    alert('✅ Se descargaron ' + descargados + ' PDFs en total.');
+                    return;
+                }
+                generarPDFFromCasoDirecto(conItems[index], 'recepcion');
+                descargados++;
+                setTimeout(function() {
+                    generarPDFFromCasoDirecto(conItems[index], 'entrega');
+                    descargados++;
+                    index++;
+                    setTimeout(downloadNext, 1500);
+                }, 1500);
+            }
+            downloadNext();
+        }
+
+        function generarPDFFromCasoDirecto(caso, tipo) {
+            try {
+                if (typeof __pdfGenerating !== 'undefined' && __pdfGenerating) {
+                    setTimeout(function() { generarPDFFromCasoDirecto(caso, tipo); }, 2000);
+                    return;
+                }
+                if (typeof generatePDFFromCase === 'function') {
+                    generatePDFFromCase(caso, tipo);
+                } else {
+                    console.error('generatePDFFromCase no está disponible');
+                }
+            } catch(e) {
+                console.error('Error generando PDF:', e);
+                if (typeof __pdfGenerating !== 'undefined') __pdfGenerating = false;
+            }
+        }
     </script>
 </body>
 </html>

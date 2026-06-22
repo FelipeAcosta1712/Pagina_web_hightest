@@ -885,7 +885,7 @@ function generarPDFRecepcion() {
                     <span>${datos.nombreCliente}</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">🆔 NIT:</span>
+                    <span class="info-label">🆔 NIT / CC:</span>
                     <span>${datos.nitEmpresa}</span>
                 </div>
                 <div class="info-row">

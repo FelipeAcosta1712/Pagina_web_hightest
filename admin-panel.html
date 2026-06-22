@@ -697,21 +697,24 @@
                     </div>
 
                     <!-- TABLA DE CLIENTES -->
-                    <div class="clients-table-container">
-                        <table class="admin-table admin-table--centered clients-table" id="clientsTable">
+                    <div class="clients-table-container" style="overflow-x: auto;">
+                        <table class="admin-table admin-table--centered clients-table" id="clientsTable" style="font-size: 12px; width: 100%;">
                             <thead>
                                 <tr>
-                                    <th>Empresa</th>
-                                    <th>NIT</th>
-                                    <th>Email</th>
-                                    <th>Contraseña</th>
-                                    <th>Fecha Registro</th>
-                                    <th>Acciones</th>
+                                    <th style="padding: 6px 8px; white-space: nowrap;">Empresa</th>
+                                    <th style="padding: 6px 8px; white-space: nowrap;">NIT / CC</th>
+                                    <th style="padding: 6px 8px; white-space: nowrap;">Email</th>
+                                    <th style="padding: 6px 8px; white-space: nowrap;">Contraseña</th>
+                                    <th style="padding: 6px 8px; white-space: nowrap;">Teléfono</th>
+                                    <th style="padding: 6px 8px; white-space: nowrap;">Dirección</th>
+                                    <th style="padding: 6px 8px; white-space: nowrap;">Contacto</th>
+                                    <th style="padding: 6px 8px; white-space: nowrap;">Registro</th>
+                                    <th style="padding: 6px 8px; white-space: nowrap;">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="clientsTableBody">
                                 <tr class="empty-state">
-                                    <td colspan="6" style="text-align: center; padding: 2rem;">
+                                    <td colspan="9" style="text-align: center; padding: 2rem;">
                                         ℹ️ No hay clientes registrados
                                     </td>
                                 </tr>
@@ -990,8 +993,7 @@
                         <input type="month" id="analisisFilterMes" style="width:100%; padding:6px 8px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
                     </div>
                 </div>
-                <!-- Stats resumen -->
-                <div id="analisisStatsResumen" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;"></div>
+
                 <!-- Tabla -->
                 <div id="analisisTablaContainer" style="overflow-x:auto;"></div>
             </div>
@@ -1150,8 +1152,8 @@
                     <input type="text" id="clientNombre" class="control__input" placeholder="Nombre de la empresa" required style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()">
                 </div>
                 <div class="form-group">
-                    <label for="clientNit">NIT *</label>
-                    <input type="text" id="clientNit" class="control__input" placeholder="900123456-7" required>
+                    <label for="clientNit">NIT / CC *</label>
+                    <input type="text" id="clientNit" class="control__input" placeholder="NIT o Cédula (Ej: 900123456-7 o 1234567890)" required>
                 </div>
                 <div class="form-group">
                     <label for="clientEmail">Email *</label>
@@ -1163,6 +1165,18 @@
                         <input type="password" id="clientPassword" class="control__input" placeholder="Contraseña segura" required>
                         <button type="button" class="password-toggle" onclick="AdminPanelManager.togglePasswordVisibility('clientPassword')" title="Mostrar/ocultar contraseña">👁️</button>
                     </div>
+                </div>
+                <div class="form-group">
+                    <label for="clientTelefono">Teléfono</label>
+                    <input type="text" id="clientTelefono" class="control__input" placeholder="Ej: 300 123 4567">
+                </div>
+                <div class="form-group">
+                    <label for="clientDireccion">Dirección</label>
+                    <input type="text" id="clientDireccion" class="control__input" placeholder="Ej: Carra 10 #5-20, Bogotá">
+                </div>
+                <div class="form-group">
+                    <label for="clientContacto">Contacto Principal</label>
+                    <input type="text" id="clientContacto" class="control__input" placeholder="Nombre del contacto principal">
                 </div>
             </form>
             <div class="modal__actions">

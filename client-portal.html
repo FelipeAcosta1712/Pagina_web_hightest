@@ -1411,7 +1411,9 @@
             const paged = filtered.slice(startIdx, startIdx + informesPerPage);
 
             const cards = paged.map(r => {
-                const fecha = r.fecha_entrega ? new Date(r.fecha_entrega).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : (r.created_at ? new Date(r.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—');
+                const fechaRaw = r.fecha_entrega || r.created_at || '';
+                const fechaParts = String(fechaRaw).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+                const fecha = fechaParts ? `${fechaParts[3]}/${fechaParts[2]}/${fechaParts[1]}` : '—';
                 const numProc = r.numero_proceso || '—';
                 const cliente = r.cliente || '—';
                 const aNombreDe = r.informe_a_nombre_de || cliente;
@@ -2066,7 +2068,7 @@
                                 </div>
                                 <div>
                                     <h3 class="text-xl font-bold">${u.name || 'Nombre de Empresa'}</h3>
-                                    <p class="text-sm" style="color:rgba(255,255,255,0.75);">${u.nit ? 'NIT: ' + u.nit : ''}</p>
+                                    <p class="text-sm" style="color:rgba(255,255,255,0.75);">${u.nit ? 'NIT / CC: ' + u.nit : ''}</p>
                                 </div>
                             </div>
                         </div>

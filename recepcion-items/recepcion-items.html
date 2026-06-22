@@ -96,7 +96,7 @@
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="nitEmpresa">🆔 NIT:</label>
+                                <label for="nitEmpresa">🆔 NIT / CC:</label>
                                 <input type="text" id="nitEmpresa" readonly>
                             </div>
                             <div class="form-group">
@@ -506,12 +506,21 @@
     <!-- Modal de Casos Terminados -->
     <div id="completedCasesModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
                  background:rgba(0,0,0,0.5); z-index:10001; justify-content:center; align-items:center;">
-        <div style="background:#fff; padding:20px; border-radius:8px; max-width:900px; width:90%; max-height:80%; overflow-y:auto; position:relative;">
+        <div style="background:#fff; padding:20px; border-radius:8px; max-width:1100px; width:95%; max-height:85%; overflow-y:auto; position:relative;">
             <h2 style="text-align:center;">📁 Casos Terminados</h2>
             <button type="button" onclick="closeCompletedModal()" style="position:absolute;top:15px;right:15px;background:none;border:none;font-size:24px;cursor:pointer;padding:0;">✕</button>
-            <table id="completedCasesTable" style="width:100%; border-collapse:collapse; margin-top:15px; text-align:center;">
+            <div style="margin: 10px 0;">
+                <input type="text" id="searchCompletedCases" placeholder="🔍 Buscar por número, cliente o empresa..." 
+                       oninput="filterCompletedCases()" style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:5px; font-size:13px;">
+            </div>
+            <table id="completedCasesTable" style="width:100%; border-collapse:collapse; margin-top:10px; text-align:center; font-size:12px;">
                 <thead style="background:#f5f5f5;"><tr>
-                    <th style="text-align:center; padding:8px;">Nº Recepción</th><th style="text-align:center; padding:8px;">Cliente</th><th style="text-align:center; padding:8px;">Empresa</th><th style="text-align:center; padding:8px;">Estado</th><th style="text-align:center; padding:8px;">Fecha Entrega</th><th data-col="acciones" style="text-align:center; padding:8px;">Acciones</th>
+                    <th style="text-align:center; padding:6px 8px;">Nº Recepción</th>
+                    <th style="text-align:center; padding:6px 8px;">Cliente</th>
+                    <th style="text-align:center; padding:6px 8px;">Empresa</th>
+                    <th style="text-align:center; padding:6px 8px;">Estado</th>
+                    <th style="text-align:center; padding:6px 8px;">Fecha Entrega</th>
+                    <th data-col="acciones" style="text-align:center; padding:6px 8px;">Acciones</th>
                 </tr></thead>
                 <tbody></tbody>
             </table>
@@ -624,55 +633,122 @@
         </div>
     </div>
 
-    <!-- Modal de Marcación de Ítems -->
+    <!-- Modal de Marcación de Elementos -->
     <div id="marcacionModal" class="marcacion-modal-overlay" hidden>
         <div class="marcacion-modal-panel" role="dialog" aria-modal="true" aria-labelledby="marcacionModalTitle">
             <div class="marcacion-modal-header">
                 <div>
-                    <div class="marcacion-modal-kicker">Recepción de Items</div>
-                    <h3 id="marcacionModalTitle">Marcación de Ítems</h3>
-                    <p id="marcacionModalSubtitle">Visualiza y marca cada elemento recibido</p>
+                    <h3 id="marcacionModalTitle">Marcación de Elementos</h3>
+                    <p id="marcacionModalSubtitle">Genere y asigne los consecutivos a cada unidad ensayable del proceso.</p>
                 </div>
                 <button type="button" class="marcacion-modal-close" onclick="closeMarcacion()" aria-label="Cerrar modal">✕</button>
             </div>
-            <div class="marcacion-summary" id="marcacionSummary">
-                <div class="marcacion-stat">
-                    <span class="marcacion-stat__value" id="marcacionTotalItems">0</span>
-                    <span class="marcacion-stat__label">Ítems</span>
+
+            <!-- Info del proceso -->
+            <div class="marcacion-process-bar" id="marcacionProcessBar">
+                <div class="marcacion-process-field">
+                    <span class="marcacion-process-label">Proceso</span>
+                    <span class="marcacion-process-value" id="marcacionProcesoNum">-</span>
                 </div>
-                <div class="marcacion-stat marcacion-stat--pending">
-                    <span class="marcacion-stat__value" id="marcacionPendientes">0</span>
-                    <span class="marcacion-stat__label">Pendientes</span>
+                <div class="marcacion-process-field">
+                    <span class="marcacion-process-label">Cliente</span>
+                    <span class="marcacion-process-value" id="marcacionCliente">-</span>
                 </div>
-                <div class="marcacion-stat marcacion-stat--done">
-                    <span class="marcacion-stat__value" id="marcacionMarcados">0</span>
-                    <span class="marcacion-stat__label">Marcados</span>
+                <div class="marcacion-process-field">
+                    <span class="marcacion-process-label">Fecha de recepción</span>
+                    <span class="marcacion-process-value" id="marcacionFecha">-</span>
                 </div>
-                <div class="marcacion-stat marcacion-stat--review">
-                    <span class="marcacion-stat__value" id="marcacionRevisados">0</span>
-                    <span class="marcacion-stat__label">Revisados</span>
+                <div class="marcacion-process-field">
+                    <span class="marcacion-process-label">Norma</span>
+                    <span class="marcacion-process-value" id="marcacionNorma">-</span>
                 </div>
-                <div class="marcacion-stat marcacion-stat--reject">
-                    <span class="marcacion-stat__value" id="marcacionNoConforme">0</span>
-                    <span class="marcacion-stat__label">No Conforme</span>
+                <div class="marcacion-process-field">
+                    <span class="marcacion-process-label">Estado del proceso</span>
+                    <span class="marcacion-process-value marcacion-status-badge" id="marcacionEstado">Recepción</span>
                 </div>
             </div>
-            <div class="marcacion-table-wrapper">
-                <table class="marcacion-table">
-                    <thead>
-                        <tr>
-                            <th style="width:5%">Nº</th>
-                            <th style="width:30%">Elemento</th>
-                            <th style="width:10%">Cantidad</th>
-                            <th style="width:30%">Observación</th>
-                            <th style="width:25%">Marcación</th>
-                        </tr>
-                    </thead>
-                    <tbody id="marcacionTableBody">
+
+            <!-- Info box -->
+            <div class="marcacion-info-box">
+                <i class="fas fa-info-circle"></i>
+                <span>La marcación se genera según las unidades ensayables definidas para cada elemento (ej: guantes = 2, mangueras = secciones, pértigas = cuerpos, etc.).</span>
+            </div>
+
+            <!-- Layout de dos paneles -->
+            <div class="marcacion-two-panels">
+                <!-- Panel izquierdo: Elementos recibidos -->
+                <div class="marcacion-panel-left">
+                    <div class="marcacion-panel-header">
+                        <h4>Elementos recibidos en el proceso</h4>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="generarMarcacion()">
+                            <i class="fas fa-cogs"></i> Generar Marcación
+                        </button>
+                    </div>
+                    <div class="marcacion-table-wrapper">
+                        <table class="marcacion-table marcacion-table-left">
+                            <thead>
+                                <tr>
+                                    <th style="width:5%">#</th>
+                                    <th style="width:30%">Elemento</th>
+                                    <th style="width:15%">Cantidad recibida</th>
+                                    <th style="width:20%">Unidades ensayables</th>
+                                    <th style="width:15%">Total a generar</th>
+                                    <th style="width:15%">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="marcacionTableBody">
+                                <!-- Se llena dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Resumen por elemento -->
+                    <div class="marcacion-summary-cards" id="marcacionSummaryCards">
                         <!-- Se llena dinámicamente -->
-                    </tbody>
-                </table>
+                    </div>
+                </div>
+
+                <!-- Panel derecho: Consecutivos generados -->
+                <div class="marcacion-panel-right">
+                    <div class="marcacion-panel-header">
+                        <h4>Unidades ensayables / Consecutivos generados</h4>
+                        <div class="marcacion-panel-actions">
+                            <span class="marcacion-gen-counter" id="marcacionGenCounter">Generados: 0 de 0</span>
+                            <span class="marcacion-gen-percent" id="marcacionGenPercent">0%</span>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleFilterConsecutivos()">
+                                <i class="fas fa-filter"></i> Filtrar
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Filtro (oculto por defecto) -->
+                    <div class="marcacion-filter-bar" id="marcacionFilterBar" style="display:none;">
+                        <input type="text" id="marcacionFilterInput" placeholder="Buscar consecutivo, elemento..."
+                               oninput="filterConsecutivos()" style="padding:6px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; width:100%;">
+                    </div>
+                    <div class="marcacion-table-wrapper marcacion-table-right-wrapper">
+                        <table class="marcacion-table marcacion-table-right">
+                            <thead>
+                                <tr>
+                                    <th>Consecutivo</th>
+                                    <th>Elemento</th>
+                                    <th>Descripción / Sección</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="marcacionConsecutivosBody">
+                                <tr>
+                                    <td colspan="5" class="marcacion-empty">
+                                        <i class="fas fa-clipboard-list"></i>
+                                        Genere la marcación para ver los consecutivos
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
+
+            <!-- Footer -->
             <div class="marcacion-modal-footer">
                 <button type="button" class="btn btn-primary" onclick="guardarMarcacion()">
                     <i class="fas fa-save"></i> Guardar Marcación
