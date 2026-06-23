@@ -1432,10 +1432,10 @@ th[data-col="acciones"],
 }
 
 .marcacion-table th {
-  padding: 8px 10px;
+  padding: 4px 3px;
   text-align: left;
   font-weight: 700;
-  font-size: 0.72rem;
+  font-size: 0.6rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #475569;
@@ -1443,7 +1443,8 @@ th[data-col="acciones"],
 }
 
 .marcacion-table td {
-  padding: 8px 10px;
+  padding: 3px 3px;
+  font-size: 0.68rem;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
   color: #1e293b;
@@ -1490,7 +1491,7 @@ th[data-col="acciones"],
 .marcacion-row-num {
   font-weight: 700;
   color: #022859;
-  font-size: 0.78rem;
+  font-size: 0.7rem;
 }
 
 .marcacion-row-name {
@@ -1507,10 +1508,10 @@ th[data-col="acciones"],
 /* Select de marcación */
 .marcacion-select {
   width: 100%;
-  padding: 5px 8px;
-  border: 2px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.75rem;
+  padding: 2px 5px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.65rem;
   font-weight: 600;
   cursor: pointer;
   background: #fff;
@@ -1711,21 +1712,229 @@ th[data-col="acciones"],
 .marcacion-action-btn {
   background: none;
   border: 1px solid #e2e8f0;
-  border-radius: 5px;
-  width: 26px;
-  height: 26px;
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: #475569;
-  font-size: 12px;
+  font-size: 10px;
   transition: all 0.15s;
 }
 
 .marcacion-action-btn:hover {
   background: #f1f5f9;
   border-color: #cbd5e1;
+}
+
+/* Banner de estado: nueva vs existente */
+.marcacion-status-banner {
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.marcacion-status-banner.nueva {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.marcacion-status-banner.existente {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+}
+
+.marcacion-status-banner .banner-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.marcacion-status-banner .banner-detail {
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: inherit;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+/* Tarjetas resumen de estado */
+.marcacion-status-cards {
+  display: flex;
+  gap: 10px;
+  padding: 10px 14px;
+}
+
+.marcacion-status-card {
+  flex: 1;
+  min-width: 0;
+  border-radius: 10px;
+  padding: 12px 10px;
+  text-align: center;
+  border: 1px solid;
+}
+
+.marcacion-status-card .status-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.marcacion-status-card .status-icon {
+  font-size: 1rem;
+}
+
+.marcacion-status-card .status-count {
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.marcacion-status-card .status-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.marcacion-status-card.marcados {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #065f46;
+}
+
+.marcacion-status-card.pendientes {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.marcacion-status-card.revisados {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+.marcacion-status-card.no-conformes {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+/* Columna última modificación */
+.marcacion-ultima-mod {
+  font-size: 0.68rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+/* Badges de marca, unidad y estado */
+.marcacion-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.marca-badge {
+  text-transform: capitalize;
+}
+
+.unidad-badge {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
+  font-weight: 700;
+}
+
+.marcacion-td-elemento {
+  font-size: 0.65rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Select de estado con estilo de badge */
+.marcacion-estado-select {
+  width: auto;
+  min-width: 75px;
+  font-size: 0.62rem;
+  padding: 2px 4px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  cursor: pointer;
+}
+
+.marcacion-estado-select[data-value="Pendiente"] {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+
+.marcacion-estado-select[data-value="Marcado"] {
+  background: #d1fae5;
+  color: #047857;
+  border-color: #6ee7b7;
+}
+
+.marcacion-estado-select[data-value="Revisado"] {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-color: #93c5fd;
+}
+
+.marcacion-estado-select[data-value="No Conforme"] {
+  background: #fde2e2;
+  color: #b91c1c;
+  border-color: #f5a3a3;
+}
+
+/* Botón de observación */
+.marcacion-obs-btn {
+  color: #64748b;
+  padding: 2px 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.marcacion-obs-btn:hover {
+  color: #0284c7;
+}
+
+/* Popup de observación */
+.marcacion-obs-popup {
+  position: absolute;
+  z-index: 10;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  min-width: 160px;
+}
+
+.marcacion-obs-popup .marcacion-obs-input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 0.65rem;
 }
 
 /* =========================================

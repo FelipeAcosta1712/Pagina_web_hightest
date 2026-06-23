@@ -11462,6 +11462,9 @@ let marcacionProcesoPrefix = 'R26';
 let marcacionConsecutivos = [];
 let marcacionProcesosList = [];
 let marcacionProcesosFiltered = [];
+let marcacionProcesoId = null;
+let marcacionProcesoNumero = null;
+let marcacionIsExistente = false;
 
 /**
  * Abre el selector de procesos para marcación.
@@ -11572,6 +11575,8 @@ async function selectProcesoMarcacion(numeroProceso) {
     if (!proceso) { alert('Proceso no encontrado.'); return; }
 
     const procesoId = proceso.id;
+    marcacionProcesoId = procesoId;
+    marcacionProcesoNumero = numeroProceso;
     const prefixMatch = numeroProceso.match(/^([A-Za-z]+\s*)/);
     marcacionProcesoPrefix = prefixMatch ? prefixMatch[1].trim() : 'R26';
 
@@ -11620,10 +11625,11 @@ async function selectProcesoMarcacion(numeroProceso) {
         detalle.forEach(item => {
             const key = item.ensayo_id || ('_idx_' + groupOrder.length);
             if (!groups[key]) {
-                groups[key] = { ensayo_id: item.ensayo_id, totalCantidad: 0, marcaCantidades: {}, ensayo_nombre: item.ensayo_nombre || '' };
+                groups[key] = { ensayo_id: item.ensayo_id, totalCantidad: 0, marcaCantidades: {}, ensayo_nombre: item.ensayo_nombre || '', ids: [] };
                 groupOrder.push(key);
             }
             groups[key].totalCantidad += (item.cantidad || 0);
+            groups[key].ids.push(item.id);
             // Guardar cantidad por marca
             const mk = (item.marca || '').trim();
             if (mk) {
@@ -11668,7 +11674,7 @@ async function selectProcesoMarcacion(numeroProceso) {
             const totalGenerar = unidadesEnsayables;
 
             marcacionData.push({
-                id: g.ensayo_id || index, elemento: nombre, marca: marcaDesglose, marcaDesglose, cantidad, unidadesEnsayables, tipoUnidad,
+                ids: g.ids, elemento: nombre, marca: marcaDesglose, marcaDesglose, cantidad, unidadesEnsayables, tipoUnidad,
                 totalGenerar, observacion_tecnica: observacion, marcacion: 'Pendiente',
                 consecutivoStart: numCounter, consecutivoEnd: numCounter + totalGenerar - 1
             });
@@ -11706,7 +11712,7 @@ async function selectProcesoMarcacion(numeroProceso) {
             const totalGenerar = unidadesEnsayables;
 
             marcacionData.push({
-                id: idx, elemento: nombre, marca: marcaDesglose, marcaDesglose, cantidad, unidadesEnsayables, tipoUnidad,
+                ids: [], elemento: nombre, marca: marcaDesglose, marcaDesglose, cantidad, unidadesEnsayables, tipoUnidad,
                 totalGenerar, observacion_tecnica: observacion, marcacion: 'Pendiente',
                 consecutivoStart: numCounter, consecutivoEnd: numCounter + totalGenerar - 1
             });
@@ -11715,8 +11721,57 @@ async function selectProcesoMarcacion(numeroProceso) {
     }
 
     renderMarcacionLeftPanel();
+
+    // Cargar marcaciones existentes desde la BD
+    marcacionIsExistente = false;
+    if (marcacionProcesoId) {
+        try {
+            const respMarc = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_marcaciones_by_proceso', proceso_id: marcacionProcesoId })
+            });
+            const resultMarc = await respMarc.json();
+            if (resultMarc.ok && Array.isArray(resultMarc.marcaciones) && resultMarc.marcaciones.length > 0) {
+                marcacionIsExistente = true;
+
+                // Contar cuántos consecutivos hay por elemento para calcular unidad
+                const countByElemento = {};
+                resultMarc.marcaciones.forEach(m => {
+                    countByElemento[m.elemento] = (countByElemento[m.elemento] || 0) + 1;
+                });
+                const posByElemento = {};
+
+                marcacionConsecutivos = resultMarc.marcaciones.map(marc => {
+                    const itemIdx = marcacionData.findIndex(d => d.elemento === marc.elemento);
+                    posByElemento[marc.elemento] = (posByElemento[marc.elemento] || 0) + 1;
+                    const unidadNum = posByElemento[marc.elemento];
+                    return {
+                        consecutivo: marc.consecutivo,
+                        elemento: marc.elemento,
+                        marca: marc.descripcion || '',
+                        unidad: `U-${unidadNum}`,
+                        descripcion: `${marc.descripcion || ''} - U-${unidadNum}`,
+                        estado: marc.estado || 'Pendiente',
+                        observaciones: marc.observacion || '',
+                        nci: marc.nci || '',
+                        itemIndex: itemIdx >= 0 ? itemIdx : 0,
+                        accion: true,
+                        updated_at: marc.updated_at || null
+                    };
+                });
+            }
+        } catch (e) {
+            console.warn('Error cargando marcaciones existentes:', e);
+        }
+    }
+
+    // Actualizar UI según origen de datos
+    updateMarcacionStatusUI(numeroProceso);
     renderConsecutivos();
     renderSummaryCards();
+    renderStatusSummaryCards();
+    updateGenCounter();
 
     const modal = document.getElementById('marcacionModal');
     if (modal) { modal.hidden = false; document.body.style.overflow = 'hidden'; }
@@ -11816,18 +11871,38 @@ function generarMarcacion() {
 
     marcacionData.forEach((item, itemIdx) => {
         const numUnidades = item.unidadesEnsayables || 1;
+        const marcaRaw = item.marcaDesglose || item.marca || item.elemento;
 
-            for (let u = 0; u < numUnidades; u++) {
+        // Expandir marcas: "3 Hastings, 1 Salisbury" → ["Hastings","Hastings","Hastings","Salisbury"]
+        const marcaEntries = marcaRaw.split(',').map(s => s.trim()).filter(Boolean);
+        const marcasExpandidas = [];
+        marcaEntries.forEach(entry => {
+            const match = entry.match(/^(\d+)\s+(.+)$/);
+            if (match) {
+                const cant = parseInt(match[1], 10);
+                const nombre = match[2].trim();
+                for (let k = 0; k < cant; k++) marcasExpandidas.push(nombre);
+            } else {
+                marcasExpandidas.push(entry);
+            }
+        });
+        if (marcasExpandidas.length === 0) marcasExpandidas.push('Sin marca');
+
+        for (let u = 0; u < numUnidades; u++) {
             const numStr = String(globalNum).padStart(3, '0');
             const consecutivo = numStr;
-            let desc = item.elemento;
-            if (numUnidades > 1) desc += ` - Unidad ${u + 1}`;
+            const marcaNombre = marcasExpandidas[u % marcasExpandidas.length] || 'Sin marca';
+            const unidadLabel = `U-${u + 1}`;
 
             marcacionConsecutivos.push({
                 consecutivo: consecutivo,
                 elemento: item.elemento,
-                descripcion: desc,
+                marca: marcaNombre,
+                unidad: unidadLabel,
+                descripcion: `${marcaNombre} - ${unidadLabel}`,
                 estado: item.marcacion || 'Pendiente',
+                observaciones: '',
+                nci: '',
                 itemIndex: itemIdx,
                 accion: true
             });
@@ -11837,6 +11912,7 @@ function generarMarcacion() {
 
     renderConsecutivos();
     renderSummaryCards();
+    renderStatusSummaryCards();
     updateGenCounter();
 }
 
@@ -11853,40 +11929,66 @@ function renderConsecutivos(filter) {
         data = data.filter(c =>
             c.consecutivo.toLowerCase().includes(q) ||
             c.elemento.toLowerCase().includes(q) ||
-            c.descripcion.toLowerCase().includes(q)
+            (c.marca || '').toLowerCase().includes(q)
         );
     }
 
     if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="marcacion-empty"><i class="fas fa-clipboard-list"></i>${marcacionConsecutivos.length === 0 ? 'Genere la marcación para ver los consecutivos' : 'No se encontraron resultados'}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="marcacion-empty"><i class="fas fa-clipboard-list"></i>${marcacionConsecutivos.length === 0 ? 'Genere la marcación para ver los consecutivos' : 'No se encontraron resultados'}</td></tr>`;
         return;
     }
 
+    const marcaColors = {
+        'Hastings': { bg: '#fde2e2', text: '#b91c1c', border: '#f5a3a3' },
+        'Salisbury': { bg: '#dbeafe', text: '#1d4ed8', border: '#93c5fd' },
+        'Chance': { bg: '#d1fae5', text: '#047857', border: '#6ee7b7' },
+        'Sin marca': { bg: '#f1f5f9', text: '#64748b', border: '#cbd5e1' }
+    };
+    const defaultMarcaColor = { bg: '#fef3c7', text: '#92400e', border: '#fcd34d' };
+
     tbody.innerHTML = data.map((c, i) => {
+        const fechaMod = c.updated_at ? new Date(c.updated_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+        const mc = marcaColors[c.marca] || defaultMarcaColor;
+        const obsValue = escapeHtml(c.observaciones || '');
+        const hasObs = (c.observaciones || '').trim().length > 0;
+        const obsBg = hasObs ? 'background:#fffbeb; border:1px solid #fcd34d;' : 'border:1px solid #e2e8f0;';
         return `
         <tr>
             <td class="marcacion-row-num">${c.consecutivo}</td>
-            <td>${escapeHtml(c.elemento)}</td>
-            <td>${escapeHtml(c.descripcion)}</td>
+            <td class="marcacion-td-elemento">${escapeHtml(c.elemento)}</td>
             <td>
-                <input type="text" class="marcacion-obs-input" value="${escapeHtml(c.observaciones || '')}"
-                    placeholder="Observación..." onchange="updateConsecutivoObs('${c.consecutivo}', this.value)">
+                <span class="marcacion-badge marca-badge" style="background:${mc.bg};color:${mc.text};border:1px solid ${mc.border};">
+                    ${escapeHtml(c.marca || 'Sin marca')}
+                </span>
             </td>
             <td>
-                <select class="marcacion-select" data-value="${c.nci || ''}" onchange="updateConsecutivoNCI('${c.consecutivo}', this.value, this)" style="width:auto; min-width:90px;">
-                    <option value="" ${!c.nci ? 'selected' : ''}>—</option>
+                <span class="marcacion-badge unidad-badge">${escapeHtml(c.unidad || '')}</span>
+            </td>
+            <td>
+                <select class="marcacion-select" data-value="${c.nci || ''}" onchange="updateConsecutivoNCI('${c.consecutivo}', this.value, this)" style="width:auto; min-width:50px; font-size:0.62rem; padding:2px 3px;">
+                    <option value="" ${!c.nci ? 'selected' : ''}>--</option>
                     <option value="NCI" ${c.nci === 'NCI' ? 'selected' : ''}>NCI</option>
                     <option value="NCE" ${c.nci === 'NCE' ? 'selected' : ''}>NCE</option>
                 </select>
             </td>
-            <td style="text-align:center; white-space:nowrap;">
-                <select class="marcacion-select" data-value="${c.estado}" onchange="updateConsecutivoEstado('${c.consecutivo}', this.value, this)" style="width:auto; min-width:90px; font-size:11px; padding:3px 6px;">
+            <td>
+                <input type="text" class="marcacion-obs-inline" value="${obsValue}"
+                    placeholder="Obs..." onchange="updateConsecutivoObs('${c.consecutivo}', this.value)"
+                    style="${obsBg} width:100%; font-size:0.6rem; padding:2px 4px; border-radius:4px; ${hasObs ? 'color:#92400e; font-weight:600;' : 'color:#64748b;'}">
+            </td>
+            <td>
+                <select class="marcacion-select marcacion-estado-select" data-value="${c.estado}" onchange="updateConsecutivoEstado('${c.consecutivo}', this.value, this)" style="font-size:0.62rem; padding:2px 3px;">
                     <option value="Pendiente" ${c.estado === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
                     <option value="Marcado" ${c.estado === 'Marcado' ? 'selected' : ''}>✅ Marcado</option>
                     <option value="Revisado" ${c.estado === 'Revisado' ? 'selected' : ''}>🔍 Revisado</option>
                     <option value="No Conforme" ${c.estado === 'No Conforme' ? 'selected' : ''}>❌ No Conforme</option>
                 </select>
-                <button class="marcacion-action-btn" title="Eliminar" onclick="eliminarConsecutivo('${c.consecutivo}')" style="margin-left:4px;color:#ef4444;"><i class="fas fa-trash"></i></button>
+            </td>
+            <td class="marcacion-ultima-mod">${fechaMod}</td>
+            <td style="text-align:center; white-space:nowrap;">
+                <button class="marcacion-action-btn" title="Mover arriba" onclick="moverConsecutivo('${c.consecutivo}', -1)" style="color:#64748b;"><i class="fas fa-arrow-up"></i></button>
+                <button class="marcacion-action-btn" title="Mover abajo" onclick="moverConsecutivo('${c.consecutivo}', 1)" style="color:#64748b;"><i class="fas fa-arrow-down"></i></button>
+                <button class="marcacion-action-btn" title="Eliminar" onclick="eliminarConsecutivo('${c.consecutivo}')" style="margin-left:2px;color:#ef4444;"><i class="fas fa-trash"></i></button>
             </td>
         </tr>`;
     }).join('');
@@ -11902,6 +12004,18 @@ function updateConsecutivoEstado(consecutivo, value, selectEl) {
         if (selectEl) selectEl.setAttribute('data-value', value);
     }
     updateGenCounter();
+    renderStatusSummaryCards();
+}
+
+function toggleObsInput(consecutivo, btn) {
+    const popup = document.getElementById('obsPopup_' + consecutivo);
+    if (!popup) return;
+    const isVisible = popup.style.display !== 'none';
+    document.querySelectorAll('.marcacion-obs-popup').forEach(p => p.style.display = 'none');
+    if (!isVisible) {
+        popup.style.display = 'block';
+        popup.querySelector('input').focus();
+    }
 }
 
 function updateConsecutivoObs(consecutivo, value) {
@@ -11920,8 +12034,48 @@ function updateConsecutivoNCI(consecutivo, value, selectEl) {
 function eliminarConsecutivo(consecutivo) {
     if (!confirm(`¿Eliminar el consecutivo ${consecutivo}?`)) return;
     marcacionConsecutivos = marcacionConsecutivos.filter(c => c.consecutivo !== consecutivo);
+    renumerarConsecutivos();
     renderConsecutivos(document.getElementById('marcacionFilterInput')?.value || '');
     updateGenCounter();
+    renderStatusSummaryCards();
+}
+
+function renumerarConsecutivos() {
+    marcacionConsecutivos.forEach((c, i) => {
+        c.consecutivo = String(i + 1).padStart(3, '0');
+    });
+}
+
+function moverConsecutivo(consecutivo, direccion) {
+    const idx = marcacionConsecutivos.findIndex(c => c.consecutivo === consecutivo);
+    if (idx === -1) return;
+    const nuevoIdx = idx + direccion;
+    if (nuevoIdx < 0 || nuevoIdx >= marcacionConsecutivos.length) return;
+
+    const temp = marcacionConsecutivos[idx];
+    marcacionConsecutivos[idx] = marcacionConsecutivos[nuevoIdx];
+    marcacionConsecutivos[nuevoIdx] = temp;
+
+    renumerarConsecutivos();
+    renderConsecutivos(document.getElementById('marcacionFilterInput')?.value || '');
+}
+
+function moverConsecutivoTop(consecutivo) {
+    const idx = marcacionConsecutivos.findIndex(c => c.consecutivo === consecutivo);
+    if (idx <= 0) return;
+    const item = marcacionConsecutivos.splice(idx, 1)[0];
+    marcacionConsecutivos.unshift(item);
+    renumerarConsecutivos();
+    renderConsecutivos(document.getElementById('marcacionFilterInput')?.value || '');
+}
+
+function moverConsecutivoBottom(consecutivo) {
+    const idx = marcacionConsecutivos.findIndex(c => c.consecutivo === consecutivo);
+    if (idx === -1 || idx >= marcacionConsecutivos.length - 1) return;
+    const item = marcacionConsecutivos.splice(idx, 1)[0];
+    marcacionConsecutivos.push(item);
+    renumerarConsecutivos();
+    renderConsecutivos(document.getElementById('marcacionFilterInput')?.value || '');
 }
 
 /**
@@ -11936,6 +12090,104 @@ function updateGenCounter() {
     const percent = document.getElementById('marcacionGenPercent');
     if (counter) counter.textContent = `Generados: ${total} de ${itemsTotal}`;
     if (percent) percent.textContent = `${pct}%`;
+}
+
+/**
+ * Actualiza el banner de estado y los botones según si la marcación es nueva o existente.
+ */
+function updateMarcacionStatusUI(numeroProceso) {
+    const banner = document.getElementById('marcacionStatusBanner');
+    const generarBtn = document.getElementById('marcacionGenerarBtn');
+    const guardarBtn = document.getElementById('marcacionGuardarBtn');
+    const totalUnidades = marcacionData.reduce((sum, item) => sum + item.totalGenerar, 0);
+
+    if (marcacionIsExistente) {
+        if (banner) {
+            banner.className = 'marcacion-status-banner existente';
+            banner.style.display = 'flex';
+            banner.innerHTML = `
+                <span class="banner-icon">✏️</span>
+                <div>
+                    <div><strong>Marcación Existente</strong></div>
+                    <div class="banner-detail">Proceso: ${escapeHtml(numeroProceso)} · Consecutivos registrados: ${marcacionConsecutivos.length}</div>
+                </div>`;
+        }
+        if (generarBtn) {
+            generarBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Regenerar Marcación';
+        }
+        if (guardarBtn) {
+            guardarBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
+        }
+    } else {
+        if (banner) {
+            banner.className = 'marcacion-status-banner nueva';
+            banner.style.display = 'flex';
+            banner.innerHTML = `
+                <span class="banner-icon">🆕</span>
+                <div>
+                    <div><strong>Nueva Marcación</strong></div>
+                    <div class="banner-detail">Proceso: ${escapeHtml(numeroProceso)} · Total unidades ensayables: ${totalUnidades}</div>
+                </div>`;
+        }
+        if (generarBtn) {
+            generarBtn.innerHTML = '<i class="fas fa-cogs"></i> Generar Marcación';
+        }
+        if (guardarBtn) {
+            guardarBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Marcación';
+        }
+    }
+}
+
+/**
+ * Renderiza las tarjetas de resumen de estado (Marcados, Pendientes, Revisados, No Conformes).
+ */
+function renderStatusSummaryCards() {
+    const container = document.getElementById('marcacionStatusCards');
+    if (!container) return;
+
+    if (marcacionConsecutivos.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const counts = { Marcado: 0, Pendiente: 0, Revisado: 0, 'No Conforme': 0 };
+    marcacionConsecutivos.forEach(c => {
+        if (counts.hasOwnProperty(c.estado)) {
+            counts[c.estado]++;
+        } else {
+            counts.Pendiente++;
+        }
+    });
+
+    container.innerHTML = `
+        <div class="marcacion-status-card marcados">
+            <div class="status-row">
+                <i class="fas fa-check-circle status-icon"></i>
+                <span class="status-count">${counts.Marcado}</span>
+            </div>
+            <div class="status-label">MARCADOS</div>
+        </div>
+        <div class="marcacion-status-card pendientes">
+            <div class="status-row">
+                <i class="fas fa-clock status-icon"></i>
+                <span class="status-count">${counts.Pendiente}</span>
+            </div>
+            <div class="status-label">PENDIENTES</div>
+        </div>
+        <div class="marcacion-status-card revisados">
+            <div class="status-row">
+                <i class="fas fa-eye status-icon"></i>
+                <span class="status-count">${counts.Revisado}</span>
+            </div>
+            <div class="status-label">REVISADOS</div>
+        </div>
+        <div class="marcacion-status-card no-conformes">
+            <div class="status-row">
+                <i class="fas fa-times-circle status-icon"></i>
+                <span class="status-count">${counts['No Conforme']}</span>
+            </div>
+            <div class="status-label">NO CONFORMES</div>
+        </div>`;
 }
 
 /**
@@ -12015,11 +12267,17 @@ async function guardarMarcacion() {
         return;
     }
 
-    const marcaciones = marcacionData.map(item => ({
-        detalle_id: item.id,
-        marcacion: item.marcacion,
-        observacion_tecnica: item.observacion_tecnica
-    }));
+    const marcaciones = [];
+    marcacionData.forEach(item => {
+        const ids = item.ids || (item.id ? [item.id] : []);
+        ids.forEach(detalleId => {
+            marcaciones.push({
+                detalle_id: detalleId,
+                marcacion: item.marcacion,
+                observacion_tecnica: item.observacion_tecnica
+            });
+        });
+    });
 
     try {
         const resp = await fetch('/.netlify/functions/conectar', {
@@ -12029,12 +12287,43 @@ async function guardarMarcacion() {
         });
         const result = await resp.json();
 
-        if (result.ok) {
-            showNotification('✅ Marcación guardada correctamente', 'success');
-            closeMarcacion();
-        } else {
+        if (!result.ok) {
             alert('Error al guardar: ' + (result.error || 'Error desconocido'));
+            return;
         }
+
+        // Guardar consecutivos en marcaciones_ac
+        if (marcacionProcesoId) {
+            const consecutivosPayload = marcacionConsecutivos.map(c => {
+                const item = marcacionData[c.itemIndex] || {};
+                const ids = item.ids || (item.id ? [item.id] : []);
+                return {
+                    proceso_id: marcacionProcesoId,
+                    detalle_id: ids[0] || null,
+                    ensayo_id: item.ensayo_id || null,
+                    consecutivo: c.consecutivo,
+                    elemento: c.elemento || '',
+                    descripcion: c.marca || '',
+                    estado: c.estado || 'Pendiente',
+                    observacion: c.observaciones || '',
+                    nci: c.nci || ''
+                };
+            });
+
+            const respCons = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'create_marcaciones_batch', marcaciones: consecutivosPayload, proceso_id: marcacionProcesoId })
+            });
+            const resultCons = await respCons.json();
+            if (!resultCons.ok) {
+                console.error('Error guardando consecutivos:', resultCons);
+                showNotification('⚠️ Marcación guardada, pero hubo un error guardando los consecutivos. Ejecuta la SQL de columnas marca/unidad.', 'error');
+            }
+        }
+
+        showNotification('✅ Marcación guardada correctamente', 'success');
+        closeMarcacion();
     } catch (e) {
         console.error('Error guardando marcación:', e);
         alert('Error de conexión al guardar la marcación.');
@@ -12052,6 +12341,9 @@ function closeMarcacion() {
     }
     marcacionData = [];
     marcacionConsecutivos = [];
+    marcacionProcesoId = null;
+    marcacionProcesoNumero = null;
+    marcacionIsExistente = false;
 }
 
 // =======================================================

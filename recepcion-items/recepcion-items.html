@@ -706,13 +706,16 @@
                 <span>La marcación se genera según las unidades ensayables definidas para cada elemento (ej: guantes = 2, mangueras = secciones, pértigas = cuerpos, etc.).</span>
             </div>
 
+            <!-- Banner de estado: nueva vs existente -->
+            <div class="marcacion-status-banner" id="marcacionStatusBanner" style="display:none;"></div>
+
             <!-- Layout de dos paneles -->
             <div class="marcacion-two-panels">
                 <!-- Panel izquierdo: Elementos recibidos -->
                 <div class="marcacion-panel-left">
                     <div class="marcacion-panel-header">
                         <h4>Elementos recibidos en el proceso</h4>
-                        <button type="button" class="btn btn-primary btn-sm" onclick="generarMarcacion()">
+                        <button type="button" id="marcacionGenerarBtn" class="btn btn-primary btn-sm" onclick="generarMarcacion()">
                             <i class="fas fa-cogs"></i> Generar Marcación
                         </button>
                     </div>
@@ -755,21 +758,26 @@
                         <input type="text" id="marcacionFilterInput" placeholder="Buscar consecutivo, elemento..."
                                oninput="filterConsecutivos()" style="padding:6px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; width:100%;">
                     </div>
+                    <!-- Tarjetas resumen de estado -->
+                    <div class="marcacion-status-cards" id="marcacionStatusCards"></div>
                     <div class="marcacion-table-wrapper marcacion-table-right-wrapper">
                         <table class="marcacion-table marcacion-table-right">
                             <thead>
                                 <tr>
-                                    <th>Consecutivo</th>
-                                    <th>Elemento</th>
-                                    <th>Descripción / Sección</th>
-                                    <th>Observaciones</th>
-                                    <th>NCI / NCE</th>
-                                    <th>Acciones</th>
+                                    <th style="width:48px;">CONSEC.</th>
+                                    <th style="width:140px;">ELEMENTO</th>
+                                    <th style="width:80px;">MARCA</th>
+                                    <th style="width:35px;">UNI</th>
+                                    <th style="width:60px;">NCI/NCE</th>
+                                    <th style="width:110px;">OBS</th>
+                                    <th style="width:50px;">ESTADO</th>
+                                    <th style="width:65px;">MOD</th>
+                                    <th style="width:70px;">ACCIONES</th>
                                 </tr>
                             </thead>
                             <tbody id="marcacionConsecutivosBody">
                                 <tr>
-                                    <td colspan="6" class="marcacion-empty">
+                                    <td colspan="7" class="marcacion-empty">
                                         <i class="fas fa-clipboard-list"></i>
                                         Genere la marcación para ver los consecutivos
                                     </td>
@@ -782,7 +790,7 @@
 
             <!-- Footer -->
             <div class="marcacion-modal-footer">
-                <button type="button" class="btn btn-primary" onclick="guardarMarcacion()">
+                <button type="button" id="marcacionGuardarBtn" class="btn btn-primary" onclick="guardarMarcacion()">
                     <i class="fas fa-save"></i> Guardar Marcación
                 </button>
                 <button type="button" class="btn btn-secondary" onclick="closeMarcacion()">Cerrar</button>

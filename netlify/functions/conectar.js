@@ -897,6 +897,7 @@ exports.handler = async (event) => {
 
                 const results = [];
                 let hasError = false;
+                let firstError = null;
 
                 for (const item of marcaciones) {
                     const { detalle_id, marcacion, observacion_tecnica } = item;
@@ -917,16 +918,115 @@ exports.handler = async (event) => {
 
                     if (error) {
                         hasError = true;
+                        if (!firstError) firstError = error;
+                        console.error('Error actualizando marcación detalle_id:', detalle_id, error.message);
                     } else {
                         results.push(Array.isArray(data) ? data[0] : data);
                     }
                 }
 
                 if (hasError && results.length === 0) {
-                    return jsonResponse(500, { ok: false, error: 'Error al actualizar marcaciones' });
+                    return jsonResponse(500, { ok: false, error: 'Error al actualizar marcaciones', detail: firstError?.message || 'Verificar columnas marcacion y observacion_tecnica' });
                 }
 
                 return jsonResponse(200, { ok: true, updated: results });
+            }
+
+            // =============================================
+            // MARCACIONES - Insertar/actualizar consecutivos
+            // =============================================
+            if (payload.action === 'create_marcaciones_batch') {
+                const { marcaciones } = payload;
+                if (!Array.isArray(marcaciones)) {
+                    return jsonResponse(400, { ok: false, error: 'Array marcaciones requerido' });
+                }
+
+                const procesoId = payload.proceso_id || (marcaciones.length > 0 ? marcaciones[0].proceso_id : null);
+                if (!procesoId) {
+                    return jsonResponse(400, { ok: false, error: 'proceso_id requerido' });
+                }
+
+                // Primero borrar todos los registros existentes de este proceso
+                const { error: deleteError } = await supabase
+                    .from('marcaciones_ac')
+                    .delete()
+                    .eq('proceso_id', procesoId);
+
+                if (deleteError) {
+                    console.error('Error borrando marcaciones_ac existentes:', deleteError.message);
+                    return jsonResponse(500, { ok: false, error: 'Error al limpiar marcaciones anteriores', detail: deleteError.message });
+                }
+
+                // Si no hay marcaciones nuevas, solo fue un borrado
+                if (marcaciones.length === 0) {
+                    return jsonResponse(200, { ok: true, updated: [] });
+                }
+
+                // Ahora insertar los nuevos registros
+                const results = [];
+                let hasError = false;
+                let firstError = null;
+
+                const BATCH_SIZE = 50;
+
+                for (let i = 0; i < marcaciones.length; i += BATCH_SIZE) {
+                    const batch = marcaciones.slice(i, i + BATCH_SIZE).map(item => ({
+                        proceso_id: item.proceso_id,
+                        detalle_id: item.detalle_id || null,
+                        ensayo_id: item.ensayo_id || null,
+                        consecutivo: item.consecutivo,
+                        elemento: item.elemento || '',
+                        descripcion: item.descripcion || '',
+                        estado: item.estado || 'Pendiente',
+                        observacion: item.observacion || '',
+                        nci: item.nci || ''
+                    }));
+
+                    const { data, error } = await supabase
+                        .from('marcaciones_ac')
+                        .insert(batch)
+                        .select();
+
+                    if (error) {
+                        hasError = true;
+                        if (!firstError) firstError = error;
+                        console.error('Error insertando marcaciones_ac:', error.message);
+                    } else {
+                        results.push(...(Array.isArray(data) ? data : [data]));
+                    }
+                }
+
+                if (hasError && results.length === 0) {
+                    return jsonResponse(500, {
+                        ok: false,
+                        error: 'Error al crear marcaciones',
+                        detail: firstError?.message || 'Verificar tabla marcaciones_ac y restricción uq_marcaciones_proceso_consecutivo'
+                    });
+                }
+
+                return jsonResponse(200, { ok: true, updated: results });
+            }
+
+            // =============================================
+            // MARCACIONES - Consultar por proceso
+            // =============================================
+            if (payload.action === 'get_marcaciones_by_proceso') {
+                const procesoId = payload.proceso_id;
+                if (!procesoId) {
+                    return jsonResponse(400, { ok: false, error: 'proceso_id requerido' });
+                }
+
+                const { data, error } = await supabase
+                    .from('marcaciones_ac')
+                    .select('*')
+                    .eq('proceso_id', procesoId)
+                    .order('consecutivo', { ascending: true });
+
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al consultar marcaciones', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true, marcaciones: data || [] });
             }
 
             // =============================================
