@@ -11738,7 +11738,8 @@ async function selectProcesoMarcacion(numeroProceso) {
             const nombre = item.name || `Elemento ${idx + 1}`;
             const cantidad = item.quantity || 0;
             if (cantidad === 0) return;
-            const marcaDesglose = item.brandSummary || item.brand || 'Sin marca';
+            const marcaRawBS = item.brandSummary || item.brand || 'Sin marca';
+            const marcaDesglose = Array.isArray(marcaRawBS) ? marcaRawBS.map(b => `${b.count || 0} ${b.brand || ''}`).join(', ') || 'Sin marca' : String(marcaRawBS || 'Sin marca');
             const observacion = item.observaciones || '';
 
             const upper = nombre.toUpperCase();
@@ -11922,9 +11923,10 @@ function generarMarcacion() {
     marcacionData.forEach((item, itemIdx) => {
         const numUnidades = item.unidadesEnsayables || 1;
         const marcaRaw = item.marcaDesglose || item.marca || item.elemento;
+        const marcaStr = Array.isArray(marcaRaw) ? marcaRaw.map(b => `${b.count || 0} ${b.brand || ''}`).join(', ') : String(marcaRaw || item.elemento);
 
         // Expandir marcas: "3 Hastings, 1 Salisbury" → ["Hastings","Hastings","Hastings","Salisbury"]
-        const marcaEntries = marcaRaw.split(',').map(s => s.trim()).filter(Boolean);
+        const marcaEntries = marcaStr.split(',').map(s => s.trim()).filter(Boolean);
         const marcasExpandidas = [];
         marcaEntries.forEach(entry => {
             const match = entry.match(/^(\d+)\s+(.+)$/);
