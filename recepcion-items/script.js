@@ -11594,6 +11594,7 @@ function renderMarcacionProcesosList() {
                 ${statusHtml}
             </div>
             <div>${badge}</div>
+            <button type="button" onclick="event.stopPropagation();selectProcesoLectura('${escapeHtml(num)}')" title="Ver marcación (solo lectura)" style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">👁 Ver</button>
             <div style="color:#94a3b8;font-size:18px;">›</div>
         </div>`;
     }).join('');
@@ -11626,6 +11627,104 @@ function closeMarcacionSelect(goBack) {
     if (goBack && new URLSearchParams(window.location.search).get('from') === 'admin') {
         window.location.href = '/admin-panel.html#items';
     }
+}
+
+/**
+ * Selecciona un proceso y muestra su marcación en modo solo lectura (modal ligero).
+ */
+async function selectProcesoLectura(numeroProceso) {
+    closeMarcacionSelect(false);
+
+    const proceso = marcacionProcesosList.find(p => p.numero_proceso === numeroProceso);
+    if (!proceso) { alert('Proceso no encontrado.'); return; }
+
+    // Barra de info del proceso (solo texto)
+    const bar = document.getElementById('marcacionViewProcessBar');
+    if (bar) {
+        bar.innerHTML = `
+            <div class="marcacion-process-field">
+                <span class="marcacion-process-label">Proceso</span>
+                <span class="marcacion-process-value" style="font-family:monospace;font-weight:700;">${escapeHtml(numeroProceso)}</span>
+            </div>
+            <div class="marcacion-process-field">
+                <span class="marcacion-process-label">Cliente</span>
+                <span class="marcacion-process-value">${escapeHtml(proceso.cliente || '-')}</span>
+            </div>
+            <div class="marcacion-process-field">
+                <span class="marcacion-process-label">Fecha de recepción</span>
+                <span class="marcacion-process-value">${(proceso.fecha_recepcion || '').substring(0, 10) || '-'}</span>
+            </div>
+            <div class="marcacion-process-field">
+                <span class="marcacion-process-label">Estado</span>
+                <span class="marcacion-process-value">${escapeHtml(proceso.estado || '-')}</span>
+            </div>
+            <div class="marcacion-process-field">
+                <span class="marcacion-process-label">Tipo</span>
+                <span class="marcacion-process-value">${escapeHtml(proceso.tipo || 'Ensayo')}</span>
+            </div>
+            <div class="marcacion-process-field">
+                <span class="marcacion-process-label">Fecha de ejecución</span>
+                <span class="marcacion-process-value">${(proceso.fecha_ejecucion || '').substring(0, 10) || '-'}</span>
+            </div>
+        `;
+    }
+
+    // Cargar consecutivos desde la BD
+    const tbody = document.getElementById('marcacionViewBody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="marcacion-empty">Cargando marcación...</td></tr>';
+
+    const modal = document.getElementById('marcacionViewModal');
+    if (modal) { modal.hidden = false; document.body.style.overflow = 'hidden'; }
+
+    try {
+        const resp = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_marcaciones_by_proceso', proceso_id: proceso.id })
+        });
+        const result = await resp.json();
+
+        if (result.ok && Array.isArray(result.marcaciones) && result.marcaciones.length > 0) {
+            // Calcular unidad por elemento
+            const posByElemento = {};
+            tbody.innerHTML = result.marcaciones.map(m => {
+                posByElemento[m.elemento] = (posByElemento[m.elemento] || 0) + 1;
+                const unidadNum = posByElemento[m.elemento];
+                const estado = m.estado || 'Pendiente';
+                let estadoClass = 'pendiente';
+                const estLower = estado.toLowerCase();
+                if (estLower.includes('marcado')) estadoClass = 'marcado';
+                else if (estLower.includes('revisado')) estadoClass = 'revisado';
+                else if (estLower.includes('no conform')) estadoClass = 'no-conforme';
+
+                const fechaMod = (m.updated_at || '').substring(0, 10) || '-';
+
+                return `<tr>
+                    <td style="text-align:center;font-weight:700;font-family:monospace;color:#022859;">${escapeHtml(m.consecutivo || '')}</td>
+                    <td style="font-weight:600;">${escapeHtml(m.elemento || '')}</td>
+                    <td><span style="background:#fef3c7;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;color:#92400e;">${escapeHtml(m.descripcion || '')}</span></td>
+                    <td style="text-align:center;"><span style="background:#e0f2fe;padding:2px 6px;border-radius:8px;font-size:11px;font-weight:600;color:#0369a1;">U-${unidadNum}</span></td>
+                    <td style="text-align:center;">${escapeHtml(m.nci || '-')}</td>
+                    <td style="font-size:12px;color:#475569;">${escapeHtml(m.observacion || '')}</td>
+                    <td><span class="marcacion-estado-badge ${estadoClass}">${escapeHtml(estado)}</span></td>
+                    <td style="font-size:11px;color:#64748b;">${fechaMod}</td>
+                </tr>`;
+            }).join('');
+        } else {
+            if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="marcacion-empty"><i class="fas fa-clipboard-list"></i>Este proceso no tiene marcaciones registradas.</td></tr>';
+        }
+    } catch (e) {
+        console.warn('Error cargando marcación:', e);
+        if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="marcacion-empty">Error al cargar la marcación.</td></tr>';
+    }
+}
+
+/**
+ * Cierra el modal de solo lectura.
+ */
+function closeMarcacionView() {
+    const modal = document.getElementById('marcacionViewModal');
+    if (modal) { modal.hidden = true; document.body.style.overflow = ''; }
 }
 
 /**

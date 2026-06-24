@@ -798,6 +798,44 @@
         </div>
     </div>
 
+    <!-- Modal de Marcación - Solo Lectura -->
+    <div id="marcacionViewModal" class="marcacion-modal-overlay" hidden>
+        <div class="marcacion-modal-panel" style="max-width:1000px;" role="dialog" aria-modal="true">
+            <div class="marcacion-modal-header">
+                <div>
+                    <h3>👁 Marcación — Solo Lectura</h3>
+                    <p>Vista previa de la marcación registrada para este proceso.</p>
+                </div>
+                <button type="button" class="marcacion-modal-close" onclick="closeMarcacionView()" aria-label="Cerrar">✕</button>
+            </div>
+            <!-- Barra de info del proceso -->
+            <div class="marcacion-process-bar" id="marcacionViewProcessBar"></div>
+            <!-- Tabla de consecutivos -->
+            <div class="marcacion-table-wrapper" style="margin-top:12px;">
+                <table class="marcacion-table">
+                    <thead>
+                        <tr>
+                            <th style="width:70px;">CONSEC.</th>
+                            <th>ELEMENTO</th>
+                            <th style="width:100px;">MARCA</th>
+                            <th style="width:50px;">UNI</th>
+                            <th style="width:80px;">NCI/NCE</th>
+                            <th style="width:120px;">OBS</th>
+                            <th style="width:100px;">ESTADO</th>
+                            <th style="width:110px;">MOD</th>
+                        </tr>
+                    </thead>
+                    <tbody id="marcacionViewBody">
+                        <tr><td colspan="8" class="marcacion-empty">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="marcacion-modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeMarcacionView()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="script.js"></script>
     <script src="save-table.js"></script>
