@@ -82,6 +82,7 @@ exports.handler = async (event) => {
     if (event.httpMethod === 'POST') {
         try {
             const payload = JSON.parse(event.body || '{}');
+            console.log('ACTION RECIBIDA:', payload.action);
 
             // Login para usuarios internos (admin/técnicos)
             if (payload.action === 'login') {
@@ -891,6 +892,7 @@ exports.handler = async (event) => {
             // Actualizar marcación de múltiples items de una vez
             if (payload.action === 'update_marcacion_batch') {
                 const { marcaciones } = payload;
+                console.log('UPDATE_MARCACION_BATCH marcaciones:', marcaciones, 'isArray:', Array.isArray(marcaciones), 'length:', marcaciones?.length);
                 if (!Array.isArray(marcaciones) || marcaciones.length === 0) {
                     return jsonResponse(400, { ok: false, error: 'Array marcaciones requerido' });
                 }
@@ -937,6 +939,7 @@ exports.handler = async (event) => {
             // =============================================
             if (payload.action === 'create_marcaciones_batch') {
                 const { marcaciones } = payload;
+                console.log('CREATE_MARCACIONES_BATCH marcaciones:', marcaciones, 'isArray:', Array.isArray(marcaciones), 'length:', marcaciones?.length);
                 if (!Array.isArray(marcaciones)) {
                     return jsonResponse(400, { ok: false, error: 'Array marcaciones requerido' });
                 }
@@ -970,17 +973,22 @@ exports.handler = async (event) => {
                 const BATCH_SIZE = 50;
 
                 for (let i = 0; i < marcaciones.length; i += BATCH_SIZE) {
-                    const batch = marcaciones.slice(i, i + BATCH_SIZE).map(item => ({
-                        proceso_id: item.proceso_id,
-                        detalle_id: item.detalle_id || null,
-                        ensayo_id: item.ensayo_id || null,
-                        consecutivo: item.consecutivo,
-                        elemento: item.elemento || '',
-                        descripcion: item.descripcion || '',
-                        estado: item.estado || 'Pendiente',
-                        observacion: item.observacion || '',
-                        nci: item.nci || ''
-                    }));
+                    const batch = marcaciones.slice(i, i + BATCH_SIZE).map(item => {
+                        const registro = {
+                            proceso_id: item.proceso_id,
+                            detalle_id: item.detalle_id || null,
+                            ensayo_id: item.ensayo_id || null,
+                            consecutivo: item.consecutivo,
+                            elemento: item.elemento || '',
+                            descripcion: item.descripcion || '',
+                            estado: item.estado || 'Pendiente',
+                            observacion: item.observacion || '',
+                            nci: item.nci || ''
+                        };
+                        console.log('MARCACION A INSERTAR:', { proceso_id: registro.proceso_id, detalle_id: registro.detalle_id, consecutivo: registro.consecutivo, elemento: registro.elemento });
+                        return registro;
+                    });
+                    console.log('INSERT MARCACIONES:', batch);
 
                     const { data, error } = await supabase
                         .from('marcaciones_ac')

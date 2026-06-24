@@ -9815,8 +9815,8 @@ function validarNIT(nit) {
     // Solo dígitos
     if (!/^\d+$/.test(clean)) return false;
     
-    // Debe tener entre 9 y 11 dígitos
-    if (clean.length < 9 || clean.length > 11) return false;
+    // Acepta entre 8 y 11 dígitos (cédula: 8-10, NIT: 9-11)
+    if (clean.length < 8 || clean.length > 11) return false;
     
     return true;
 }
@@ -11783,6 +11783,8 @@ async function selectProcesoMarcacion(numeroProceso) {
                 body: JSON.stringify({ action: 'get_marcaciones_by_proceso', proceso_id: marcacionProcesoId })
             });
             const resultMarc = await respMarc.json();
+            console.log('MARCACIONES BD:', resultMarc.marcaciones);
+            console.log('MARCACION DATA:', marcacionData);
             if (resultMarc.ok && Array.isArray(resultMarc.marcaciones) && resultMarc.marcaciones.length > 0) {
                 marcacionIsExistente = true;
 
@@ -11795,6 +11797,7 @@ async function selectProcesoMarcacion(numeroProceso) {
 
                 marcacionConsecutivos = resultMarc.marcaciones.map(marc => {
                     const itemIdx = marcacionData.findIndex(d => d.elemento === marc.elemento);
+                    console.log('Consecutivo:', marc.consecutivo, 'elemento_marca:', marc.elemento, 'itemIdx:', itemIdx, 'marcacionData_elementos:', marcacionData.map(d => d.elemento));
                     posByElemento[marc.elemento] = (posByElemento[marc.elemento] || 0) + 1;
                     const unidadNum = posByElemento[marc.elemento];
                     return {
@@ -11811,6 +11814,7 @@ async function selectProcesoMarcacion(numeroProceso) {
                         updated_at: marc.updated_at || null
                     };
                 });
+                console.log('CONSECUTIVOS RECONSTRUIDOS:', marcacionConsecutivos);
             }
         } catch (e) {
             console.warn('Error cargando marcaciones existentes:', e);
@@ -12356,6 +12360,10 @@ async function guardarMarcacion() {
         return;
     }
 
+    console.log('marcacionData:', marcacionData);
+    console.log('marcacionConsecutivos:', marcacionConsecutivos);
+    console.log('procesoId:', marcacionProcesoId);
+
     const marcaciones = [];
     marcacionData.forEach(item => {
         const ids = item.ids || (item.id ? [item.id] : []);
@@ -12367,18 +12375,25 @@ async function guardarMarcacion() {
             });
         });
     });
+    console.log('marcaciones construidas:', marcaciones);
+    console.log('cantidad marcaciones:', marcaciones.length);
 
     try {
-        const resp = await fetch('/.netlify/functions/conectar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'update_marcacion_batch', marcaciones })
-        });
-        const result = await resp.json();
+        if (marcaciones.length > 0) {
+            console.log('PAYLOAD update_marcacion_batch:', { action: 'update_marcacion_batch', marcaciones });
+            const resp = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'update_marcacion_batch', marcaciones })
+            });
+            const result = await resp.json();
 
-        if (!result.ok) {
-            alert('Error al guardar: ' + (result.error || 'Error desconocido'));
-            return;
+            if (!result.ok) {
+                alert('Error al guardar: ' + (result.error || 'Error desconocido'));
+                return;
+            }
+        } else {
+            console.log('SKIP update_marcacion_batch: marcaciones vacío');
         }
 
         // Guardar consecutivos en marcaciones_ac
@@ -12399,6 +12414,7 @@ async function guardarMarcacion() {
                 };
             });
 
+            console.log('PAYLOAD create_marcaciones_batch:', { action: 'create_marcaciones_batch', proceso_id: marcacionProcesoId, marcaciones: consecutivosPayload });
             const respCons = await fetch('/.netlify/functions/conectar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -12409,6 +12425,8 @@ async function guardarMarcacion() {
                 console.error('Error guardando consecutivos:', resultCons);
                 showNotification('⚠️ Marcación guardada, pero hubo un error guardando los consecutivos. Ejecuta la SQL de columnas marca/unidad.', 'error');
             }
+        } else {
+            console.log('SKIP create_marcaciones_batch: marcacionProcesoId es null');
         }
 
         showNotification('✅ Marcación guardada correctamente', 'success');
