@@ -82,7 +82,7 @@ exports.handler = async (event) => {
     if (event.httpMethod === 'POST') {
         try {
             const payload = JSON.parse(event.body || '{}');
-            console.log('ACTION RECIBIDA:', payload.action);
+            // console.log('ACTION RECIBIDA:', payload.action);
 
             // Login para usuarios internos (admin/técnicos)
             if (payload.action === 'login') {
@@ -469,7 +469,7 @@ exports.handler = async (event) => {
                 if (!numero) return jsonResponse(400, { ok: false, error: 'numero_proceso requerido' });
 
                 // Permitir actualizar solo campos autorizados
-                const allowed = ['numero_proceso','cliente','cliente_id','tipo','estado','fecha_recepcion','fecha_entrega_cliente','fecha_finalizado','valor','caso_activo','informe_a_nombre_de','facturar_a_nombre_de','fecha_ejecucion'];
+                const allowed = ['numero_proceso','cliente','cliente_id','tipo','estado','fecha_recepcion','fecha_entrega_cliente','fecha_finalizado','valor','caso_activo','informe_a_nombre_de','facturar_a_nombre_de','fecha_ejecucion','n_remision'];
                 const updateData = {};
                 for (const key of allowed) {
                     if (payload[key] !== undefined) updateData[key] = payload[key];
@@ -892,7 +892,7 @@ exports.handler = async (event) => {
             // Actualizar marcación de múltiples items de una vez
             if (payload.action === 'update_marcacion_batch') {
                 const { marcaciones } = payload;
-                console.log('UPDATE_MARCACION_BATCH marcaciones:', marcaciones, 'isArray:', Array.isArray(marcaciones), 'length:', marcaciones?.length);
+                // console.log('UPDATE_MARCACION_BATCH marcaciones:', marcaciones, 'isArray:', Array.isArray(marcaciones), 'length:', marcaciones?.length);
                 if (!Array.isArray(marcaciones) || marcaciones.length === 0) {
                     return jsonResponse(400, { ok: false, error: 'Array marcaciones requerido' });
                 }
@@ -939,7 +939,7 @@ exports.handler = async (event) => {
             // =============================================
             if (payload.action === 'create_marcaciones_batch') {
                 const { marcaciones } = payload;
-                console.log('CREATE_MARCACIONES_BATCH marcaciones:', marcaciones, 'isArray:', Array.isArray(marcaciones), 'length:', marcaciones?.length);
+                // console.log('CREATE_MARCACIONES_BATCH marcaciones:', marcaciones, 'isArray:', Array.isArray(marcaciones), 'length:', marcaciones?.length);
                 if (!Array.isArray(marcaciones)) {
                     return jsonResponse(400, { ok: false, error: 'Array marcaciones requerido' });
                 }
@@ -985,10 +985,10 @@ exports.handler = async (event) => {
                             observacion: item.observacion || '',
                             nci: item.nci || ''
                         };
-                        console.log('MARCACION A INSERTAR:', { proceso_id: registro.proceso_id, detalle_id: registro.detalle_id, consecutivo: registro.consecutivo, elemento: registro.elemento });
+                        // console.log('MARCACION A INSERTAR:', { proceso_id: registro.proceso_id, detalle_id: registro.detalle_id, consecutivo: registro.consecutivo, elemento: registro.elemento });
                         return registro;
                     });
-                    console.log('INSERT MARCACIONES:', batch);
+                    // console.log('INSERT MARCACIONES:', batch);
 
                     const { data, error } = await supabase
                         .from('marcaciones_ac')

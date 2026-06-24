@@ -6507,6 +6507,7 @@ async function recuperarCaso(numeroProceso) {
             fechaEntrega: proceso.fecha_entrega_cliente || '',
             informeNombre: proceso.informe_a_nombre_de || '',
             facturarNombre: proceso.facturar_a_nombre_de || '',
+            facturar: proceso.n_remision || '',
             items: (detalle || []).map(d => ({
                 id: d.ensayo_id,
                 quantity: d.cantidad,
@@ -7270,6 +7271,7 @@ async function crearProcesoEnPanelAdmin() {
             cliente: clienteNombre,
             informe_a_nombre_de: (document.getElementById('informeNombre')?.value || clienteNombre).toUpperCase(),
             facturar_a_nombre_de: (document.getElementById('facturarNombre')?.value || clienteNombre).toUpperCase(),
+            n_remision: document.getElementById('facturar')?.value || '',
             estado: 'recepcion',
             fecha_recepcion: fechaRecepcion,
             fecha_entrega_cliente: null,
@@ -7515,6 +7517,17 @@ async function saveAsDraft() {
 
     // Sincronizar con servidor (con await para asegurar que se guarde)
     try { await saveDraftsToServer(allDrafts); } catch(e) { console.log('Sync server error', e); }
+
+    // Sincronizar n_remision con la BD si el proceso ya existe
+    if (formData.cotizacion && formData.facturar) {
+        try {
+            await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'update_proceso', numero_proceso: formData.cotizacion, n_remision: formData.facturar })
+            });
+        } catch(e) { /* no bloquear por error de sync remisión */ }
+    }
 
     // Refrescar selector de casos y notificar al usuario
     setTimeout(refreshCasesSelect, 100);
@@ -11783,8 +11796,8 @@ async function selectProcesoMarcacion(numeroProceso) {
                 body: JSON.stringify({ action: 'get_marcaciones_by_proceso', proceso_id: marcacionProcesoId })
             });
             const resultMarc = await respMarc.json();
-            console.log('MARCACIONES BD:', resultMarc.marcaciones);
-            console.log('MARCACION DATA:', marcacionData);
+            // console.log('MARCACIONES BD:', resultMarc.marcaciones);
+            // console.log('MARCACION DATA:', marcacionData);
             if (resultMarc.ok && Array.isArray(resultMarc.marcaciones) && resultMarc.marcaciones.length > 0) {
                 marcacionIsExistente = true;
 
@@ -11797,7 +11810,7 @@ async function selectProcesoMarcacion(numeroProceso) {
 
                 marcacionConsecutivos = resultMarc.marcaciones.map(marc => {
                     const itemIdx = marcacionData.findIndex(d => d.elemento === marc.elemento);
-                    console.log('Consecutivo:', marc.consecutivo, 'elemento_marca:', marc.elemento, 'itemIdx:', itemIdx, 'marcacionData_elementos:', marcacionData.map(d => d.elemento));
+                    // console.log('Consecutivo:', marc.consecutivo, 'elemento_marca:', marc.elemento, 'itemIdx:', itemIdx, 'marcacionData_elementos:', marcacionData.map(d => d.elemento));
                     posByElemento[marc.elemento] = (posByElemento[marc.elemento] || 0) + 1;
                     const unidadNum = posByElemento[marc.elemento];
                     return {
@@ -11814,7 +11827,7 @@ async function selectProcesoMarcacion(numeroProceso) {
                         updated_at: marc.updated_at || null
                     };
                 });
-                console.log('CONSECUTIVOS RECONSTRUIDOS:', marcacionConsecutivos);
+                // console.log('CONSECUTIVOS RECONSTRUIDOS:', marcacionConsecutivos);
             }
         } catch (e) {
             console.warn('Error cargando marcaciones existentes:', e);
@@ -12360,9 +12373,9 @@ async function guardarMarcacion() {
         return;
     }
 
-    console.log('marcacionData:', marcacionData);
-    console.log('marcacionConsecutivos:', marcacionConsecutivos);
-    console.log('procesoId:', marcacionProcesoId);
+    // console.log('marcacionData:', marcacionData);
+    // console.log('marcacionConsecutivos:', marcacionConsecutivos);
+    // console.log('procesoId:', marcacionProcesoId);
 
     const marcaciones = [];
     marcacionData.forEach(item => {
@@ -12375,12 +12388,12 @@ async function guardarMarcacion() {
             });
         });
     });
-    console.log('marcaciones construidas:', marcaciones);
-    console.log('cantidad marcaciones:', marcaciones.length);
+    // console.log('marcaciones construidas:', marcaciones);
+    // console.log('cantidad marcaciones:', marcaciones.length);
 
     try {
         if (marcaciones.length > 0) {
-            console.log('PAYLOAD update_marcacion_batch:', { action: 'update_marcacion_batch', marcaciones });
+            // console.log('PAYLOAD update_marcacion_batch:', { action: 'update_marcacion_batch', marcaciones });
             const resp = await fetch('/.netlify/functions/conectar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -12393,7 +12406,7 @@ async function guardarMarcacion() {
                 return;
             }
         } else {
-            console.log('SKIP update_marcacion_batch: marcaciones vacío');
+            // console.log('SKIP update_marcacion_batch: marcaciones vacío');
         }
 
         // Guardar consecutivos en marcaciones_ac
@@ -12414,7 +12427,7 @@ async function guardarMarcacion() {
                 };
             });
 
-            console.log('PAYLOAD create_marcaciones_batch:', { action: 'create_marcaciones_batch', proceso_id: marcacionProcesoId, marcaciones: consecutivosPayload });
+            // console.log('PAYLOAD create_marcaciones_batch:', { action: 'create_marcaciones_batch', proceso_id: marcacionProcesoId, marcaciones: consecutivosPayload });
             const respCons = await fetch('/.netlify/functions/conectar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -12426,7 +12439,7 @@ async function guardarMarcacion() {
                 showNotification('⚠️ Marcación guardada, pero hubo un error guardando los consecutivos. Ejecuta la SQL de columnas marca/unidad.', 'error');
             }
         } else {
-            console.log('SKIP create_marcaciones_batch: marcacionProcesoId es null');
+            // console.log('SKIP create_marcaciones_batch: marcacionProcesoId es null');
         }
 
         showNotification('✅ Marcación guardada correctamente', 'success');
