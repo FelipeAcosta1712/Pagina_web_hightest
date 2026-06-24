@@ -3,214 +3,340 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="FR-7.8 Informe de ensayos eléctricos - HIGH TEST SAS">
-    <meta name="author" content="HIGH TEST SAS">
     <title>FR-7.8 Informe de Ensayos | HIGH TEST SAS</title>
-    <link rel="stylesheet" href="styles-v2.css">
+    <link rel="stylesheet" href="informe_ensayos/informe-ac.css">
 </head>
-<body class="admin-page">
-    <!-- HEADER INFORME DE ENSAYOS -->
-    <header class="header header--admin" role="banner">
-        <div class="header__container">
-            <div class="header__logo">
-                <a href="index.html#inicio" class="header__logo-link">
-                    <img src="/image/logo.png" alt="HIGH TEST SAS" class="header__logo-image">
-                </a>
-            </div>
-            <nav class="header__nav" role="navigation" aria-label="Navegación informe de ensayos">
-                <button class="header__menu-toggle" aria-label="Abrir menú" aria-expanded="false">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
-                <ul class="header__menu">
-                    <li><a href="admin-panel.html#items" class="header__link">⬅ Volver al Panel</a></li>
-                </ul>
-                <button class="header__icon-btn" id="themeToggleBtn" aria-label="Cambiar tema de color" title="Cambiar tema">
-                    🌙
-                </button>
-            </nav>
+<body>
+
+    <!-- HEADER -->
+    <header class="inf-header">
+        <h1>SISTEMA DE INFORMES DE LABORATORIO</h1>
+        <div class="inf-header__code">
+            <label>CODIGO INFORME:</label>
+            <input type="text" id="reportCode" value="R26-0001">
         </div>
     </header>
 
-    <!-- CONTENIDO PRINCIPAL -->
-    <main class="admin-panel admin-main" role="main">
-        <div class="container">
-            <section class="admin-section">
-                <div class="admin-section__header">
-                    <h1 class="admin-section__title">FR-7.8 Informe de Ensayos Eléctricos</h1>
-                    <p class="admin-section__subtitle">Formato para documentar los resultados de los ensayos eléctricos realizados a equipos y elementos sometidos a prueba.</p>
-                </div>
-                <div class="admin-section__content">
-                    <!-- DATOS GENERALES DEL SERVICIO -->
-                    <div class="admin-checklist__info">
-                        <div class="checklist-header-grid">
-                            <div class="checklist-header-field">
-                                <label for="infCliente">Cliente</label>
-                                <input type="text" id="infCliente" name="cliente" placeholder="Nombre del cliente">
-                            </div>
-                            <div class="checklist-header-field">
-                                <label for="infUbicacion">Ubicación / Sitio de ensayo</label>
-                                <input type="text" id="infUbicacion" name="ubicacion" placeholder="Dirección o instalación donde se realizó el ensayo">
-                            </div>
-                            <div class="checklist-header-field">
-                                <label for="infFechaEnsayo">Fecha del ensayo</label>
-                                <input type="date" id="infFechaEnsayo" name="fecha_ensayo">
-                            </div>
-                            <div class="checklist-header-field">
-                                <label for="infNumero">N° de informe</label>
-                                <input type="text" id="infNumero" name="numero_informe" placeholder="Código interno del informe">
-                            </div>
+    <!-- TABS -->
+    <nav class="inf-tabs styled-scrollbar">
+        <button class="inf-tab active" data-tab="portada">1. Portada</button>
+        <button class="inf-tab" data-tab="mangas">2. Mangas</button>
+        <button class="inf-tab" data-tab="alfombras">3. Alfombras</button>
+        <button class="inf-tab" data-tab="mantas">4. Mantas</button>
+        <button class="inf-tab" data-tab="jumpers">5. Jumpers</button>
+        <button class="inf-tab" data-tab="mangueras">6. Mangueras</button>
+        <button class="inf-tab" data-tab="cubiertas">7. Cubiertas</button>
+        <button class="inf-tab" data-tab="calzado">8. Calzado</button>
+        <button class="inf-tab" data-tab="tubos">9. Tubos/Varas</button>
+        <button class="inf-tab" data-tab="guantes">10. Guantes</button>
+        <button class="inf-tab" data-tab="herramientas">11. Herramientas</button>
+        <button class="inf-tab" data-tab="cascos">12. Cascos</button>
+        <button class="inf-tab" data-tab="plataformas">13. Plataformas</button>
+        <button class="inf-tab" data-tab="tierras">14. Tierras</button>
+        <button class="inf-tab" data-tab="detectores">15. Detectores</button>
+        <button class="inf-tab" data-tab="vehiculos">16. Vehiculos</button>
+        <button class="inf-tab" data-tab="liners">17. Liners</button>
+    </nav>
+
+    <!-- CONTENIDO -->
+    <div class="inf-content">
+
+        <!-- ==================== PORTADA ==================== -->
+        <div class="inf-panel active" id="panel-portada">
+            <div class="inf-portada-title">
+                <h2>INFORME DE ENSAYOS</h2>
+                <p>Documento Oficial de Resultados de Laboratorio</p>
+                <p class="code">N° <span class="report-code-display">R26-0001</span></p>
+            </div>
+            <div class="inf-portada-grid">
+                <div class="inf-portada-card">
+                    <div class="inf-portada-card__header">Informacion del Cliente</div>
+                    <div class="inf-portada-card__body">
+                        <div class="inf-portada-field">
+                            <label>Nombre / Razon Social</label>
+                            <input type="text" placeholder="Ej: Empresa de Energia S.A.">
                         </div>
-                        <div class="checklist-header-grid" style="margin-top: 8px;">
-                            <div class="checklist-header-field">
-                                <label for="infEquipo">Equipo / Elemento ensayado</label>
-                                <input type="text" id="infEquipo" name="equipo" placeholder="Descripción del equipo o elemento evaluado">
-                            </div>
-                            <div class="checklist-header-field">
-                                <label for="infReferencia">Referencia / Identificación</label>
-                                <input type="text" id="infReferencia" name="referencia" placeholder="Placa, serie o código interno">
-                            </div>
-                            <div class="checklist-header-field">
-                                <label for="infNorma">Norma / Procedimiento aplicado</label>
-                                <input type="text" id="infNorma" name="norma" placeholder="Norma técnica o procedimiento utilizado">
-                            </div>
-                            <div class="checklist-header-field">
-                                <label for="infRecepcion">N° de recepción</label>
-                                <input type="text" id="infRecepcion" name="numero_recepcion" placeholder="Relación con recepción de ítems">
-                            </div>
+                        <div class="inf-portada-field">
+                            <label>Direccion</label>
+                            <input type="text" placeholder="Ej: Calle 123 #45-67">
                         </div>
-                    </div>
-
-                    <!-- TABLA DE RESULTADOS -->
-                    <table class="admin-table checklist-table" aria-label="Resultados de los ensayos eléctricos">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Parámetro / Ensayo</th>
-                                <th>Unidad</th>
-                                <th>Valor medido</th>
-                                <th>Criterio / Límite</th>
-                                <th>Resultado</th>
-                                <th>Observaciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>1</td>
-                                <td><input type="text" class="checklist-observation" placeholder="Ej: Tensión de prueba"></td>
-                                <td><input type="text" class="checklist-observation" placeholder="kV"></td>
-                                <td><input type="text" class="checklist-observation" placeholder="Valor medido"></td>
-                                <td><input type="text" class="checklist-observation" placeholder="Criterio de aceptación"></td>
-                                <td>
-                                    <select class="checklist-observation" name="resultado_1">
-                                        <option value="">-</option>
-                                        <option value="conforme">Conforme</option>
-                                        <option value="no_conforme">No conforme</option>
-                                        <option value="no_aplica">No aplica</option>
-                                    </select>
-                                </td>
-                                <td><input type="text" class="checklist-observation" placeholder="Observaciones"></td>
-                            </tr>
-                            <tr>
-                                <td>2</td>
-                                <td><input type="text" class="checklist-observation" placeholder="Parámetro adicional"></td>
-                                <td><input type="text" class="checklist-observation" placeholder="Unidad"></td>
-                                <td><input type="text" class="checklist-observation" placeholder="Valor medido"></td>
-                                <td><input type="text" class="checklist-observation" placeholder="Criterio de aceptación"></td>
-                                <td>
-                                    <select class="checklist-observation" name="resultado_2">
-                                        <option value="">-</option>
-                                        <option value="conforme">Conforme</option>
-                                        <option value="no_conforme">No conforme</option>
-                                        <option value="no_aplica">No aplica</option>
-                                    </select>
-                                </td>
-                                <td><input type="text" class="checklist-observation" placeholder="Observaciones"></td>
-                            </tr>
-                            <tr>
-                                <td>3</td>
-                                <td><input type="text" class="checklist-observation" placeholder="Parámetro adicional"></td>
-                                <td><input type="text" class="checklist-observation" placeholder="Unidad"></td>
-                                <td><input type="text" class="checklist-observation" placeholder="Valor medido"></td>
-                                <td><input type="text" class="checklist-observation" placeholder="Criterio de aceptación"></td>
-                                <td>
-                                    <select class="checklist-observation" name="resultado_3">
-                                        <option value="">-</option>
-                                        <option value="conforme">Conforme</option>
-                                        <option value="no_conforme">No conforme</option>
-                                        <option value="no_aplica">No aplica</option>
-                                    </select>
-                                </td>
-                                <td><input type="text" class="checklist-observation" placeholder="Observaciones"></td>
-                            </tr>
-                            <tr>
-                                <td>4</td>
-                                <td><input type="text" class="checklist-observation" placeholder="Parámetro adicional"></td>
-                                <td><input type="text" class="checklist-observation" placeholder="Unidad"></td>
-                                <td><input type="text" class="checklist-observation" placeholder="Valor medido"></td>
-                                <td><input type="text" class="checklist-observation" placeholder="Criterio de aceptación"></td>
-                                <td>
-                                    <select class="checklist-observation" name="resultado_4">
-                                        <option value="">-</option>
-                                        <option value="conforme">Conforme</option>
-                                        <option value="no_conforme">No conforme</option>
-                                        <option value="no_aplica">No aplica</option>
-                                    </select>
-                                </td>
-                                <td><input type="text" class="checklist-observation" placeholder="Observaciones"></td>
-                            </tr>
-                            <tr>
-                                <td>5</td>
-                                <td><input type="text" class="checklist-observation" placeholder="Parámetro adicional"></td>
-                                <td><input type="text" class="checklist-observation" placeholder="Unidad"></td>
-                                <td><input type="text" class="checklist-observation" placeholder="Valor medido"></td>
-                                <td><input type="text" class="checklist-observation" placeholder="Criterio de aceptación"></td>
-                                <td>
-                                    <select class="checklist-observation" name="resultado_5">
-                                        <option value="">-</option>
-                                        <option value="conforme">Conforme</option>
-                                        <option value="no_conforme">No conforme</option>
-                                        <option value="no_aplica">No aplica</option>
-                                    </select>
-                                </td>
-                                <td><input type="text" class="checklist-observation" placeholder="Observaciones"></td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <!-- CONCLUSIONES Y OBSERVACIONES GENERALES -->
-                    <div class="admin-checklist__footer" style="margin-top: 16px;">
-                        <p><strong>Conclusiones del ensayo:</strong></p>
-                        <textarea id="infConclusiones" name="conclusiones" rows="4" style="width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; resize: vertical;" placeholder="Describa de forma clara las conclusiones generales del ensayo."></textarea>
-
-                        <p style="margin-top: 12px;"><strong>Observaciones generales:</strong></p>
-                        <textarea id="infObservacionesGenerales" name="observaciones_generales" rows="3" style="width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; resize: vertical;" placeholder="Registre observaciones relevantes adicionales al resultado del ensayo."></textarea>
-
-                        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; align-items: flex-end;">
-                            <div style="flex: 1 1 200px;">
-                                <label for="infResponsable" style="display:block; font-size: 13px; font-weight:600; margin-bottom:4px;">Responsable del informe</label>
-                                <input type="text" id="infResponsable" name="responsable" style="width:100%; border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; font-size:13px;" placeholder="Nombre del profesional responsable">
-                            </div>
-                            <div style="flex: 1 1 200px;">
-                                <label for="infCargo" style="display:block; font-size: 13px; font-weight:600; margin-bottom:4px;">Cargo</label>
-                                <input type="text" id="infCargo" name="cargo" style="width:100%; border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; font-size:13px;" placeholder="Cargo del responsable">
-                            </div>
-                            <div style="flex: 1 1 200px;">
-                                <label for="infFirma" style="display:block; font-size: 13px; font-weight:600; margin-bottom:4px;">Firma / VoBo</label>
-                                <input type="text" id="infFirma" name="firma" style="width:100%; border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; font-size:13px;" placeholder="Espacio para firma o VoBo">
-                            </div>
-                            <div style="flex: 0 0 auto; margin-left:auto;">
-                                <button type="button" class="btn btn--primary" id="btnInformePdf">Generar PDF</button>
-                            </div>
+                        <div class="inf-portada-field">
+                            <label>Contacto</label>
+                            <input type="text" placeholder="Ej: +57 300 123 4567">
                         </div>
                     </div>
                 </div>
-            </section>
+                <div class="inf-portada-card">
+                    <div class="inf-portada-card__header">Equipos Utilizados</div>
+                    <div class="inf-portada-card__body">
+                        <div class="inf-portada-field">
+                            <label>Lugar de Ensayo</label>
+                            <input type="text" value="Laboratorio Principal">
+                        </div>
+                        <div class="inf-portada-field">
+                            <label>Equipos</label>
+                            <div class="inf-equipo-item">
+                                <select>
+                                    <option>Elevador de tension</option>
+                                    <option>Multimetro calibrado</option>
+                                    <option>Generador de Alta Tension</option>
+                                    <option>Camara Termografica</option>
+                                    <option>Termohigrometro</option>
+                                    <option>Miliohmetro / Medidor DC</option>
+                                </select>
+                                <button class="btn-remove print-hidden">X</button>
+                            </div>
+                            <div class="inf-equipo-item">
+                                <select>
+                                    <option>Multimetro calibrado</option>
+                                    <option>Elevador de tension</option>
+                                    <option>Generador de Alta Tension</option>
+                                    <option>Camara Termografica</option>
+                                    <option>Termohigrometro</option>
+                                    <option>Miliohmetro / Medidor DC</option>
+                                </select>
+                                <button class="btn-remove print-hidden">X</button>
+                            </div>
+                            <button class="inf-add-equipo print-hidden">+ Agregar otro equipo</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-    </main>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
-    <script src="script-v2.js"></script>
+        <!-- ==================== MANGAS ==================== -->
+        <div class="inf-panel" id="panel-mangas">
+            <div class="inf-top-section">
+                <div class="inf-top-header">
+                    <div class="inf-top-header__approved">
+                        APROBADO: <input type="text" placeholder="ESPECIFICAR"><br>
+                        REALIZO: <input type="text" placeholder="ESPECIFICAR">
+                    </div>
+                    <div class="inf-top-header__fr">FR 7.8-V04</div>
+                    <h2>RESULTADO DE ENSAYO</h2>
+                    <p>Rigidez dielectrica - Mangas Aislantes</p>
+                    <p class="inf-top-header__code">No. <span class="report-code-display">R26-0001</span></p>
+                </div>
+                <div class="inf-info-box">
+                    <strong>ASTM F496-24</strong> Numerales 7.7, 7.1.3
+                    &mdash; Cumple: si soporta la tension de ensayo sin ruptura dielectrica.
+                    No Cumple: si presenta ruptura dielectrica o no supera inspeccion visual.
+                </div>
+                <div class="inf-nota">
+                    <strong>Nota:</strong> Si la inspeccion resulta en NO Pasa, dirijase a los anexos para consultar la causa de rechazo.
+                </div>
+            </div>
+            <div class="inf-table-wrapper">
+                <table class="inf-table">
+                    <thead>
+                        <tr>
+                            <th colspan="2">IDENTIFICACION</th>
+                            <th colspan="3" class="section-title">INFO CLIENTE</th>
+                            <th colspan="4" class="section-title">RESULTADO ENSAYO</th>
+                            <th colspan="1" class="section-title">CONFORMIDAD</th>
+                            <th class="print-hidden">X</th>
+                        </tr>
+                        <tr>
+                            <th>Interna</th>
+                            <th>Externa</th>
+                            <th class="section-title">Elemento</th>
+                            <th>Fabricante</th>
+                            <th>Clase</th>
+                            <th class="section-title">Inspeccion Visual</th>
+                            <th>Tension (kV)</th>
+                            <th>Incert.</th>
+                            <th>Disrupcion</th>
+                            <th class="section-title">Cumple</th>
+                            <th class="print-hidden">Del</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mangasBody"></tbody>
+                </table>
+            </div>
+            <div class="inf-btn-add print-hidden">
+                <button>+ Agregar fila</button>
+            </div>
+        </div>
+
+        <!-- ==================== ALFOMBRAS ==================== -->
+        <div class="inf-panel" id="panel-alfombras">
+            <div class="inf-top-section">
+                <div class="inf-top-header">
+                    <div class="inf-top-header__approved">
+                        APROBADO: <input type="text" placeholder="ESPECIFICAR"><br>
+                        REALIZO: <input type="text" placeholder="ESPECIFICAR">
+                    </div>
+                    <div class="inf-top-header__fr">FR 7.8-V04</div>
+                    <h2>RESULTADO DE ENSAYO</h2>
+                    <p>Rigidez dielectrica - Alfombras / Tapetes Aislantes</p>
+                    <p class="inf-top-header__code">No. <span class="report-code-display">R26-0001</span></p>
+                </div>
+                <div class="inf-info-box">
+                    <strong>ASTM D178-22</strong> Numerales 18.3
+                    &mdash; Cumple: si soporta la tension de ensayo durante 1 minuto sin ruptura.
+                    No Cumple: si presenta ruptura dielectrica.
+                </div>
+                <div class="inf-nota">
+                    <strong>Nota:</strong> Si la inspeccion resulta en NO Pasa, dirijase a los anexos para consultar la causa de rechazo.
+                </div>
+            </div>
+            <div class="inf-table-wrapper">
+                <table class="inf-table">
+                    <thead>
+                        <tr>
+                            <th colspan="2">IDENTIFICACION</th>
+                            <th colspan="4" class="section-title">INFO CLIENTE</th>
+                            <th colspan="4" class="section-title">RESULTADO ENSAYO</th>
+                            <th colspan="1" class="section-title">CONFORMIDAD</th>
+                            <th class="print-hidden">X</th>
+                        </tr>
+                        <tr>
+                            <th>Interna</th>
+                            <th>Externa</th>
+                            <th class="section-title">Elemento</th>
+                            <th>Fabricante</th>
+                            <th>Clase</th>
+                            <th>Dim. (cm)</th>
+                            <th class="section-title">Inspeccion Visual</th>
+                            <th>Tension (kV)</th>
+                            <th>Incert.</th>
+                            <th>Disrupcion</th>
+                            <th class="section-title">Cumple</th>
+                            <th class="print-hidden">Del</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alfombrasBody"></tbody>
+                </table>
+            </div>
+            <div class="inf-btn-add print-hidden">
+                <button>+ Agregar fila</button>
+            </div>
+        </div>
+
+        <!-- ==================== MANTAS ==================== -->
+        <div class="inf-panel" id="panel-mantas">
+            <div class="inf-top-section">
+                <div class="inf-top-header">
+                    <div class="inf-top-header__approved">
+                        APROBADO: <input type="text" placeholder="ESPECIFICAR"><br>
+                        REALIZO: <input type="text" placeholder="ESPECIFICAR">
+                    </div>
+                    <div class="inf-top-header__fr">FR 7.8-V04</div>
+                    <h2>RESULTADO DE ENSAYO</h2>
+                    <p>Rigidez dielectrica - Mantas Aislantes</p>
+                    <p class="inf-top-header__code">No. <span class="report-code-display">R26-0001</span></p>
+                </div>
+                <div class="inf-info-box">
+                    <strong>ASTM F479-06 (2022)</strong> Numerales 8.5
+                    &mdash; Cumple: si soporta la tension de ensayo durante 1 minuto sin ruptura dielectrica.
+                    No Cumple: si presenta ruptura dielectrica.
+                </div>
+                <div class="inf-nota">
+                    <strong>Nota:</strong> Si la inspeccion resulta en NO Pasa, dirijase a los anexos para consultar la causa de rechazo.
+                </div>
+            </div>
+            <div class="inf-table-wrapper">
+                <table class="inf-table">
+                    <thead>
+                        <tr>
+                            <th colspan="2">IDENTIFICACION</th>
+                            <th colspan="4" class="section-title">INFO CLIENTE</th>
+                            <th colspan="4" class="section-title">RESULTADO ENSAYO</th>
+                            <th colspan="1" class="section-title">CONFORMIDAD</th>
+                            <th class="print-hidden">X</th>
+                        </tr>
+                        <tr>
+                            <th>Interna</th>
+                            <th>Externa</th>
+                            <th class="section-title">Elemento</th>
+                            <th>Fabricante</th>
+                            <th>Clase</th>
+                            <th>Dim. (cm)</th>
+                            <th class="section-title">Inspeccion Visual</th>
+                            <th>Tension (kV)</th>
+                            <th>Incert.</th>
+                            <th>Disrupcion</th>
+                            <th class="section-title">Cumple</th>
+                            <th class="print-hidden">Del</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mantasBody"></tbody>
+                </table>
+            </div>
+            <div class="inf-btn-add print-hidden">
+                <button>+ Agregar fila</button>
+            </div>
+        </div>
+
+        <!-- ==================== PESTAÑAS PENDIENTES (placeholder) ==================== -->
+        <div class="inf-panel" id="panel-jumpers">
+            <div class="inf-info-box">
+                <span>Proximo desarrollo: Pestaña de Jumpers Dielectricos (ASTM F1742)</span>
+            </div>
+        </div>
+        <div class="inf-panel" id="panel-mangueras">
+            <div class="inf-info-box">
+                <span>Proximo desarrollo: Pestaña de Mangueras con Conector (ASTM F1505)</span>
+            </div>
+        </div>
+        <div class="inf-panel" id="panel-cubiertas">
+            <div class="inf-info-box">
+                <span>Proximo desarrollo: Pestaña de Cubiertas Plasticas (ASTM F1741)</span>
+            </div>
+        </div>
+        <div class="inf-panel" id="panel-calzado">
+            <div class="inf-info-box">
+                <span>Proximo desarrollo: Pestaña de Calzado Dielectrico (ASTM F1117)</span>
+            </div>
+        </div>
+        <div class="inf-panel" id="panel-tubos">
+            <div class="inf-info-box">
+                <span>Proximo desarrollo: Pestaña de Tubos / Varas / Pertigas (ASTM F711)</span>
+            </div>
+        </div>
+        <div class="inf-panel" id="panel-guantes">
+            <div class="inf-info-box">
+                <span>Proximo desarrollo: Pestaña de Guantes Dielectricos (ASTM F496)</span>
+            </div>
+        </div>
+        <div class="inf-panel" id="panel-herramientas">
+            <div class="inf-info-box">
+                <span>Proximo desarrollo: Pestaña de Herramientas Aisladas (IEC 60900)</span>
+            </div>
+        </div>
+        <div class="inf-panel" id="panel-cascos">
+            <div class="inf-info-box">
+                <span>Proximo desarrollo: Pestaña de Cascos Dielectricos (ASTM F1802)</span>
+            </div>
+        </div>
+        <div class="inf-panel" id="panel-plataformas">
+            <div class="inf-info-box">
+                <span>Proximo desarrollo: Pestaña de Plataformas Aislantes (ASTM F1236)</span>
+            </div>
+        </div>
+        <div class="inf-panel" id="panel-tierras">
+            <div class="inf-info-box">
+                <span>Proximo desarrollo: Pestaña de Puentes Tierra (IEEE 80)</span>
+            </div>
+        </div>
+        <div class="inf-panel" id="panel-detectores">
+            <div class="inf-info-box">
+                <span>Proximo desarrollo: Pestaña de Detectores de Tension (IEC 61243-1)</span>
+            </div>
+        </div>
+        <div class="inf-panel" id="panel-vehiculos">
+            <div class="inf-info-box">
+                <span>Proximo desarrollo: Pestaña de Vehiculos Brazo Aislado (ANSI/SIA A92.2)</span>
+            </div>
+        </div>
+        <div class="inf-panel" id="panel-liners">
+            <div class="inf-info-box">
+                <span>Proximo desarrollo: Pestaña de Vaso Liner / Canastilla (IEC 60900)</span>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="informe_ensayos/informe-ac.js"></script>
 </body>
 </html>

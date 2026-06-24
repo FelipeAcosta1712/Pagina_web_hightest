@@ -6940,8 +6940,8 @@ textarea:focus-visible {
 
 .admin-quick-link .admin-section__content {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: var(--spacing-md);
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
     padding: var(--spacing-md);
 }
 
@@ -6949,9 +6949,9 @@ textarea:focus-visible {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-md);
+    justify-content: space-between;
+    gap: 8px;
+    padding: 16px 14px;
     border-radius: var(--radius-lg);
     background: linear-gradient(135deg, #f7faff, #eef5ff);
     border: 1px solid rgba(148, 163, 184, 0.16);
@@ -6967,20 +6967,20 @@ textarea:focus-visible {
 }
 
 .admin-quick-link__card h3 {
-    font-size: var(--font-size-base);
-    margin: var(--spacing-xs) 0;
+    font-size: 0.82rem;
+    margin: 2px 0;
 }
 
 .admin-quick-link__card p {
-    font-size: var(--font-size-sm);
-    line-height: 1.3;
-    margin: var(--spacing-xs) 0 var(--spacing-sm) 0;
+    font-size: 0.72rem;
+    line-height: 1.35;
+    margin: 2px 0 6px 0;
 }
 
 .admin-quick-link__card .btn {
     width: 100%;
-    font-size: var(--font-size-sm);
-    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.7rem;
+    padding: 5px 8px;
 }
 
 .admin-quick-link__card .btn--primary {

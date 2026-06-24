@@ -1454,6 +1454,13 @@ th[data-col="acciones"],
   background: #f8fafc;
 }
 
+.marcacion-table tbody tr.estado-marcado { background: #dcfce7 !important; }
+.marcacion-table tbody tr.estado-revisado { background: #dbeafe !important; }
+.marcacion-table tbody tr.estado-no-conforme { background: #fee2e2 !important; }
+.marcacion-table tbody tr.estado-marcado:hover { background: #bbf7d0 !important; }
+.marcacion-table tbody tr.estado-revisado:hover { background: #bfdbfe !important; }
+.marcacion-table tbody tr.estado-no-conforme:hover { background: #fecaca !important; }
+
 .marcacion-table tbody tr:last-child td {
   border-bottom: none;
 }

@@ -1122,6 +1122,11 @@ async function loadPredefinedItemsNoAcredFromJSON() {
 document.addEventListener('DOMContentLoaded', async function() {
     initializeSignatureCanvas(); // Inicializa el canvas básico para dibujo
     initializeMultipleSignaturePads(); // Inicializa múltiples SignaturePads
+
+    // Auto-abrir modal de marcación si viene con ?open=marcacion
+    if (new URLSearchParams(window.location.search).get('open') === 'marcacion') {
+        setTimeout(() => verMarcacion(), 500);
+    }
     
     // Agregar event listeners para actualizar totales
     document.addEventListener('input', function(e) {
@@ -11465,6 +11470,7 @@ let marcacionProcesosFiltered = [];
 let marcacionProcesoId = null;
 let marcacionProcesoNumero = null;
 let marcacionIsExistente = false;
+let marcacionResumen = {};
 
 /**
  * Abre el selector de procesos para marcación.
@@ -11477,23 +11483,35 @@ async function verMarcacion() {
     if (modal) { modal.hidden = false; document.body.style.overflow = 'hidden'; }
 
     try {
-        const resp = await fetch('/.netlify/functions/conectar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'get_procesos_acreditados' })
-        });
-        const result = await resp.json();
-        if (result.ok && Array.isArray(result.procesos)) {
-            marcacionProcesosList = result.procesos;
+        const [procsResp, resumenResp] = await Promise.all([
+            fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_procesos_acreditados' })
+            }),
+            fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_marcaciones_resumen' })
+            })
+        ]);
+        const procsResult = await procsResp.json();
+        const resumenResult = await resumenResp.json();
+
+        if (procsResult.ok && Array.isArray(procsResult.procesos)) {
+            marcacionProcesosList = procsResult.procesos;
             marcacionProcesosFiltered = [...marcacionProcesosList];
         } else {
             marcacionProcesosList = [];
             marcacionProcesosFiltered = [];
         }
+
+        marcacionResumen = (resumenResult.ok && resumenResult.resumen) ? resumenResult.resumen : {};
     } catch (e) {
         console.warn('Error cargando procesos:', e);
         marcacionProcesosList = [];
         marcacionProcesosFiltered = [];
+        marcacionResumen = {};
     }
 
     renderMarcacionProcesosList();
@@ -11511,7 +11529,13 @@ function renderMarcacionProcesosList() {
         return;
     }
 
-    listEl.innerHTML = marcacionProcesosFiltered.map(p => {
+    const sorted = [...marcacionProcesosFiltered].sort((a, b) => {
+        const numA = String(a.numero_proceso || '').replace(/\D/g, '');
+        const numB = String(b.numero_proceso || '').replace(/\D/g, '');
+        return Number(numB) - Number(numA);
+    });
+
+    listEl.innerHTML = sorted.map(p => {
         const num = p.numero_proceso || '—';
         const cliente = p.cliente || '—';
         const estado = p.estado || '—';
@@ -11526,12 +11550,35 @@ function renderMarcacionProcesosList() {
         else if (upperEstado.includes('finalizado')) badge = '<span class="marcacion-estado-badge no-conforme">Finalizado</span>';
         else if (upperEstado.includes('informe') || upperEstado.includes('entrega')) badge = '<span class="marcacion-estado-badge marcado">Entrega</span>';
 
+        const r = marcacionResumen[p.id] || null;
+        let statusHtml = '';
+        let cardBorder = '#e2e8f0';
+        let cardBg = '#fff';
+
+        if (r && r.total > 0) {
+            const pct = Math.round((r.marcados / r.total) * 100);
+            if (r.marcados === r.total) {
+                statusHtml = `<div style="font-size:11px;color:#047857;margin-top:4px;font-weight:700;">✅ Completo (${r.total}/${r.total})</div>`;
+                cardBorder = '#6ee7b7';
+                cardBg = '#f0fdf4';
+            } else {
+                statusHtml = `<div style="font-size:11px;color:#92400e;margin-top:4px;font-weight:600;">⚠️ ${r.marcados} de ${r.total} marcados (${pct}%)</div>`;
+                cardBorder = '#fcd34d';
+                cardBg = '#fffbeb';
+            }
+        } else {
+            statusHtml = `<div style="font-size:11px;color:#ef4444;margin-top:4px;font-weight:600;">🔴 Sin marcación</div>`;
+            cardBorder = '#fca5a5';
+            cardBg = '#fef2f2';
+        }
+
         return `
-        <div class="marcacion-process-select-item" onclick="selectProcesoMarcacion('${escapeHtml(num)}')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all 0.15s;background:#fff;" onmouseover="this.style.background='#f0f7ff';this.style.borderColor='#93c5fd'" onmouseout="this.style.background='#fff';this.style.borderColor='#e2e8f0'">
+        <div class="marcacion-process-select-item" onclick="selectProcesoMarcacion('${escapeHtml(num)}')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:2px solid ${cardBorder};border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all 0.15s;background:${cardBg};" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
             <div style="flex:1;min-width:0;">
                 <div style="font-weight:700;font-family:monospace;font-size:14px;color:#022859;">${escapeHtml(num)}</div>
                 <div style="font-size:12px;color:#475569;margin-top:2px;">${escapeHtml(cliente)} — ${escapeHtml(tipo)}</div>
                 <div style="font-size:11px;color:#94a3b8;margin-top:2px;">📅 ${fecha}${informe ? ' · 📄 ' + escapeHtml(informe) : ''}</div>
+                ${statusHtml}
             </div>
             <div>${badge}</div>
             <div style="color:#94a3b8;font-size:18px;">›</div>
@@ -11560,16 +11607,19 @@ function filterMarcacionProcesos() {
 /**
  * Cierra el selector de procesos.
  */
-function closeMarcacionSelect() {
+function closeMarcacionSelect(goBack) {
     const modal = document.getElementById('marcacionSelectModal');
     if (modal) { modal.hidden = true; document.body.style.overflow = ''; }
+    if (goBack && new URLSearchParams(window.location.search).get('from') === 'admin') {
+        window.location.href = '/admin-panel.html#items';
+    }
 }
 
 /**
  * Selecciona un proceso y carga sus items para marcación.
  */
 async function selectProcesoMarcacion(numeroProceso) {
-    closeMarcacionSelect();
+    closeMarcacionSelect(false);
 
     const proceso = marcacionProcesosList.find(p => p.numero_proceso === numeroProceso);
     if (!proceso) { alert('Proceso no encontrado.'); return; }
@@ -11946,14 +11996,22 @@ function renderConsecutivos(filter) {
     };
     const defaultMarcaColor = { bg: '#fef3c7', text: '#92400e', border: '#fcd34d' };
 
+    const estadoRowClasses = {
+        'Marcado': 'estado-marcado',
+        'Revisado': 'estado-revisado',
+        'No Conforme': 'estado-no-conforme',
+        'Pendiente': ''
+    };
+
     tbody.innerHTML = data.map((c, i) => {
         const fechaMod = c.updated_at ? new Date(c.updated_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
         const mc = marcaColors[c.marca] || defaultMarcaColor;
         const obsValue = escapeHtml(c.observaciones || '');
         const hasObs = (c.observaciones || '').trim().length > 0;
         const obsBg = hasObs ? 'background:#fffbeb; border:1px solid #fcd34d;' : 'border:1px solid #e2e8f0;';
+        const rowClass = estadoRowClasses[c.estado] || '';
         return `
-        <tr>
+        <tr class="${rowClass}">
             <td class="marcacion-row-num">${c.consecutivo}</td>
             <td class="marcacion-td-elemento">${escapeHtml(c.elemento)}</td>
             <td>
@@ -11973,7 +12031,7 @@ function renderConsecutivos(filter) {
             </td>
             <td>
                 <input type="text" class="marcacion-obs-inline" value="${obsValue}"
-                    placeholder="Obs..." onchange="updateConsecutivoObs('${c.consecutivo}', this.value)"
+                    placeholder="Obs..." oninput="liveObsStyle(this)" onchange="updateConsecutivoObs('${c.consecutivo}', this.value)"
                     style="${obsBg} width:100%; font-size:0.6rem; padding:2px 4px; border-radius:4px; ${hasObs ? 'color:#92400e; font-weight:600;' : 'color:#64748b;'}">
             </td>
             <td>
@@ -12003,6 +12061,20 @@ function updateConsecutivoEstado(consecutivo, value, selectEl) {
         c.estado = value;
         if (selectEl) selectEl.setAttribute('data-value', value);
     }
+    const estadoRowClasses = {
+        'Marcado': 'estado-marcado',
+        'Revisado': 'estado-revisado',
+        'No Conforme': 'estado-no-conforme',
+        'Pendiente': ''
+    };
+    if (selectEl) {
+        const tr = selectEl.closest('tr');
+        if (tr) {
+            tr.classList.remove('estado-marcado', 'estado-revisado', 'estado-no-conforme');
+            const cls = estadoRowClasses[value];
+            if (cls) tr.classList.add(cls);
+        }
+    }
     updateGenCounter();
     renderStatusSummaryCards();
 }
@@ -12021,6 +12093,21 @@ function toggleObsInput(consecutivo, btn) {
 function updateConsecutivoObs(consecutivo, value) {
     const c = marcacionConsecutivos.find(x => x.consecutivo === consecutivo);
     if (c) c.observaciones = value;
+}
+
+function liveObsStyle(input) {
+    const hasText = input.value.trim().length > 0;
+    if (hasText) {
+        input.style.background = '#fffbeb';
+        input.style.border = '1px solid #fcd34d';
+        input.style.color = '#92400e';
+        input.style.fontWeight = '600';
+    } else {
+        input.style.background = '';
+        input.style.border = '1px solid #e2e8f0';
+        input.style.color = '#64748b';
+        input.style.fontWeight = '';
+    }
 }
 
 function updateConsecutivoNCI(consecutivo, value, selectEl) {
@@ -12324,6 +12411,10 @@ async function guardarMarcacion() {
 
         showNotification('✅ Marcación guardada correctamente', 'success');
         closeMarcacion();
+        // Si vino desde admin panel, redirigir de vuelta
+        if (new URLSearchParams(window.location.search).get('from') === 'admin') {
+            setTimeout(() => { window.location.href = '/admin-panel.html#items'; }, 800);
+        }
     } catch (e) {
         console.error('Error guardando marcación:', e);
         alert('Error de conexión al guardar la marcación.');
@@ -12341,6 +12432,9 @@ function closeMarcacion() {
     }
     marcacionData = [];
     marcacionConsecutivos = [];
+    if (new URLSearchParams(window.location.search).get('from') === 'admin') {
+        window.location.href = '/admin-panel.html#items';
+    }
     marcacionProcesoId = null;
     marcacionProcesoNumero = null;
     marcacionIsExistente = false;

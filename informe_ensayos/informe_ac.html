@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Informes de Laboratorio</title>
+    
+    <!-- Tailwind CSS para los estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React y ReactDOM para la lógica de la interfaz -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel para compilar el JavaScript en el navegador -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* Estilos personalizados para la barra de desplazamiento y modo impresión */
+        body { font-family: system-ui, -apple-system, sans-serif; }
+        .styled-scrollbar::-webkit-scrollbar { height: 6px; }
+        .styled-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .styled-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        @media print {
+            body { background-color: white !important; margin: 0 !important; padding: 0 !important; }
+            .print\:hidden { display: none !important; }
+            .print\:shadow-none { box-shadow: none !important; }
+            .print\:border-none { border: none !important; }
+            .print\:p-0 { padding: 0 !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+    
+    <!-- Contenedor principal de la aplicación -->
+    <div id="root"></div>
+
+    <!-- Lógica de la aplicación en JavaScript -->
+    <script type="text/babel" data-presets="react,env">
+        
+        const { useState } = React;
+
+        // --- COMPONENTE REUTILIZABLE PARA ENCABEZADOS Y CONDICIONES AMBIENTALES ---
+        const TopSection = ({ reportCode, tituloEnsayo, normativa, numNormativa, reglas = [], env = {}, setEnv, notasExtra }) => (
+          <div className="space-y-4 max-w-[100%] overflow-x-auto text-black pb-4">
+            <div className="relative text-center mb-6">
+              <div className="absolute top-0 left-0 text-xs text-left print:hidden">
+                <div>APROBADO: <input type="text" className="w-24 border-b border-gray-400 focus:outline-none bg-transparent" placeholder="ESPECIFICAR" /></div>
+                <div>REALIZÓ: <input type="text" className="w-24 border-b border-gray-400 focus:outline-none bg-transparent" placeholder="ESPECIFICAR" /></div>
+              </div>
+              <div className="absolute top-0 right-0 text-xs text-right font-bold">FR 7.8-V04</div>
+              <h2 className="text-4xl font-bold tracking-tight">RESULTADO DE ENSAYO</h2>
+              <p className="text-xl mt-1 font-semibold">No. {reportCode}</p>
+            </div>
+
+            <div className="flex border-2 border-black bg-white">
+              <div className="w-1/2 border-r-2 border-black">
+                <div className="flex border-b border-black">
+                  <div className="w-1/3 bg-[#b4c6e7] font-bold text-center py-2 text-sm flex items-center justify-center border-r border-black">ENSAYO</div>
+                  <div className="w-2/3 text-center py-2 text-sm font-bold flex items-center justify-center px-2">{tituloEnsayo}</div>
+                </div>
+                <div className="flex">
+                  <div className="w-1/3 bg-[#b4c6e7] font-bold text-center py-2 text-sm flex items-center justify-center border-r border-black">REFERENCIA NORMATIVA</div>
+                  <div className="w-2/3 text-center py-2 text-sm font-bold flex flex-col items-center justify-center px-2"><span>{normativa}</span><span>{numNormativa}</span></div>
+                </div>
+              </div>
+              <div className="w-1/2 p-2 text-[10px] sm:text-xs text-left flex flex-col justify-center bg-white space-y-1">
+                {reglas.map((regla, idx) => <p key={idx}>{regla}</p>)}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div className="border border-black flex flex-col h-full bg-white">
+                <div className="bg-[#002060] text-white text-center py-2 font-bold text-xs uppercase h-12 flex flex-col justify-center"><span>FECHA DE EJECUCIÓN</span><span>AAAA-MM-DD</span></div>
+                <div className="flex-1 flex items-center justify-center font-bold"><input type="text" className="w-full text-center focus:outline-none bg-transparent" value={env?.fechaEjecucion || ''} onChange={e => setEnv && setEnv({...env, fechaEjecucion: e.target.value})} /></div>
+              </div>
+              <div className="border border-black flex flex-col bg-white">
+                <div className="bg-[#002060] text-white text-center py-1 font-bold text-xs uppercase">CONDICIONES AMBIENTALES</div>
+                <div className="flex flex-1">
+                  <div className="w-1/2 border-r border-dashed border-gray-400">
+                    <div className="bg-[#002060] text-white text-center text-xs pb-1 font-bold">Temperatura (°C)</div>
+                    <div className="flex border-t border-black bg-[#002060] text-white text-xs"><div className="w-1/2 text-center border-r border-dashed border-gray-400">Max</div><div className="w-1/2 text-center">Min</div></div>
+                    <div className="flex flex-1 mt-1"><input type="text" className="w-1/2 text-center text-sm focus:outline-none border-r border-dashed border-gray-400 bg-transparent" value={env?.tempMax || ''} onChange={e => setEnv && setEnv({...env, tempMax: e.target.value})} /><input type="text" className="w-1/2 text-center text-sm focus:outline-none bg-transparent" value={env?.tempMin || ''} onChange={e => setEnv && setEnv({...env, tempMin: e.target.value})} /></div>
+                  </div>
+                  <div className="w-1/2">
+                    <div className="bg-[#002060] text-white text-center text-xs pb-1 font-bold">Humedad Relativa (%)</div>
+                    <div className="flex border-t border-black bg-[#002060] text-white text-xs"><div className="w-1/2 text-center border-r border-dashed border-gray-400">Max</div><div className="w-1/2 text-center">Min</div></div>
+                    <div className="flex flex-1 mt-1"><input type="text" className="w-1/2 text-center text-sm focus:outline-none border-r border-dashed border-gray-400 bg-transparent" value={env?.humMax || ''} onChange={e => setEnv && setEnv({...env, humMax: e.target.value})} /><input type="text" className="w-1/2 text-center text-sm focus:outline-none bg-transparent" value={env?.humMin || ''} onChange={e => setEnv && setEnv({...env, humMin: e.target.value})} /></div>
+                  </div>
+                </div>
+              </div>
+              <div className="border border-black flex flex-col bg-white">
+                <div className="bg-[#002060] text-white text-center py-2 font-bold text-xs uppercase h-12 flex items-center justify-center">INCERTIDUMBRE DE MEDICIÓN</div>
+                <div className="flex flex-col flex-1 justify-center px-4 text-xs">
+                  <div className="flex justify-between border-b border-dotted border-gray-400 py-1"><span>Factor de cobertura "k"</span><input type="text" className="w-8 text-center focus:outline-none font-bold bg-transparent" value={env?.factorCobertura || ''} onChange={e => setEnv && setEnv({...env, factorCobertura: e.target.value})} /></div>
+                  <div className="flex justify-between py-1"><span>Nivel de confianza</span><input type="text" className="w-10 text-center focus:outline-none font-bold bg-transparent" value={env?.confianza || ''} onChange={e => setEnv && setEnv({...env, confianza: e.target.value})} /></div>
+                </div>
+              </div>
+            </div>
+            {notasExtra}
+          </div>
+        );
+
+        // --- COMPONENTE PRINCIPAL ---
+        function App() {
+          const [activeTab, setActiveTab] = useState('portada');
+          const [reportCode, setReportCode] = useState('R26-0001');
+
+          const [globalCounter, setGlobalCounter] = useState(17);
+
+          const [equipos, setEquipos] = useState([
+            { id: 1, nombre: 'Elevador de tensión' },
+            { id: 2, nombre: 'Multímetro calibrado' }
+          ]);
+
+          const defaultEnv = { fechaEjecucion: '2026-', tempMax: '', tempMin: '', humMax: '', humMin: '', factorCobertura: '2', confianza: '95%' };
+          const [envConditions, setEnvConditions] = useState({...defaultEnv});
+          const [alfombrasConditions, setAlfombrasConditions] = useState({...defaultEnv});
+          const [mantasConditions, setMantasConditions] = useState({...defaultEnv});
+          const [jumpersConditions, setJumpersConditions] = useState({...defaultEnv});
+          const [manguerasConditions, setManguerasConditions] = useState({...defaultEnv});
+          const [cubiertasConditions, setCubiertasConditions] = useState({...defaultEnv});
+          const [calzadoConditions, setCalzadoConditions] = useState({...defaultEnv});
+          const [tubosConditions, setTubosConditions] = useState({...defaultEnv, tempInicial: '20.1', acondicionamiento: 'Si'}); 
+          const [guantesConditions, setGuantesConditions] = useState({...defaultEnv});
+          const [herramientasConditions, setHerramientasConditions] = useState({...defaultEnv});
+          const [cascosConditions, setCascosConditions] = useState({...defaultEnv});
+          const [plataformasConditions, setPlataformasConditions] = useState({...defaultEnv});
+          const [tierrasConditions, setTierrasConditions] = useState({...defaultEnv});
+          const [detectoresConditions, setDetectoresConditions] = useState({...defaultEnv});
+          const [vehiculosConditions, setVehiculosConditions] = useState({...defaultEnv});
+          const [linersConditions, setLinersConditions] = useState({...defaultEnv});
+
+          const [itemsMangas, setItemsMangas] = useState([{ idConsecutivo: '001', idCliente: '', descripcion: 'MANGA DIELÉCTRICA', fabricante: '', clase: '2', inspeccionVisual: 'Pasa', tensionAplicada: '', incertidumbre: '', disrupcion: 'No', cumple: 'PASA' }]);
+          const [itemsAlfombras, setItemsAlfombras] = useState([{ idConsecutivo: '002', idExterna: '', elemento: 'TAPETE DIELÉCTRICO', fabricante: '', clase: '2', dimension: '', inspeccionVisual: 'PASA', tension: '', incertidumbre: '0.40', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+          const [itemsMantas, setItemsMantas] = useState([{ idConsecutivo: '003', idExterna: '', elemento: 'MANTA DIELÉCTRICA', fabricante: '', clase: '4', dimension: '', inspeccionVisual: 'PASA', tension: '', incertidumbre: '0.40', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+          const [itemsJumpers, setItemsJumpers] = useState([{ idConsecutivo: '004', idExterna: '', elemento: 'JUMPER DIELÉCTRICO', fabricante: '', clasificacion: '15', inspeccionVisual: 'PASA', tension: '', incertidumbre: '0.21', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+          const [itemsMangueras, setItemsMangueras] = useState([{ idConsecutivo: '005', idExterna: '', elemento: 'MANGUERA CON CONECTOR', fabricante: '', clase: '4', dimension: '137', inspeccionVisual: 'PASA', tension: '', incertidumbre: '0.40', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+          const [itemsCubiertas, setItemsCubiertas] = useState([{ idConsecutivo: '006', idExterna: '', elemento: 'CUBIERTA PLÁSTICA', fabricante: '', clase: '6', dimension: '150', inspeccionVisual: 'PASA', tension: '', incertidumbre: '0.40', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+          const [itemsCalzado, setItemsCalzado] = useState([{ idConsecutivo: '007', idExterna: '', elemento: 'BOTA DIELÉCTRICA', fabricante: 'novax', clase: '2', talla: '40', inspeccionVisual: 'PASA', tension: '39.6', incertidumbre: '0.40', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+          const [itemsTubos, setItemsTubos] = useState([{ idConsecutivo: '008', idExterna: '', elemento: 'PÉRTIGA ESCOPETA', fabricante: 'HASTINGS', inspeccionVisual: 'PASA', tension: '100.1', incertidumbre: '1.2', disrupcion: 'NO PRESENTA', tempFinal: '20.4', incrementoTemp: 'NO PRESENTA', cumple: 'PASA' }]);
+          const [itemsGuantes, setItemsGuantes] = useState([{ idConsecutivo: '009', idExterna: '', elemento: 'GUANTE DIELÉCTRICO DERECHO', fabricante: 'novax', clase: '4', dimension: '41', inspeccionVisual: 'PASA', tension: '39.6', corriente: '12.45', incCorriente: '0.34', maxCorriente: '22', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+          const [itemsHerramientas, setItemsHerramientas] = useState([{ idConsecutivo: '010', idExterna: '', elemento: 'LLAVE RACHE AISLADA', fabricante: 'TOOLS', l1: '0.30', l2: '0.30', inspeccionVisual: 'PASA', tension: '9.9', corriente: '1.50', incCorriente: '0.081', maxCorriente: '3', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+          const [itemsCascos, setItemsCascos] = useState([{ idConsecutivo: '011', idExterna: '', elemento: 'CASCO DIELÉCTRICO', fabricante: 'MANDACA', clase: 'E', talla: 'S', inspeccionVisual: 'PASA', tension: '19.3', corriente: '5.89', incCorriente: '0.20', maxCorriente: '9', disrupcion: 'NO PRESENTA', observaciones: '', cumple: 'PASA' }]);
+          const [itemsPlataformas, setItemsPlataformas] = useState([{ idConsecutivo: '012', idExterna: '', elemento: 'PLATAFORMA AISLANTE', fabricante: 'CHANCE', dimension: '60', inspeccionVisual: 'PASA', puntos: '1 - 4', tension: '29.5', corriente: '109.85', incCorriente: '2.30', maxCorriente: '150', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+          const [itemsTierras, setItemsTierras] = useState([{ idConsecutivo: '013', idExterna: '', elemento: 'PUENTE TIERRA TRAMO 1', fabricante: 'FUSSAND', calibre: '25', longitud: '6.00', inspeccionVisual: 'PASA', continuidad: 'EFICIENTE', resistenciaMedida: '4.299', incResistencia: '0.0300', resistenciaMax: '4.667', cumple: 'PASA' }]);
+          const [itemsDetectores, setItemsDetectores] = useState([{ idConsecutivo: '014', idExterna: '', elemento: 'DETECTOR DE TENSIÓN', fabricante: 'RITZ', tensionOperacion: '11.4 - 34.5', inspeccionVisual: 'PASA', tensionPrueba: '40.0', distancia: '0.30', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+          const [itemsVehiculos, setItemsVehiculos] = useState([{ idConsecutivo: '015', idExterna: '', elemento: 'VEHÍCULO BRAZO AISLADO', fabricante: 'ALTEC', categoria: 'C', inspeccionVisual: 'PASA', tension: '46.0', corriente: '0.85', incCorriente: '0.02', maxCorriente: '1.0', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+          const [itemsLiners, setItemsLiners] = useState([{ idConsecutivo: '016', idExterna: '', elemento: 'VASO LINER / CANASTILLA', fabricante: 'TEREX', clase: '10', inspeccionVisual: 'PASA', tension: '10.0', corriente: '0.45', incCorriente: '0.01', maxCorriente: '1.0', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+
+          const getNextId = () => {
+            const id = globalCounter.toString().padStart(3, '0');
+            setGlobalCounter(prev => prev + 1);
+            return id;
+          };
+
+          const updateItem = (items, setItems, index, field, value, failCondition, successCondition) => {
+            const newItems = [...items];
+            newItems[index][field] = value;
+            if (field === 'disrupcion' && value === failCondition) newItems[index]['cumple'] = 'NO PASA';
+            else if (field === 'disrupcion' && value === successCondition && (newItems[index]['inspeccionVisual'] === 'Pasa' || newItems[index]['inspeccionVisual'] === 'PASA')) newItems[index]['cumple'] = 'PASA';
+            else if (field === 'inspeccionVisual' && (value === 'No Pasa' || value === 'NO PASA')) newItems[index]['cumple'] = 'NO PASA';
+            setItems(newItems);
+          };
+          
+          const removeItem = (items, setItems, index) => { const newItems = [...items]; newItems.splice(index, 1); setItems(newItems); };
+
+          const handleItemChange = (index, field, value) => updateItem(itemsMangas, setItemsMangas, index, field, value, 'Sí', 'No');
+          const addItem = () => setItemsMangas([...itemsMangas, { idConsecutivo: getNextId(), idCliente: '', descripcion: '', fabricante: '', clase: '', inspeccionVisual: 'Pasa', tensionAplicada: '', incertidumbre: '', disrupcion: 'No', cumple: 'PASA' }]);
+          
+          const handleAlfombraChange = (index, field, value) => updateItem(itemsAlfombras, setItemsAlfombras, index, field, value, 'PRESENTA', 'NO PRESENTA');
+          const addItemAlfombra = () => setItemsAlfombras([...itemsAlfombras, { idConsecutivo: getNextId(), idExterna: '', elemento: 'TAPETE DIELÉCTRICO', fabricante: '', clase: '', dimension: '', inspeccionVisual: 'PASA', tension: '', incertidumbre: '0.40', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+          
+          const handleMantaChange = (index, field, value) => updateItem(itemsMantas, setItemsMantas, index, field, value, 'PRESENTA', 'NO PRESENTA');
+          const addItemManta = () => setItemsMantas([...itemsMantas, { idConsecutivo: getNextId(), idExterna: '', elemento: 'MANTA DIELÉCTRICA', fabricante: '', clase: '', dimension: '', inspeccionVisual: 'PASA', tension: '', incertidumbre: '0.40', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+          
+          const handleJumperChange = (index, field, value) => updateItem(itemsJumpers, setItemsJumpers, index, field, value, 'PRESENTA', 'NO PRESENTA');
+          const addItemJumper = () => setItemsJumpers([...itemsJumpers, { idConsecutivo: getNextId(), idExterna: '', elemento: 'JUMPER DIELÉCTRICO', fabricante: '', clasificacion: '15', inspeccionVisual: 'PASA', tension: '', incertidumbre: '0.21', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+          
+          const handleMangueraChange = (index, field, value) => updateItem(itemsMangueras, setItemsMangueras, index, field, value, 'PRESENTA', 'NO PRESENTA');
+          const addItemManguera = () => setItemsMangueras([...itemsMangueras, { idConsecutivo: getNextId(), idExterna: '', elemento: 'MANGUERA CON CONECTOR', fabricante: '', clase: '4', dimension: '137', inspeccionVisual: 'PASA', tension: '', incertidumbre: '0.40', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+          
+          const handleCubiertaChange = (index, field, value) => updateItem(itemsCubiertas, setItemsCubiertas, index, field, value, 'PRESENTA', 'NO PRESENTA');
+          const addItemCubierta = () => setItemsCubiertas([...itemsCubiertas, { idConsecutivo: getNextId(), idExterna: '', elemento: 'CUBIERTA PLÁSTICA', fabricante: '', clase: '6', dimension: '150', inspeccionVisual: 'PASA', tension: '', incertidumbre: '0.40', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+          
+          const handleCalzadoChange = (index, field, value) => updateItem(itemsCalzado, setItemsCalzado, index, field, value, 'PRESENTA', 'NO PRESENTA');
+          const addItemCalzado = () => setItemsCalzado([...itemsCalzado, { idConsecutivo: getNextId(), idExterna: '', elemento: 'BOTA DIELÉCTRICA', fabricante: 'novax', clase: '2', talla: '40', inspeccionVisual: 'PASA', tension: '39.6', incertidumbre: '0.40', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+          
+          const handleTuboChange = (index, field, value) => {
+            const newItems = [...itemsTubos];
+            newItems[index][field] = value;
+            const disp = field === 'disrupcion' ? value : newItems[index].disrupcion;
+            const incr = field === 'incrementoTemp' ? value : newItems[index].incrementoTemp;
+            const insp = field === 'inspeccionVisual' ? value : newItems[index].inspeccionVisual;
+            if (disp === 'PRESENTA' || incr === 'PRESENTA' || insp === 'NO PASA') newItems[index]['cumple'] = 'NO PASA';
+            else newItems[index]['cumple'] = 'PASA';
+            setItemsTubos(newItems);
+          };
+          const addItemTubo = () => setItemsTubos([...itemsTubos, { idConsecutivo: getNextId(), idExterna: '', elemento: 'PÉRTIGA ESCOPETA', fabricante: 'HASTINGS', inspeccionVisual: 'PASA', tension: '100.1', incertidumbre: '1.2', disrupcion: 'NO PRESENTA', tempFinal: '20.4', incrementoTemp: 'NO PRESENTA', cumple: 'PASA' }]);
+          
+          const checkCurrentLimit = (items, setItems, index, field, value) => {
+            const newItems = [...items];
+            newItems[index][field] = value;
+            const { disrupcion, inspeccionVisual, corriente, maxCorriente } = newItems[index];
+            if (disrupcion === 'PRESENTA' || inspeccionVisual === 'NO PASA' || parseFloat(corriente) > parseFloat(maxCorriente)) newItems[index]['cumple'] = 'NO PASA';
+            else newItems[index]['cumple'] = 'PASA';
+            setItems(newItems);
+          };
+          
+          const handleGuanteChange = (index, field, value) => checkCurrentLimit(itemsGuantes, setItemsGuantes, index, field, value);
+          const addItemGuante = () => setItemsGuantes([...itemsGuantes, { idConsecutivo: getNextId(), idExterna: '', elemento: 'GUANTE DIELÉCTRICO DERECHO', fabricante: 'novax', clase: '4', dimension: '41', inspeccionVisual: 'PASA', tension: '39.6', corriente: '12.45', incCorriente: '0.34', maxCorriente: '22', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+          
+          const handleHerramientaChange = (index, field, value) => checkCurrentLimit(itemsHerramientas, setItemsHerramientas, index, field, value);
+          const addItemHerramienta = () => setItemsHerramientas([...itemsHerramientas, { idConsecutivo: getNextId(), idExterna: '', elemento: 'LLAVE RACHE AISLADA', fabricante: 'TOOLS', l1: '0.30', l2: '0.30', inspeccionVisual: 'PASA', tension: '9.9', corriente: '1.50', incCorriente: '0.081', maxCorriente: '3', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+
+          const handleCascoChange = (index, field, value) => checkCurrentLimit(itemsCascos, setItemsCascos, index, field, value);
+          const addItemCasco = () => setItemsCascos([...itemsCascos, { idConsecutivo: getNextId(), idExterna: '', elemento: 'CASCO DIELÉCTRICO', fabricante: 'MANDACA', clase: 'E', talla: 'S', inspeccionVisual: 'PASA', tension: '19.3', corriente: '5.89', incCorriente: '0.20', maxCorriente: '9', disrupcion: 'NO PRESENTA', observaciones: '', cumple: 'PASA' }]);
+
+          const handlePlataformaChange = (index, field, value) => checkCurrentLimit(itemsPlataformas, setItemsPlataformas, index, field, value);
+          const addItemPlataforma = () => setItemsPlataformas([...itemsPlataformas, { idConsecutivo: getNextId(), idExterna: '', elemento: 'PLATAFORMA AISLANTE', fabricante: 'CHANCE', dimension: '60', inspeccionVisual: 'PASA', puntos: '1 - 4', tension: '29.5', corriente: '109.85', incCorriente: '2.30', maxCorriente: '150', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+
+          const handleTierraChange = (index, field, value) => {
+            const newItems = [...itemsTierras];
+            newItems[index][field] = value;
+            const { inspeccionVisual: insp, continuidad: cont, resistenciaMedida: rMedida, resistenciaMax: rMax } = newItems[index];
+            if (insp === 'NO PASA' || cont === 'NO EFICIENTE') newItems[index]['cumple'] = 'NO PASA';
+            else if (rMedida && rMax && parseFloat(rMedida) > parseFloat(rMax)) newItems[index]['cumple'] = 'NO PASA';
+            else newItems[index]['cumple'] = 'PASA';
+            setItemsTierras(newItems);
+          };
+          const addItemTierra = () => setItemsTierras([...itemsTierras, { idConsecutivo: getNextId(), idExterna: '', elemento: 'PUENTE TIERRA TRAMO 1', fabricante: 'FUSSAND', calibre: '25', longitud: '6.00', inspeccionVisual: 'PASA', continuidad: 'EFICIENTE', resistenciaMedida: '4.299', incResistencia: '0.0300', resistenciaMax: '4.667', cumple: 'PASA' }]);
+
+          const handleDetectorChange = (index, field, value) => updateItem(itemsDetectores, setItemsDetectores, index, field, value, 'PRESENTA', 'NO PRESENTA');
+          const addItemDetector = () => setItemsDetectores([...itemsDetectores, { idConsecutivo: getNextId(), idExterna: '', elemento: 'DETECTOR DE TENSIÓN', fabricante: '', tensionOperacion: '', inspeccionVisual: 'PASA', tensionPrueba: '', distancia: '', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+
+          const handleVehiculoChange = (index, field, value) => checkCurrentLimit(itemsVehiculos, setItemsVehiculos, index, field, value);
+          const addItemVehiculo = () => setItemsVehiculos([...itemsVehiculos, { idConsecutivo: getNextId(), idExterna: '', elemento: 'VEHÍCULO BRAZO AISLADO', fabricante: '', categoria: 'C', inspeccionVisual: 'PASA', tension: '', corriente: '', incCorriente: '', maxCorriente: '', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+
+          const handleLinerChange = (index, field, value) => checkCurrentLimit(itemsLiners, setItemsLiners, index, field, value);
+          const addItemLiner = () => setItemsLiners([...itemsLiners, { idConsecutivo: getNextId(), idExterna: '', elemento: 'VASO LINER / CANASTILLA', fabricante: '', clase: '', inspeccionVisual: 'PASA', tension: '', corriente: '', incCorriente: '', maxCorriente: '', disrupcion: 'NO PRESENTA', cumple: 'PASA' }]);
+
+          return (
+            <div className="min-h-screen p-4 md:p-8">
+              <div className="max-w-[95rem] mx-auto">
+                
+                {/* ENCABEZADO Y PESTAÑAS */}
+                <div className="bg-white rounded-t-lg shadow-sm border-b border-gray-200 overflow-hidden print:hidden">
+                  <div className="p-4 bg-blue-900 text-white flex flex-col md:flex-row justify-between items-center">
+                    <h1 className="text-2xl font-bold tracking-wider">SISTEMA DE INFORMES DE LABORATORIO</h1>
+                    <div className="mt-2 md:mt-0 flex items-center bg-blue-800 p-2 rounded border border-blue-700">
+                      <label className="font-semibold mr-2 text-sm">CÓDIGO INFORME:</label>
+                      <input type="text" value={reportCode} onChange={(e) => setReportCode(e.target.value)} className="text-black px-2 py-1 rounded font-bold w-32 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                    </div>
+                  </div>
+                  <div className="flex overflow-x-auto whitespace-nowrap bg-gray-50 border-b border-gray-300 styled-scrollbar px-2">
+                    {[
+                      { id: 'portada', name: '1. Portada' }, { id: 'mangas', name: '2. Mangas' }, { id: 'alfombras', name: '3. Alfombras' },
+                      { id: 'mantas', name: '4. Mantas' }, { id: 'jumpers', name: '5. Jumpers' }, { id: 'mangueras', name: '6. Mangueras' },
+                      { id: 'cubiertas', name: '7. Cubiertas' }, { id: 'calzado', name: '8. Calzado' }, { id: 'tubos', name: '9. Tubos/Varas' },
+                      { id: 'guantes', name: '10. Guantes' }, { id: 'herramientas', name: '11. Herramientas' }, { id: 'cascos', name: '12. Cascos' },
+                      { id: 'plataformas', name: '13. Plataformas' }, { id: 'tierras', name: '14. Tierras' },
+                      { id: 'detectores', name: '15. Detectores' }, { id: 'vehiculos', name: '16. Vehículos' }, { id: 'liners', name: '17. Liners' }
+                    ].map((tab) => (
+                      <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-4 py-3 font-semibold text-sm transition-colors ${activeTab === tab.id ? 'border-b-4 border-blue-600 text-blue-700 bg-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+                        {tab.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* CONTENIDO DE LA PESTAÑA ACTIVA */}
+                <div className="bg-white p-6 rounded-b-lg shadow-lg print:shadow-none border border-t-0 border-gray-200 print:border-none print:p-0 overflow-x-auto">
+                  
+                  {/* --- PORTADA --- */}
+                  {activeTab === 'portada' && (
+                    <div className="space-y-6">
+                      <div className="text-center mb-8 border-b-2 border-gray-800 pb-4">
+                        <h2 className="text-3xl font-black uppercase tracking-widest text-gray-800">Informe de Ensayos</h2>
+                        <p className="text-gray-500 font-medium mt-1">Documento Oficial de Resultados de Laboratorio</p>
+                        <p className="font-bold text-lg mt-2 text-blue-900">N° {reportCode}</p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="border border-gray-300 rounded-md overflow-hidden">
+                          <div className="bg-gray-200 px-4 py-2 border-b border-gray-300 font-bold text-gray-700 uppercase text-sm">Información del Cliente</div>
+                          <div className="p-4 space-y-3">
+                            <div><label className="block text-xs font-semibold text-gray-500 uppercase">Nombre / Razón Social</label><input type="text" className="w-full border-b border-gray-300 py-1 focus:outline-none focus:border-blue-600" placeholder="Ej: Empresa de Energía S.A." /></div>
+                            <div><label className="block text-xs font-semibold text-gray-500 uppercase">Dirección</label><input type="text" className="w-full border-b border-gray-300 py-1 focus:outline-none focus:border-blue-600" placeholder="Ej: Calle 123 #45-67" /></div>
+                            <div><label className="block text-xs font-semibold text-gray-500 uppercase">Contacto</label><input type="text" className="w-full border-b border-gray-300 py-1 focus:outline-none focus:border-blue-600" placeholder="Ej: +57 300 123 4567" /></div>
+                          </div>
+                        </div>
+                        <div className="border border-gray-300 rounded-md overflow-hidden">
+                          <div className="bg-gray-200 px-4 py-2 border-b border-gray-300 font-bold text-gray-700 uppercase text-sm">Equipos Utilizados</div>
+                          <div className="p-4 space-y-4">
+                            <div><label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Lugar de Ensayo</label><input type="text" className="w-full border border-gray-300 rounded px-2 py-1.5 focus:outline-none focus:border-blue-600 text-sm" defaultValue="Laboratorio Principal" /></div>
+                            <div>
+                              {equipos.map((equipo) => (
+                                <div key={equipo.id} className="flex mb-2">
+                                  <select className="flex-1 border border-gray-300 rounded-l px-2 py-1.5 text-sm focus:outline-none"><option>{equipo.nombre}</option><option>Generador de Alta Tensión</option><option>Cámara Termográfica</option><option>Termohigrómetro</option><option>Milióhmetro / Medidor DC</option></select>
+                                  <button className="print:hidden bg-red-100 text-red-600 px-3 rounded-r border border-l-0 border-red-200 hover:bg-red-200 font-bold">X</button>
+                                </div>
+                              ))}
+                              <button className="print:hidden text-xs text-blue-600 font-bold hover:underline">+ Añadir otro equipo</button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* --- MANGAS --- */}
+                  {activeTab === 'mangas' && (
+                    <React.Fragment>
+                      <TopSection reportCode={reportCode} tituloEnsayo="Rigidez dieléctrica - Mangas Aislantes" normativa="ASTM F496-24" numNormativa="Numerales 7.7, 7.1.3" reglas={["Regla de decisión (Simple): La conformidad se declara aplicando una regla de decisión simple.", "- Cumple: si soporta la tensión de ensayo sin ruptura dieléctrica.", "- No Cumple: si presenta ruptura dieléctrica o no supera inspección visual."]} env={envConditions} setEnv={setEnvConditions} notasExtra={<div className="mt-2 mb-2"><div className="border border-dashed border-black inline-block p-2 text-xs bg-white shadow-sm"><span className="font-bold">Nota:</span> Si la inspección resulta en NO Pasa, diríjase a los anexos para consultar la causa de rechazo.</div></div>} />
+                      <table className="w-full text-xs text-center border-collapse bg-white">
+                        <thead>
+                          <tr className="bg-[#b4c6e7] font-bold border-t-2 border-l-2 border-r-2 border-black">
+                            <th colSpan="2" className="border border-black px-2 py-1">IDENTIFICACIÓN</th><th colSpan="3" className="border border-black border-l-2 border-dashed px-2 py-1">INFO CLIENTE</th><th colSpan="4" className="border border-black border-l-2 border-dashed px-2 py-1">RESULTADO ENSAYO</th><th colSpan="1" className="border border-black border-l-2 border-dashed px-2 py-1">CONFORMIDAD</th><th className="border border-black print:hidden">X</th>
+                          </tr>
+                          <tr className="bg-[#b4c6e7] font-bold border-l-2 border-r-2 border-black">
+                            <th className="border border-black px-1 py-1 w-20">Interna</th><th className="border border-black px-1 py-1 w-20">Externa</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-32">Elemento</th><th className="border border-black px-1 py-1 w-24">Fabricante</th><th className="border border-black px-1 py-1 w-16">Clase</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-24">Inspección Visual</th><th className="border border-black px-1 py-1 w-20">Tensión (kV)</th><th className="border border-black px-1 py-1 w-20">Incert.</th><th className="border border-black px-1 py-1 w-20">Disrupción</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Cumple</th><th className="border border-black print:hidden w-10">Del</th>
+                          </tr>
+                        </thead>
+                        <tbody className="border-l-2 border-r-2 border-b-2 border-black">
+                          {itemsMangas.map((item, index) => (
+                            <tr key={item.idConsecutivo} className={`border-b border-black ${item.cumple === 'NO PASA' ? 'bg-[#d9d9d9]' : 'bg-white'}`}>
+                              <td className="border border-black px-1 py-2 font-mono">{reportCode}-{item.idConsecutivo}</td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.idCliente} onChange={(e) => handleItemChange(index, 'idCliente', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.descripcion} onChange={(e) => handleItemChange(index, 'descripcion', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.fabricante} onChange={(e) => handleItemChange(index, 'fabricante', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none" value={item.clase} onChange={(e) => handleItemChange(index, 'clase', e.target.value)}><option value="00">00</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none font-bold" value={item.inspeccionVisual} onChange={(e) => handleItemChange(index, 'inspeccionVisual', e.target.value)}><option>Pasa</option><option>No Pasa</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.tensionAplicada} onChange={(e) => handleItemChange(index, 'tensionAplicada', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.incertidumbre} onChange={(e) => handleItemChange(index, 'incertidumbre', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className={`w-full text-center focus:outline-none font-bold ${item.disrupcion==='Sí'?'text-red-700':'text-green-700'}`} value={item.disrupcion} onChange={(e) => handleItemChange(index, 'disrupcion', e.target.value)}><option>No</option><option>Sí</option></select></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2 font-bold uppercase"><div className={`text-center font-bold px-2 py-1 rounded text-xs uppercase ${item.cumple === 'PASA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.cumple}</div></td>
+                              <td className="border border-black px-1 py-2 print:hidden"><button onClick={() => removeItem(itemsMangas, setItemsMangas, index)} className="text-white bg-red-600 px-2 py-1 rounded font-bold">X</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mt-2 print:hidden"><button onClick={addItem} className="bg-[#002060] hover:bg-blue-800 text-white px-4 py-2 font-bold rounded text-sm">+ Añadir fila</button></div>
+                    </React.Fragment>
+                  )}
+
+                  {/* --- ALFOMBRAS --- */}
+                  {activeTab === 'alfombras' && (
+                    <React.Fragment>
+                      <TopSection reportCode={reportCode} tituloEnsayo="Rigidez dieléctrica - Alfombras / Tapetes Aislantes" normativa="ASTM D178-22" numNormativa="Numerales 18.3" reglas={["Regla de decisión (Simple): La conformidad se declara aplicando una regla de decisión simple.", "- Cumple: si soporta la tensión de ensayo durante 1 minuto sin ruptura.", "- No Cumple: si presenta ruptura dieléctrica."]} env={alfombrasConditions} setEnv={setAlfombrasConditions} notasExtra={<div className="mt-2 mb-2"><div className="border border-dashed border-black inline-block p-2 text-xs bg-white shadow-sm"><span className="font-bold">Nota:</span> Si la inspección resulta en NO Pasa, diríjase a los anexos para consultar la causa de rechazo.</div></div>} />
+                      <table className="w-full text-xs text-center border-collapse bg-white">
+                        <thead>
+                          <tr className="bg-[#b4c6e7] font-bold border-t-2 border-l-2 border-r-2 border-black">
+                            <th colSpan="2" className="border border-black px-2 py-1">IDENTIFICACIÓN</th><th colSpan="4" className="border border-black border-l-2 border-dashed px-2 py-1">INFO CLIENTE</th><th colSpan="4" className="border border-black border-l-2 border-dashed px-2 py-1">RESULTADO ENSAYO</th><th colSpan="1" className="border border-black border-l-2 border-dashed px-2 py-1">CONFORMIDAD</th><th className="border border-black print:hidden">X</th>
+                          </tr>
+                          <tr className="bg-[#b4c6e7] font-bold border-l-2 border-r-2 border-black">
+                            <th className="border border-black px-1 py-1 w-20">Interna</th><th className="border border-black px-1 py-1 w-20">Externa</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-32">Elemento</th><th className="border border-black px-1 py-1 w-24">Fabricante</th><th className="border border-black px-1 py-1 w-16">Clase</th><th className="border border-black px-1 py-1 w-16">Dim. (cm)</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-24">Inspección Visual</th><th className="border border-black px-1 py-1 w-20">Tensión (kV)</th><th className="border border-black px-1 py-1 w-20">Incert.</th><th className="border border-black px-1 py-1 w-20">Disrupción</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Cumple</th><th className="border border-black print:hidden w-10">Del</th>
+                          </tr>
+                        </thead>
+                        <tbody className="border-l-2 border-r-2 border-b-2 border-black">
+                          {itemsAlfombras.map((item, index) => (
+                            <tr key={item.idConsecutivo} className={`border-b border-black ${item.cumple === 'NO PASA' ? 'bg-[#d9d9d9]' : 'bg-white'}`}>
+                              <td className="border border-black px-1 py-2 font-mono">{reportCode}-{item.idConsecutivo}</td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.idExterna} onChange={(e) => handleAlfombraChange(index, 'idExterna', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.elemento} onChange={(e) => handleAlfombraChange(index, 'elemento', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.fabricante} onChange={(e) => handleAlfombraChange(index, 'fabricante', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none" value={item.clase} onChange={(e) => handleAlfombraChange(index, 'clase', e.target.value)}><option value="00">00</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.dimension} onChange={(e) => handleAlfombraChange(index, 'dimension', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none font-bold" value={item.inspeccionVisual} onChange={(e) => handleAlfombraChange(index, 'inspeccionVisual', e.target.value)}><option>PASA</option><option>NO PASA</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.tension} onChange={(e) => handleAlfombraChange(index, 'tension', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.incertidumbre} onChange={(e) => handleAlfombraChange(index, 'incertidumbre', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className={`w-full text-center focus:outline-none font-bold ${item.disrupcion==='PRESENTA'?'text-red-700':'text-green-700'}`} value={item.disrupcion} onChange={(e) => handleAlfombraChange(index, 'disrupcion', e.target.value)}><option>NO PRESENTA</option><option>PRESENTA</option></select></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2 font-bold uppercase"><div className={`text-center font-bold px-2 py-1 rounded text-xs uppercase ${item.cumple === 'PASA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.cumple}</div></td>
+                              <td className="border border-black px-1 py-2 print:hidden"><button onClick={() => removeItem(itemsAlfombras, setItemsAlfombras, index)} className="text-white bg-red-600 px-2 py-1 rounded font-bold">X</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mt-2 print:hidden"><button onClick={addItemAlfombra} className="bg-[#002060] hover:bg-blue-800 text-white px-4 py-2 font-bold rounded text-sm">+ Añadir fila</button></div>
+                    </React.Fragment>
+                  )}
+
+                  {/* --- MANTAS --- */}
+                  {activeTab === 'mantas' && (
+                    <React.Fragment>
+                      <TopSection reportCode={reportCode} tituloEnsayo="Rigidez dieléctrica - Mantas Aislantes" normativa="ASTM F479-06 (2022)" numNormativa="Numerales 8.5" reglas={["Regla de decisión (Simple): La conformidad se declara aplicando una regla de decisión simple.", "- Cumple: si soporta la tensión de ensayo durante 1 minuto sin ruptura dieléctrica.", "- No Cumple: si presenta ruptura dieléctrica."]} env={mantasConditions} setEnv={setMantasConditions} notasExtra={<div className="mt-2 mb-2"><div className="border border-dashed border-black inline-block p-2 text-xs bg-white shadow-sm"><span className="font-bold">Nota:</span> Si la inspección resulta en NO Pasa, diríjase a los anexos para consultar la causa de rechazo.</div></div>} />
+                      <table className="w-full text-xs text-center border-collapse bg-white">
+                        <thead>
+                          <tr className="bg-[#b4c6e7] font-bold border-t-2 border-l-2 border-r-2 border-black">
+                            <th colSpan="2" className="border border-black px-2 py-1">IDENTIFICACIÓN</th><th colSpan="4" className="border border-black border-l-2 border-dashed px-2 py-1">INFO CLIENTE</th><th colSpan="4" className="border border-black border-l-2 border-dashed px-2 py-1">RESULTADO ENSAYO</th><th colSpan="1" className="border border-black border-l-2 border-dashed px-2 py-1">CONFORMIDAD</th><th className="border border-black print:hidden">X</th>
+                          </tr>
+                          <tr className="bg-[#b4c6e7] font-bold border-l-2 border-r-2 border-black">
+                            <th className="border border-black px-1 py-1 w-20">Interna</th><th className="border border-black px-1 py-1 w-20">Externa</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-32">Elemento</th><th className="border border-black px-1 py-1 w-24">Fabricante</th><th className="border border-black px-1 py-1 w-16">Clase</th><th className="border border-black px-1 py-1 w-16">Dim. (cm)</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-24">Inspección Visual</th><th className="border border-black px-1 py-1 w-20">Tensión (kV)</th><th className="border border-black px-1 py-1 w-20">Incert.</th><th className="border border-black px-1 py-1 w-20">Disrupción</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Cumple</th><th className="border border-black print:hidden w-10">Del</th>
+                          </tr>
+                        </thead>
+                        <tbody className="border-l-2 border-r-2 border-b-2 border-black">
+                          {itemsMantas.map((item, index) => (
+                            <tr key={item.idConsecutivo} className={`border-b border-black ${item.cumple === 'NO PASA' ? 'bg-[#d9d9d9]' : 'bg-white'}`}>
+                              <td className="border border-black px-1 py-2 font-mono">{reportCode}-{item.idConsecutivo}</td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.idExterna} onChange={(e) => handleMantaChange(index, 'idExterna', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.elemento} onChange={(e) => handleMantaChange(index, 'elemento', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.fabricante} onChange={(e) => handleMantaChange(index, 'fabricante', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none" value={item.clase} onChange={(e) => handleMantaChange(index, 'clase', e.target.value)}><option value="00">00</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.dimension} onChange={(e) => handleMantaChange(index, 'dimension', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none font-bold" value={item.inspeccionVisual} onChange={(e) => handleMantaChange(index, 'inspeccionVisual', e.target.value)}><option>PASA</option><option>NO PASA</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.tension} onChange={(e) => handleMantaChange(index, 'tension', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.incertidumbre} onChange={(e) => handleMantaChange(index, 'incertidumbre', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className={`w-full text-center focus:outline-none font-bold ${item.disrupcion==='PRESENTA'?'text-red-700':'text-green-700'}`} value={item.disrupcion} onChange={(e) => handleMantaChange(index, 'disrupcion', e.target.value)}><option>NO PRESENTA</option><option>PRESENTA</option></select></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2 font-bold uppercase"><div className={`text-center font-bold px-2 py-1 rounded text-xs uppercase ${item.cumple === 'PASA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.cumple}</div></td>
+                              <td className="border border-black px-1 py-2 print:hidden"><button onClick={() => removeItem(itemsMantas, setItemsMantas, index)} className="text-white bg-red-600 px-2 py-1 rounded font-bold">X</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mt-2 print:hidden"><button onClick={addItemManta} className="bg-[#002060] hover:bg-blue-800 text-white px-4 py-2 font-bold rounded text-sm">+ Añadir fila</button></div>
+                    </React.Fragment>
+                  )}
+
+                  {/* --- JUMPERS --- */}
+                  {activeTab === 'jumpers' && (
+                    <React.Fragment>
+                      <TopSection reportCode={reportCode} tituloEnsayo="Rigidez dieléctrica - By-Pass Jumpers Aislados" normativa="ASTM F2321-23" numNormativa="Numerales 55.4" reglas={["Regla de decisión (Simple): La conformidad se declara aplicando una regla de decisión simple.", "- Cumple: si soporta la tensión de ensayo durante 1 minuto sin ruptura dieléctrica.", "- No Cumple: si presenta ruptura dieléctrica."]} env={jumpersConditions} setEnv={setJumpersConditions} notasExtra={<div className="mt-2 mb-2"><div className="border border-dashed border-black inline-block p-2 text-xs bg-white shadow-sm"><span className="font-bold">Nota:</span> Si la inspección resulta en NO Pasa, diríjase a los anexos para consultar la causa de rechazo.</div></div>} />
+                      <table className="w-full text-xs text-center border-collapse bg-white">
+                        <thead>
+                          <tr className="bg-[#b4c6e7] font-bold border-t-2 border-l-2 border-r-2 border-black">
+                            <th colSpan="2" className="border border-black px-2 py-1">IDENTIFICACIÓN</th><th colSpan="3" className="border border-black border-l-2 border-dashed px-2 py-1">INFO CLIENTE</th><th colSpan="4" className="border border-black border-l-2 border-dashed px-2 py-1">RESULTADO ENSAYO</th><th colSpan="1" className="border border-black border-l-2 border-dashed px-2 py-1">CONFORMIDAD</th><th className="border border-black print:hidden">X</th>
+                          </tr>
+                          <tr className="bg-[#b4c6e7] font-bold border-l-2 border-r-2 border-black">
+                            <th className="border border-black px-1 py-1 w-20">Interna</th><th className="border border-black px-1 py-1 w-20">Externa</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-32">Elemento</th><th className="border border-black px-1 py-1 w-24">Fabricante</th><th className="border border-black px-1 py-1 w-20">Clasificación (kV)</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-24">Inspección Visual</th><th className="border border-black px-1 py-1 w-20">Tensión (kV)</th><th className="border border-black px-1 py-1 w-20">Incert.</th><th className="border border-black px-1 py-1 w-20">Disrupción</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Cumple</th><th className="border border-black print:hidden w-10">Del</th>
+                          </tr>
+                        </thead>
+                        <tbody className="border-l-2 border-r-2 border-b-2 border-black">
+                          {itemsJumpers.map((item, index) => (
+                            <tr key={item.idConsecutivo} className={`border-b border-black ${item.cumple === 'NO PASA' ? 'bg-[#d9d9d9]' : 'bg-white'}`}>
+                              <td className="border border-black px-1 py-2 font-mono">{reportCode}-{item.idConsecutivo}</td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.idExterna} onChange={(e) => handleJumperChange(index, 'idExterna', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.elemento} onChange={(e) => handleJumperChange(index, 'elemento', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.fabricante} onChange={(e) => handleJumperChange(index, 'fabricante', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none" value={item.clasificacion} onChange={(e) => handleJumperChange(index, 'clasificacion', e.target.value)}><option value="15">15</option><option value="25">25</option><option value="35">35</option></select></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none font-bold" value={item.inspeccionVisual} onChange={(e) => handleJumperChange(index, 'inspeccionVisual', e.target.value)}><option>PASA</option><option>NO PASA</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.tension} onChange={(e) => handleJumperChange(index, 'tension', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.incertidumbre} onChange={(e) => handleJumperChange(index, 'incertidumbre', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className={`w-full text-center focus:outline-none font-bold ${item.disrupcion==='PRESENTA'?'text-red-700':'text-green-700'}`} value={item.disrupcion} onChange={(e) => handleJumperChange(index, 'disrupcion', e.target.value)}><option>NO PRESENTA</option><option>PRESENTA</option></select></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2 font-bold uppercase"><div className={`text-center font-bold px-2 py-1 rounded text-xs uppercase ${item.cumple === 'PASA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.cumple}</div></td>
+                              <td className="border border-black px-1 py-2 print:hidden"><button onClick={() => removeItem(itemsJumpers, setItemsJumpers, index)} className="text-white bg-red-600 px-2 py-1 rounded font-bold">X</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mt-2 print:hidden"><button onClick={addItemJumper} className="bg-[#002060] hover:bg-blue-800 text-white px-4 py-2 font-bold rounded text-sm">+ Añadir fila</button></div>
+                    </React.Fragment>
+                  )}
+
+                  {/* --- MANGUERAS --- */}
+                  {activeTab === 'mangueras' && (
+                    <React.Fragment>
+                      <TopSection reportCode={reportCode} tituloEnsayo="Rigidez dieléctrica - Mangueras y Cubiertas aislantes" normativa="ASTM F478-14a (2023)" numNormativa="Numerales 7.5" reglas={["Regla de decisión (Simple): La conformidad se declara aplicando una regla de decisión simple.", "- Cumple: si soporta la tensión de ensayo durante 1 minuto sin ruptura.", "- No Cumple: si presenta disrupción."]} env={manguerasConditions} setEnv={setManguerasConditions} notasExtra={<div className="mt-2 mb-2"><div className="border border-dashed border-black inline-block p-2 text-xs bg-white shadow-sm"><span className="font-bold">Nota:</span> Si la inspección resulta en NO Pasa, diríjase a los anexos para consultar la causa de rechazo.</div></div>} />
+                      <table className="w-full text-xs text-center border-collapse bg-white">
+                        <thead>
+                          <tr className="bg-[#b4c6e7] font-bold border-t-2 border-l-2 border-r-2 border-black">
+                            <th colSpan="2" className="border border-black px-2 py-1">IDENTIFICACIÓN</th><th colSpan="4" className="border border-black border-l-2 border-dashed px-2 py-1">INFO CLIENTE</th><th colSpan="4" className="border border-black border-l-2 border-dashed px-2 py-1">RESULTADO ENSAYO</th><th colSpan="1" className="border border-black border-l-2 border-dashed px-2 py-1">CONFORMIDAD</th><th className="border border-black print:hidden">X</th>
+                          </tr>
+                          <tr className="bg-[#b4c6e7] font-bold border-l-2 border-r-2 border-black">
+                            <th className="border border-black px-1 py-1 w-20">Interna</th><th className="border border-black px-1 py-1 w-20">Externa</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-32">Elemento</th><th className="border border-black px-1 py-1 w-24">Fabricante</th><th className="border border-black px-1 py-1 w-16">Clase</th><th className="border border-black px-1 py-1 w-16">Dim. (cm)</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-24">Inspección Visual</th><th className="border border-black px-1 py-1 w-20">Tensión (kV)</th><th className="border border-black px-1 py-1 w-20">Incert.</th><th className="border border-black px-1 py-1 w-20">Disrupción</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Cumple</th><th className="border border-black print:hidden w-10">Del</th>
+                          </tr>
+                        </thead>
+                        <tbody className="border-l-2 border-r-2 border-b-2 border-black">
+                          {itemsMangueras.map((item, index) => (
+                            <tr key={item.idConsecutivo} className={`border-b border-black ${item.cumple === 'NO PASA' ? 'bg-[#d9d9d9]' : 'bg-white'}`}>
+                              <td className="border border-black px-1 py-2 font-mono">{reportCode}-{item.idConsecutivo}</td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.idExterna} onChange={(e) => handleMangueraChange(index, 'idExterna', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.elemento} onChange={(e) => handleMangueraChange(index, 'elemento', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.fabricante} onChange={(e) => handleMangueraChange(index, 'fabricante', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none" value={item.clase} onChange={(e) => handleMangueraChange(index, 'clase', e.target.value)}><option value="00">00</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.dimension} onChange={(e) => handleMangueraChange(index, 'dimension', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none font-bold" value={item.inspeccionVisual} onChange={(e) => handleMangueraChange(index, 'inspeccionVisual', e.target.value)}><option>PASA</option><option>NO PASA</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.tension} onChange={(e) => handleMangueraChange(index, 'tension', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.incertidumbre} onChange={(e) => handleMangueraChange(index, 'incertidumbre', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className={`w-full text-center focus:outline-none font-bold ${item.disrupcion==='PRESENTA'?'text-red-700':'text-green-700'}`} value={item.disrupcion} onChange={(e) => handleMangueraChange(index, 'disrupcion', e.target.value)}><option>NO PRESENTA</option><option>PRESENTA</option></select></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2 font-bold uppercase"><div className={`text-center font-bold px-2 py-1 rounded text-xs uppercase ${item.cumple === 'PASA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.cumple}</div></td>
+                              <td className="border border-black px-1 py-2 print:hidden"><button onClick={() => removeItem(itemsMangueras, setItemsMangueras, index)} className="text-white bg-red-600 px-2 py-1 rounded font-bold">X</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mt-2 print:hidden"><button onClick={addItemManguera} className="bg-[#002060] hover:bg-blue-800 text-white px-4 py-2 font-bold rounded text-sm">+ Añadir fila</button></div>
+                    </React.Fragment>
+                  )}
+
+                  {/* --- CUBIERTAS --- */}
+                  {activeTab === 'cubiertas' && (
+                    <React.Fragment>
+                      <TopSection reportCode={reportCode} tituloEnsayo="Rigidez dieléctrica - Cubiertas y protectores" normativa="ASTM F712-24" numNormativa="Numeral 10 y 12 Método A" reglas={["Regla de decisión (Simple): La conformidad se declara aplicando una regla de decisión simple.", "- Cumple: si soporta la tensión de ensayo sin ruptura.", "- No Cumple: si presenta ruptura dieléctrica."]} env={cubiertasConditions} setEnv={setCubiertasConditions} notasExtra={<div className="mt-2 mb-2"><div className="border border-dashed border-black inline-block p-2 text-xs bg-white shadow-sm"><span className="font-bold">Nota:</span> Si la inspección resulta en NO Pasa, diríjase a los anexos para consultar la causa de rechazo.</div></div>} />
+                      <table className="w-full text-xs text-center border-collapse bg-white">
+                        <thead>
+                          <tr className="bg-[#b4c6e7] font-bold border-t-2 border-l-2 border-r-2 border-black">
+                            <th colSpan="2" className="border border-black px-2 py-1">IDENTIFICACIÓN</th><th colSpan="4" className="border border-black border-l-2 border-dashed px-2 py-1">INFO CLIENTE</th><th colSpan="4" className="border border-black border-l-2 border-dashed px-2 py-1">RESULTADO ENSAYO</th><th colSpan="1" className="border border-black border-l-2 border-dashed px-2 py-1">CONFORMIDAD</th><th className="border border-black print:hidden">X</th>
+                          </tr>
+                          <tr className="bg-[#b4c6e7] font-bold border-l-2 border-r-2 border-black">
+                            <th className="border border-black px-1 py-1 w-20">Interna</th><th className="border border-black px-1 py-1 w-20">Externa</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-32">Elemento</th><th className="border border-black px-1 py-1 w-24">Fabricante</th><th className="border border-black px-1 py-1 w-16">Clase</th><th className="border border-black px-1 py-1 w-16">Dim. (cm)</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-24">Inspección Visual</th><th className="border border-black px-1 py-1 w-20">Tensión (kV)</th><th className="border border-black px-1 py-1 w-20">Incert.</th><th className="border border-black px-1 py-1 w-20">Disrupción</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Cumple</th><th className="border border-black print:hidden w-10">Del</th>
+                          </tr>
+                        </thead>
+                        <tbody className="border-l-2 border-r-2 border-b-2 border-black">
+                          {itemsCubiertas.map((item, index) => (
+                            <tr key={item.idConsecutivo} className={`border-b border-black ${item.cumple === 'NO PASA' ? 'bg-[#d9d9d9]' : 'bg-white'}`}>
+                              <td className="border border-black px-1 py-2 font-mono">{reportCode}-{item.idConsecutivo}</td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.idExterna} onChange={(e) => handleCubiertaChange(index, 'idExterna', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.elemento} onChange={(e) => handleCubiertaChange(index, 'elemento', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.fabricante} onChange={(e) => handleCubiertaChange(index, 'fabricante', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none" value={item.clase} onChange={(e) => handleCubiertaChange(index, 'clase', e.target.value)}><option value="00">00</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.dimension} onChange={(e) => handleCubiertaChange(index, 'dimension', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none font-bold" value={item.inspeccionVisual} onChange={(e) => handleCubiertaChange(index, 'inspeccionVisual', e.target.value)}><option>PASA</option><option>NO PASA</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.tension} onChange={(e) => handleCubiertaChange(index, 'tension', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.incertidumbre} onChange={(e) => handleCubiertaChange(index, 'incertidumbre', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className={`w-full text-center focus:outline-none font-bold ${item.disrupcion==='PRESENTA'?'text-red-700':'text-green-700'}`} value={item.disrupcion} onChange={(e) => handleCubiertaChange(index, 'disrupcion', e.target.value)}><option>NO PRESENTA</option><option>PRESENTA</option></select></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2 font-bold uppercase"><div className={`text-center font-bold px-2 py-1 rounded text-xs uppercase ${item.cumple === 'PASA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.cumple}</div></td>
+                              <td className="border border-black px-1 py-2 print:hidden"><button onClick={() => removeItem(itemsCubiertas, setItemsCubiertas, index)} className="text-white bg-red-600 px-2 py-1 rounded font-bold">X</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mt-2 print:hidden"><button onClick={addItemCubierta} className="bg-[#002060] hover:bg-blue-800 text-white px-4 py-2 font-bold rounded text-sm">+ Añadir fila</button></div>
+                    </React.Fragment>
+                  )}
+
+                  {/* --- CALZADO --- */}
+                  {activeTab === 'calzado' && (
+                    <React.Fragment>
+                      <TopSection reportCode={reportCode} tituloEnsayo="Rigidez dieléctrica - Calzado Dieléctrico" normativa="ASTM F1116-21" numNormativa="Numeral 7.1" reglas={["Regla de decisión (Simple): La conformidad se declara aplicando una regla de decisión simple.", "- Cumple: si soporta la tensión de ensayo durante 1 minuto sin ruptura dieléctrica.", "- No Cumple: si presenta ruptura dieléctrica."]} env={calzadoConditions} setEnv={setCalzadoConditions} notasExtra={<div className="mt-2 mb-2"><div className="border border-dashed border-black inline-block p-2 text-xs bg-white shadow-sm"><span className="font-bold">Nota:</span> Si la inspección resulta en NO Pasa, diríjase a los anexos para consultar la causa de rechazo.</div></div>} />
+                      <table className="w-full text-xs text-center border-collapse bg-white">
+                        <thead>
+                          <tr className="bg-[#b4c6e7] font-bold border-t-2 border-l-2 border-r-2 border-black">
+                            <th colSpan="2" className="border border-black px-2 py-1">IDENTIFICACIÓN</th><th colSpan="4" className="border border-black border-l-2 border-dashed px-2 py-1">INFO CLIENTE</th><th colSpan="3" className="border border-black border-l-2 border-dashed px-2 py-1">RESULTADO ENSAYO</th><th colSpan="1" className="border border-black border-l-2 border-dashed px-2 py-1">CONFORMIDAD</th><th className="border border-black print:hidden">X</th>
+                          </tr>
+                          <tr className="bg-[#b4c6e7] font-bold border-l-2 border-r-2 border-black">
+                            <th className="border border-black px-1 py-1 w-20">Interna</th><th className="border border-black px-1 py-1 w-20">Externa</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-32">Elemento</th><th className="border border-black px-1 py-1 w-24">Fabricante</th><th className="border border-black px-1 py-1 w-16">Clase</th><th className="border border-black px-1 py-1 w-16">Talla</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-24">Inspección Visual</th><th className="border border-black px-1 py-1 w-20">Tensión (kV)</th><th className="border border-black px-1 py-1 w-20">Disrupción</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Cumple</th><th className="border border-black print:hidden w-10">Del</th>
+                          </tr>
+                        </thead>
+                        <tbody className="border-l-2 border-r-2 border-b-2 border-black">
+                          {itemsCalzado.map((item, index) => (
+                            <tr key={item.idConsecutivo} className={`border-b border-black ${item.cumple === 'NO PASA' ? 'bg-[#d9d9d9]' : 'bg-white'}`}>
+                              <td className="border border-black px-1 py-2 font-mono">{reportCode}-{item.idConsecutivo}</td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.idExterna} onChange={(e) => handleCalzadoChange(index, 'idExterna', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.elemento} onChange={(e) => handleCalzadoChange(index, 'elemento', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.fabricante} onChange={(e) => handleCalzadoChange(index, 'fabricante', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none" value={item.clase} onChange={(e) => handleCalzadoChange(index, 'clase', e.target.value)}><option value="00">00</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.talla} onChange={(e) => handleCalzadoChange(index, 'talla', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none font-bold" value={item.inspeccionVisual} onChange={(e) => handleCalzadoChange(index, 'inspeccionVisual', e.target.value)}><option>PASA</option><option>NO PASA</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.tension} onChange={(e) => handleCalzadoChange(index, 'tension', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className={`w-full text-center focus:outline-none font-bold ${item.disrupcion==='PRESENTA'?'text-red-700':'text-green-700'}`} value={item.disrupcion} onChange={(e) => handleCalzadoChange(index, 'disrupcion', e.target.value)}><option>NO PRESENTA</option><option>PRESENTA</option></select></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2 font-bold uppercase"><div className={`text-center font-bold px-2 py-1 rounded text-xs uppercase ${item.cumple === 'PASA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.cumple}</div></td>
+                              <td className="border border-black px-1 py-2 print:hidden"><button onClick={() => removeItem(itemsCalzado, setItemsCalzado, index)} className="text-white bg-red-600 px-2 py-1 rounded font-bold">X</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mt-2 print:hidden"><button onClick={addItemCalzado} className="bg-[#002060] hover:bg-blue-800 text-white px-4 py-2 font-bold rounded text-sm">+ Añadir fila</button></div>
+                    </React.Fragment>
+                  )}
+
+                  {/* --- TUBOS --- */}
+                  {activeTab === 'tubos' && (
+                    <React.Fragment>
+                      <TopSection reportCode={reportCode} tituloEnsayo="Rigidez dieléctrica - Tubos y varas FRP" normativa="ASTM F711-17 (2022)" numNormativa="Numeral 12.2.5.1" reglas={["Regla de decisión (Simple): La conformidad se declara aplicando una regla de decisión simple.", "- Cumple: si soporta la tensión durante 5 min, sin disrupción ni incremento de temp.", "- No Cumple: si ocurre disrupción o aumento perceptible de temperatura."]} env={tubosConditions} setEnv={setTubosConditions} notasExtra={ <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"> <div className="mt-2 text-xs border border-dashed border-black inline-block p-2 bg-white shadow-sm self-start"><span className="font-bold">Nota:</span> Si la inspección resulta en NO Pasa, diríjase a los anexos para consultar la causa de rechazo.</div> <div className="text-xs space-y-1"> <div className="flex border border-black border-dashed bg-white"><div className="w-3/4 p-1 font-bold text-right border-r border-black border-dashed">Temperatura Inicial en Tubos FRP (°C):</div><div className="w-1/4 p-1"><input type="text" className="w-full text-center focus:outline-none bg-transparent" value={tubosConditions.tempInicial} onChange={e => setTubosConditions({...tubosConditions, tempInicial: e.target.value})} /></div></div> <div className="flex border border-black border-dashed bg-white"><div className="w-3/4 p-1 font-bold text-right border-r border-black border-dashed">Cumplió el acondicionamiento de 24h:</div><div className="w-1/4 p-1"><input type="text" className="w-full text-center focus:outline-none bg-transparent" value={tubosConditions.acondicionamiento} onChange={e => setTubosConditions({...tubosConditions, acondicionamiento: e.target.value})} /></div></div> </div> </div> } />
+                      <table className="w-full text-xs text-center border-collapse bg-white">
+                        <thead>
+                          <tr className="bg-[#b4c6e7] font-bold border-t-2 border-l-2 border-r-2 border-black">
+                            <th colSpan="2" className="border border-black px-2 py-1">IDENTIFICACIÓN</th><th colSpan="2" className="border border-black border-l-2 border-dashed px-2 py-1">INFO CLIENTE</th><th colSpan="5" className="border border-black border-l-2 border-dashed px-2 py-1">RESULTADO ENSAYO</th><th colSpan="1" className="border border-black border-l-2 border-dashed px-2 py-1">CONFORMIDAD</th><th className="border border-black print:hidden">X</th>
+                          </tr>
+                          <tr className="bg-[#b4c6e7] font-bold border-l-2 border-r-2 border-black">
+                            <th className="border border-black px-1 py-1 w-20">Interna</th><th className="border border-black px-1 py-1 w-20">Externa</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-32">Elemento</th><th className="border border-black px-1 py-1 w-24">Fabricante</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-24">Inspección Visual</th><th className="border border-black px-1 py-1 w-20">Tensión (kV)</th><th className="border border-black px-1 py-1 w-20">Disrupción</th><th className="border border-black px-1 py-1 w-20">Temp Final (°C)</th><th className="border border-black px-1 py-1 w-20">Incr. Temp</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Cumple</th><th className="border border-black print:hidden w-10">Del</th>
+                          </tr>
+                        </thead>
+                        <tbody className="border-l-2 border-r-2 border-b-2 border-black">
+                          {itemsTubos.map((item, index) => (
+                            <tr key={item.idConsecutivo} className={`border-b border-black ${item.cumple === 'NO PASA' ? 'bg-[#d9d9d9]' : 'bg-white'}`}>
+                              <td className="border border-black px-1 py-2 font-mono">{reportCode}-{item.idConsecutivo}</td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.idExterna} onChange={(e) => handleTuboChange(index, 'idExterna', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.elemento} onChange={(e) => handleTuboChange(index, 'elemento', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.fabricante} onChange={(e) => handleTuboChange(index, 'fabricante', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none font-bold" value={item.inspeccionVisual} onChange={(e) => handleTuboChange(index, 'inspeccionVisual', e.target.value)}><option>PASA</option><option>NO PASA</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.tension} onChange={(e) => handleTuboChange(index, 'tension', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className={`w-full text-center focus:outline-none font-bold ${item.disrupcion==='PRESENTA'?'text-red-700':'text-green-700'}`} value={item.disrupcion} onChange={(e) => handleTuboChange(index, 'disrupcion', e.target.value)}><option>NO PRESENTA</option><option>PRESENTA</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.tempFinal} onChange={(e) => handleTuboChange(index, 'tempFinal', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className={`w-full text-center focus:outline-none font-bold ${item.incrementoTemp==='PRESENTA'?'text-red-700':'text-green-700'}`} value={item.incrementoTemp} onChange={(e) => handleTuboChange(index, 'incrementoTemp', e.target.value)}><option>NO PRESENTA</option><option>PRESENTA</option></select></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2 font-bold uppercase"><div className={`text-center font-bold px-2 py-1 rounded text-xs uppercase ${item.cumple === 'PASA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.cumple}</div></td>
+                              <td className="border border-black px-1 py-2 print:hidden"><button onClick={() => removeItem(itemsTubos, setItemsTubos, index)} className="text-white bg-red-600 px-2 py-1 rounded font-bold">X</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mt-2 print:hidden"><button onClick={addItemTubo} className="bg-[#002060] hover:bg-blue-800 text-white px-4 py-2 font-bold rounded text-sm">+ Añadir fila</button></div>
+                    </React.Fragment>
+                  )}
+
+                  {/* --- GUANTES --- */}
+                  {activeTab === 'guantes' && (
+                    <React.Fragment>
+                      <TopSection reportCode={reportCode} tituloEnsayo="Rigidez dieléctrica - Guantes Aislantes" normativa="ASTM F496-24" numNormativa="Numerales 7.7, 7.1.3 y 7.1.4" reglas={["Regla de decisión (Simple): La conformidad se declara aplicando una regla de decisión simple.", "- Cumple: si soporta la tensión durante 3 min sin disrupción y la corriente no excede el límite.", "- No Cumple: si presenta disrupción o excede la corriente máxima."]} env={guantesConditions} setEnv={setGuantesConditions} notasExtra={<div className="mt-2 mb-2"><div className="border border-dashed border-black inline-block p-2 text-xs bg-white shadow-sm"><span className="font-bold">Nota:</span> Si la inspección resulta en NO Pasa, diríjase a los anexos para consultar la causa de rechazo.</div></div>} />
+                      <table className="w-full text-xs text-center border-collapse bg-white">
+                        <thead>
+                          <tr className="bg-[#b4c6e7] font-bold border-t-2 border-l-2 border-r-2 border-black">
+                            <th colSpan="2" className="border border-black px-2 py-1">IDENTIFICACIÓN</th><th colSpan="4" className="border border-black border-l-2 border-dashed px-2 py-1">INFO CLIENTE</th><th colSpan="6" className="border border-black border-l-2 border-dashed px-2 py-1">RESULTADO ENSAYO</th><th colSpan="1" className="border border-black border-l-2 border-dashed px-2 py-1">CONFORMIDAD</th><th className="border border-black print:hidden">X</th>
+                          </tr>
+                          <tr className="bg-[#b4c6e7] font-bold border-l-2 border-r-2 border-black">
+                            <th className="border border-black px-1 py-1 w-20">Interna</th><th className="border border-black px-1 py-1 w-20">Externa</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-32">Elemento</th><th className="border border-black px-1 py-1 w-24">Fabricante</th><th className="border border-black px-1 py-1 w-16">Clase</th><th className="border border-black px-1 py-1 w-16">Dim.</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-24">Inspección Visual</th><th className="border border-black px-1 py-1 w-16">Tensión (kV)</th><th className="border border-black px-1 py-1 w-16">Corr. (mA)</th><th className="border border-black px-1 py-1 w-16">Incert.</th><th className="border border-black px-1 py-1 w-16">Max Corr.</th><th className="border border-black px-1 py-1 w-20">Disrupción</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Cumple</th><th className="border border-black print:hidden w-10">Del</th>
+                          </tr>
+                        </thead>
+                        <tbody className="border-l-2 border-r-2 border-b-2 border-black">
+                          {itemsGuantes.map((item, index) => (
+                            <tr key={item.idConsecutivo} className={`border-b border-black ${item.cumple === 'NO PASA' ? 'bg-[#d9d9d9]' : 'bg-white'}`}>
+                              <td className="border border-black px-1 py-2 font-mono">{reportCode}-{item.idConsecutivo}</td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.idExterna} onChange={(e) => handleGuanteChange(index, 'idExterna', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.elemento} onChange={(e) => handleGuanteChange(index, 'elemento', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.fabricante} onChange={(e) => handleGuanteChange(index, 'fabricante', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none" value={item.clase} onChange={(e) => handleGuanteChange(index, 'clase', e.target.value)}><option value="00">00</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.dimension} onChange={(e) => handleGuanteChange(index, 'dimension', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none font-bold" value={item.inspeccionVisual} onChange={(e) => handleGuanteChange(index, 'inspeccionVisual', e.target.value)}><option>PASA</option><option>NO PASA</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.tension} onChange={(e) => handleGuanteChange(index, 'tension', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.01" className="w-full text-center bg-transparent focus:outline-none font-bold text-blue-700" value={item.corriente} onChange={(e) => handleGuanteChange(index, 'corriente', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.01" className="w-full text-center bg-transparent focus:outline-none" value={item.incCorriente} onChange={(e) => handleGuanteChange(index, 'incCorriente', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.1" className="w-full text-center bg-transparent focus:outline-none font-bold text-red-700" value={item.maxCorriente} onChange={(e) => handleGuanteChange(index, 'maxCorriente', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className={`w-full text-center focus:outline-none font-bold ${item.disrupcion==='PRESENTA'?'text-red-700':'text-green-700'}`} value={item.disrupcion} onChange={(e) => handleGuanteChange(index, 'disrupcion', e.target.value)}><option>NO PRESENTA</option><option>PRESENTA</option></select></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2 font-bold uppercase"><div className={`text-center font-bold px-2 py-1 rounded text-xs uppercase ${item.cumple === 'PASA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.cumple}</div></td>
+                              <td className="border border-black px-1 py-2 print:hidden"><button onClick={() => removeItem(itemsGuantes, setItemsGuantes, index)} className="text-white bg-red-600 px-2 py-1 rounded font-bold">X</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mt-2 print:hidden"><button onClick={addItemGuante} className="bg-[#002060] hover:bg-blue-800 text-white px-4 py-2 font-bold rounded text-sm">+ Añadir fila</button></div>
+                    </React.Fragment>
+                  )}
+
+                  {/* --- HERRAMIENTAS --- */}
+                  {activeTab === 'herramientas' && (
+                    <React.Fragment>
+                      <TopSection reportCode={reportCode} tituloEnsayo="Rigidez dieléctrica - Herramientas manuales" normativa="ASTM F1505-16 (2021)" numNormativa="Numerales 7.4.3.3, 8.3.1" reglas={["Regla de decisión (Simple): La conformidad se declara aplicando una regla de decisión simple.", "- Cumple: si soporta la tensión durante 3 min sin presentar disrupción ni exceder la corriente.", "- No Cumple: si presenta disrupción o excede la corriente máxima."]} env={herramientasConditions} setEnv={setHerramientasConditions} notasExtra={<div className="mt-2 mb-2"><div className="border border-dashed border-black inline-block p-2 text-xs bg-white shadow-sm"><span className="font-bold">Nota:</span> Si la inspección resulta en NO Pasa, diríjase a los anexos para consultar la causa de rechazo.</div></div>} />
+                      <table className="w-full text-xs text-center border-collapse bg-white">
+                        <thead>
+                          <tr className="bg-[#b4c6e7] font-bold border-t-2 border-l-2 border-r-2 border-black">
+                            <th colSpan="2" className="border border-black px-2 py-1">IDENTIFICACIÓN</th><th colSpan="4" className="border border-black border-l-2 border-dashed px-2 py-1">INFO CLIENTE</th><th colSpan="6" className="border border-black border-l-2 border-dashed px-2 py-1">RESULTADO ENSAYO</th><th colSpan="1" className="border border-black border-l-2 border-dashed px-2 py-1">CONFORMIDAD</th><th className="border border-black print:hidden">X</th>
+                          </tr>
+                          <tr className="bg-[#b4c6e7] font-bold border-l-2 border-r-2 border-black">
+                            <th className="border border-black px-1 py-1 w-20">Interna</th><th className="border border-black px-1 py-1 w-20">Externa</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-32">Elemento</th><th className="border border-black px-1 py-1 w-24">Fabricante</th><th className="border border-black px-1 py-1 w-16">L1 (m)</th><th className="border border-black px-1 py-1 w-16">L2 (m)</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-24">Inspección Visual</th><th className="border border-black px-1 py-1 w-16">Tensión (kV)</th><th className="border border-black px-1 py-1 w-16">Corr. (mA)</th><th className="border border-black px-1 py-1 w-16">Incert.</th><th className="border border-black px-1 py-1 w-16">Max Corr.</th><th className="border border-black px-1 py-1 w-20">Disrupción</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Cumple</th><th className="border border-black print:hidden w-10">Del</th>
+                          </tr>
+                        </thead>
+                        <tbody className="border-l-2 border-r-2 border-b-2 border-black">
+                          {itemsHerramientas.map((item, index) => (
+                            <tr key={item.idConsecutivo} className={`border-b border-black ${item.cumple === 'NO PASA' ? 'bg-[#d9d9d9]' : 'bg-white'}`}>
+                              <td className="border border-black px-1 py-2 font-mono">{reportCode}-{item.idConsecutivo}</td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.idExterna} onChange={(e) => handleHerramientaChange(index, 'idExterna', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.elemento} onChange={(e) => handleHerramientaChange(index, 'elemento', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.fabricante} onChange={(e) => handleHerramientaChange(index, 'fabricante', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.l1} onChange={(e) => handleHerramientaChange(index, 'l1', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.l2} onChange={(e) => handleHerramientaChange(index, 'l2', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none font-bold" value={item.inspeccionVisual} onChange={(e) => handleHerramientaChange(index, 'inspeccionVisual', e.target.value)}><option>PASA</option><option>NO PASA</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.tension} onChange={(e) => handleHerramientaChange(index, 'tension', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.01" className="w-full text-center bg-transparent focus:outline-none font-bold text-blue-700" value={item.corriente} onChange={(e) => handleHerramientaChange(index, 'corriente', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.001" className="w-full text-center bg-transparent focus:outline-none" value={item.incCorriente} onChange={(e) => handleHerramientaChange(index, 'incCorriente', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.1" className="w-full text-center bg-transparent focus:outline-none font-bold text-red-700" value={item.maxCorriente} onChange={(e) => handleHerramientaChange(index, 'maxCorriente', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className={`w-full text-center focus:outline-none font-bold ${item.disrupcion==='PRESENTA'?'text-red-700':'text-green-700'}`} value={item.disrupcion} onChange={(e) => handleHerramientaChange(index, 'disrupcion', e.target.value)}><option>NO PRESENTA</option><option>PRESENTA</option></select></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2 font-bold uppercase"><div className={`text-center font-bold px-2 py-1 rounded text-xs uppercase ${item.cumple === 'PASA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.cumple}</div></td>
+                              <td className="border border-black px-1 py-2 print:hidden"><button onClick={() => removeItem(itemsHerramientas, setItemsHerramientas, index)} className="text-white bg-red-600 px-2 py-1 rounded font-bold">X</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mt-2 print:hidden"><button onClick={addItemHerramienta} className="bg-[#002060] hover:bg-blue-800 text-white px-4 py-2 font-bold rounded text-sm">+ Añadir fila</button></div>
+                    </React.Fragment>
+                  )}
+
+                  {/* --- CASCOS --- */}
+                  {activeTab === 'cascos' && (
+                    <React.Fragment>
+                      <TopSection reportCode={reportCode} tituloEnsayo="Rigidez dieléctrica - Cascos de seguridad" normativa="NTC 1523-2012" numNormativa="Numerales 7.1.4.1, 7.1.4.2" reglas={["Regla de decisión (Simple): La conformidad se declara aplicando una regla de decisión simple.", "- Cumple: si soporta la tensión durante 1min o 3min sin ruptura y la corriente no excede el límite.", "- No Cumple: si presenta ruptura o la corriente de fuga excede el límite."]} env={cascosConditions} setEnv={setCascosConditions} notasExtra={<div className="mt-2 mb-2"><div className="border border-dashed border-black inline-block p-2 text-xs bg-white shadow-sm"><span className="font-bold">Nota:</span> Si la inspección resulta en NO Pasa, diríjase a los anexos para consultar la causa de rechazo.</div></div>} />
+                      <table className="w-full text-xs text-center border-collapse bg-white">
+                        <thead>
+                          <tr className="bg-[#b4c6e7] font-bold border-t-2 border-l-2 border-r-2 border-black">
+                            <th colSpan="2" className="border border-black px-2 py-1">IDENTIFICACIÓN</th><th colSpan="4" className="border border-black border-l-2 border-dashed px-2 py-1">INFO CLIENTE</th><th colSpan="7" className="border border-black border-l-2 border-dashed px-2 py-1">RESULTADO ENSAYO</th><th colSpan="1" className="border border-black border-l-2 border-dashed px-2 py-1">CONFORMIDAD</th><th className="border border-black print:hidden">X</th>
+                          </tr>
+                          <tr className="bg-[#b4c6e7] font-bold border-l-2 border-r-2 border-black">
+                            <th className="border border-black px-1 py-1 w-20">Interna</th><th className="border border-black px-1 py-1 w-20">Externa</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-32">Elemento</th><th className="border border-black px-1 py-1 w-24">Fabricante</th><th className="border border-black px-1 py-1 w-16">Clase</th><th className="border border-black px-1 py-1 w-16">Talla</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Inspección Visual</th><th className="border border-black px-1 py-1 w-16">Tensión (kV)</th><th className="border border-black px-1 py-1 w-16">Corr. (mA)</th><th className="border border-black px-1 py-1 w-16">Incert.</th><th className="border border-black px-1 py-1 w-16">Max Corr.</th><th className="border border-black px-1 py-1 w-20">Disrupción</th><th className="border border-black px-1 py-1 w-24">Observaciones</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Cumple</th><th className="border border-black print:hidden w-10">Del</th>
+                          </tr>
+                        </thead>
+                        <tbody className="border-l-2 border-r-2 border-b-2 border-black">
+                          {itemsCascos.map((item, index) => (
+                            <tr key={item.idConsecutivo} className={`border-b border-black ${item.cumple === 'NO PASA' ? 'bg-[#d9d9d9]' : 'bg-white'}`}>
+                              <td className="border border-black px-1 py-2 font-mono">{reportCode}-{item.idConsecutivo}</td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.idExterna} onChange={(e) => handleCascoChange(index, 'idExterna', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.elemento} onChange={(e) => handleCascoChange(index, 'elemento', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.fabricante} onChange={(e) => handleCascoChange(index, 'fabricante', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.clase} onChange={(e) => handleCascoChange(index, 'clase', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.talla} onChange={(e) => handleCascoChange(index, 'talla', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none font-bold" value={item.inspeccionVisual} onChange={(e) => handleCascoChange(index, 'inspeccionVisual', e.target.value)}><option>PASA</option><option>NO PASA</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.tension} onChange={(e) => handleCascoChange(index, 'tension', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.01" className="w-full text-center bg-transparent focus:outline-none font-bold text-blue-700" value={item.corriente} onChange={(e) => handleCascoChange(index, 'corriente', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.01" className="w-full text-center bg-transparent focus:outline-none" value={item.incCorriente} onChange={(e) => handleCascoChange(index, 'incCorriente', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.1" className="w-full text-center bg-transparent focus:outline-none font-bold text-red-700" value={item.maxCorriente} onChange={(e) => handleCascoChange(index, 'maxCorriente', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className={`w-full text-center focus:outline-none font-bold ${item.disrupcion==='PRESENTA'?'text-red-700':'text-green-700'}`} value={item.disrupcion} onChange={(e) => handleCascoChange(index, 'disrupcion', e.target.value)}><option>NO PRESENTA</option><option>PRESENTA</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.observaciones} onChange={(e) => handleCascoChange(index, 'observaciones', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2 font-bold uppercase"><div className={`text-center font-bold px-2 py-1 rounded text-xs uppercase ${item.cumple === 'PASA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.cumple}</div></td>
+                              <td className="border border-black px-1 py-2 print:hidden"><button onClick={() => removeItem(itemsCascos, setItemsCascos, index)} className="text-white bg-red-600 px-2 py-1 rounded font-bold">X</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mt-2 print:hidden"><button onClick={addItemCasco} className="bg-[#002060] hover:bg-blue-800 text-white px-4 py-2 font-bold rounded text-sm">+ Añadir fila</button></div>
+                    </React.Fragment>
+                  )}
+
+                  {/* --- PLATAFORMAS --- */}
+                  {activeTab === 'plataformas' && (
+                    <React.Fragment>
+                      <TopSection reportCode={reportCode} tituloEnsayo="Rigidez dieléctrica - Plataforma aislantes" normativa="ABNT NBR 11855:1991" numNormativa="Numeral 6.2.1.4.1" reglas={["Regla de decisión (Simple): La conformidad se declara aplicando una regla de decisión simple.", "- Cumple: si soporta la tensión durante 1 minuto sin disrupción y la corriente no excede el límite.", "- No Cumple: si presenta disrupción o la corriente excede el límite."]} env={plataformasConditions} setEnv={setPlataformasConditions} notasExtra={<div className="mt-2 mb-2"><div className="border border-dashed border-black inline-block p-2 text-xs bg-white shadow-sm"><span className="font-bold">Nota:</span> Si la inspección resulta en NO Pasa, diríjase a los anexos para consultar la causa de rechazo.</div></div>} />
+                      <table className="w-full text-xs text-center border-collapse bg-white">
+                        <thead>
+                          <tr className="bg-[#b4c6e7] font-bold border-t-2 border-l-2 border-r-2 border-black">
+                            <th colSpan="2" className="border border-black px-2 py-1">IDENTIFICACIÓN</th><th colSpan="3" className="border border-black border-l-2 border-dashed px-2 py-1">INFO CLIENTE</th><th colSpan="7" className="border border-black border-l-2 border-dashed px-2 py-1">RESULTADO ENSAYO</th><th colSpan="1" className="border border-black border-l-2 border-dashed px-2 py-1">CONFORMIDAD</th><th className="border border-black print:hidden">X</th>
+                          </tr>
+                          <tr className="bg-[#b4c6e7] font-bold border-l-2 border-r-2 border-black">
+                            <th className="border border-black px-1 py-1 w-20">Interna</th><th className="border border-black px-1 py-1 w-20">Externa</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-32">Elemento</th><th className="border border-black px-1 py-1 w-24">Fabricante</th><th className="border border-black px-1 py-1 w-16">Dim. (cm)</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Inspección Visual</th><th className="border border-black px-1 py-1 w-16">Puntos</th><th className="border border-black px-1 py-1 w-16">Tensión (kV)</th><th className="border border-black px-1 py-1 w-16">Corr. (µA)</th><th className="border border-black px-1 py-1 w-16">Incert.</th><th className="border border-black px-1 py-1 w-16">Max Corr.</th><th className="border border-black px-1 py-1 w-20">Disrupción</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Cumple</th><th className="border border-black print:hidden w-10">Del</th>
+                          </tr>
+                        </thead>
+                        <tbody className="border-l-2 border-r-2 border-b-2 border-black">
+                          {itemsPlataformas.map((item, index) => (
+                            <tr key={item.idConsecutivo} className={`border-b border-black ${item.cumple === 'NO PASA' ? 'bg-[#d9d9d9]' : 'bg-white'}`}>
+                              <td className="border border-black px-1 py-2 font-mono">{reportCode}-{item.idConsecutivo}</td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.idExterna} onChange={(e) => handlePlataformaChange(index, 'idExterna', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.elemento} onChange={(e) => handlePlataformaChange(index, 'elemento', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.fabricante} onChange={(e) => handlePlataformaChange(index, 'fabricante', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.dimension} onChange={(e) => handlePlataformaChange(index, 'dimension', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none font-bold" value={item.inspeccionVisual} onChange={(e) => handlePlataformaChange(index, 'inspeccionVisual', e.target.value)}><option>PASA</option><option>NO PASA</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none font-bold" value={item.puntos} onChange={(e) => handlePlataformaChange(index, 'puntos', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.tension} onChange={(e) => handlePlataformaChange(index, 'tension', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.01" className="w-full text-center bg-transparent focus:outline-none font-bold text-blue-700" value={item.corriente} onChange={(e) => handlePlataformaChange(index, 'corriente', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.01" className="w-full text-center bg-transparent focus:outline-none" value={item.incCorriente} onChange={(e) => handlePlataformaChange(index, 'incCorriente', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.1" className="w-full text-center bg-transparent focus:outline-none font-bold text-red-700" value={item.maxCorriente} onChange={(e) => handlePlataformaChange(index, 'maxCorriente', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className={`w-full text-center focus:outline-none font-bold ${item.disrupcion==='PRESENTA'?'text-red-700':'text-green-700'}`} value={item.disrupcion} onChange={(e) => handlePlataformaChange(index, 'disrupcion', e.target.value)}><option>NO PRESENTA</option><option>PRESENTA</option></select></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2 font-bold uppercase"><div className={`text-center font-bold px-2 py-1 rounded text-xs uppercase ${item.cumple === 'PASA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.cumple}</div></td>
+                              <td className="border border-black px-1 py-2 text-center bg-white print:hidden"><button onClick={() => removeItem(itemsPlataformas, setItemsPlataformas, index)} className="text-white bg-red-600 px-2 py-1 rounded font-bold">X</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mt-2 print:hidden"><button onClick={addItemPlataforma} className="bg-[#002060] hover:bg-blue-800 text-white px-4 py-2 font-bold rounded text-sm">+ Añadir fila</button></div>
+                    </React.Fragment>
+                  )}
+
+                  {/* --- TIERRAS --- */}
+                  {activeTab === 'tierras' && (
+                    <React.Fragment>
+                      <TopSection reportCode={reportCode} tituloEnsayo="Medición de resistencia eléctrica DC - Puente temporal" normativa="ASTM F2249-25" numNormativa="Numerales 7.3.1, 7.4.1" reglas={["Regla de decisión (Simple): La conformidad se declara aplicando una regla de decisión simple.", "- Cumple: Cuando la resistencia medida (R) es menor a la resistencia máxima permitida (Rm).", "- No Cumple: Cuando R es mayor al valor de Rm o si falla la continuidad auditiva."]} env={tierrasConditions} setEnv={setTierrasConditions} notasExtra={<div className="mt-2 mb-2"><div className="border border-dashed border-black inline-block p-2 text-xs bg-white shadow-sm"><span className="font-bold">Nota:</span> Si la inspección resulta en NO Pasa, diríjase a los anexos para consultar la causa de rechazo.</div></div>} />
+                      <table className="w-full text-xs text-center border-collapse bg-white">
+                        <thead>
+                          <tr className="bg-[#b4c6e7] font-bold border-t-2 border-l-2 border-r-2 border-black">
+                            <th colSpan="2" className="border border-black px-2 py-1">IDENTIFICACIÓN</th><th colSpan="4" className="border border-black border-l-2 border-dashed px-2 py-1">INFO CLIENTE</th><th colSpan="5" className="border border-black border-l-2 border-dashed px-2 py-1">RESULTADO ENSAYO</th><th colSpan="1" className="border border-black border-l-2 border-dashed px-2 py-1">CONFORMIDAD</th><th className="border border-black print:hidden">X</th>
+                          </tr>
+                          <tr className="bg-[#b4c6e7] font-bold border-l-2 border-r-2 border-black">
+                            <th className="border border-black px-1 py-1 w-20">Interna</th><th className="border border-black px-1 py-1 w-20">Externa</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-32">Elemento</th><th className="border border-black px-1 py-1 w-24">Fabricante</th><th className="border border-black px-1 py-1 w-16">Calibre</th><th className="border border-black px-1 py-1 w-16">Long. (m)</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Inspección Visual</th><th className="border border-black px-1 py-1 w-20">Continuidad</th><th className="border border-black px-1 py-1 w-20">Res. Medida (mΩ)</th><th className="border border-black px-1 py-1 w-20">Incert. (mΩ)</th><th className="border border-black px-1 py-1 w-24">Res. Máxima (mΩ)</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Cumple</th><th className="border border-black print:hidden w-10">Del</th>
+                          </tr>
+                        </thead>
+                        <tbody className="border-l-2 border-r-2 border-b-2 border-black">
+                          {itemsTierras.map((item, index) => (
+                            <tr key={item.idConsecutivo} className={`border-b border-black ${item.cumple === 'NO PASA' ? 'bg-[#d9d9d9]' : 'bg-white'}`}>
+                              <td className="border border-black px-1 py-2 font-mono">{reportCode}-{item.idConsecutivo}</td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full border-gray-300 rounded focus:outline-none text-xs text-center bg-transparent" value={item.idExterna} onChange={(e) => handleTierraChange(index, 'idExterna', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2 uppercase"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.elemento} onChange={(e) => handleTierraChange(index, 'elemento', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2 uppercase"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.fabricante} onChange={(e) => handleTierraChange(index, 'fabricante', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.calibre} onChange={(e) => handleTierraChange(index, 'calibre', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.longitud} onChange={(e) => handleTierraChange(index, 'longitud', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none font-bold" value={item.inspeccionVisual} onChange={(e) => handleTierraChange(index, 'inspeccionVisual', e.target.value)}><option value="PASA">PASA</option><option value="NO PASA">NO PASA</option></select></td>
+                              <td className="border border-black px-1 py-2"><select className={`w-full text-center bg-transparent focus:outline-none font-bold ${item.continuidad==='NO EFICIENTE'?'text-red-700':'text-green-700'}`} value={item.continuidad} onChange={(e) => handleTierraChange(index, 'continuidad', e.target.value)}><option value="EFICIENTE">EFICIENTE</option><option value="NO EFICIENTE">NO EFICIENTE</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.001" className="w-full text-center bg-transparent focus:outline-none font-bold text-blue-800" value={item.resistenciaMedida} onChange={(e) => handleTierraChange(index, 'resistenciaMedida', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.0001" className="w-full text-center bg-transparent focus:outline-none" value={item.incResistencia} onChange={(e) => handleTierraChange(index, 'incResistencia', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.001" className="w-full text-center bg-transparent focus:outline-none font-bold text-red-800" value={item.resistenciaMax} onChange={(e) => handleTierraChange(index, 'resistenciaMax', e.target.value)} title="Rm = 1.05 * RL + 0.32" /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><div className={`text-center font-bold px-2 py-1 rounded text-xs uppercase ${item.cumple === 'PASA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.cumple}</div></td>
+                              <td className="border border-black px-1 py-2 text-center bg-white print:hidden"><button onClick={() => removeItem(itemsTierras, setItemsTierras, index)} className="text-white bg-red-600 px-2 py-1 rounded font-bold">X</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mt-2 print:hidden"><button onClick={addItemTierra} className="bg-[#002060] hover:bg-blue-800 text-white px-4 py-2 rounded font-bold text-sm">+ Añadir fila</button></div>
+                    </React.Fragment>
+                  )}
+
+                  {/* --- DETECTORES --- */}
+                  {activeTab === 'detectores' && (
+                    <React.Fragment>
+                      <TopSection reportCode={reportCode} tituloEnsayo="Rigidez dieléctrica - Detectores de tensión" normativa="IEC 61243-1: 2021" numNormativa="Numerales 6.2.2.3, 6.2.2.4" reglas={["Regla de decisión (Simple): La conformidad se declara aplicando una regla de decisión simple.", "- Cumple: si soporta la tensión de ensayo sin presentar disrupción dieléctrica, flashover, chispa o punzamiento.", "- No Cumple: si presenta disrupción dieléctrica, flashover, chispa o punzamiento."]} env={detectoresConditions} setEnv={setDetectoresConditions} notasExtra={<div className="mt-2 mb-2"><div className="border border-dashed border-black inline-block p-2 text-xs bg-white shadow-sm"><span className="font-bold">Nota:</span> Si la inspección resulta en NO Pasa, diríjase a los anexos para consultar la causa de rechazo.</div></div>} />
+                      <table className="w-full text-xs text-center border-collapse bg-white">
+                        <thead>
+                          <tr className="bg-[#b4c6e7] font-bold border-t-2 border-l-2 border-r-2 border-black">
+                            <th colSpan="2" className="border border-black px-2 py-1">IDENTIFICACIÓN</th><th colSpan="3" className="border border-black border-l-2 border-dashed px-2 py-1">INFO CLIENTE</th><th colSpan="4" className="border border-black border-l-2 border-dashed px-2 py-1">RESULTADO ENSAYO</th><th colSpan="1" className="border border-black border-l-2 border-dashed px-2 py-1">CONFORMIDAD</th><th className="border border-black print:hidden">X</th>
+                          </tr>
+                          <tr className="bg-[#b4c6e7] font-bold border-l-2 border-r-2 border-black">
+                            <th className="border border-black px-1 py-1 w-20">Interna</th><th className="border border-black px-1 py-1 w-20">Externa</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-32">Elemento</th><th className="border border-black px-1 py-1 w-24">Fabricante</th><th className="border border-black px-1 py-1 w-24">Tensión Op. (kV)</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Inspección Visual</th><th className="border border-black px-1 py-1 w-20">Tensión Prueba (kV)</th><th className="border border-black px-1 py-1 w-20">Distancia (m)</th><th className="border border-black px-1 py-1 w-20">Disrupción</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Cumple</th><th className="border border-black print:hidden w-10">Del</th>
+                          </tr>
+                        </thead>
+                        <tbody className="border-l-2 border-r-2 border-b-2 border-black">
+                          {itemsDetectores.map((item, index) => (
+                            <tr key={item.idConsecutivo} className={`border-b border-black ${item.cumple === 'NO PASA' ? 'bg-[#d9d9d9]' : 'bg-white'}`}>
+                              <td className="border border-black px-1 py-2 font-mono">{reportCode}-{item.idConsecutivo}</td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.idExterna} onChange={(e) => handleDetectorChange(index, 'idExterna', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2 uppercase"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.elemento} onChange={(e) => handleDetectorChange(index, 'elemento', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2 uppercase"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.fabricante} onChange={(e) => handleDetectorChange(index, 'fabricante', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.tensionOperacion} onChange={(e) => handleDetectorChange(index, 'tensionOperacion', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none font-bold" value={item.inspeccionVisual} onChange={(e) => handleDetectorChange(index, 'inspeccionVisual', e.target.value)}><option value="PASA">PASA</option><option value="NO PASA">NO PASA</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.1" className="w-full text-center bg-transparent focus:outline-none" value={item.tensionPrueba} onChange={(e) => handleDetectorChange(index, 'tensionPrueba', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.01" className="w-full text-center bg-transparent focus:outline-none" value={item.distancia} onChange={(e) => handleDetectorChange(index, 'distancia', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className={`w-full text-center focus:outline-none font-bold ${item.disrupcion==='PRESENTA'?'text-red-700':'text-green-700'}`} value={item.disrupcion} onChange={(e) => handleDetectorChange(index, 'disrupcion', e.target.value)}><option>NO PRESENTA</option><option>PRESENTA</option></select></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><div className={`text-center font-bold px-2 py-1 rounded text-xs uppercase ${item.cumple === 'PASA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.cumple}</div></td>
+                              <td className="border border-black px-1 py-2 text-center bg-white print:hidden"><button onClick={() => removeItem(itemsDetectores, setItemsDetectores, index)} className="text-white bg-red-600 px-2 py-1 rounded font-bold">X</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mt-2 print:hidden"><button onClick={addItemDetector} className="bg-[#002060] hover:bg-blue-800 text-white px-4 py-2 rounded font-bold text-sm">+ Añadir fila</button></div>
+                    </React.Fragment>
+                  )}
+
+                  {/* --- VEHÍCULOS --- */}
+                  {activeTab === 'vehiculos' && (
+                    <React.Fragment>
+                      <TopSection reportCode={reportCode} tituloEnsayo="Medición de corriente de fuga - Vehículos brazo aislado." normativa="ANSI/SIA A92.2 - 2021" numNormativa="Numerales 5.4.2 y 5.4.3" reglas={["Regla de decisión (Simple): La conformidad se declara aplicando una regla de decisión simple en donde se establece el criterio de aceptación y/o rechazo:", "- Cumple: si el vehículo soporta la tensión durante el tiempo estipulado sin disrupción y la corriente de fuga no excede el límite máximo especificado.", "- No Cumple: si presenta disrupción o la corriente de fuga excede el límite."]} env={vehiculosConditions} setEnv={setVehiculosConditions} notasExtra={<div className="mt-2 mb-2"><div className="border border-dashed border-black inline-block p-2 text-xs bg-white shadow-sm"><span className="font-bold">Nota:</span> Si la inspección resulta en NO Pasa, diríjase a los anexos para consultar la causa de rechazo.</div></div>} />
+                      <table className="w-full text-xs text-center border-collapse bg-white">
+                        <thead>
+                          <tr className="bg-[#b4c6e7] font-bold border-t-2 border-l-2 border-r-2 border-black">
+                            <th colSpan="2" className="border border-black px-2 py-1">IDENTIFICACIÓN</th><th colSpan="3" className="border border-black border-l-2 border-dashed px-2 py-1">INFO CLIENTE</th><th colSpan="6" className="border border-black border-l-2 border-dashed px-2 py-1">RESULTADO ENSAYO</th><th colSpan="1" className="border border-black border-l-2 border-dashed px-2 py-1">CONFORMIDAD</th><th className="border border-black print:hidden">X</th>
+                          </tr>
+                          <tr className="bg-[#b4c6e7] font-bold border-l-2 border-r-2 border-black">
+                            <th className="border border-black px-1 py-1 w-20">Interna</th><th className="border border-black px-1 py-1 w-20">Externa</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-32">Elemento</th><th className="border border-black px-1 py-1 w-24">Fabricante</th><th className="border border-black px-1 py-1 w-16">Categoría</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Inspección Visual</th><th className="border border-black px-1 py-1 w-16">Tensión (kV)</th><th className="border border-black px-1 py-1 w-16">Corr. (mA)</th><th className="border border-black px-1 py-1 w-16">Incert.</th><th className="border border-black px-1 py-1 w-16">Max Corr.</th><th className="border border-black px-1 py-1 w-20">Disrupción</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Cumple</th><th className="border border-black print:hidden w-10">Del</th>
+                          </tr>
+                        </thead>
+                        <tbody className="border-l-2 border-r-2 border-b-2 border-black">
+                          {itemsVehiculos.map((item, index) => (
+                            <tr key={item.idConsecutivo} className={`border-b border-black ${item.cumple === 'NO PASA' ? 'bg-[#d9d9d9]' : 'bg-white'}`}>
+                              <td className="border border-black px-1 py-2 font-mono">{reportCode}-{item.idConsecutivo}</td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.idExterna} onChange={(e) => handleVehiculoChange(index, 'idExterna', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.elemento} onChange={(e) => handleVehiculoChange(index, 'elemento', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.fabricante} onChange={(e) => handleVehiculoChange(index, 'fabricante', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none font-bold" value={item.categoria} onChange={(e) => handleVehiculoChange(index, 'categoria', e.target.value)}><option value="A">A</option><option value="B">B</option><option value="C">C</option></select></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none font-bold" value={item.inspeccionVisual} onChange={(e) => handleVehiculoChange(index, 'inspeccionVisual', e.target.value)}><option>PASA</option><option>NO PASA</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.tension} onChange={(e) => handleVehiculoChange(index, 'tension', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.01" className="w-full text-center bg-transparent focus:outline-none font-bold text-blue-700" value={item.corriente} onChange={(e) => handleVehiculoChange(index, 'corriente', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.01" className="w-full text-center bg-transparent focus:outline-none" value={item.incCorriente} onChange={(e) => handleVehiculoChange(index, 'incCorriente', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.1" className="w-full text-center bg-transparent focus:outline-none font-bold text-red-700" value={item.maxCorriente} onChange={(e) => handleVehiculoChange(index, 'maxCorriente', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className={`w-full text-center focus:outline-none font-bold ${item.disrupcion==='PRESENTA'?'text-red-700':'text-green-700'}`} value={item.disrupcion} onChange={(e) => handleVehiculoChange(index, 'disrupcion', e.target.value)}><option>NO PRESENTA</option><option>PRESENTA</option></select></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2 font-bold uppercase"><div className={`text-center font-bold px-2 py-1 rounded text-xs uppercase ${item.cumple === 'PASA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.cumple}</div></td>
+                              <td className="border border-black px-1 py-2 text-center bg-white print:hidden"><button onClick={() => removeItem(itemsVehiculos, setItemsVehiculos, index)} className="text-white bg-red-600 px-2 py-1 rounded font-bold">X</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mt-2 print:hidden"><button onClick={addItemVehiculo} className="bg-[#002060] hover:bg-blue-800 text-white px-4 py-2 font-bold rounded text-sm">+ Añadir fila</button></div>
+                    </React.Fragment>
+                  )}
+
+                  {/* --- LINERS --- */}
+                  {activeTab === 'liners' && (
+                    <React.Fragment>
+                      <TopSection reportCode={reportCode} tituloEnsayo="Ensayos de Vaso Liner (Herramienta aislada)" normativa="IEC 60900:2018" numNormativa="Numeral 5.5.3 (Ensayo de aislamiento dieléctrico)" reglas={["La conformidad se declara cuando el aislamiento dieléctrico del Vaso Liner soporta la aplicación de la tensión de prueba de 10 kV durante 3 minutos sin presentar corrientes de fuga superiores a 1.0 mA.", "Criterio de Aceptación: Corriente de fuga ≤ 1.0 mA y ausencia de perforación o arqueo."]} env={linersConditions} setEnv={setLinersConditions} notasExtra={<div className="mt-2 mb-2"><div className="border border-dashed border-black inline-block p-2 text-xs bg-white shadow-sm"><span className="font-bold">Nota:</span> Si la inspección resulta en NO Pasa, diríjase a los anexos para consultar la causa de rechazo.</div></div>} />
+                      <table className="w-full text-xs text-center border-collapse bg-white">
+                        <thead>
+                          <tr className="bg-[#b4c6e7] font-bold border-t-2 border-l-2 border-r-2 border-black">
+                            <th colSpan="2" className="border border-black px-2 py-1">IDENTIFICACIÓN</th><th colSpan="2" className="border border-black border-l-2 border-dashed px-2 py-1">INFO CLIENTE</th><th colSpan="6" className="border border-black border-l-2 border-dashed px-2 py-1">RESULTADO ENSAYO</th><th colSpan="1" className="border border-black border-l-2 border-dashed px-2 py-1">CONFORMIDAD</th><th className="border border-black print:hidden">X</th>
+                          </tr>
+                          <tr className="bg-[#b4c6e7] font-bold border-l-2 border-r-2 border-black">
+                            <th className="border border-black px-1 py-1 w-20">Interna</th><th className="border border-black px-1 py-1 w-20">Externa</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-32">Elemento</th><th className="border border-black px-1 py-1 w-24">Fabricante</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Inspección Visual</th><th className="border border-black px-1 py-1 w-16">Tensión (kV)</th><th className="border border-black px-1 py-1 w-16">Corr. (mA)</th><th className="border border-black px-1 py-1 w-16">Incert.</th><th className="border border-black px-1 py-1 w-16">Max Corr.</th><th className="border border-black px-1 py-1 w-20">Disrupción</th>
+                            <th className="border border-black border-l-2 border-dashed px-1 py-1 w-20">Cumple</th><th className="border border-black print:hidden w-10">Del</th>
+                          </tr>
+                        </thead>
+                        <tbody className="border-l-2 border-r-2 border-b-2 border-black">
+                          {itemsLiners.map((item, index) => (
+                            <tr key={item.idConsecutivo} className={`border-b border-black ${item.cumple === 'NO PASA' ? 'bg-[#d9d9d9]' : 'bg-white'}`}>
+                              <td className="border border-black px-1 py-2 font-mono">{reportCode}-{item.idConsecutivo}</td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none" value={item.idExterna} onChange={(e) => handleLinerChange(index, 'idExterna', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.elemento} onChange={(e) => handleLinerChange(index, 'elemento', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="text" className="w-full text-center bg-transparent focus:outline-none uppercase" value={item.fabricante} onChange={(e) => handleLinerChange(index, 'fabricante', e.target.value)} /></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2"><select className="w-full text-center bg-transparent focus:outline-none font-bold" value={item.inspeccionVisual} onChange={(e) => handleLinerChange(index, 'inspeccionVisual', e.target.value)}><option>PASA</option><option>NO PASA</option></select></td>
+                              <td className="border border-black px-1 py-2"><input type="number" className="w-full text-center bg-transparent focus:outline-none" value={item.tension} onChange={(e) => handleLinerChange(index, 'tension', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.01" className="w-full text-center bg-transparent focus:outline-none font-bold text-blue-700" value={item.corriente} onChange={(e) => handleLinerChange(index, 'corriente', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.01" className="w-full text-center bg-transparent focus:outline-none" value={item.incCorriente} onChange={(e) => handleLinerChange(index, 'incCorriente', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><input type="number" step="0.1" className="w-full text-center bg-transparent focus:outline-none font-bold text-red-700" value={item.maxCorriente} onChange={(e) => handleLinerChange(index, 'maxCorriente', e.target.value)} /></td>
+                              <td className="border border-black px-1 py-2"><select className={`w-full text-center focus:outline-none font-bold ${item.disrupcion==='PRESENTA'?'text-red-700':'text-green-700'}`} value={item.disrupcion} onChange={(e) => handleLinerChange(index, 'disrupcion', e.target.value)}><option>NO PRESENTA</option><option>PRESENTA</option></select></td>
+                              <td className="border border-black border-l-2 border-dashed px-1 py-2 font-bold uppercase"><div className={`text-center font-bold px-2 py-1 rounded text-xs uppercase ${item.cumple === 'PASA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{item.cumple}</div></td>
+                              <td className="border border-black px-1 py-2 text-center bg-white print:hidden"><button onClick={() => removeItem(itemsLiners, setItemsLiners, index)} className="text-white bg-red-600 px-2 py-1 rounded font-bold">X</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mt-2 print:hidden"><button onClick={addItemLiner} className="bg-[#002060] hover:bg-blue-800 text-white px-4 py-2 font-bold rounded text-sm">+ Añadir fila</button></div>
+                    </React.Fragment>
+                  )}
+
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // Renderizado inicial
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

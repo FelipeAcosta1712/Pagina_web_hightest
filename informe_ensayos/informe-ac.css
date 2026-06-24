@@ -1,0 +1,562 @@
+/* =============================================
+   INFORME DE ENSAYOS - HIGHTEST SAS
+   Estilos para FR-7.8
+   ============================================= */
+
+/* --- Reset & Base --- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: #f1f5f9;
+  color: #1e293b;
+  line-height: 1.5;
+}
+
+/* --- Scrollbar --- */
+.styled-scrollbar::-webkit-scrollbar { height: 6px; }
+.styled-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+.styled-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+/* --- Header --- */
+.inf-header {
+  background: #1e3a5f;
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.inf-header h1 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.inf-header__code {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #163050;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #2d5a8a;
+}
+
+.inf-header__code label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.inf-header__code input {
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #4a7ab5;
+  font-size: 0.9rem;
+  width: 130px;
+}
+
+/* --- Tabs --- */
+.inf-tabs {
+  display: flex;
+  overflow-x: auto;
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
+.inf-tabs::-webkit-scrollbar { height: 4px; }
+.inf-tabs::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+.inf-tab {
+  padding: 10px 16px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.inf-tab:hover { color: #2563eb; background: #eff6ff; }
+.inf-tab.active { color: #1d4ed8; border-bottom-color: #2563eb; background: #fff; }
+
+/* --- Main Content --- */
+.inf-content {
+  max-width: 110rem;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  padding: 24px;
+  overflow-x: auto;
+}
+
+.inf-panel { display: none; }
+.inf-panel.active { display: block; }
+
+/* --- Top Section (Encabezado por ensayo) --- */
+.inf-top-section { margin-bottom: 16px; }
+
+.inf-top-header {
+  text-align: center;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.inf-top-header h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.inf-top-header p {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.inf-top-header__code {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #1e3a5f;
+}
+
+.inf-top-header__approved {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 0.7rem;
+  text-align: left;
+  color: #334155;
+}
+
+.inf-top-header__fr {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.inf-top-header__approved input {
+  width: 100px;
+  border: none;
+  border-bottom: 1px solid #94a3b8;
+  font-size: 0.7rem;
+  background: transparent;
+  outline: none;
+  padding: 1px 4px;
+}
+
+/* --- Info Box --- */
+.inf-info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: #1e40af;
+  margin-bottom: 12px;
+}
+
+/* --- Grid de datos generales --- */
+.inf-data-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.inf-data-card {
+  border: 1px solid #000;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.inf-data-card__title {
+  background: #002060;
+  color: #fff;
+  text-align: center;
+  padding: 8px 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.inf-data-card__title small { font-size: 0.6rem; font-weight: 400; }
+
+.inf-data-card__body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.inf-data-card__body input {
+  width: 100%;
+  text-align: center;
+  border: none;
+  background: transparent;
+  font-weight: 700;
+  font-size: 0.85rem;
+  outline: none;
+  padding: 4px;
+}
+
+/* --- Condicionales ambientales --- */
+.inf-env-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 80px;
+}
+
+.inf-env-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.inf-env-col__label {
+  background: #002060;
+  color: #fff;
+  text-align: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 4px 0;
+}
+
+.inf-env-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #002060;
+  color: #fff;
+  font-size: 0.65rem;
+}
+
+.inf-env-row > div { text-align: center; padding: 2px 0; border-right: 1px dashed #6b7280; }
+.inf-env-row > div:last-child { border-right: none; }
+
+.inf-env-values {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+}
+
+.inf-env-values input {
+  width: 100%;
+  text-align: center;
+  border: none;
+  background: transparent;
+  font-size: 0.8rem;
+  outline: none;
+  padding: 4px;
+  border-right: 1px dashed #d1d5db;
+}
+
+.inf-env-values input:last-child { border-right: none; }
+
+/* --- Incertidumbre --- */
+.inf-incert-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  border-bottom: 1px dotted #d1d5db;
+  font-size: 0.72rem;
+}
+
+.inf-incert-row:last-child { border-bottom: none; }
+
+.inf-incert-row input {
+  width: 50px;
+  text-align: center;
+  border: none;
+  background: transparent;
+  font-weight: 700;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+/* --- Nota --- */
+.inf-nota {
+  border: 1px dashed #000;
+  display: inline-block;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  background: #fff;
+  margin: 8px 0;
+}
+
+/* --- Tabla de ensayo --- */
+.inf-table-wrapper {
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.inf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.inf-table th,
+.inf-table td {
+  border: 1px solid #000;
+  padding: 4px 3px;
+  vertical-align: middle;
+}
+
+.inf-table thead tr:first-child th {
+  border-top: 2px solid #000;
+}
+
+.inf-table thead tr:last-child th {
+  border-top: 1px solid #000;
+}
+
+.inf-table thead {
+  background: #b4c6e7;
+  font-weight: 700;
+}
+
+.inf-table thead th.section-start {
+  border-left: 2px dashed #000;
+}
+
+.inf-table thead th.section-title {
+  border-left: 2px dashed #000;
+}
+
+.inf-table tbody {
+  border: 2px solid #000;
+}
+
+.inf-table tbody td {
+  border: 1px solid #000;
+}
+
+.inf-table tbody td.section-start {
+  border-left: 2px dashed #000;
+}
+
+.inf-table tbody tr.row-fail {
+  background: #d9d9d9;
+}
+
+/* --- Inputs de tabla --- */
+.inf-table input,
+.inf-table select {
+  width: 100%;
+  text-align: center;
+  border: none;
+  background: transparent;
+  font-size: 0.7rem;
+  outline: none;
+  padding: 2px;
+}
+
+.inf-table select { cursor: pointer; }
+
+.inf-table .cell-id {
+  font-family: monospace;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* --- Badge de conformidad --- */
+.inf-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  width: 100%;
+  text-align: center;
+}
+
+.inf-badge--pass { background: #dcfce7; color: #166534; }
+.inf-badge--fail { background: #fee2e2; color: #991b1b; }
+
+/* --- Botones de acción --- */
+.inf-btn-del {
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.inf-btn-del:hover { background: #b91c1c; }
+
+.inf-btn-add {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.inf-btn-add button {
+  background: #002060;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.inf-btn-add button:hover { background: #003090; }
+
+/* --- Select con color por valor --- */
+.inf-select-disrupcion { font-weight: 700; }
+.inf-select-disrupcion.text-red { color: #b91c1c; }
+.inf-select-disrupcion.text-green { color: #15803d; }
+
+/* --- Select inspección visual --- */
+.inf-select-inspeccion { font-weight: 700; }
+
+/* --- Portada --- */
+.inf-portada-title {
+  text-align: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #1e293b;
+}
+
+.inf-portada-title h2 {
+  font-size: 1.6rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #1e293b;
+}
+
+.inf-portada-title p { color: #64748b; font-weight: 500; margin-top: 4px; }
+.inf-portada-title .code { font-weight: 700; font-size: 1.1rem; color: #1e3a5f; margin-top: 6px; }
+
+.inf-portada-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.inf-portada-card {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.inf-portada-card__header {
+  background: #e2e8f0;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #374151;
+  text-transform: uppercase;
+  border-bottom: 1px solid #d1d5db;
+}
+
+.inf-portada-card__body { padding: 16px; }
+
+.inf-portada-field { margin-bottom: 12px; }
+
+.inf-portada-field label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.inf-portada-field input,
+.inf-portada-field select {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid #d1d5db;
+  padding: 4px 2px;
+  font-size: 0.85rem;
+  background: transparent;
+  outline: none;
+}
+
+.inf-portada-field input:focus,
+.inf-portada-field select:focus {
+  border-bottom-color: #2563eb;
+}
+
+/* --- Equipo item --- */
+.inf-equipo-item {
+  display: flex;
+  margin-bottom: 6px;
+  gap: 4px;
+}
+
+.inf-equipo-item select {
+  flex: 1;
+  border: 1px solid #d1d5db;
+  border-radius: 4px 0 0 4px;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+  outline: none;
+}
+
+.inf-equipo-item .btn-remove {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+  border-left: 0;
+  border-radius: 0 4px 4px 0;
+  padding: 4px 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.inf-add-equipo {
+  font-size: 0.72rem;
+  color: #2563eb;
+  font-weight: 700;
+  cursor: pointer;
+  background: none;
+  border: none;
+  text-decoration: underline;
+}
+
+/* --- Print --- */
+@media print {
+  body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+  .inf-header, .inf-tabs, .inf-btn-add, .inf-btn-del, .inf-add-equipo,
+  .inf-portada-card__header, .print-hidden { display: none !important; }
+  .inf-content { box-shadow: none !important; border-radius: 0 !important; padding: 8px !important; }
+  .inf-table input, .inf-table select { border: none !important; }
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .inf-portada-grid { grid-template-columns: 1fr; }
+  .inf-data-grid { grid-template-columns: 1fr; }
+  .inf-header { flex-direction: column; align-items: flex-start; }
+}

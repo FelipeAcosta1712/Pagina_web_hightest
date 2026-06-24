@@ -1030,6 +1030,34 @@ exports.handler = async (event) => {
             }
 
             // =============================================
+            // MARCACIONES - Resumen por todos los procesos
+            // =============================================
+            if (payload.action === 'get_marcaciones_resumen') {
+                const { data, error } = await supabase
+                    .from('marcaciones_ac')
+                    .select('proceso_id, estado');
+
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al consultar resumen de marcaciones', detail: error.message });
+                }
+
+                const resumen = {};
+                (data || []).forEach(m => {
+                    const pid = m.proceso_id;
+                    if (!resumen[pid]) {
+                        resumen[pid] = { total: 0, marcados: 0, pendientes: 0, otros: 0 };
+                    }
+                    resumen[pid].total++;
+                    const est = String(m.estado || '').toLowerCase();
+                    if (est === 'marcado') resumen[pid].marcados++;
+                    else if (est === 'pendiente') resumen[pid].pendientes++;
+                    else resumen[pid].otros++;
+                });
+
+                return jsonResponse(200, { ok: true, resumen });
+            }
+
+            // =============================================
             // COTIZACIONES - CRUD completo
             // =============================================
 
