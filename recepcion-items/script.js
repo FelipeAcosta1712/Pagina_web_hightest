@@ -11663,6 +11663,10 @@ async function selectProcesoLectura(numeroProceso) {
                 <span class="marcacion-process-value">${escapeHtml(proceso.tipo || 'Ensayo')}</span>
             </div>
             <div class="marcacion-process-field">
+                <span class="marcacion-process-label">Informe a nombre de</span>
+                <span class="marcacion-process-value">${escapeHtml(proceso.informe_a_nombre_de || proceso.cliente || '-')}</span>
+            </div>
+            <div class="marcacion-process-field">
                 <span class="marcacion-process-label">Fecha de ejecución</span>
                 <span class="marcacion-process-value">${(proceso.fecha_ejecucion || '').substring(0, 10) || '-'}</span>
             </div>
