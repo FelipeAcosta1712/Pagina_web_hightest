@@ -1554,13 +1554,27 @@ exports.handler = async (event) => {
                 const filePath = normalizeText(payload.file_path);
                 if (!filePath) return jsonResponse(400, { ok: false, error: 'file_path requerido' });
 
+                const fileName = payload.file_name
+                    ? normalizeText(payload.file_name)
+                    : true;
+
                 const { data, error } = await supabase
                     .storage
                     .from('Informes')
-                    .createSignedUrl(filePath, 3600);
+                    .createSignedUrl(filePath, 3600, {
+                        download: fileName
+                    });
+
+                let signedUrl = data?.signedUrl || '';
+                if (signedUrl) {
+                    try { signedUrl = decodeURI(signedUrl); } catch (e) {}
+                }
+
+                console.log('[DOWNLOAD] file_name recibido:', fileName);
+                console.log('[DOWNLOAD] signedUrl (corregida):', signedUrl);
 
                 if (error) return jsonResponse(500, { ok: false, error: error.message });
-                return jsonResponse(200, { ok: true, signedUrl: data?.signedUrl || '' });
+                return jsonResponse(200, { ok: true, signedUrl });
             }
 
             // Obtener URL pública para previsualizar PDF

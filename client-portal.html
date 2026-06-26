@@ -1196,7 +1196,7 @@
                     const numProceso = i.numero_proceso || '—';
                     const fecha = i.fecha_entrega || (i.created_at || '').substring(0, 10);
                     return `
-                <div class="dm-activity-item" style="display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid #f1f5f9; transition:background 0.15s; cursor:pointer;" onclick="${pdfUrl ? `window.open('${pdfUrl}', '_blank')` : `setTab('reports')`}">
+                <div class="dm-activity-item" style="display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid #f1f5f9; transition:background 0.15s; cursor:pointer;" onclick="${pdfUrl ? `downloadPdfFile('${escapeHtml(pdfUrl)}', '${escapeHtml(i.nombre_documento || 'informe')}')` : `setTab('reports')`}">
                     <div class="dm-bg-red" style="width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                         <span style="font-size:18px;">📄</span>
                     </div>
@@ -1207,7 +1207,7 @@
                     </div>
                     <div style="text-align:right; flex-shrink:0;">
                         <span class="dm-badge-green" style="display:inline-block; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:600;">✅ Disponible</span>
-                        <div class="dm-text-link" style="margin-top:4px; font-size:11px; font-weight:600;">${pdfUrl ? 'Ver PDF →' : 'Ver detalle →'}</div>
+                        <div class="dm-text-link" style="margin-top:4px; font-size:11px; font-weight:600;">${pdfUrl ? 'Descargar →' : 'Ver detalle →'}</div>
                     </div>
                 </div>`;
                 }).join('')
@@ -1219,8 +1219,8 @@
                     text: `<strong>Informe ${i.n_informe || i.nombre_documento || ''}</strong> disponible`,
                     sub: `Proceso: ${i.numero_proceso || ''}`,
                     date: i.fecha_entrega || (i.created_at || '').substring(0, 10),
-                    action: i.archivo_pdf ? `window.open('${i.archivo_pdf}', '_blank')` : `setTab('reports')`,
-                    actionLabel: i.archivo_pdf ? 'Ver PDF' : 'Ver detalle'
+                    action: i.archivo_pdf ? `downloadPdfFile('${escapeHtml(i.archivo_pdf)}', '${escapeHtml(i.nombre_documento || 'informe')}')` : `setTab('reports')`,
+                    actionLabel: i.archivo_pdf ? 'Descargar' : 'Ver detalle'
                 })),
                 ...clientData.requests.slice(0, 3).map(r => ({
                     icon: '🧪', iconBg: '#fef3c7', iconColor: '#d97706',
@@ -1439,8 +1439,7 @@
                         </div>
                     </div>
                     <div class="dm-border" style="border-top:1px solid #f1f5f9;padding:12px 20px;display:flex;gap:8px;background:#fafbfc;">
-                        ${archivoUrl ? `<button onclick="window.open('${escapeHtml(archivoUrl)}', '_blank')" class="dm-btn-blue" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">👁️ Ver PDF</button>` : ''}
-                        ${archivoUrl ? `<button onclick="window.open('${escapeHtml(archivoUrl)}', '_blank')" class="dm-btn-outline" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">📥 Descargar</button>` : ''}
+                        ${archivoUrl ? `<button onclick="downloadPdfFile('${escapeHtml(archivoUrl)}', '${escapeHtml(r.nombre_documento || 'informe')}')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;background:#28a745;color:#fff;border:none;">📥 Descargar</button>` : ''}
                     </div>
                 </div>`;
             }).join('');

@@ -153,6 +153,42 @@ async function fetchFromDatabase(action, params = {}) {
 }
 
 /**
+ * Descarga un PDF desde Supabase Storage usando URL firmada con nombre personalizado.
+ * Función compartida por Panel Admin y Portal Cliente.
+ */
+async function downloadPdfFile(archivoUrl, nombre) {
+    if (!archivoUrl) {
+        alert('URL del informe no disponible');
+        return;
+    }
+    try {
+        let filePath = archivoUrl;
+        const publicMarker = '/object/public/Informes/';
+        if (archivoUrl.includes(publicMarker)) {
+            filePath = archivoUrl.split(publicMarker).pop();
+        }
+        const result = await fetchFromDatabase('get_informe_download_url', {
+            file_path: filePath,
+            file_name: `${nombre || 'informe'}.pdf`
+        });
+        console.log('[DOWNLOAD] file_name enviado:', `${nombre || 'informe'}.pdf`);
+        console.log('[DOWNLOAD] signedUrl recibida:', result?.signedUrl || '(vacía)');
+        const downloadUrl = result?.signedUrl || '';
+        if (downloadUrl) {
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = `${nombre || 'informe'}.pdf`;
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    } catch (err) {
+        console.error('Error descargando PDF:', err);
+    }
+}
+
+/**
  * Obtener procesos acreditados desde la función `conectar`.
  * filters: { limit, offset, estado, fecha_inicio, fecha_fin, cliente }
  */
@@ -7209,8 +7245,7 @@ const GestionInformesModule = {
                         <span style="flex:1;">${escapeHtml(inf.nombre_documento || '')}</span>
                         <span style="font-size:10px; color:#999;" title="Fecha de carga"><span style="font-size:9px; color:#aaa;">Carga:</span> ${fechaCarga}</span>
                         ${fechaEntrega ? `<span style="font-size:10px; font-weight:600; color:#022859;" title="Entrega a cliente"><span style="font-size:9px; color:#aaa;">Entrega:</span> ${fechaEntrega.substring(0, 10)}</span>` : ''}
-                        <button class="btn btn--small btn--primary" onclick="GestionInformesModule.openPdf('${escapeHtml(inf.archivo_pdf || '')}')" style="font-size:11px; padding:2px 6px;">👁️</button>
-                        <button class="btn btn--small btn--secondary" onclick="GestionInformesModule.downloadPdf('${escapeHtml(inf.archivo_pdf || '')}', '${escapeHtml(inf.nombre_documento || '')}')" style="font-size:11px; padding:2px 6px;">📥</button>
+                        <button class="btn btn--small" onclick="GestionInformesModule.downloadPdf('${escapeHtml(inf.archivo_pdf || '')}', '${escapeHtml(inf.nombre_documento || '')}')" style="font-size:11px; padding:2px 8px; background:#28a745; color:#fff; border:none; border-radius:4px; cursor:pointer;">📥</button>
                     </div>`;
             });
             html += '</div>';
@@ -7453,8 +7488,7 @@ const GestionInformesModule = {
                             ${fechaEntrega ? `<span style="font-size:10px; font-weight:600; color:#022859; margin-left:8px;" title="Entrega a cliente"><span style="font-size:9px; color:#aaa;">Entrega:</span> ${fechaEntrega.substring(0, 10)}</span>` : ''}
                         </div>
                         <div style="display:flex; gap:6px;">
-                            <button class="btn btn--small btn--primary" onclick="GestionInformesModule.openPdf('${escapeHtml(activo.archivo_pdf || '')}')">👁️ Ver</button>
-                            <button class="btn btn--small btn--secondary" onclick="GestionInformesModule.downloadPdf('${escapeHtml(activo.archivo_pdf || '')}', '${escapeHtml(activo.nombre_documento || 'informe')}')">📥 Descargar</button>
+                            <button class="btn btn--small" onclick="GestionInformesModule.downloadPdf('${escapeHtml(activo.archivo_pdf || '')}', '${escapeHtml(activo.nombre_documento || 'informe')}')" style="font-size:12px; padding:4px 12px; background:#28a745; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">📥 Descargar</button>
                             <button class="btn btn--small btn--secondary" onclick="GestionInformesModule.showHistory()">📜 Historial</button>
                         </div>
                     </div>
@@ -7572,49 +7606,8 @@ const GestionInformesModule = {
         });
     },
 
-    async openPdf(archivoUrl) {
-        if (!archivoUrl) {
-            alert('URL del informe no disponible');
-            return;
-        }
-        // Si es una URL pública, abrirla directamente
-        if (archivoUrl.startsWith('http')) {
-            window.open(archivoUrl, '_blank');
-            return;
-        }
-        // Si es una ruta de Storage, obtener URL firmada
-        try {
-            const result = await fetchFromDatabase('get_informe_download_url', { file_path: archivoUrl });
-            if (result?.signedUrl) {
-                window.open(result.signedUrl, '_blank');
-            }
-        } catch (err) {
-            console.error('Error abriendo PDF:', err);
-        }
-    },
-
     async downloadPdf(archivoUrl, nombre) {
-        if (!archivoUrl) {
-            alert('URL del informe no disponible');
-            return;
-        }
-        try {
-            let downloadUrl = archivoUrl;
-            if (!archivoUrl.startsWith('http')) {
-                const result = await fetchFromDatabase('get_informe_download_url', { file_path: archivoUrl });
-                downloadUrl = result?.signedUrl || '';
-            }
-            if (downloadUrl) {
-                const a = document.createElement('a');
-                a.href = downloadUrl;
-                a.download = `${nombre || 'informe'}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-            }
-        } catch (err) {
-            console.error('Error descargando PDF:', err);
-        }
+        return downloadPdfFile(archivoUrl, nombre);
     },
 
     async showHistory() {
@@ -7646,8 +7639,7 @@ const GestionInformesModule = {
                             <div style="font-size:12px; color:#666; margin-top:4px;">${fecha}</div>
                         </div>
                         <div style="display:flex; gap:6px;">
-                            <button class="btn btn--small btn--primary" onclick="GestionInformesModule.openPdf('${escapeHtml(inf.archivo_pdf || '')}')" style="font-size:12px;">👁️ Ver</button>
-                            <button class="btn btn--small btn--secondary" onclick="GestionInformesModule.downloadPdf('${escapeHtml(inf.archivo_pdf || '')}', '${escapeHtml(inf.nombre_documento || 'informe')}')" style="font-size:12px;">📥</button>
+                            <button class="btn btn--small" onclick="GestionInformesModule.downloadPdf('${escapeHtml(inf.archivo_pdf || '')}', '${escapeHtml(inf.nombre_documento || 'informe')}')" style="font-size:12px; padding:2px 8px; background:#28a745; color:#fff; border:none; border-radius:4px; cursor:pointer;">📥</button>
                             ${!isActivo ? `<button class="btn btn--small" onclick="GestionInformesModule.deleteInforme('${inf.id}')" style="font-size:12px; color:#c62828; border-color:#c62828;">🗑️</button>` : ''}
                         </div>
                     </div>`;
