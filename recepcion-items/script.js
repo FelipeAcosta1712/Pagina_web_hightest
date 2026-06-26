@@ -897,6 +897,7 @@ function saveUnitManager() {
         updateVisibleItemRowSummary(tableType, rowIndex);
         updateSavedItemsPreview();
         updateTotals();
+        actualizarCantidadLavados();
     }
 
     closeUnitManager();
@@ -5523,9 +5524,13 @@ function generatePDF() {
     doc.text(`Fecha Entrega: ${formData.fechaEntrega || '-'}`, col1X, y);
     doc.text(`Nº de Remisión: ${formData.facturar || '-'}`, col2X, y);
     y += lineGap;
-    doc.text(`Informe a Nombre de: ${formData.informeNombre || '-'}`, col1X, y);
-    doc.text(`Facturar a Nombre de: ${formData.facturarNombre || '-'}`, col2X, y);
-    y += 8;
+    const informeMaxW = col2X - col1X - 2;
+    const facturarMaxW = 190 - col2X;
+    const informeLines = doc.splitTextToSize(`Informe a Nombre de: ${formData.informeNombre || '-'}`, informeMaxW);
+    const facturarLines = doc.splitTextToSize(`Facturar a Nombre de: ${formData.facturarNombre || '-'}`, facturarMaxW);
+    doc.text(informeLines, col1X, y);
+    doc.text(facturarLines, col2X, y);
+    y += Math.max(informeLines.length, facturarLines.length) * lineGap;
 
     // Resumen de elementos y estado
     const totalRecep = formData.items.reduce((s, it) => s + (parseInt(it.quantity) || 0), 0);
@@ -5878,8 +5883,13 @@ function generatePDFRecepcion() {
     doc.text(`Cliente: ${formData.cliente || '-'}`, col2X, y); y += lineGap;
     doc.text(`Fecha Recepción: ${formData.fechaRecepcion || '-'}`, col1X, y);
     doc.text(`NIT / CC: ${formData.nitEmpresa || '-'}`, col2X, y); y += lineGap;
-    doc.text(`Informe a Nombre de: ${formData.informeNombre || '-'}`, col1X, y);
-    doc.text(`Facturar a Nombre de: ${formData.facturarNombre || '-'}`, col2X, y); y += 8;
+    const informeMaxW2 = col2X - col1X - 2;
+    const facturarMaxW2 = 190 - col2X;
+    const informeLines2 = doc.splitTextToSize(`Informe a Nombre de: ${formData.informeNombre || '-'}`, informeMaxW2);
+    const facturarLines2 = doc.splitTextToSize(`Facturar a Nombre de: ${formData.facturarNombre || '-'}`, facturarMaxW2);
+    doc.text(informeLines2, col1X, y);
+    doc.text(facturarLines2, col2X, y);
+    y += Math.max(informeLines2.length, facturarLines2.length) * lineGap;
 
     // Resumen (Recepción Parcial)
     const totalRecep = formData.items.reduce((s, it) => s + (parseInt(it.quantity) || 0), 0);
@@ -6924,7 +6934,8 @@ function openComposeRecepcion(forcedEmail) {
         `Le compartimos la constancia de recepción correspondiente al Nº ${formData.cotizacion || ''}.\n\n` +
         `Detalles:\n` +
         `- Fecha de recepción: ${formData.fechaRecepcion || '-'}\n` +
-        `- Cliente: ${formData.cliente || '-'}\n\n` +
+        `- Cliente: ${formData.cliente || '-'}\n` +
+        `- Informe a nombre de: ${formData.informeNombre || formData.cliente || '-'}\n\n` +
 
         `Para observar todos los datos, descargue el archivo adjunto\n\n` +
         `Por favor, conserve este documento como soporte de la recepción realizada.\n\n` +
@@ -6993,7 +7004,8 @@ function openComposeEntregaTotal(forcedEmail) {
         `Le compartimos la constancia de entrega total correspondiente al Nº ${formData.cotizacion || ''}.\n\n` +
         `Fechas:\n` +
         `- Recepción: ${formData.fechaRecepcion || '-'}\n` +
-        `- Entrega: ${formData.fechaEntrega || '-'}\n\n` +
+        `- Entrega: ${formData.fechaEntrega || '-'}\n` +
+        `- Informe a nombre de: ${formData.informeNombre || formData.cliente || '-'}\n\n` +
         
         `Para observar todos los datos, descargue el archivo adjunto\n\n` +
         `Por favor, conserve este documento como soporte de la entrega realizada.\n\n` +
@@ -7813,15 +7825,13 @@ function calcularTotalElementosLavados() {
     }
     
     // Buscar en los inputs de lavados de ensayos alcance (itemsList) - solo los no guardados
-    const inputsLavadosAcreditados = document.querySelectorAll('#itemsList input[id^="status_"]');
+    const inputsLavadosAcreditados = document.querySelectorAll('#itemsList input[id^="status_"], #itemsList select[id^="status_"]');
     
     inputsLavadosAcreditados.forEach(input => {
         if (input && input.value && !input.disabled) {
-            // Obtener el índice del input para verificar si está guardado
             const match = input.id.match(/status_(\d+)/);
             if (match) {
                 const rowIndex = parseInt(match[1]);
-                // Solo sumar si no está guardado (para evitar duplicados)
                 if (!savedRowsData.ensayos_acreditados[rowIndex] || !savedRowsData.ensayos_acreditados[rowIndex].saved) {
                     const cantidad = parseInt(input.value) || 0;
                     totalLavados += cantidad;
@@ -7831,15 +7841,13 @@ function calcularTotalElementosLavados() {
     });
     
     // Buscar en los inputs de lavados de ensayos no acreditados (itemsList2) - solo los no guardados
-    const inputsLavadosNoAcreditados = document.querySelectorAll('#itemsList2 input[id^="status2_"]');
+    const inputsLavadosNoAcreditados = document.querySelectorAll('#itemsList2 input[id^="status2_"], #itemsList2 select[id^="status2_"]');
     
     inputsLavadosNoAcreditados.forEach(input => {
         if (input && input.value && !input.disabled) {
-            // Obtener el índice del input para verificar si está guardado
             const match = input.id.match(/status2_(\d+)/);
             if (match) {
                 const rowIndex = parseInt(match[1]);
-                // Solo sumar si no está guardado (para evitar duplicados)
                 if (!savedRowsData.ensayos_no_acreditados[rowIndex] || !savedRowsData.ensayos_no_acreditados[rowIndex].saved) {
                     const cantidad = parseInt(input.value) || 0;
                     totalLavados += cantidad;
@@ -7870,7 +7878,8 @@ function actualizarCantidadLavados() {
         if (lavadoSi && lavadoNo) {
             if (total > 0) {
                 lavadoSi.checked = true;
-                // Mostrar campos y habilitar responsable
+                lavadoNo.checked = false;
+                lavadoSi.dispatchEvent(new Event('change', { bubbles: true }));
                 if (lavadoFields) {
                     lavadoFields.style.display = 'flex';
                     lavadoFields.classList.add('active');
@@ -7880,7 +7889,8 @@ function actualizarCantidadLavados() {
                 }
             } else {
                 lavadoNo.checked = true;
-                // Ocultar campos y deshabilitar responsable
+                lavadoSi.checked = false;
+                lavadoNo.dispatchEvent(new Event('change', { bubbles: true }));
                 if (lavadoFields) {
                     lavadoFields.style.display = 'none';
                     lavadoFields.classList.remove('active');
@@ -7961,10 +7971,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Escuchar cambios en los campos de lavados de las tablas para actualizar el total
     document.addEventListener('input', function(e) {
-        // Detectar cambios en los inputs de lavados (status_ para acreditados, status2_ para no acreditados)
         if (e.target.matches('#itemsList input[id^="status_"], #itemsList2 input[id^="status2_"]')) {
             actualizarCantidadLavados();
-            console.log('Total de lavados actualizado por cambio en input:', e.target.id);
+        }
+    });
+    document.addEventListener('change', function(e) {
+        if (e.target.matches('#itemsList input[id^="status_"], #itemsList2 input[id^="status2_"], #itemsList select[id^="status_"], #itemsList2 select[id^="status2_"]')) {
+            actualizarCantidadLavados();
         }
     });
     
@@ -12682,8 +12695,13 @@ function generatePDFFromCase(caso, tipo) {
         doc.text(`Fecha Entrega: ${fechaEntrega}`, col1X, y);
     }
     doc.text(`Nº de Remisión: ${facturar}`, col2X, y); y += lineGap;
-    doc.text(`Informe a Nombre de: ${informeNombre}`, col1X, y);
-    doc.text(`Facturar a Nombre de: ${facturarNombre}`, col2X, y); y += 8;
+    const informeMaxW3 = col2X - col1X - 2;
+    const facturarMaxW3 = 190 - col2X;
+    const informeLines3 = doc.splitTextToSize(`Informe a Nombre de: ${informeNombre}`, informeMaxW3);
+    const facturarLines3 = doc.splitTextToSize(`Facturar a Nombre de: ${facturarNombre}`, facturarMaxW3);
+    doc.text(informeLines3, col1X, y);
+    doc.text(facturarLines3, col2X, y);
+    y += Math.max(informeLines3.length, facturarLines3.length) * lineGap;
 
     const totalRecep = items.reduce((s, it) => s + it.quantity, 0);
     const totalEnt = items.reduce((s, it) => s + it.quantity2, 0);
