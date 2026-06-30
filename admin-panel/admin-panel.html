@@ -5905,32 +5905,49 @@
            (769px - 1024px)
            =========================== */
         @media (min-width: 769px) and (max-width: 1024px) {
-            /* Sidebar colapsado con iconos */
+            /* Sidebar compacto con icono + texto vertical */
             .admin-sidebar {
-                width: 64px;
+                width: 85px;
                 transform: translateX(0) !important;
             }
             .admin-sidebar__brand {
                 justify-content: center;
-                padding: 12px 8px;
+                padding: 12px 6px;
             }
-            .admin-sidebar__brand-name,
-            .admin-sidebar__section-title,
-            .admin-sidebar__item span {
+            .admin-sidebar__brand-name {
                 display: none;
             }
+            .admin-sidebar__section-title {
+                font-size: 8px;
+                letter-spacing: 0.5px;
+                text-align: center;
+                padding: 6px 4px 2px;
+                color: #64748b;
+            }
             .admin-sidebar__item {
+                flex-direction: column;
                 justify-content: center;
-                padding: 10px 8px;
+                align-items: center;
+                gap: 3px;
+                padding: 8px 4px;
                 margin-right: 0;
+                text-align: center;
             }
             .admin-sidebar__item.is-active {
                 border-radius: 8px;
                 margin: 0 6px;
             }
+            .admin-sidebar__item span {
+                display: block;
+                font-size: 9.5px;
+                line-height: 1.15;
+                max-width: 100%;
+                white-space: normal;
+                text-align: center;
+            }
             .admin-sidebar__icon {
-                width: 22px;
-                height: 22px;
+                width: 20px;
+                height: 20px;
             }
             .admin-sidebar__user-info {
                 display: none;
@@ -5947,7 +5964,7 @@
 
             /* Main content ajustado */
             .admin-main-content {
-                margin-left: 64px;
+                margin-left: 85px;
             }
 
             /* Header admin visible en tablet */
