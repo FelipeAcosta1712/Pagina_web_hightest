@@ -5899,6 +5899,212 @@
         @keyframes marc-spin {
             to { transform: rotate(360deg); }
         }
+
+        /* ===========================
+           TABLET OPTIMIZATIONS
+           (769px - 1024px)
+           =========================== */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            /* Sidebar colapsado con iconos */
+            .admin-sidebar {
+                width: 64px;
+                transform: translateX(0) !important;
+            }
+            .admin-sidebar__brand {
+                justify-content: center;
+                padding: 12px 8px;
+            }
+            .admin-sidebar__brand-name,
+            .admin-sidebar__section-title,
+            .admin-sidebar__item span {
+                display: none;
+            }
+            .admin-sidebar__item {
+                justify-content: center;
+                padding: 10px 8px;
+                margin-right: 0;
+            }
+            .admin-sidebar__item.is-active {
+                border-radius: 8px;
+                margin: 0 6px;
+            }
+            .admin-sidebar__icon {
+                width: 22px;
+                height: 22px;
+            }
+            .admin-sidebar__user-info {
+                display: none;
+            }
+            .admin-sidebar__footer {
+                padding: 8px 6px;
+            }
+            .admin-sidebar__action-btn {
+                padding: 8px;
+            }
+            .admin-sidebar__action-btn span {
+                display: none;
+            }
+
+            /* Main content ajustado */
+            .admin-main-content {
+                margin-left: 64px;
+            }
+
+            /* Header admin visible en tablet */
+            .header--admin {
+                display: flex !important;
+                height: auto !important;
+                min-height: 48px !important;
+                padding: 8px 16px !important;
+                background: rgba(255,255,255,0.92) !important;
+                backdrop-filter: blur(10px);
+            }
+            .header--admin .header__container {
+                display: flex !important;
+                width: 100%;
+                align-items: center;
+            }
+            .admin-sidebar__toggle {
+                display: none;
+            }
+
+            /* Dashboard */
+            .dash-stats-row {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .dash-charts-row {
+                grid-template-columns: 1fr 1fr;
+            }
+            .dash-bottom-row {
+                grid-template-columns: 1fr 1fr;
+            }
+            .dash-header {
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 0.75rem;
+            }
+            .dash-header__right {
+                width: auto;
+            }
+            .dash-kpi-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            /* Cotizaciones */
+            .cot-stats {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .cot-filters {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            .cot-detail__body {
+                grid-template-columns: 1fr 1fr;
+            }
+            .cot-detail__sidebar {
+                order: 0;
+            }
+
+            /* Usuarios */
+            .usr-detail__fields {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .usr-detail__shortcuts {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .usr-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .usr-filters {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            /* Marcación */
+            .marc-content {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            /* Admin general - tablas */
+            .admin-table th,
+            .admin-table td {
+                padding: 8px 6px;
+                font-size: 11px;
+            }
+            .admin-filters {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            .admin-filters .control__filters {
+                flex-wrap: wrap;
+            }
+            .admin-section__header {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .admin-section__content {
+                padding: var(--spacing-md);
+            }
+            .admin-stats {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .stat-card {
+                padding: var(--spacing-md);
+                gap: var(--spacing-sm);
+            }
+            .stat-card__icon {
+                width: 40px;
+                height: 40px;
+            }
+
+            /* Tablas con scroll horizontal */
+            .certificates-table,
+            .clients-table,
+            .cot-table,
+            .admin-table {
+                min-width: 720px;
+            }
+            .admin-table-wrapper,
+            .cot-table-wrap,
+            .clients-table-container,
+            .usr-table-wrap,
+            .marcacion-table-wrapper,
+            .marc-detail__table-wrapper {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Quick links y cards */
+            .dashboard-quick-access {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .dashboard-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .commercial-stats {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .commercial-hero {
+                grid-template-columns: 1fr;
+            }
+            .reports-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .monthly-summary-list {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .kanban-board {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            /* Modales */
+            #modalEstadisticasDetalle > div,
+            #modalSinEntregar > div,
+            #modalDescargaPDFs > div {
+                max-width: 90vw;
+                margin: 20px auto;
+            }
+        }
     </style>
 
     <!-- MODAL DESCARGA DE PDFs -->
