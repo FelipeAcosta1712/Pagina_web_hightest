@@ -185,7 +185,8 @@ exports.handler = async (event) => {
                     phone: pickFirstValue(row, ['telefono', 'teléfono', 'phone', 'celular', 'movil']) || null,
                     address: pickFirstValue(row, ['direccion', 'dirección', 'address']) || null,
                     nit: pickFirstValue(row, ['nit', 'NIT', 'documento', 'ruc']) || null,
-                    contact: pickFirstValue(row, ['contacto', 'representante', 'nombre_completo']) || null
+                    contact: pickFirstValue(row, ['contacto_principal', 'contacto', 'representante', 'nombre_completo']) || null,
+                    created_at: row.created_at || row.fecha_registro || row.fecha_creacion || null
                 };
                 return jsonResponse(200, { ok: true, profile });
             }
@@ -218,6 +219,56 @@ exports.handler = async (event) => {
                 }
 
                 return jsonResponse(200, { ok: true, usuarios: data || [] });
+            }
+
+            // Obtener todos los usuarios con campos completos para el panel de administración
+            if (payload.action === 'get_all_usuarios') {
+                const { data, error } = await supabase
+                    .from('usuarios')
+                    .select('*')
+                    .order('nombre', { ascending: true });
+
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al obtener usuarios', detail: error.message });
+                }
+
+                const usuarios = (data || []).map(u => ({
+                    id: u.id,
+                    nombre: u.nombre || '',
+                    email: u.email || '',
+                    rol: u.rol || 'usuario',
+                    estado: u.estado || u.activo !== undefined ? (u.activo === false ? 'inactivo' : 'activo') : 'activo',
+                    telefono: u.telefono || u.teléfono || u.phone || u.celular || '',
+                    documento: u.documento || u.cedula || u.cc || u.identificacion || '',
+                    area: u.area || u.departamento || u.department || '',
+                    ultimo_acceso: u.ultimo_acceso || u.last_login || u.ultimo_inicio || '',
+                    fecha_registro: u.fecha_registro || u.created_at || u.fecha_creacion || '',
+                    avatar: u.avatar || u.foto || u.photo || u.imagen || ''
+                }));
+
+                return jsonResponse(200, { ok: true, usuarios });
+            }
+
+            // Actualizar estado de un usuario
+            if (payload.action === 'update_usuario_status') {
+                const userId = payload.id;
+                const newStatus = normalizeText(payload.estado).toLowerCase();
+
+                if (!userId || !newStatus) {
+                    return jsonResponse(400, { ok: false, error: 'Se requiere id y estado' });
+                }
+
+                const { data, error } = await supabase
+                    .from('usuarios')
+                    .update({ estado: newStatus, activo: newStatus === 'activo' })
+                    .eq('id', userId)
+                    .select('id, nombre, estado');
+
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al actualizar usuario', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true, usuario: data?.[0] || null });
             }
 
             // Obtener lista de clientes
@@ -383,7 +434,26 @@ exports.handler = async (event) => {
                     return jsonResponse(500, { ok: false, error: 'Error al consultar procesos_acreditados', detail: error.message });
                 }
 
-                return jsonResponse(200, { ok: true, procesos: data || [] });
+                // Obtener conteo de elementos distintos por proceso_id
+                const procesos = data || [];
+                const ids = procesos.map(p => p.id).filter(Boolean);
+                let conteosMap = {};
+                if (ids.length > 0) {
+                    const { data: marcData } = await supabase
+                        .from('marcaciones_ac')
+                        .select('proceso_id, elemento');
+                    (marcData || []).forEach(m => {
+                        const pid = String(m.proceso_id).trim();
+                        if (!conteosMap[pid]) conteosMap[pid] = new Set();
+                        if (m.elemento) conteosMap[pid].add(m.elemento.trim());
+                    });
+                }
+                procesos.forEach(p => {
+                    const set = conteosMap[String(p.id).trim()];
+                    p.total_items = set ? set.size : 0;
+                });
+
+                return jsonResponse(200, { ok: true, procesos });
             }
 
             // Eliminar proceso por numero_proceso
@@ -460,6 +530,7 @@ exports.handler = async (event) => {
                     return jsonResponse(404, { ok: false, error: 'Proceso no encontrado' });
                 }
 
+                console.log('[Backend get_proceso]', { numero_proceso: proceso.numero_proceso, informe_a_nombre_de: proceso.informe_a_nombre_de, cliente: proceso.cliente, full: proceso });
                 return jsonResponse(200, { ok: true, proceso });
             }
 
@@ -469,7 +540,7 @@ exports.handler = async (event) => {
                 if (!numero) return jsonResponse(400, { ok: false, error: 'numero_proceso requerido' });
 
                 // Permitir actualizar solo campos autorizados
-                const allowed = ['numero_proceso','cliente','cliente_id','tipo','estado','fecha_recepcion','fecha_entrega_cliente','fecha_finalizado','valor','caso_activo','informe_a_nombre_de','facturar_a_nombre_de','fecha_ejecucion','n_remision'];
+                const allowed = ['numero_proceso','cliente','cliente_id','tipo','estado','fecha_recepcion','fecha_entrega_cliente','fecha_finalizado','valor','caso_activo','informe_a_nombre_de','facturar_a_nombre_de','fecha_ejecucion','n_remision','responsable_marcacion'];
                 const updateData = {};
                 for (const key of allowed) {
                     if (payload[key] !== undefined) updateData[key] = payload[key];
@@ -852,14 +923,57 @@ exports.handler = async (event) => {
 
                 const { data, error } = await supabase
                     .from('detalle_procesos_ac')
-                    .select('*')
-                    .eq('proceso_id', procesoId);
+                    .select('*, ensayos_acreditados(nombre, categoria)')
+                    .eq('proceso_id', procesoId)
+                    .order('id', { ascending: true });
 
                 if (error) {
                     return jsonResponse(500, { ok: false, error: 'Error al consultar detalle del proceso', detail: error.message });
                 }
 
-                return jsonResponse(200, { ok: true, detalle: data || [] });
+                const detalle = Array.isArray(data) ? data.map(d => ({
+                    ...d,
+                    ensayo_nombre: d.ensayos_acreditados?.nombre || d.ensayo_nombre || '',
+                    ensayo_categoria: d.ensayos_acreditados?.categoria || ''
+                })) : [];
+
+                return jsonResponse(200, { ok: true, detalle });
+            }
+
+            // Obtener conteo de items por todos los procesos (para modal PDFs)
+            if (payload.action === 'get_all_detalle_procesos') {
+                // Contar desde ambas tablas y usar el mayor
+                const [resDetalle, resMarc] = await Promise.all([
+                    supabase.from('detalle_procesos_ac').select('proceso_id, id'),
+                    supabase.from('marcaciones_ac').select('proceso_id, elemento')
+                ]);
+
+                const conteos = {};
+
+                // Contar desde detalle_procesos_ac
+                (resDetalle.data || []).forEach(d => {
+                    const pid = String(d.proceso_id).trim();
+                    if (!conteos[pid]) conteos[pid] = 0;
+                    conteos[pid]++;
+                });
+
+                // Contar elementos distintos desde marcaciones_ac
+                const marcPorProceso = {};
+                (resMarc.data || []).forEach(m => {
+                    const pid = String(m.proceso_id).trim();
+                    if (!marcPorProceso[pid]) marcPorProceso[pid] = new Set();
+                    if (m.elemento) marcPorProceso[pid].add(m.elemento.trim());
+                });
+
+                // Usar el mayor de ambos conteos
+                for (const pid in marcPorProceso) {
+                    const marcCount = marcPorProceso[pid].size;
+                    if (!conteos[pid] || marcCount > conteos[pid]) {
+                        conteos[pid] = marcCount;
+                    }
+                }
+
+                return jsonResponse(200, { ok: true, conteos });
             }
 
             // Actualizar marcación de un item del detalle
@@ -949,23 +1063,27 @@ exports.handler = async (event) => {
                     return jsonResponse(400, { ok: false, error: 'proceso_id requerido' });
                 }
 
-                // Primero borrar todos los registros existentes de este proceso
-                const { error: deleteError } = await supabase
-                    .from('marcaciones_ac')
-                    .delete()
-                    .eq('proceso_id', procesoId);
+                // ╔══════════════════════════════════════════════════════════╗
+                // ║  FASE 1: No eliminar marcaciones existentes.            ║
+                // ║  Solo insertar nuevas si no existen duplicados.          ║
+                // ╚══════════════════════════════════════════════════════════╝
 
-                if (deleteError) {
-                    console.error('Error borrando marcaciones_ac existentes:', deleteError.message);
-                    return jsonResponse(500, { ok: false, error: 'Error al limpiar marcaciones anteriores', detail: deleteError.message });
-                }
-
-                // Si no hay marcaciones nuevas, solo fue un borrado
+                // Si no hay marcaciones nuevas, no hacer nada
                 if (marcaciones.length === 0) {
                     return jsonResponse(200, { ok: true, updated: [] });
                 }
 
-                // Ahora insertar los nuevos registros
+                // Verificar marcaciones existentes para evitar duplicados
+                const { data: existingMarcaciones } = await supabase
+                    .from('marcaciones_ac')
+                    .select('id, consecutivo, ensayo_id')
+                    .eq('proceso_id', procesoId);
+
+                const existingSet = new Set(
+                    (Array.isArray(existingMarcaciones) ? existingMarcaciones : []).map(m => `${m.ensayo_id}|${m.consecutivo}`)
+                );
+
+                // Ahora insertar solo los registros que no existen
                 const results = [];
                 let hasError = false;
                 let firstError = null;
@@ -973,34 +1091,74 @@ exports.handler = async (event) => {
                 const BATCH_SIZE = 50;
 
                 for (let i = 0; i < marcaciones.length; i += BATCH_SIZE) {
-                    const batch = marcaciones.slice(i, i + BATCH_SIZE).map(item => {
-                        const registro = {
-                            proceso_id: item.proceso_id,
-                            detalle_id: item.detalle_id || null,
-                            ensayo_id: item.ensayo_id || null,
-                            consecutivo: item.consecutivo,
-                            elemento: item.elemento || '',
-                            descripcion: item.descripcion || '',
-                            estado: item.estado || 'Pendiente',
-                            observacion: item.observacion || '',
-                            nci: item.nci || ''
-                        };
-                        // console.log('MARCACION A INSERTAR:', { proceso_id: registro.proceso_id, detalle_id: registro.detalle_id, consecutivo: registro.consecutivo, elemento: registro.elemento });
-                        return registro;
-                    });
-                    // console.log('INSERT MARCACIONES:', batch);
+                    // FASE 1: Filtrar duplicados antes de insertar
+                    const batch = marcaciones.slice(i, i + BATCH_SIZE)
+                        .map(item => {
+                            const registro = {
+                                proceso_id: item.proceso_id,
+                                detalle_id: item.detalle_id || null,
+                                ensayo_id: item.ensayo_id || null,
+                                consecutivo: item.consecutivo,
+                                elemento: item.elemento || '',
+                                descripcion: item.descripcion || '',
+                                estado: item.estado || 'Pendiente',
+                                observacion: item.observacion || '',
+                                nci: item.nci || ''
+                            };
+                            return registro;
+                        })
+                        .filter(registro => {
+                            const key = `${registro.ensayo_id}|${registro.consecutivo}`;
+                            if (existingSet.has(key)) {
+                                console.log('[create_marcaciones_batch] Marcación ya existe, omitiendo:', key);
+                                return false;
+                            }
+                            return true;
+                        });
 
-                    const { data, error } = await supabase
-                        .from('marcaciones_ac')
-                        .insert(batch)
-                        .select();
+                    // FASE 1: Saltar batch vacío (todos eran duplicados)
+                    if (batch.length === 0) continue;
 
-                    if (error) {
+                    let insertBatch = batch;
+                    let inserted = false;
+
+                    for (let attempt = 0; attempt < 3; attempt++) {
+                        const { data, error } = await supabase
+                            .from('marcaciones_ac')
+                            .insert(insertBatch)
+                            .select();
+
+                        if (!error) {
+                            results.push(...(Array.isArray(data) ? data : [data]));
+                            inserted = true;
+                            break;
+                        }
+
+                        console.error('Error insertando marcaciones_ac (attempt ' + (attempt + 1) + '):', error.message);
+
+                        const msg = String(error.message || '').toLowerCase();
+                        const missingCols = [];
+                        const m1 = msg.match(/could not find the '([^']+)' column/);
+                        if (m1) missingCols.push(m1[1]);
+                        const m2 = msg.match(/column\s+"?([^"\s]+)"?\s+does not exist/);
+                        if (m2) missingCols.push(m2[1]);
+
+                        if (missingCols.length === 0) {
+                            hasError = true;
+                            if (!firstError) firstError = error;
+                            break;
+                        }
+
+                        insertBatch = insertBatch.map(item => {
+                            const clean = { ...item };
+                            missingCols.forEach(col => { delete clean[col]; });
+                            return clean;
+                        });
+                    }
+
+                    if (!inserted && insertBatch.length > 0 && !hasError) {
                         hasError = true;
-                        if (!firstError) firstError = error;
-                        console.error('Error insertando marcaciones_ac:', error.message);
-                    } else {
-                        results.push(...(Array.isArray(data) ? data : [data]));
+                        if (!firstError) firstError = { message: 'Columnas faltantes en marcaciones_ac' };
                     }
                 }
 
@@ -1018,6 +1176,31 @@ exports.handler = async (event) => {
             // =============================================
             // MARCACIONES - Consultar por proceso
             // =============================================
+            // =============================================
+            // MARCACIONES - Actualizar una marcación en marcaciones_ac
+            // =============================================
+            if (payload.action === 'update_marcacion_ac') {
+                const { marcacion_id, nci, observacion, estado } = payload;
+                if (!marcacion_id) return jsonResponse(400, { ok: false, error: 'marcacion_id requerido' });
+
+                const updateData = { fecha_modificacion: new Date().toISOString() };
+                if (nci !== undefined) updateData.nci = nci;
+                if (observacion !== undefined) updateData.observacion = observacion;
+                if (estado !== undefined) updateData.estado = estado;
+
+                const { data, error } = await supabase
+                    .from('marcaciones_ac')
+                    .update(updateData)
+                    .eq('id', marcacion_id)
+                    .select()
+                    .limit(1);
+
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al actualizar marcación', detail: error.message });
+                }
+                return jsonResponse(200, { ok: true, item: Array.isArray(data) ? data[0] : data });
+            }
+
             if (payload.action === 'get_marcaciones_by_proceso') {
                 const procesoId = payload.proceso_id;
                 if (!procesoId) {
@@ -1049,9 +1232,11 @@ exports.handler = async (event) => {
                     return jsonResponse(500, { ok: false, error: 'Error al consultar resumen de marcaciones', detail: error.message });
                 }
 
+                // Resumen por proceso_id (puede ser numérico o string como "R26 0046")
                 const resumen = {};
                 (data || []).forEach(m => {
-                    const pid = m.proceso_id;
+                    const pid = String(m.proceso_id || '').trim();
+                    if (!pid) return;
                     if (!resumen[pid]) {
                         resumen[pid] = { total: 0, marcados: 0, pendientes: 0, otros: 0 };
                     }

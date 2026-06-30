@@ -33,12 +33,12 @@
         <header class="header header--client" role="banner">
             <div class="header__container">
                 <div class="header__logo">
-                    <a href="index.html" class="header__logo-link">
-                        <img src="image/logo.png" alt="HIGH TEST SAS" class="header__logo-image">
+                    <a href="../index.html" class="header__logo-link">
+                        <img src="../image/logo.png" alt="HIGH TEST SAS" class="header__logo-image">
                     </a>
                 </div>
                 <nav class="header__nav" role="navigation" aria-label="Navegación cliente">
-                    <a href="index.html" class="header__cta header__cta--primary" style="text-decoration:none;">
+                    <a href="../index.html" class="header__cta header__cta--primary" style="text-decoration:none;">
                         <i data-lucide="arrow-left" class="w-4 h-4 inline mr-1" style="vertical-align:middle;"></i> Volver al Inicio
                     </a>
                     <button class="header__icon-btn" id="themeToggleBtn" aria-label="Cambiar tema de color" title="Cambiar tema">
@@ -73,6 +73,9 @@
                 </button>
                 <button onclick="setTab('requests')" class="nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-1" data-id="requests">
                     <i data-lucide="clock" class="nav-icon mr-3 w-5 h-5"></i> Estado de Solicitudes
+                </button>
+                <button onclick="setTab('cotizaciones')" class="nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-1" data-id="cotizaciones">
+                    <i data-lucide="file-text" class="nav-icon mr-3 w-5 h-5"></i> Cotizaciones
                 </button>
                 <div class="mt-8 mb-4 text-xs font-semibold text-slate-400 uppercase tracking-wider px-4">Administración</div>
                 <button onclick="setTab('history')" class="nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-1" data-id="history">
@@ -109,7 +112,7 @@
                     <span id="mobile-welcome" class="text-sm font-bold text-white">Bienvenido</span>
                 </div>
                 <div class="flex items-center gap-2">
-                    <a href="index.html" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors no-underline" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.25);text-decoration:none;">Inicio</a>
+                    <a href="../index.html" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors no-underline" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.25);text-decoration:none;">Inicio</a>
                     <button id="mobileThemeToggleBtn" class="p-2 rounded-lg text-lg transition-colors" style="color:#fff;" aria-label="Cambiar tema" title="Cambiar tema">🌙</button>
                     <button onclick="toggleMobileMenu(true)" class="p-2 rounded-lg transition-colors" style="color:rgba(255,255,255,0.8);" aria-label="Menú">
                         <i data-lucide="menu" class="w-6 h-6"></i>
@@ -961,7 +964,8 @@
             reports: [],
             requests: [],
             history: [],
-            serviceDistribution: []
+            serviceDistribution: [],
+            cotizaciones: []
         };
 
         async function loadClientData() {
@@ -1006,7 +1010,12 @@
                         clientData.user.phone = p.phone || '';
                         clientData.user.address = p.address || '';
                         clientData.user.nit = p.nit || '';
-                        clientData.user.joined = '';
+                        if (p.created_at) {
+                            const d = new Date(p.created_at);
+                            clientData.user.joined = d.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+                        } else {
+                            clientData.user.joined = '';
+                        }
                     }
                 } catch(err) {
                     console.warn('No se pudo cargar perfil desde la DB:', err.message);
@@ -1016,6 +1025,7 @@
             updateUserDisplay();
             try { await loadClientHistory(); } catch(e) { console.warn('Error loadClientHistory:', e); }
             try { await loadInformesCliente(); } catch(e) { console.warn('Error loadInformesCliente:', e); }
+            try { await loadCotizacionesCliente(); } catch(e) { console.warn('Error loadCotizacionesCliente:', e); }
             setTab(activeTab);
         }
 
@@ -1054,7 +1064,7 @@
                 localStorage.removeItem('clientData');
                 localStorage.removeItem('hightest_client');
                 localStorage.removeItem('clientSession');
-                window.location.href = 'index.html';
+                window.location.href = '../index.html';
             }
         }
 
@@ -1577,6 +1587,31 @@
             }
         }
 
+        async function loadCotizacionesCliente() {
+            const clientName = clientData.user.name;
+            if (!clientName) return;
+            try {
+                const result = await fetchFromDatabase('get_cotizaciones', { cliente: clientName });
+                if (result.ok && Array.isArray(result.cotizaciones)) {
+                    clientData.cotizaciones = result.cotizaciones.map(c => ({
+                        id: c.cotizacion || `COT-${c.id}`,
+                        dbId: c.id,
+                        cliente: c.cliente || '',
+                        estado: c.estado || 'Borrador',
+                        valor_total: c.valor_total || c.total || 0,
+                        fecha: c.fecha || c.created_at || '',
+                        items: c.items || c.datos || [],
+                        observaciones: c.observaciones || ''
+                    }));
+                } else {
+                    clientData.cotizaciones = [];
+                }
+            } catch (err) {
+                console.warn('No se pudieron cargar cotizaciones del cliente:', err.message);
+                clientData.cotizaciones = [];
+            }
+        }
+
         function getTimelineStepIndex(statusRaw) {
             const raw = String(statusRaw || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[_\s-]+/g, '');
             if (raw.includes('finalizado')) return 5;
@@ -1806,6 +1841,19 @@
         window.openRequestDetail = function(id) {
             openHistoryModal(id);
         };
+
+        function renderCotizaciones() {
+            return `<div style="space-y:6;">
+                <div style="margin-bottom:24px;">
+                    <h2 class="dm-text-primary" style="font-size:24px;font-weight:800;margin:0 0 4px;">Cotizaciones</h2>
+                    <p class="dm-text-secondary" style="font-size:14px;margin:0;">Consulte las cotizaciones asociadas a sus servicios.</p>
+                </div>
+                <div class="dm-card" style="border-radius:14px;padding:40px 20px;text-align:center;">
+                    <div style="font-size:40px;margin-bottom:12px;">📋</div>
+                    <p class="dm-text-secondary" style="font-size:14px;max-width:400px;margin:0 auto;">Estamos trabajando fuertemente para que puedas ver tus cotizaciones, pronto las podrás ver.</p>
+                </div>
+            </div>`;
+        }
 
         function renderHistory() {
             const sorted = [...clientData.history].sort((a, b) => {
@@ -2161,6 +2209,7 @@
                 case 'dashboard': container.innerHTML = renderDashboard(); break;
                 case 'reports': container.innerHTML = renderReports(); break;
                 case 'requests': container.innerHTML = renderRequests(); break;
+                case 'cotizaciones': container.innerHTML = renderCotizaciones(); break;
                 case 'history': container.innerHTML = renderHistory(); break;
                 case 'profile': container.innerHTML = renderProfile(); break;
             }
@@ -2285,6 +2334,6 @@
         </div>
     </div>
 
-    <script src="script-v2.js"></script>
+    <script src="../script-v2.js"></script>
 </body>
 </html>

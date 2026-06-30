@@ -684,11 +684,7 @@
                 </div>
                 <div class="marcacion-process-field">
                     <span class="marcacion-process-label">Informe a nombre de</span>
-                    <span class="marcacion-process-value">
-                        <input type="text" id="marcacionInformeNombre" placeholder="Nombre del informe..."
-                            onchange="guardarCampoProceso('informe_a_nombre_de', this.value)"
-                            style="border:1px solid #d1d5db; border-radius:6px; padding:4px 8px; font-size:13px; width:180px;">
-                    </span>
+                    <span class="marcacion-process-value" id="marcacionInformeNombre">—</span>
                 </div>
                 <div class="marcacion-process-field">
                     <span class="marcacion-process-label">Fecha de ejecución</span>
@@ -696,6 +692,16 @@
                         <input type="date" id="marcacionFechaEjecucion"
                             onchange="guardarCampoProceso('fecha_ejecucion', this.value)"
                             style="border:1px solid #d1d5db; border-radius:6px; padding:4px 8px; font-size:13px;">
+                    </span>
+                </div>
+                <div class="marcacion-process-field">
+                    <span class="marcacion-process-label">Responsable de marcación</span>
+                    <span class="marcacion-process-value">
+                        <select id="marcacionResponsable"
+                            onchange="guardarCampoProceso('responsable_marcacion', this.value)"
+                            style="border:1px solid #d1d5db; border-radius:6px; padding:4px 8px; font-size:13px;">
+                            <option value="">— Seleccionar —</option>
+                        </select>
                     </span>
                 </div>
             </div>
@@ -777,7 +783,7 @@
                             </thead>
                             <tbody id="marcacionConsecutivosBody">
                                 <tr>
-                                    <td colspan="7" class="marcacion-empty">
+                                    <td colspan="9" class="marcacion-empty">
                                         <i class="fas fa-clipboard-list"></i>
                                         Genere la marcación para ver los consecutivos
                                     </td>

@@ -1128,6 +1128,22 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (new URLSearchParams(window.location.search).get('open') === 'marcacion') {
         setTimeout(() => verMarcacion(), 500);
     }
+
+    // Auto-descargar PDF si viene con ?process=XXX&autoPdf=recepcion|entrega
+    const autoPdfTipo = new URLSearchParams(window.location.search).get('autoPdf');
+    if (autoPdfTipo) {
+        setTimeout(() => {
+            try {
+                const casos = obtenerCasosUnificados();
+                const params = new URLSearchParams(window.location.search);
+                const processNum = params.get('process') || params.get('cotizacion') || '';
+                const caso = casos.find(c => (c.cotizacion || c.quoteNumber || c.numero_proceso || '') === processNum);
+                if (caso && caso.items && caso.items.length > 0) {
+                    generatePDFFromCase(caso, autoPdfTipo === 'entrega' ? 'entrega' : 'recepcion');
+                }
+            } catch (e) { console.error('Auto-pdf error:', e); }
+        }, 3000);
+    }
     
     // Agregar event listeners para actualizar totales
     document.addEventListener('input', function(e) {
@@ -5494,7 +5510,7 @@ function generatePDF() {
     y = 6;
 
     // Logotipo y datos (abajo cerca de la línea)
-    try { const logo = new Image(); logo.src = 'Logo.png'; doc.addImage(logo, 'PNG', margin, y + 4, 28, 22); } catch (_) {}
+    try { const logo = new Image(); logo.src = '/recepcion-items/Logo.png'; doc.addImage(logo, 'PNG', margin, y + 4, 28, 22); } catch (_) {}
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(6);
     doc.text('CÓDIGO: FR-7.4.1', 210 - margin, y + 16, { align: 'right' });
@@ -5863,7 +5879,7 @@ function generatePDFRecepcion() {
     y = 6;
 
     // Logotipo y datos (abajo cerca de la línea)
-    try { const logo = new Image(); logo.src = 'Logo.png'; doc.addImage(logo, 'PNG', margin, y + 4, 28, 22); } catch (_) {}
+    try { const logo = new Image(); logo.src = '/recepcion-items/Logo.png'; doc.addImage(logo, 'PNG', margin, y + 4, 28, 22); } catch (_) {}
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(6);
     doc.text('CÓDIGO: FR-7.4.1', 210 - margin, y + 16, { align: 'right' });
@@ -6924,7 +6940,7 @@ function sendEmail() {
 }
 
 // Abre redacción en Gmail u Outlook (según preferencia del usuario) para Recepción, sin generar/descargar PDF
-function openComposeRecepcion(forcedEmail) {
+function openComposeRecepcion(forcedEmail, extraEmail) {
     const formData = collectFormData();
     if (forcedEmail) formData.clienteEmail = forcedEmail;
     if (!formData.clienteEmail) { alert('Por favor, ingrese el email del cliente.'); return; }
@@ -6943,7 +6959,8 @@ function openComposeRecepcion(forcedEmail) {
         `Saludos,\n` +
         `HIGH TEST SAS`
     );
-    openWebMail(formData.clienteEmail, formData.copiaEmail, subject, body);
+    const cc = extraEmail || formData.copiaEmail || '';
+    openWebMail(formData.clienteEmail, cc, subject, body);
 }
 
 // Abre redacción en Gmail u Outlook (según preferencia del usuario) para el envío general, sin generar/descargar PDF
@@ -6994,7 +7011,7 @@ function openWebMail(to, cc, subject, body) {
 }
 
 // Nuevo: Redacción para Entrega Total en Gmail/Outlook
-function openComposeEntregaTotal(forcedEmail) {
+function openComposeEntregaTotal(forcedEmail, extraEmail) {
     const formData = collectFormData();
     if (forcedEmail) formData.clienteEmail = forcedEmail;
     if (!formData.clienteEmail) { alert('Por favor, ingrese el email del cliente.'); return; }
@@ -7012,7 +7029,8 @@ function openComposeEntregaTotal(forcedEmail) {
         `Saludos,\n` +
         `LABORATORIO HIGH TEST SAS`
     );
-    openWebMail(formData.clienteEmail, formData.copiaEmail, subject, body);
+    const cc = extraEmail || formData.copiaEmail || '';
+    openWebMail(formData.clienteEmail, cc, subject, body);
 }
 
 // Nuevo: Enviar por WhatsApp con resumen
@@ -7240,7 +7258,76 @@ function validatePDFRequirements(tipo = 'entrega') {
     };
 }
 
+// ─── Fase 1: Huella técnica ───────────────────────────────────────────────────
+// Construye la huella técnica del formulario actual (ensayo_id + cantidad + marca)
+function buildCurrentFingerprint() {
+    const tuples = [];
+    if (savedRowsData?.ensayos_acreditados) {
+        for (const [key, row] of Object.entries(savedRowsData.ensayos_acreditados)) {
+            if (!row) continue;
+            const index = parseInt(key.replace(/^row_/, ''));
+            const ensayo = Array.isArray(predefinedItemsData) ? predefinedItemsData[index] : null;
+            const ensayoId = ensayo?.id;
+            if (!ensayoId) continue;
+
+            const units = getRowUnits('ensayos_acreditados', index);
+            if (units && units.length > 0) {
+                const brandGroups = {};
+                for (const unit of units) {
+                    const marca = unit.brand || '';
+                    if (!brandGroups[marca]) brandGroups[marca] = 0;
+                    brandGroups[marca]++;
+                }
+                for (const [marca, cantidad] of Object.entries(brandGroups)) {
+                    if (cantidad > 0) {
+                        tuples.push({ ensayo_id: ensayoId, cantidad, marca: marca || '' });
+                    }
+                }
+            } else {
+                const cantidad = parseInt(row.cantRecibida) || 0;
+                if (cantidad > 0) {
+                    tuples.push({ ensayo_id: ensayoId, cantidad, marca: '' });
+                }
+            }
+        }
+    }
+    tuples.sort((a, b) => {
+        if (a.ensayo_id !== b.ensayo_id) return a.ensayo_id - b.ensayo_id;
+        if (a.marca !== b.marca) return a.marca.localeCompare(b.marca);
+        return a.cantidad - b.cantidad;
+    });
+    return tuples;
+}
+
+// Construye la huella técnica almacenada en detalle_procesos_ac
+function buildStoredFingerprint(detalleRows) {
+    const tuples = (Array.isArray(detalleRows) ? detalleRows : []).map(d => ({
+        ensayo_id: d.ensayo_id,
+        cantidad: d.cantidad,
+        marca: d.marca || ''
+    }));
+    tuples.sort((a, b) => {
+        if (a.ensayo_id !== b.ensayo_id) return a.ensayo_id - b.ensayo_id;
+        if (a.marca !== b.marca) return a.marca.localeCompare(b.marca);
+        return a.cantidad - b.cantidad;
+    });
+    return tuples;
+}
+
+// Compara dos huellas técnicas (son idénticas si tienen los mismos tuples ordenados)
+function fingerprintsMatch(a, b) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i].ensayo_id !== b[i].ensayo_id) return false;
+        if (a[i].cantidad !== b[i].cantidad) return false;
+        if (a[i].marca !== b[i].marca) return false;
+    }
+    return true;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Crea un proceso oficial en el panel de administración con estado RECEPCIÓN
+// Fase 1: No elimina nada. Si el proceso ya existe, compara huellas técnicas.
 async function crearProcesoEnPanelAdmin() {
     try {
         const numeroProceso = document.getElementById('quoteNumber')?.value;
@@ -7257,18 +7344,101 @@ async function crearProcesoEnPanelAdmin() {
             return;
         }
 
-        // 1. Eliminar reserva temporal si existe para este número
+        // FASE 1: Verificar si el proceso ya existe SIN eliminar nada
+        let existingProcess = null;
         try {
-            await fetch('/.netlify/functions/conectar', {
+            const existenteRes = await fetch('/.netlify/functions/conectar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'delete_proceso', numero_proceso: numeroProceso })
+                body: JSON.stringify({ action: 'get_proceso', numero_proceso: numeroProceso })
             });
+            const existenteResult = await existenteRes.json();
+            if (existenteResult.ok && existenteResult.proceso) {
+                existingProcess = existenteResult.proceso;
+            }
         } catch (e) {
-            console.warn('No se pudo limpiar reserva temporal (puede que no exista):', e);
+            console.warn('[crearProcesoEnPanelAdmin] Error buscando proceso existente:', e);
         }
 
-        // 2. Limpiar bloqueo temporal local (hold) ya que el número ya se usó oficialmente
+        // ── CASO A: El proceso YA existe ──────────────────────────────────
+        if (existingProcess) {
+            console.log('[crearProcesoEnPanelAdmin] Proceso ya existe (id:', existingProcess.id, '). Comparando huellas técnicas...');
+
+            // 1. Obtener detalle almacenado
+            let storedDetalle = [];
+            try {
+                const detRes = await fetch('/.netlify/functions/conectar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'get_detalle_proceso', proceso_id: existingProcess.id })
+                });
+                const detResult = await detRes.json();
+                if (detResult.ok && Array.isArray(detResult.detalle)) {
+                    storedDetalle = detResult.detalle;
+                }
+            } catch (e) {
+                console.warn('[crearProcesoEnPanelAdmin] Error obteniendo detalle existente:', e);
+            }
+
+            // 2. Construir y comparar huellas
+            const currentFingerprint = buildCurrentFingerprint();
+            const storedFingerprint  = buildStoredFingerprint(storedDetalle);
+            const match = fingerprintsMatch(currentFingerprint, storedFingerprint);
+
+            // ╔══════════════════════════════════════════════════════════╗
+            // ║  Siempre actualizar campos administrativos               ║
+            // ║  (informe_a_nombre_de, facturar_a_nombre_de, etc.)       ║
+            // ╚══════════════════════════════════════════════════════════╝
+            const adminFields = {
+                numero_proceso: numeroProceso,
+                cliente: clienteNombre,
+                informe_a_nombre_de: (document.getElementById('informeNombre')?.value || clienteNombre).toUpperCase(),
+                facturar_a_nombre_de: (document.getElementById('facturarNombre')?.value || clienteNombre).toUpperCase(),
+                n_remision: document.getElementById('facturar')?.value || '',
+                fecha_recepcion: fechaRecepcion
+            };
+            try {
+                await fetch('/.netlify/functions/conectar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'update_proceso', ...adminFields })
+                });
+            } catch (e) {
+                console.warn('[crearProcesoEnPanelAdmin] Error actualizando campos administrativos:', e);
+            }
+
+            if (!match) {
+                // ╔══════════════════════════════════════════════════════════╗
+                // ║  FASE 1: Huella técnica diferente → No tocar detalle    ║
+                // ╚══════════════════════════════════════════════════════════╝
+                const msg = 'Campos administrativos actualizados.\n\n'
+                    + 'Se detectaron cambios en los elementos recibidos. El detalle y la marcación '
+                    + 'no se modificarán hasta que se implemente la sincronización inteligente.';
+                console.warn('[crearProcesoEnPanelAdmin] Huellas técnicas difieren. Solo campos admin actualizados.');
+                showNotification('Campos administrativos actualizados. Marcación pendiente de sincronización inteligente.', 'warning');
+                return existingProcess;
+            }
+
+            // ╔══════════════════════════════════════════════════════════╗
+            // ║  FASE 1: Huella técnica igual → Confirmar éxito          ║
+            // ╚══════════════════════════════════════════════════════════╝
+            console.log('[crearProcesoEnPanelAdmin] Huellas técnicas idénticas. Campos administrativos actualizados.');
+            showNotification('Recepción actualizada (campos administrativos). Marcación intacta.', 'success');
+
+            // Limpiar hold local
+            try {
+                const held = getHeldReceptionNumbers();
+                if (held[numeroProceso]) {
+                    delete held[numeroProceso];
+                    setHeldReceptionNumbers(held);
+                }
+            } catch (e) { /* ignore */ }
+
+            return existingProcess;
+        }
+
+        // ── CASO B: El proceso NO existe → Crear normalmente ─────────────
+        // Limpiar bloqueo temporal local (hold) ya que el número se usará oficialmente
         try {
             const held = getHeldReceptionNumbers();
             if (held[numeroProceso]) {
@@ -7277,7 +7447,6 @@ async function crearProcesoEnPanelAdmin() {
             }
         } catch (e) { console.warn('Error limpiando hold:', e); }
 
-        // 3. Crear proceso oficial
         const insertData = {
             numero_proceso: numeroProceso,
             cliente: clienteNombre,
@@ -7300,10 +7469,6 @@ async function crearProcesoEnPanelAdmin() {
         const result = await response.json();
 
         if (!response.ok) {
-            if (result && result.error && result.error.toLowerCase().includes('duplicado')) {
-                showNotification('El proceso ya existe en el panel administrativo', 'info');
-                return null;
-            }
             throw new Error((result && result.error) || 'Error al crear proceso');
         }
 
@@ -7353,6 +7518,7 @@ async function actualizarProcesoAEntrega() {
 
 // Guarda cada elemento recibido en detalle_procesos_ac
 async function guardarDetalleProceso(procesoId) {
+    const numeroProceso = document.getElementById('quoteNumber')?.value || 'desconocido';
     const detalle = [];
 
     if (savedRowsData?.ensayos_acreditados) {
@@ -7401,9 +7567,35 @@ async function guardarDetalleProceso(procesoId) {
         }
     }
 
-    if (detalle.length === 0) return;
+    if (detalle.length === 0) {
+        console.error('[guardarDetalleProceso] No se generó detalle para insertar:', {
+            proceso_id: procesoId,
+            numero_proceso: numeroProceso,
+            savedRowsDataKeys: savedRowsData?.ensayos_acreditados ? Object.keys(savedRowsData.ensayos_acreditados).length : 0,
+            predefinedItemsDataLength: Array.isArray(predefinedItemsData) ? predefinedItemsData.length : 0,
+            motivo: !savedRowsData?.ensayos_acreditados
+                ? 'savedRowsData.ensayos_acreditados es null/undefined'
+                : Object.keys(savedRowsData.ensayos_acreditados).length === 0
+                    ? 'savedRowsData.ensayos_acreditados está vacío'
+                    : 'todos los ensayos fueron omitidos (sin ensayoId o sin cantidad)'
+        });
+        return;
+    }
 
     try {
+        // Verificar si ya existe detalle para este proceso
+        const checkRes = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_detalle_proceso', proceso_id: procesoId })
+        });
+        const checkResult = await checkRes.json();
+        if (checkResult.ok && Array.isArray(checkResult.detalle) && checkResult.detalle.length > 0) {
+            console.log('[guardarDetalleProceso] Detalle ya existe para proceso', procesoId, '- no se duplica');
+            return;
+        }
+
+        // Insertar detalle
         const response = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -7411,10 +7603,10 @@ async function guardarDetalleProceso(procesoId) {
         });
         const result = await response.json();
         if (!response.ok) {
-            console.warn('Error guardando detalle del proceso:', result?.error);
+            console.error('[guardarDetalleProceso] Error guardando detalle:', result?.error, result?.detail);
         }
     } catch (err) {
-        console.warn('Error en guardarDetalleProceso:', err);
+        console.error('[guardarDetalleProceso] Error en guardarDetalleProceso:', err);
     }
 }
 
@@ -8661,7 +8853,7 @@ async function _fetchSupabaseEnBackground() {
     window._fetchEnCurso = false;
 
     // Disparar re-render en todos los callbacks registrados
-    const cbs = window._callbacksRender.slice();
+    const cbs = (window._callbacksRender || []).slice();
     window._callbacksRender = [];
     cbs.forEach(cb => {
         try { cb(window._casosUnificadosCache); } catch(e) { console.warn('Error en callback de render:', e); }
@@ -11079,12 +11271,30 @@ function openReportsWithCaseData() {
 // ===============================
 function mostrarVistaPrevia(numRecepcion) {
     const casos = obtenerCasosUnificados();
-    const caso = casos.find(c => (c.cotizacion || c.quoteNumber || c.numero_proceso) === numRecepcion);
-    
+    let caso = casos.find(c => (c.cotizacion || c.quoteNumber || c.numero_proceso) === numRecepcion);
+
+    if (!caso && window.RecepcionAnalyticsModule && Array.isArray(RecepcionAnalyticsModule.casos)) {
+        caso = RecepcionAnalyticsModule.casos.find(c => (c.cotizacion || c.quoteNumber || c.numero_proceso) === numRecepcion);
+    }
+
     if (!caso) {
-        alert('No se encontraron datos para este caso');
+        invalidarCacheCasos();
+        _fetchSupabaseEnBackground().then(() => {
+            const freshCasos = obtenerCasosUnificados();
+            const freshCaso = freshCasos.find(c => (c.cotizacion || c.quoteNumber || c.numero_proceso) === numRecepcion);
+            if (!freshCaso) {
+                alert('No se encontraron datos para este caso');
+                return;
+            }
+            _renderVistaPrevia(freshCaso);
+        });
         return;
     }
+
+    _renderVistaPrevia(caso);
+}
+
+function _renderVistaPrevia(caso) {
     
     // Generar HTML de vista previa
     const items = caso.items || [];
@@ -11638,7 +11848,7 @@ function closeMarcacionSelect(goBack) {
     const modal = document.getElementById('marcacionSelectModal');
     if (modal) { modal.hidden = true; document.body.style.overflow = ''; }
     if (goBack && new URLSearchParams(window.location.search).get('from') === 'admin') {
-        window.location.href = '/admin-panel.html#items';
+        window.location.href = '/admin-panel/admin-panel.html#items';
     }
 }
 
@@ -11762,10 +11972,17 @@ async function selectProcesoMarcacion(numeroProceso) {
     // Poblar barra de info
     document.getElementById('marcacionProcesoNum').textContent = numeroProceso;
     document.getElementById('marcacionCliente').textContent = proceso.cliente || '-';
-    document.getElementById('marcacionInformeNombre').value = proceso.informe_a_nombre_de || proceso.cliente || '';
+    document.getElementById('marcacionInformeNombre').textContent = proceso.informe_a_nombre_de || proceso.cliente || '-';
     document.getElementById('marcacionFecha').textContent = (proceso.fecha_recepcion || '').substring(0, 10) || '-';
     document.getElementById('marcacionEstado').textContent = proceso.estado || 'Recepción';
     document.getElementById('marcacionFechaEjecucion').value = (proceso.fecha_ejecucion || '').substring(0, 10) || '';
+
+    // Poblar select de responsable de marcación
+    const selResponsable = document.getElementById('marcacionResponsable');
+    if (selResponsable) {
+        selResponsable.innerHTML = '<option value="">— Seleccionar —</option>' +
+            highTestUsuarios.map(u => `<option value="${escapeHtml(u.nombre)}" ${(proceso.responsable_marcacion || '') === u.nombre ? 'selected' : ''}>${escapeHtml(u.nombre)}</option>`).join('');
+    }
 
     // Intentar cargar detalle del proceso desde la BD
     let detalle = [];
@@ -11926,7 +12143,6 @@ async function selectProcesoMarcacion(numeroProceso) {
 
                 marcacionConsecutivos = resultMarc.marcaciones.map(marc => {
                     const itemIdx = marcacionData.findIndex(d => d.elemento === marc.elemento);
-                    // console.log('Consecutivo:', marc.consecutivo, 'elemento_marca:', marc.elemento, 'itemIdx:', itemIdx, 'marcacionData_elementos:', marcacionData.map(d => d.elemento));
                     posByElemento[marc.elemento] = (posByElemento[marc.elemento] || 0) + 1;
                     const unidadNum = posByElemento[marc.elemento];
                     return {
@@ -12118,10 +12334,10 @@ function renderConsecutivos(filter) {
         );
     }
 
-    if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="marcacion-empty"><i class="fas fa-clipboard-list"></i>${marcacionConsecutivos.length === 0 ? 'Genere la marcación para ver los consecutivos' : 'No se encontraron resultados'}</td></tr>`;
-        return;
-    }
+        if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="9" class="marcacion-empty"><i class="fas fa-clipboard-list"></i>${marcacionConsecutivos.length === 0 ? 'Genere la marcación para ver los consecutivos' : 'No se encontraron resultados'}</td></tr>`;
+            return;
+        }
 
     const marcaColors = {
         'Hastings': { bg: '#fde2e2', text: '#b91c1c', border: '#f5a3a3' },
@@ -12537,6 +12753,7 @@ async function guardarMarcacion() {
                     consecutivo: c.consecutivo,
                     elemento: c.elemento || '',
                     descripcion: c.marca || '',
+                    unidad: c.unidad || '',
                     estado: c.estado || 'Pendiente',
                     observacion: c.observaciones || '',
                     nci: c.nci || ''
@@ -12562,7 +12779,7 @@ async function guardarMarcacion() {
         closeMarcacion();
         // Si vino desde admin panel, redirigir de vuelta
         if (new URLSearchParams(window.location.search).get('from') === 'admin') {
-            setTimeout(() => { window.location.href = '/admin-panel.html#items'; }, 800);
+            setTimeout(() => { window.location.href = '/admin-panel/admin-panel.html#items'; }, 800);
         }
     } catch (e) {
         console.error('Error guardando marcación:', e);
@@ -12582,7 +12799,7 @@ function closeMarcacion() {
     marcacionData = [];
     marcacionConsecutivos = [];
     if (new URLSearchParams(window.location.search).get('from') === 'admin') {
-        window.location.href = '/admin-panel.html#items';
+        window.location.href = '/admin-panel/admin-panel.html#items';
     }
     marcacionProcesoId = null;
     marcacionProcesoNumero = null;
@@ -12670,7 +12887,7 @@ function generatePDFFromCase(caso, tipo) {
     doc.text('DE ITEMS', 105, y += 6, { align: 'center' });
     y = 6;
 
-    try { const logo = new Image(); logo.src = 'Logo.png'; doc.addImage(logo, 'PNG', margin, y + 4, 28, 22); } catch (_) {}
+    try { const logo = new Image(); logo.src = '/recepcion-items/Logo.png'; doc.addImage(logo, 'PNG', margin, y + 4, 28, 22); } catch (_) {}
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(6);
     doc.text('CÓDIGO: FR-7.4.1', 210 - margin, y + 16, { align: 'right' });

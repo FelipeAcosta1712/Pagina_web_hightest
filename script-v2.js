@@ -660,6 +660,45 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Búsqueda y filtros - NO ACREDITADOS (botones de reinicio)
+    const resetNoAcreditadosFiltersBtn = document.getElementById('resetNoAcreditadosFiltersBtn');
+    if (resetNoAcreditadosFiltersBtn) {
+        resetNoAcreditadosFiltersBtn.addEventListener('click', () => {
+            const status = document.getElementById('adminFilterStatusNoAcreditados');
+            const client = document.getElementById('adminFilterTypeNoAcreditados');
+            const month = document.getElementById('adminFilterMonthNoAcreditados');
+            const date = document.getElementById('adminFilterDateNoAcreditados');
+            const search = document.getElementById('adminSearchCertificatesNoAcreditados');
+            if (status) status.value = '';
+            if (client) client.value = '';
+            if (month) month.value = '';
+            if (date) date.value = '';
+            if (search) search.value = '';
+            if (window.AdminPanelManager) {
+                window.AdminPanelManager.filterCertificatesNoAcreditados();
+            }
+        });
+    }
+
+    const resetFinalizedNoAcreditadosFiltersBtn = document.getElementById('resetFinalizedNoAcreditadosFiltersBtn');
+    if (resetFinalizedNoAcreditadosFiltersBtn) {
+        resetFinalizedNoAcreditadosFiltersBtn.addEventListener('click', () => {
+            const status = document.getElementById('adminFilterFinalizedStatusNoAcreditados');
+            const client = document.getElementById('adminFilterFinalizedTypeNoAcreditados');
+            const month = document.getElementById('adminFilterFinalizedMonthNoAcreditados');
+            const date = document.getElementById('adminFilterFinalizedDateNoAcreditados');
+            const search = document.getElementById('adminSearchFinalizedCertificatesNoAcreditados');
+            if (status) status.value = '';
+            if (client) client.value = '';
+            if (month) month.value = '';
+            if (date) date.value = '';
+            if (search) search.value = '';
+            if (window.AdminPanelManager) {
+                window.AdminPanelManager.filterFinalizedCertificatesNoAcreditados();
+            }
+        });
+    }
+
     // delegación para botones de acciones (ver/editar) — soporta tablas principal y finalizados
     const bindTableActions = (tableId) => {
         const table = document.getElementById(tableId);
@@ -702,6 +741,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     bindTableActions('certificatesTable');
     bindTableActions('finalizedCertificatesTable');
+    bindTableActions('noAcreditadosTable');
+    bindTableActions('finalizedNoAcreditadosTable');
 
     // Abrir modal de edición buscando datos desde backend
     async function openEditProcessModal(numero) {
@@ -2178,7 +2219,7 @@ const AuthManager = {
                 // Si ya hay sesión HIGH TEST, ir directo al panel
                 if (this.currentUser) {
                     console.log('🔐 AuthManager: Usuario ya autenticado, redirigiendo a admin-panel');
-                    window.location.href = 'admin-panel.html';
+                    window.location.href = 'admin-panel/admin-panel.html';
                     return;
                 }
                 // Si no hay sesión, abrir modal de login
@@ -2195,7 +2236,7 @@ const AuthManager = {
                 // Si ya hay sesión HIGH TEST, ir directo al panel
                 if (this.currentUser) {
                     console.log('🔐 AuthManager: Usuario ya autenticado (móvil), redirigiendo a admin-panel');
-                    window.location.href = 'admin-panel.html';
+                    window.location.href = 'admin-panel/admin-panel.html';
                     MobileMenu.close();
                     return;
                 }
@@ -2380,7 +2421,7 @@ const AuthManager = {
 
             redirectScheduled = true;
             window.setTimeout(() => {
-                window.location.href = 'admin-panel.html';
+                window.location.href = 'admin-panel/admin-panel.html';
             }, 3000);
         } catch (error) {
             console.error('Error en el sistema de acceso:', error);
@@ -2610,7 +2651,7 @@ const CertificatesAuthManager = {
 
             const storedClient = localStorage.getItem('hightest_client');
             if (storedClient) {
-                window.location.href = 'client-portal.html';
+                window.location.href = 'portal-clientes/client-portal.html';
                 return;
             }
 
@@ -2634,7 +2675,7 @@ const CertificatesAuthManager = {
 
                 const storedClient = localStorage.getItem('hightest_client');
                 if (storedClient) {
-                    window.location.href = 'client-portal.html';
+                    window.location.href = 'portal-clientes/client-portal.html';
                     // Cerrar menú móvil después de redireccionar
                     MobileMenu.close();
                     return;
@@ -2817,7 +2858,7 @@ const CertificatesAuthManager = {
             // Cerrar modal y redirigir después de pequeña pausa
             setTimeout(() => {
                 this.closeCertificatesModal();
-                window.location.href = 'client-portal.html';
+                window.location.href = 'portal-clientes/client-portal.html';
             }, 900);
         } catch (err) {
             console.error('CertificatesAuthManager: error conectando al servidor', err);
@@ -3081,7 +3122,7 @@ function bindCertificatesBtnFallback() {
         const storedClient = localStorage.getItem('hightest_client');
         if (storedClient) {
             console.log('➡️ Fallback: cliente logueado, redirigiendo');
-            window.location.href = 'client-portal.html';
+            window.location.href = 'portal-clientes/client-portal.html';
             return;
         }
 
@@ -3223,7 +3264,7 @@ const ClientAuth = {
             setFeedback(`Todo listo, ${client.name}. Estamos entrando a tu portal de cliente.`, false);
 
             setTimeout(() => {
-                window.location.href = 'client-portal.html';
+                window.location.href = 'portal-clientes/client-portal.html';
             }, 800);
         } catch (err) {
             console.error('ClientAuth error:', err);
@@ -3524,6 +3565,19 @@ const AdminPanelManager = {
             addCertBtn.addEventListener('click', () => this.addNewCertificate());
         }
 
+        // Botón para agregar nuevo proceso no acreditado
+        const addNoAcreditadoBtn = document.getElementById('addNoAcreditadoBtn');
+        if (addNoAcreditadoBtn) {
+            addNoAcreditadoBtn.addEventListener('click', () => {
+                this.addNewCertificate();
+                // Establecer tipo como no-acreditado después de abrir el modal
+                setTimeout(() => {
+                    const tipo = document.getElementById('processTipo');
+                    if (tipo) tipo.value = 'no-acreditado';
+                }, 100);
+            });
+        }
+
         const closeProcessModalBtn = document.getElementById('closeCertificateProcessModal');
         const cancelProcessModalBtn = document.getElementById('cancelCertificateProcessBtn');
         const saveProcessModalBtn = document.getElementById('saveCertificateProcessBtn');
@@ -3617,16 +3671,13 @@ const AdminPanelManager = {
         const reportsNoAcreditadosSection = document.getElementById('reports-no-acreditados');
         const gestionInformesSection = document.getElementById('gestion-informes');
 
-        // Ocultar todas las secciones por defecto
+        // Ocultar todas las secciones por defecto (excepto las que ahora están dentro de views)
         certificatesSection?.classList.add('is-hidden');
         certificatesNoAcreditadosSection?.classList.add('is-hidden');
-        clientsSection?.classList.add('is-hidden');
         commercialSection?.classList.add('is-hidden');
-        statsSection?.classList.add('is-hidden');
         reportsAcreditadosSection?.classList.add('is-hidden');
         reportsNoAcreditadosSection?.classList.add('is-hidden');
         quickLinkSection?.classList.add('is-hidden');
-        if (gestionInformesSection) gestionInformesSection.style.display = 'none';
 
         if (commercialSection) {
             commercialSection.hidden = true;
@@ -3635,7 +3686,6 @@ const AdminPanelManager = {
         // Mostrar solo lo necesario según la pestaña
         if (tabName === 'acreditados') {
             quickLinkSection?.classList.remove('is-hidden');
-            statsSection?.classList.remove('is-hidden');
             reportsAcreditadosSection?.classList.remove('is-hidden');
             certificatesSection?.classList.remove('is-hidden');
             if (gestionInformesSection) gestionInformesSection.style.display = '';
@@ -3644,6 +3694,7 @@ const AdminPanelManager = {
             }
             filtrarProcesos();
             GestionInformesModule.init();
+            this.renderMonthlySummary();
         } else if (tabName === 'no-acreditados') {
             quickLinkSection?.classList.remove('is-hidden');
             reportsNoAcreditadosSection?.classList.remove('is-hidden');
@@ -7115,11 +7166,20 @@ const GestionInformesModule = {
         if (closeFaltantes) closeFaltantes.addEventListener('click', () => this.closeModal('faltantesModal'));
         if (closeFaltantesBtn) closeFaltantesBtn.addEventListener('click', () => this.closeModal('faltantesModal'));
 
+        // Resumen por cliente
+        const btnResumen = document.getElementById('btnResumenCliente');
+        const closeResumen = document.getElementById('closeResumenClienteModal');
+        const closeResumenBtn = document.getElementById('closeResumenClienteBtn');
+        if (btnResumen) btnResumen.addEventListener('click', () => this.showResumenCliente());
+        if (closeResumen) closeResumen.addEventListener('click', () => this.closeModal('resumenClienteModal'));
+        if (closeResumenBtn) closeResumenBtn.addEventListener('click', () => this.closeModal('resumenClienteModal'));
+
         // Cerrar modales con Escape
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.closeModal('informeHistoryModal');
                 this.closeModal('faltantesModal');
+                this.closeModal('resumenClienteModal');
             }
         });
     },
@@ -7731,7 +7791,7 @@ const GestionInformesModule = {
         }
     },
 
-    async showProcesosFaltantes() {
+    async showProcesosFaltantes(clienteFiltro = null) {
         const content = document.getElementById('faltantesContent');
         if (!content) return;
         content.innerHTML = '<div style="text-align:center; padding:24px; color:#666;">Cargando procesos sin informe...</div>';
@@ -7739,13 +7799,21 @@ const GestionInformesModule = {
 
         try {
             const result = await fetchFromDatabase('get_procesos_sin_informe', {});
-            const procesos = result?.procesos || [];
+            let procesos = result?.procesos || [];
+
+            // Si hay filtro de cliente, mostrar solo los de ese cliente
+            if (clienteFiltro) {
+                procesos = procesos.filter(p => {
+                    const cliente = (p.cliente || p.empresa || '').toLowerCase();
+                    return cliente === clienteFiltro.toLowerCase();
+                });
+            }
 
             if (procesos.length === 0) {
                 content.innerHTML = `
                     <div style="text-align:center; padding:32px; color:#28a745;">
                         <div style="font-size:48px; margin-bottom:12px;">✅</div>
-                        <p style="font-size:16px; font-weight:600;">Todos los procesos tienen informe</p>
+                        <p style="font-size:16px; font-weight:600;">${clienteFiltro ? 'Este cliente tiene todos los informes cargados' : 'Todos los procesos tienen informe'}</p>
                         <p style="font-size:13px; color:#666;">No hay procesos pendientes por informe</p>
                     </div>`;
                 return;
@@ -7754,6 +7822,7 @@ const GestionInformesModule = {
             let html = `
                 <div style="margin-bottom:12px; padding:10px; background:#fff3e0; border-radius:6px; border-left:3px solid #ff9800;">
                     <span style="font-weight:600; color:#e65100;">${procesos.length}</span> proceso(s) sin informe cargado
+                    ${clienteFiltro ? ` — <strong>${escapeHtml(clienteFiltro)}</strong>` : ''}
                 </div>
                 <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
                     <input type="text" id="faltantesSearch" placeholder="🔍 Buscar por número o cliente..." 
@@ -7841,6 +7910,102 @@ const GestionInformesModule = {
         }
     },
 
+    async showResumenCliente() {
+        const content = document.getElementById('resumenClienteContent');
+        if (!content) return;
+        content.innerHTML = '<div style="text-align:center; padding:24px; color:#666;">Cargando resumen por cliente...</div>';
+        this.openModal('resumenClienteModal');
+
+        try {
+            const procesos = PROCESOS_STORE?.all || [];
+            if (procesos.length === 0) {
+                content.innerHTML = '<div style="text-align:center; padding:24px; color:#999;">No hay procesos cargados</div>';
+                return;
+            }
+
+            // Agrupar procesos por cliente
+            const clienteMap = {};
+            procesos.forEach(p => {
+                const cliente = p.cliente || p.empresa || 'Sin cliente';
+                if (!clienteMap[cliente]) {
+                    clienteMap[cliente] = { total: 0, conInforme: 0, sinInforme: 0, procesos: [] };
+                }
+                clienteMap[cliente].total++;
+                clienteMap[cliente].procesos.push(p);
+            });
+
+            // Verificar cuáles tienen informe
+            const clienteNames = Object.keys(clienteMap).sort();
+            for (const cliente of clienteNames) {
+                const procs = clienteMap[cliente].procesos;
+                const ids = procs.map(p => p.id).filter(Boolean);
+                let conInforme = 0;
+                for (const pid of ids) {
+                    try {
+                        const result = await fetchFromDatabase('get_informes_proceso', { proceso_id: pid });
+                        const informes = result?.informes || [];
+                        if (informes.length > 0) conInforme++;
+                    } catch (e) { /* skip */ }
+                }
+                clienteMap[cliente].conInforme = conInforme;
+                clienteMap[cliente].sinInforme = clienteMap[cliente].total - conInforme;
+            }
+
+            // Renderizar tabla
+            let html = `
+                <div style="margin-bottom:12px; padding:10px; background:#e3f2fd; border-radius:6px; border-left:3px solid #1976d2;">
+                    <span style="font-weight:600; color:#0d47a1;">${clienteNames.length}</span> cliente(s) — 
+                    <span style="font-weight:600; color:#28a745;">${procesos.filter(p => clienteMap[p.cliente || p.empresa || 'Sin cliente']?.sinInforme === 0).length}</span> con todos los informes completos
+                </div>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                        <thead style="background:#f5f5f5; border-bottom:2px solid #022859;">
+                            <tr>
+                                <th style="padding:8px; text-align:left; border:1px solid #ddd;">Cliente</th>
+                                <th style="padding:8px; text-align:center; border:1px solid #ddd;">Total Procesos</th>
+                                <th style="padding:8px; text-align:center; border:1px solid #ddd; color:#28a745;">Con Informe</th>
+                                <th style="padding:8px; text-align:center; border:1px solid #ddd; color:#c62828;">Sin Informe</th>
+                                <th style="padding:8px; text-align:center; border:1px solid #ddd;">%</th>
+                                <th style="padding:8px; text-align:center; border:1px solid #ddd;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            clienteNames.forEach(cliente => {
+                const data = clienteMap[cliente];
+                const pct = data.total > 0 ? Math.round((data.conInforme / data.total) * 100) : 0;
+                const pctColor = pct === 100 ? '#28a745' : pct >= 50 ? '#ff9800' : '#c62828';
+                const sinInformeStyle = data.sinInforme > 0 ? 'color:#c62828; font-weight:700;' : 'color:#28a745;';
+
+                html += `
+                    <tr style="border-bottom:1px solid #ddd; ${data.sinInforme > 0 ? 'background:#fff8f8;' : ''}">
+                        <td style="padding:8px; border:1px solid #ddd; font-weight:600;">${escapeHtml(cliente)}</td>
+                        <td style="padding:8px; border:1px solid #ddd; text-align:center; font-weight:700;">${data.total}</td>
+                        <td style="padding:8px; border:1px solid #ddd; text-align:center; color:#28a745; font-weight:600;">${data.conInforme}</td>
+                        <td style="padding:8px; border:1px solid #ddd; text-align:center; ${sinInformeStyle}">${data.sinInforme}</td>
+                        <td style="padding:8px; border:1px solid #ddd; text-align:center; color:${pctColor}; font-weight:700;">${pct}%</td>
+                        <td style="padding:8px; border:1px solid #ddd; text-align:center;">
+                            ${data.sinInforme > 0 ? `<button class="btn btn--small" onclick="GestionInformesModule.filtrarClienteDesdeResumen('${escapeHtml(cliente)}')" style="font-size:11px; padding:2px 8px; background:#1976d2; color:#fff; border:none; border-radius:4px; cursor:pointer;">Ver faltantes</button>` : '<span style="color:#28a745;">✅</span>'}
+                        </td>
+                    </tr>`;
+            });
+
+            html += '</tbody></table></div>';
+            content.innerHTML = html;
+
+        } catch (err) {
+            console.error('Error generando resumen por cliente:', err);
+            content.innerHTML = `<div style="padding:16px; border:1px solid #c62828; border-radius:8px; background:#ffebee; color:#c62828;">
+                <strong>Error:</strong> ${err.message}
+            </div>`;
+        }
+    },
+
+    filtrarClienteDesdeResumen(clienteNombre) {
+        this.closeModal('resumenClienteModal');
+        this.showProcesosFaltantes(clienteNombre);
+    },
+
     openModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) {
@@ -7868,6 +8033,7 @@ window.GestionInformesModule = GestionInformesModule;
 const AnalisisProcesosModule = {
     init() {
         const btn = document.getElementById('btnAnalisisProcesos');
+        const btnNoAcreditados = document.getElementById('btnAnalisisProcesosNoAcreditados');
         const close = document.getElementById('closeAnalisisProcesos');
         const closeBtn = document.getElementById('closeAnalisisBtn');
         const search = document.getElementById('analisisSearch');
@@ -7877,6 +8043,7 @@ const AnalisisProcesosModule = {
         const closeVPBtn = document.getElementById('closeVistaPreviaBtn');
 
         if (btn) btn.addEventListener('click', () => this.open());
+        if (btnNoAcreditados) btnNoAcreditados.addEventListener('click', () => this.open());
         if (close) close.addEventListener('click', () => this.close());
         if (closeBtn) closeBtn.addEventListener('click', () => this.close());
         if (search) search.addEventListener('input', () => this.render());

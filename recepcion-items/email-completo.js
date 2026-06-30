@@ -42,6 +42,9 @@ function crearBotonEmailCompleto() {
     const existente = document.getElementById('btn-email-completo');
     if (existente) existente.remove();
 
+    // Variable para correo adicional
+    let correoAdicional = '';
+
     // Contenedor del botón flotante y menú
     const wrapper = document.createElement('div');
     wrapper.id = 'btn-email-completo';
@@ -122,11 +125,25 @@ function crearBotonEmailCompleto() {
         if (!correo) { if (window.showNotification) showNotification('Envío cancelado: sin correo.', 'warning'); return; }
         if (/^\S+@\S+\.\S+$/.test(correo) === false) { alert('Correo inválido'); return; }
         if (tipo === 'recepcion' && typeof openComposeRecepcion === 'function') {
-            openComposeRecepcion(correo);
+            openComposeRecepcion(correo, correoAdicional);
         } else if (tipo === 'entrega' && typeof openComposeEntregaTotal === 'function') {
-            openComposeEntregaTotal(correo);
+            openComposeEntregaTotal(correo, correoAdicional);
         } else {
             abrirModalEmailCompleto();
+        }
+    };
+
+    // Solicita correo adicional
+    const askAdditionalEmail = () => {
+        const actual = correoAdicional || '';
+        const correo = prompt('Ingrese el correo electrónico adicional (copia)', actual);
+        if (correo === null) return;
+        if (correo && !/^\S+@\S+\.\S+$/.test(correo)) { alert('Correo inválido'); return; }
+        correoAdicional = correo || '';
+        if (correoAdicional) {
+            if (window.showNotification) showNotification(`Correo adicional guardado: ${correoAdicional}`, 'success');
+        } else {
+            if (window.showNotification) showNotification('Correo adicional eliminado.', 'info');
         }
     };
 
@@ -145,6 +162,7 @@ function crearBotonEmailCompleto() {
     menu.appendChild(makeItem('📥', 'Enviar Recepción (Email)', () => askEmailAndSend('recepcion')));
     menu.appendChild(makeItem('📦', 'Enviar Entrega Total (Email)', () => askEmailAndSend('entrega')));
     menu.appendChild(makeItem('🟢', 'Enviar por WhatsApp', () => askWhatsAppAndSend(), '#16a34a'));
+    menu.appendChild(makeItem('✉️', 'Agregar otro correo electrónico', () => askAdditionalEmail(), '#2563eb'));
 
     boton.addEventListener('click', () => {
         const visible = menu.style.display === 'block';
