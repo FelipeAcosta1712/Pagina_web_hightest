@@ -1053,7 +1053,6 @@ exports.handler = async (event) => {
             // =============================================
             if (payload.action === 'create_marcaciones_batch') {
                 const { marcaciones } = payload;
-                // console.log('CREATE_MARCACIONES_BATCH marcaciones:', marcaciones, 'isArray:', Array.isArray(marcaciones), 'length:', marcaciones?.length);
                 if (!Array.isArray(marcaciones)) {
                     return jsonResponse(400, { ok: false, error: 'Array marcaciones requerido' });
                 }
@@ -1063,27 +1062,26 @@ exports.handler = async (event) => {
                     return jsonResponse(400, { ok: false, error: 'proceso_id requerido' });
                 }
 
-                // ╔══════════════════════════════════════════════════════════╗
-                // ║  FASE 1: No eliminar marcaciones existentes.            ║
-                // ║  Solo insertar nuevas si no existen duplicados.          ║
-                // ╚══════════════════════════════════════════════════════════╝
-
-                // Si no hay marcaciones nuevas, no hacer nada
                 if (marcaciones.length === 0) {
-                    return jsonResponse(200, { ok: true, updated: [] });
+                    return jsonResponse(200, { ok: true, updated: [], deleted: 0 });
                 }
 
-                // Verificar marcaciones existentes para evitar duplicados
-                const { data: existingMarcaciones } = await supabase
+                // FASE 1: Eliminar marcaciones existentes para este proceso
+                const { error: deleteError } = await supabase
                     .from('marcaciones_ac')
-                    .select('id, consecutivo, ensayo_id')
+                    .delete()
                     .eq('proceso_id', procesoId);
 
-                const existingSet = new Set(
-                    (Array.isArray(existingMarcaciones) ? existingMarcaciones : []).map(m => `${m.ensayo_id}|${m.consecutivo}`)
-                );
+                if (deleteError) {
+                    console.error('[create_marcaciones_batch] Error eliminando marcaciones existentes:', deleteError.message);
+                    return jsonResponse(500, {
+                        ok: false,
+                        error: 'Error al eliminar marcaciones existentes',
+                        detail: deleteError.message
+                    });
+                }
 
-                // Ahora insertar solo los registros que no existen
+                // FASE 2: Insertar todas las marcaciones nuevas
                 const results = [];
                 let hasError = false;
                 let firstError = null;
@@ -1091,32 +1089,19 @@ exports.handler = async (event) => {
                 const BATCH_SIZE = 50;
 
                 for (let i = 0; i < marcaciones.length; i += BATCH_SIZE) {
-                    // FASE 1: Filtrar duplicados antes de insertar
                     const batch = marcaciones.slice(i, i + BATCH_SIZE)
-                        .map(item => {
-                            const registro = {
-                                proceso_id: item.proceso_id,
-                                detalle_id: item.detalle_id || null,
-                                ensayo_id: item.ensayo_id || null,
-                                consecutivo: item.consecutivo,
-                                elemento: item.elemento || '',
-                                descripcion: item.descripcion || '',
-                                estado: item.estado || 'Pendiente',
-                                observacion: item.observacion || '',
-                                nci: item.nci || ''
-                            };
-                            return registro;
-                        })
-                        .filter(registro => {
-                            const key = `${registro.ensayo_id}|${registro.consecutivo}`;
-                            if (existingSet.has(key)) {
-                                console.log('[create_marcaciones_batch] Marcación ya existe, omitiendo:', key);
-                                return false;
-                            }
-                            return true;
-                        });
+                        .map(item => ({
+                            proceso_id: item.proceso_id,
+                            detalle_id: item.detalle_id || null,
+                            ensayo_id: item.ensayo_id || null,
+                            consecutivo: item.consecutivo,
+                            elemento: item.elemento || '',
+                            descripcion: item.descripcion || '',
+                            estado: item.estado || 'Pendiente',
+                            observacion: item.observacion || '',
+                            nci: item.nci || ''
+                        }));
 
-                    // FASE 1: Saltar batch vacío (todos eran duplicados)
                     if (batch.length === 0) continue;
 
                     let insertBatch = batch;
@@ -1166,7 +1151,7 @@ exports.handler = async (event) => {
                     return jsonResponse(500, {
                         ok: false,
                         error: 'Error al crear marcaciones',
-                        detail: firstError?.message || 'Verificar tabla marcaciones_ac y restricción uq_marcaciones_proceso_consecutivo'
+                        detail: firstError?.message || 'Verificar tabla marcaciones_ac'
                     });
                 }
 
