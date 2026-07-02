@@ -148,13 +148,19 @@
                 <div class="dash-header">
                     <div class="dash-header__left">
                         <h1 class="dash-header__title">Dashboard</h1>
-                        <p class="dash-header__subtitle">Resumen general de la gestión de High Test</p>
+                        <p class="dash-header__subtitle">Resumen general de la gestión del laboratorio</p>
                     </div>
                     <div class="dash-header__right">
                         <div class="dash-date-picker">
                             <input type="text" class="dash-date-picker__input" id="dashDateRange" value="01/06/2026 - 28/06/2026" readonly>
                             <svg class="dash-date-picker__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                         </div>
+                        <select class="dash-filter-select" id="dashClientFilter">
+                            <option>Todos los clientes</option>
+                        </select>
+                        <select class="dash-filter-select" id="dashStatusFilter">
+                            <option>Todos los estados</option>
+                        </select>
                         <button class="dash-export-btn" id="dashExportBtn">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                             Exportar Reporte
@@ -162,343 +168,228 @@
                     </div>
                 </div>
 
-                <!-- Stats Cards Row -->
+                <!-- KPI Cards Row -->
                 <div class="dash-stats-row">
                     <div class="dash-stat-card">
-                        <div class="dash-stat-card__icon dash-stat-card__icon--blue">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        <div class="dash-stat-card__top">
+                            <div class="dash-stat-card__icon dash-stat-card__icon--blue">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            </div>
+                            <span class="dash-stat-card__value" id="dashProcesos">0</span>
                         </div>
                         <div class="dash-stat-card__content">
-                            <span class="dash-stat-card__value" id="dashClientes">128</span>
-                            <span class="dash-stat-card__label">Clientes Activos</span>
-                            <span class="dash-stat-card__trend dash-stat-card__trend--up">↑ 15% vs mes anterior</span>
-                        </div>
-                        <div class="dash-stat-card__sparkline" id="sparkClientes"></div>
-                    </div>
-                    <div class="dash-stat-card">
-                        <div class="dash-stat-card__icon dash-stat-card__icon--green">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        </div>
-                        <div class="dash-stat-card__content">
-                            <span class="dash-stat-card__value" id="dashProcesos">356</span>
                             <span class="dash-stat-card__label">Procesos Totales</span>
-                            <span class="dash-stat-card__trend dash-stat-card__trend--up">↑ 22% vs mes anterior</span>
+                            <span class="dash-stat-card__trend dash-stat-card__trend--up">Todos los procesos creados</span>
                         </div>
-                        <div class="dash-stat-card__sparkline" id="sparkProcesos"></div>
                     </div>
                     <div class="dash-stat-card">
-                        <div class="dash-stat-card__icon dash-stat-card__icon--purple">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                        <div class="dash-stat-card__top">
+                            <div class="dash-stat-card__icon dash-stat-card__icon--purple">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                            </div>
+                            <span class="dash-stat-card__value" id="dashUnidades">0</span>
                         </div>
                         <div class="dash-stat-card__content">
-                            <span class="dash-stat-card__value" id="dashEnsayos">214</span>
-                            <span class="dash-stat-card__label">Ensayos Realizados</span>
-                            <span class="dash-stat-card__trend dash-stat-card__trend--up">↑ 15% vs mes anterior</span>
+                            <span class="dash-stat-card__label">Unidades Recibidas</span>
+                            <span class="dash-stat-card__trend dash-stat-card__trend--up">Suma de todos los elementos</span>
                         </div>
-                        <div class="dash-stat-card__sparkline" id="sparkEnsayos"></div>
                     </div>
                     <div class="dash-stat-card">
-                        <div class="dash-stat-card__icon dash-stat-card__icon--orange">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        <div class="dash-stat-card__top">
+                            <div class="dash-stat-card__icon dash-stat-card__icon--orange">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            </div>
+                            <span class="dash-stat-card__value" id="dashInformes">0</span>
                         </div>
                         <div class="dash-stat-card__content">
-                            <span class="dash-stat-card__value" id="dashInformes">98</span>
                             <span class="dash-stat-card__label">Informes Generados</span>
-                            <span class="dash-stat-card__trend dash-stat-card__trend--up">↑ 12% vs mes anterior</span>
+                            <span class="dash-stat-card__trend dash-stat-card__trend--up">Procesos con informe emitido</span>
                         </div>
-                        <div class="dash-stat-card__sparkline" id="sparkInformes"></div>
                     </div>
                     <div class="dash-stat-card">
-                        <div class="dash-stat-card__icon dash-stat-card__icon--teal">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        <div class="dash-stat-card__top">
+                            <div class="dash-stat-card__icon dash-stat-card__icon--green">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            </div>
+                            <span class="dash-stat-card__value" id="dashClientes">0</span>
                         </div>
                         <div class="dash-stat-card__content">
-                            <span class="dash-stat-card__value" id="dashCotizaciones">46</span>
-                            <span class="dash-stat-card__label">Cotizaciones Totales</span>
-                            <span class="dash-stat-card__trend dash-stat-card__trend--up">↑ 8% vs mes anterior</span>
+                            <span class="dash-stat-card__label">Clientes Atendidos</span>
+                            <span class="dash-stat-card__trend dash-stat-card__trend--up">Clientes con procesos</span>
                         </div>
-                        <div class="dash-stat-card__sparkline" id="sparkCotizaciones"></div>
                     </div>
                     <div class="dash-stat-card">
-                        <div class="dash-stat-card__icon dash-stat-card__icon--emerald">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        <div class="dash-stat-card__top">
+                            <div class="dash-stat-card__icon dash-stat-card__icon--emerald">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            </div>
+                            <span class="dash-stat-card__value" id="dashFinalizados">0</span>
                         </div>
                         <div class="dash-stat-card__content">
-                            <span class="dash-stat-card__value" id="dashIngresos">$24.850.000</span>
-                            <span class="dash-stat-card__label">Ingresos del Mes</span>
-                            <span class="dash-stat-card__trend dash-stat-card__trend--up">↑ 25% vs mes anterior</span>
+                            <span class="dash-stat-card__label">Procesos Finalizados</span>
+                            <span class="dash-stat-card__trend dash-stat-card__trend--up">Procesos completados</span>
                         </div>
-                        <div class="dash-stat-card__sparkline" id="sparkIngresos"></div>
+                    </div>
+                    <div class="dash-stat-card">
+                        <div class="dash-stat-card__top">
+                            <div class="dash-stat-card__icon dash-stat-card__icon--teal">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            </div>
+                            <span class="dash-stat-card__value" id="dashActivos">0</span>
+                        </div>
+                        <div class="dash-stat-card__content">
+                            <span class="dash-stat-card__label">Procesos Activos</span>
+                            <span class="dash-stat-card__trend dash-stat-card__trend--down">En recepción, informe o entrega</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Charts Row -->
-                <div class="dash-charts-row">
-                    <!-- Evolución de Procesos -->
-                    <div class="dash-chart-card">
-                        <div class="dash-chart-card__header">
-                            <h3 class="dash-chart-card__title">Evolución de Procesos</h3>
-                            <select class="dash-chart-card__filter" id="filterEvolucion">
-                                <option>Este año</option>
-                                <option>Último trimestre</option>
-                                <option>Último mes</option>
-                            </select>
-                        </div>
-                        <div class="dash-chart-card__body">
-                            <canvas id="chartEvolucion"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- Procesos por Estado -->
-                    <div class="dash-chart-card">
-                        <div class="dash-chart-card__header">
-                            <h3 class="dash-chart-card__title">Procesos por Estado</h3>
-                        </div>
-                        <div class="dash-chart-card__body dash-chart-card__body--donut">
-                            <div class="dash-donut-container">
-                                <canvas id="chartEstado"></canvas>
-                                <div class="dash-donut-center">
-                                    <span class="dash-donut-center__value" id="donutTotal">356</span>
-                                    <span class="dash-donut-center__label">Total</span>
-                                </div>
+                <!-- Charts Row 1: stacked columns -->
+                <div class="dash-charts-row dash-charts-row--3col-custom">
+                    <div class="dash-chart-col-stacked">
+                        <div class="dash-chart-card">
+                            <div class="dash-chart-card__header">
+                                <h3 class="dash-chart-card__title">Procesos por Mes</h3>
+                                <select class="dash-chart-card__filter" id="filterEvolucion">
+                                    <option>Este año</option>
+                                    <option>Último trimestre</option>
+                                    <option>Último mes</option>
+                                </select>
                             </div>
-                            <div class="dash-legend" id="legendEstado"></div>
+                            <div class="dash-chart-card__body">
+                                <canvas id="chartEvolucion"></canvas>
+                            </div>
+                            <div class="dash-chart-card__footer" id="evolucionFooter">Total per\u00edodo: 0 procesos</div>
+                        </div>
+
+                        <div class="dash-chart-card">
+                            <div class="dash-chart-card__header">
+                                <h3 class="dash-chart-card__title">Elementos por Categoría</h3>
+                            </div>
+                            <div class="dash-chart-card__body dash-chart-card__body--donut">
+                                <div class="dash-donut-container">
+                                    <canvas id="chartCategorias"></canvas>
+                                </div>
+                                <div class="dash-legend" id="legendCategorias"></div>
+                            </div>
+                            <div class="dash-chart-card__footer"><a href="#" class="dash-chart-card__link" id="verTodasCategorias">Ver todas las categorías</a></div>
                         </div>
                     </div>
 
-                    <!-- Ensayos por Tipo -->
+                    <div class="dash-chart-col-stacked">
+                        <div class="dash-chart-card">
+                            <div class="dash-chart-card__header">
+                                <h3 class="dash-chart-card__title">Procesos por Estado</h3>
+                            </div>
+                            <div class="dash-chart-card__body dash-chart-card__body--donut">
+                                <div class="dash-donut-container">
+                                    <canvas id="chartEstado"></canvas>
+                                    <div class="dash-donut-center">
+                                        <span class="dash-donut-center__value" id="donutTotal">0</span>
+                                        <span class="dash-donut-center__label">Total</span>
+                                    </div>
+                                </div>
+                                <div class="dash-legend" id="legendEstado"></div>
+                            </div>
+                            <div class="dash-chart-card__footer" id="donutFooter">% Finalizaci\u00f3n del per\u00edodo: 0%</div>
+                        </div>
+
+                        <div class="dash-chart-card">
+                            <div class="dash-chart-card__header">
+                                <h3 class="dash-chart-card__title">Top 5 Clientes por Unidades Recibidas</h3>
+                            </div>
+                            <div class="dash-chart-card__body">
+                                <canvas id="chartClientesUnidades"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="dash-chart-card">
                         <div class="dash-chart-card__header">
-                            <h3 class="dash-chart-card__title">Ensayos por Tipo</h3>
+                            <h3 class="dash-chart-card__title">Top 10 Elementos Más Recibidos</h3>
                             <select class="dash-chart-card__filter" id="filterTipo">
                                 <option>Este año</option>
                                 <option>Último trimestre</option>
                             </select>
                         </div>
-                        <div class="dash-chart-card__body">
-                            <canvas id="chartTipo"></canvas>
+                        <div class="dash-chart-card__body dash-chart-card__body--table">
+                            <div class="dash-top10-table" id="top10Table"></div>
                         </div>
+                        <div class="dash-chart-card__footer"><a href="#" class="dash-chart-card__link" id="verTodosElementos">Ver todos los elementos</a></div>
                     </div>
                 </div>
 
-                <!-- Bottom Row -->
-                <div class="dash-bottom-row">
-                    <!-- Actividad Reciente -->
+                <!-- Row 3: Actividad + Indicadores + \u00daltimas Recepciones -->
+                <div class="dash-charts-row">
                     <div class="dash-chart-card">
                         <div class="dash-chart-card__header">
                             <h3 class="dash-chart-card__title">Actividad Reciente</h3>
                         </div>
                         <div class="dash-chart-card__body">
-                            <div class="dash-activity-list" id="activityList">
-                                <div class="dash-activity-item">
-                                    <div class="dash-activity-item__icon dash-activity-item__icon--blue">📦</div>
-                                    <div class="dash-activity-item__content">
-                                        <span class="dash-activity-item__text">Nueva recepción registrada</span>
-                                        <span class="dash-activity-item__detail">REC-2025-045 - Empresa Energía S.A.S</span>
-                                    </div>
-                                    <span class="dash-activity-item__time">Hace 15 min</span>
-                                </div>
-                                <div class="dash-activity-item">
-                                    <div class="dash-activity-item__icon dash-activity-item__icon--green">✅</div>
-                                    <div class="dash-activity-item__content">
-                                        <span class="dash-activity-item__text">Ensayo acreditado completado</span>
-                                        <span class="dash-activity-item__detail">ENS-AC-2025-012 - Transformador de Poder</span>
-                                    </div>
-                                    <span class="dash-activity-item__time">Hace 1 hora</span>
-                                </div>
-                                <div class="dash-activity-item">
-                                    <div class="dash-activity-item__icon dash-activity-item__icon--orange">📄</div>
-                                    <div class="dash-activity-item__content">
-                                        <span class="dash-activity-item__text">Informe de ensayo generado</span>
-                                        <span class="dash-activity-item__detail">INF-2025-089 - Servicios Ambientales S.A.S</span>
-                                    </div>
-                                    <span class="dash-activity-item__time">Hace 2 horas</span>
-                                </div>
-                                <div class="dash-activity-item">
-                                    <div class="dash-activity-item__icon dash-activity-item__icon--purple">💰</div>
-                                    <div class="dash-activity-item__content">
-                                        <span class="dash-activity-item__text">Nueva cotización creada</span>
-                                        <span class="dash-activity-item__detail">CTE-2025-078 - Industrias Eléctricas Ltda</span>
-                                    </div>
-                                    <span class="dash-activity-item__time">Hace 3 horas</span>
-                                </div>
-                                <div class="dash-activity-item">
-                                    <div class="dash-activity-item__icon dash-activity-item__icon--teal">👤</div>
-                                    <div class="dash-activity-item__content">
-                                        <span class="dash-activity-item__text">Cliente registrado</span>
-                                        <span class="dash-activity-item__detail">Constructora del Norte S.A.S</span>
-                                    </div>
-                                    <span class="dash-activity-item__time">Hace 5 horas</span>
-                                </div>
-                            </div>
+                            <div class="dash-activity-list" id="activityList"></div>
+                            <div class="dash-chart-card__footer"><a href="#" class="dash-chart-card__link" id="verTodaActividad">Ver toda la actividad</a></div>
                         </div>
                     </div>
 
-                    <!-- Top 5 Clientes por Procesos -->
-                    <div class="dash-chart-card">
+                    <div class="dash-chart-card dash-chart-card--indicadores">
                         <div class="dash-chart-card__header">
-                            <h3 class="dash-chart-card__title">Top 5 Clientes por Procesos</h3>
-                            <select class="dash-chart-card__filter" id="filterTopClientes">
-                                <option>Este año</option>
-                                <option>Último trimestre</option>
-                            </select>
+                            <h3 class="dash-chart-card__title">Indicadores del Laboratorio</h3>
                         </div>
                         <div class="dash-chart-card__body">
-                            <div class="dash-top-clients" id="topClientsList">
-                                <div class="dash-top-client">
-                                    <span class="dash-top-client__rank">1</span>
-                                    <div class="dash-top-client__info">
-                                        <span class="dash-top-client__name">Empresa de Energía S.A.S</span>
-                                        <div class="dash-top-client__bar">
-                                            <div class="dash-top-client__fill" style="width: 16%"></div>
-                                        </div>
-                                    </div>
-                                    <span class="dash-top-client__value">58 procesos</span>
-                                    <span class="dash-top-client__pct">16%</span>
-                                </div>
-                                <div class="dash-top-client">
-                                    <span class="dash-top-client__rank">2</span>
-                                    <div class="dash-top-client__info">
-                                        <span class="dash-top-client__name">Industrias Eléctricas Ltda</span>
-                                        <div class="dash-top-client__bar">
-                                            <div class="dash-top-client__fill" style="width: 12%"></div>
-                                        </div>
-                                    </div>
-                                    <span class="dash-top-client__value">42 procesos</span>
-                                    <span class="dash-top-client__pct">12%</span>
-                                </div>
-                                <div class="dash-top-client">
-                                    <span class="dash-top-client__rank">3</span>
-                                    <div class="dash-top-client__info">
-                                        <span class="dash-top-client__name">Constructora del Norte S.A.S</span>
-                                        <div class="dash-top-client__bar">
-                                            <div class="dash-top-client__fill" style="width: 11%"></div>
-                                        </div>
-                                    </div>
-                                    <span class="dash-top-client__value">38 procesos</span>
-                                    <span class="dash-top-client__pct">11%</span>
-                                </div>
-                                <div class="dash-top-client">
-                                    <span class="dash-top-client__rank">4</span>
-                                    <div class="dash-top-client__info">
-                                        <span class="dash-top-client__name">Servicios Ambientales S.A.S</span>
-                                        <div class="dash-top-client__bar">
-                                            <div class="dash-top-client__fill" style="width: 9%"></div>
-                                        </div>
-                                    </div>
-                                    <span class="dash-top-client__value">32 procesos</span>
-                                    <span class="dash-top-client__pct">9%</span>
-                                </div>
-                                <div class="dash-top-client">
-                                    <span class="dash-top-client__rank">5</span>
-                                    <div class="dash-top-client__info">
-                                        <span class="dash-top-client__name">Ingeniería y Proyectos S.A.S</span>
-                                        <div class="dash-top-client__bar">
-                                            <div class="dash-top-client__fill" style="width: 8%"></div>
-                                        </div>
-                                    </div>
-                                    <span class="dash-top-client__value">28 procesos</span>
-                                    <span class="dash-top-client__pct">8%</span>
-                                </div>
-                            </div>
+                            <div class="dash-indicadores-grid" id="indicadoresGrid"></div>
                         </div>
                     </div>
 
-                    <!-- Indicadores Clave -->
                     <div class="dash-chart-card">
                         <div class="dash-chart-card__header">
-                            <h3 class="dash-chart-card__title">Indicadores Clave</h3>
+                            <h3 class="dash-chart-card__title">\u00daltimas Recepciones</h3>
                         </div>
-                        <div class="dash-chart-card__body">
-                            <div class="dash-kpi-grid">
-                                <div class="dash-kpi">
-                                    <div class="dash-kpi__icon dash-kpi__icon--blue">⏱️</div>
-                                    <div class="dash-kpi__content">
-                                        <span class="dash-kpi__label">Tiempo Promedio</span>
-                                        <span class="dash-kpi__value">5.2 días</span>
-                                        <span class="dash-kpi__sub">Respuesta a solicitud</span>
-                                        <span class="dash-kpi__trend dash-kpi__trend--up">↑ 8% vs mes anterior</span>
-                                    </div>
-                                </div>
-                                <div class="dash-kpi">
-                                    <div class="dash-kpi__icon dash-kpi__icon--green">📊</div>
-                                    <div class="dash-kpi__content">
-                                        <span class="dash-kpi__label">Cumplimiento</span>
-                                        <span class="dash-kpi__value">92%</span>
-                                        <span class="dash-kpi__sub">Entregas a Tiempo</span>
-                                        <span class="dash-kpi__trend dash-kpi__trend--up">↑ 4% vs mes anterior</span>
-                                    </div>
-                                </div>
-                                <div class="dash-kpi">
-                                    <div class="dash-kpi__icon dash-kpi__icon--red">❌</div>
-                                    <div class="dash-kpi__content">
-                                        <span class="dash-kpi__label">Tasa de Rechazo</span>
-                                        <span class="dash-kpi__value">3.1%</span>
-                                        <span class="dash-kpi__sub">Este mes</span>
-                                        <span class="dash-kpi__trend dash-kpi__trend--down">↓ 1.2% vs mes anterior</span>
-                                    </div>
-                                </div>
-                                <div class="dash-kpi">
-                                    <div class="dash-kpi__icon dash-kpi__icon--purple">⭐</div>
-                                    <div class="dash-kpi__content">
-                                        <span class="dash-kpi__label">Satisfacción Clientes</span>
-                                        <span class="dash-kpi__value">4.7 / 5</span>
-                                        <span class="dash-kpi__sub">Calificación promedio</span>
-                                        <span class="dash-kpi__trend dash-kpi__trend--up">↑ 3% vs mes anterior</span>
-                                    </div>
-                                </div>
-                                <div class="dash-kpi">
-                                    <div class="dash-kpi__icon dash-kpi__icon--teal">🏆</div>
-                                    <div class="dash-kpi__content">
-                                        <span class="dash-kpi__label">Ensayos Acreditados</span>
-                                        <span class="dash-kpi__value">142</span>
-                                        <span class="dash-kpi__sub">Este mes</span>
-                                        <span class="dash-kpi__trend dash-kpi__trend--up">↑ 18% vs mes anterior</span>
-                                    </div>
-                                </div>
-                                <div class="dash-kpi">
-                                    <div class="dash-kpi__icon dash-kpi__icon--orange">📋</div>
-                                    <div class="dash-kpi__content">
-                                        <span class="dash-kpi__label">Ensayos No Acreditados</span>
-                                        <span class="dash-kpi__value">72</span>
-                                        <span class="dash-kpi__sub">Este mes</span>
-                                        <span class="dash-kpi__trend dash-kpi__trend--down">↓ 5% vs mes anterior</span>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="dash-chart-card__body dash-chart-card__body--table">
+                            <div class="dash-recepciones-table" id="recepcionesTable"></div>
                         </div>
+                        <div class="dash-chart-card__footer"><a href="#" class="dash-chart-card__link" id="verTodasRecepciones">Ver todas las recepciones</a></div>
                     </div>
                 </div>
 
-                <!-- Summary Footer Bar -->
-                <div class="dash-summary-bar">
-                    <div class="dash-summary-bar__title">Resumen General del Período</div>
-                    <div class="dash-summary-bar__stats">
-                        <div class="dash-summary-stat">
-                            <span class="dash-summary-stat__value">356</span>
-                            <span class="dash-summary-stat__label">Procesos totales</span>
+                <!-- Flow Summary Row -->
+                <div class="dash-flow-row">
+                    <div class="dash-flow-card">
+                        <div class="dash-flow-card__icon dash-flow-card__icon--blue">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
                         </div>
-                        <div class="dash-summary-stat">
-                            <span class="dash-summary-stat__value">214</span>
-                            <span class="dash-summary-stat__label">Ensayos realizados</span>
-                        </div>
-                        <div class="dash-summary-stat">
-                            <span class="dash-summary-stat__value">98</span>
-                            <span class="dash-summary-stat__label">Informes generados</span>
-                        </div>
-                        <div class="dash-summary-stat">
-                            <span class="dash-summary-stat__value">46</span>
-                            <span class="dash-summary-stat__label">Cotizaciones creadas</span>
-                        </div>
-                        <div class="dash-summary-stat">
-                            <span class="dash-summary-stat__value">128</span>
-                            <span class="dash-summary-stat__label">Clientes activos</span>
-                        </div>
-                        <div class="dash-summary-stat">
-                            <span class="dash-summary-stat__value">$24.850.000</span>
-                            <span class="dash-summary-stat__label">Ingresos totales</span>
-                        </div>
+                        <div class="dash-flow-card__value" id="flowRecibidos">0</div>
+                        <div class="dash-flow-card__label">Recibidos</div>
                     </div>
+                    <div class="dash-flow-separator">\u2192</div>
+                    <div class="dash-flow-card">
+                        <div class="dash-flow-card__icon dash-flow-card__icon--orange">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        </div>
+                        <div class="dash-flow-card__value" id="flowInforme">0</div>
+                        <div class="dash-flow-card__label">Informe</div>
+                    </div>
+                    <div class="dash-flow-separator">\u2192</div>
+                    <div class="dash-flow-card">
+                        <div class="dash-flow-card__icon dash-flow-card__icon--teal">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                        </div>
+                        <div class="dash-flow-card__value" id="flowEntrega">0</div>
+                        <div class="dash-flow-card__label">Entrega</div>
+                    </div>
+                    <div class="dash-flow-separator">\u2192</div>
+                    <div class="dash-flow-card">
+                        <div class="dash-flow-card__icon dash-flow-card__icon--emerald">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        </div>
+                        <div class="dash-flow-card__value" id="flowFinalizado">0</div>
+                        <div class="dash-flow-card__label">Finalizado</div>
+                    </div>
+                </div>
+                <div class="dash-flow-subtitle">Flujo de procesos del per\u00edodo</div>
+
+                <!-- Footer -->
+                <div class="dash-footer">
+                    <span id="dashLastUpdate">Datos actualizados al --</span>
                 </div>
             </div>
 
@@ -3120,6 +3011,12 @@
         }
 
         /* ===== DASHBOARD ===== */
+        #view-dashboard {
+            background: #f3f4f6;
+            min-height: 100vh;
+            padding-bottom: 1rem;
+        }
+
         .dashboard-welcome {
             display: flex;
             justify-content: space-between;
@@ -4032,9 +3929,12 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1.25rem;
-            padding-bottom: 0.8rem;
+            margin-bottom: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: #fff;
             border-bottom: 1px solid #e5e7eb;
+            border-radius: 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         }
 
         .dash-header__left {
@@ -4043,7 +3943,7 @@
         }
 
         .dash-header__title {
-            font-size: 1.35rem;
+            font-size: 1.15rem;
             font-weight: 700;
             color: #111827;
             margin: 0;
@@ -4093,22 +3993,23 @@
         }
 
         .dash-export-btn {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 0.4rem;
-            padding: 0.5rem 1rem;
-            background: #3b82f6;
+            padding: 0.55rem 1.1rem;
+            background: #2563eb;
             color: #fff;
             border: none;
-            border-radius: 6px;
-            font-size: 0.8rem;
+            border-radius: 8px;
+            font-size: 0.78rem;
             font-weight: 600;
             cursor: pointer;
+            white-space: nowrap;
             transition: background 0.2s;
         }
 
         .dash-export-btn:hover {
-            background: #2563eb;
+            background: #1d4ed8;
         }
 
         .dash-export-btn svg {
@@ -4119,99 +4020,124 @@
         .dash-stats-row {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
-            gap: 0.75rem;
-            margin-bottom: 1.25rem;
+            gap: 0.6rem;
+            margin-bottom: 1rem;
+            padding: 0 0.25rem;
         }
 
         .dash-stat-card {
             background: #fff;
             border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 0.9rem;
+            border-radius: 14px;
+            padding: 14px 16px;
             display: flex;
             flex-direction: column;
             position: relative;
             overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            animation: fadeInUp 0.3s ease both;
+        }
+
+        .dash-stat-card:nth-child(1) { animation-delay: 0ms; }
+        .dash-stat-card:nth-child(2) { animation-delay: 50ms; }
+        .dash-stat-card:nth-child(3) { animation-delay: 100ms; }
+        .dash-stat-card:nth-child(4) { animation-delay: 150ms; }
+        .dash-stat-card:nth-child(5) { animation-delay: 200ms; }
+        .dash-stat-card:nth-child(6) { animation-delay: 250ms; }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .dash-stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08), 0 4px 10px rgba(0,0,0,0.04);
         }
 
         .dash-stat-card__icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 0.6rem;
+            flex-shrink: 0;
         }
 
         .dash-stat-card__icon svg {
-            width: 18px;
-            height: 18px;
+            width: 22px;
+            height: 22px;
         }
 
         .dash-stat-card__icon--blue { background: #eff6ff; color: #3b82f6; }
         .dash-stat-card__icon--green { background: #f0fdf4; color: #22c55e; }
-        .dash-stat-card__icon--purple { background: #faf5ff; color: #a855f7; }
-        .dash-stat-card__icon--orange { background: #fff7ed; color: #f97316; }
-        .dash-stat-card__icon--teal { background: #f0fdfa; color: #14b8a6; }
-        .dash-stat-card__icon--emerald { background: #ecfdf5; color: #10b981; }
+        .dash-stat-card__icon--purple { background: #f5f3ff; color: #7c3aed; }
+        .dash-stat-card__icon--orange { background: #fff7ed; color: #ea580c; }
+        .dash-stat-card__icon--teal { background: #fefce8; color: #ca8a04; }
+        .dash-stat-card__icon--emerald { background: #ecfdf5; color: #059669; }
+
+        .dash-stat-card__top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
 
         .dash-stat-card__content {
             display: flex;
             flex-direction: column;
-        }
-
-        .dash-stat-card__value {
-            font-size: 1.35rem;
-            font-weight: 700;
-            color: #111827;
-            line-height: 1.2;
+            min-width: 0;
+            width: 100%;
         }
 
         .dash-stat-card__label {
-            font-size: 0.7rem;
+            font-size: 12px;
             color: #6b7280;
-            margin-top: 0.15rem;
+            font-weight: 500;
+            margin-bottom: 2px;
+            line-height: 1.3;
+        }
+
+        .dash-stat-card__value {
+            font-size: 26px;
+            font-weight: 700;
+            color: #111827;
+            line-height: 1.1;
+            margin-bottom: 2px;
+            letter-spacing: -0.5px;
         }
 
         .dash-stat-card__trend {
-            font-size: 0.6rem;
-            margin-top: 0.35rem;
+            font-size: 11px;
             font-weight: 500;
         }
 
         .dash-stat-card__trend--up { color: #16a34a; }
         .dash-stat-card__trend--down { color: #dc2626; }
 
-        .dash-stat-card__sparkline {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 70px;
-            height: 35px;
-            opacity: 0.3;
-        }
-
         /* Charts Row */
         .dash-charts-row {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1.25rem;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            padding: 0 0.25rem;
         }
 
         .dash-chart-card {
             background: #fff;
             border: 1px solid #e5e7eb;
             border-radius: 10px;
-            padding: 0.9rem;
+            padding: 0.85rem;
         }
 
         .dash-chart-card__header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
         }
 
         .dash-chart-card__title {
@@ -4300,9 +4226,10 @@
         /* Bottom Row */
         .dash-bottom-row {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1.25rem;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+            padding: 0 0.5rem;
         }
 
         /* Activity List */
@@ -4354,9 +4281,7 @@
             font-size: 0.65rem;
             color: #6b7280;
             display: block;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            word-break: break-word;
         }
 
         .dash-activity-item__time {
@@ -4500,14 +4425,15 @@
         .dash-summary-bar {
             background: linear-gradient(135deg, #1e3a5f 0%, #0f2440 100%);
             border-radius: 10px;
-            padding: 1rem 1.5rem;
+            padding: 0.85rem 1.25rem;
             color: #fff;
+            margin: 0 0.25rem 0.75rem;
         }
 
         .dash-summary-bar__title {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 600;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
             opacity: 0.9;
         }
 
@@ -4532,13 +4458,271 @@
             opacity: 0.8;
         }
 
+        /* Chart Card Footer */
+        .dash-chart-card__footer {
+            margin-top: 0.75rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid #f3f4f6;
+            font-size: 0.7rem;
+            color: #6b7280;
+            text-align: center;
+        }
+
+        .dash-chart-card__link {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .dash-chart-card__link:hover {
+            text-decoration: underline;
+        }
+
+        /* Filter Select */
+        .dash-filter-select {
+            padding: 0.4rem 0.8rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: #374151;
+            background: #fff;
+            cursor: pointer;
+        }
+
+        /* 2-column charts row */
+        .dash-charts-row--2col {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        /* 4-column custom layout */
+        .dash-charts-row--3col-custom {
+            grid-template-columns: 1fr 1fr 1.2fr;
+        }
+
+        .dash-chart-col-stacked {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        /* 1-column charts row */
+        .dash-charts-row--1col {
+            grid-template-columns: 1fr;
+        }
+
+        /* Top 10 Table */
+        .dash-top10-table {
+            font-size: 0.72rem;
+        }
+
+        .dash-top10-table__header {
+            display: grid;
+            grid-template-columns: 30px 1fr 70px 80px;
+            gap: 0.5rem;
+            padding: 0.4rem 0.5rem;
+            border-bottom: 2px solid #e5e7eb;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .dash-top10-table__row {
+            display: grid;
+            grid-template-columns: 30px 1fr 70px 80px;
+            gap: 0.5rem;
+            padding: 0.4rem 0.5rem;
+            border-bottom: 1px solid #f3f4f6;
+            align-items: center;
+        }
+
+        .dash-top10-table__row:hover {
+            background: #f9fafb;
+        }
+
+        .dash-top10-table__rank {
+            font-weight: 600;
+            color: #9ca3af;
+        }
+
+        .dash-top10-table__name {
+            color: #111827;
+            word-break: break-word;
+        }
+
+        .dash-top10-table__num {
+            text-align: right;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        /* Recepciones Table */
+        .dash-recepciones-table {
+            font-size: 0.72rem;
+        }
+
+        .dash-recepciones-table__header {
+            display: grid;
+            grid-template-columns: 90px 1fr 80px 80px 60px;
+            gap: 0.4rem;
+            padding: 0.4rem 0.5rem;
+            border-bottom: 2px solid #e5e7eb;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .dash-recepciones-table__row {
+            display: grid;
+            grid-template-columns: 90px 1fr 80px 80px 60px;
+            gap: 0.4rem;
+            padding: 0.4rem 0.5rem;
+            border-bottom: 1px solid #f3f4f6;
+            align-items: center;
+        }
+
+        .dash-recepciones-table__row:hover {
+            background: #f9fafb;
+        }
+
+        .dash-recepciones-table__badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.65rem;
+            font-weight: 500;
+        }
+
+        .dash-recepciones-table__badge--recepcion { background: #dbeafe; color: #1d4ed8; }
+        .dash-recepciones-table__badge--lavado { background: #ede9fe; color: #7c3aed; }
+        .dash-recepciones-table__badge--ensayo { background: #fef3c7; color: #d97706; }
+        .dash-recepciones-table__badge--informe { background: #fce7f3; color: #db2777; }
+        .dash-recepciones-table__badge--entrega { background: #d1fae5; color: #059669; }
+        .dash-recepciones-table__badge--finalizado { background: #f3f4f6; color: #4b5563; }
+
+        /* Indicadores del Laboratorio */
+        .dash-indicadores-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .dash-indicador {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+
+        .dash-indicador__icon {
+            font-size: 1.3rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .dash-indicador__value {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #111827;
+            display: block;
+            line-height: 1.2;
+        }
+
+        .dash-indicador__value--small {
+            font-size: 0.75rem;
+        }
+
+        .dash-indicador__label {
+            font-size: 0.6rem;
+            color: #6b7280;
+            margin-top: 0.15rem;
+        }
+
+        .dash-indicador--full {
+            grid-column: 1 / -1;
+        }
+
+        /* Flow Row */
+        .dash-flow-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 1rem 0.5rem 0.25rem;
+            padding: 1rem;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+        }
+
+        .dash-flow-card {
+            text-align: center;
+            padding: 0.6rem 1.2rem;
+            background: #f9fafb;
+            border-radius: 8px;
+            min-width: 80px;
+        }
+
+        .dash-flow-card__icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 0.3rem;
+        }
+
+        .dash-flow-card__icon--blue { background: #dbeafe; color: #2563eb; }
+        .dash-flow-card__icon--orange { background: #ffedd5; color: #ea580c; }
+        .dash-flow-card__icon--teal { background: #ccfbf1; color: #0d9488; }
+        .dash-flow-card__icon--emerald { background: #d1fae5; color: #059669; }
+
+        .dash-flow-card__value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .dash-flow-card__label {
+            font-size: 0.65rem;
+            color: #6b7280;
+        }
+
+        .dash-flow-separator {
+            font-size: 1.2rem;
+            color: #d1d5db;
+        }
+
+        .dash-flow-subtitle {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #9ca3af;
+            margin-bottom: 1rem;
+        }
+
+        /* Dashboard Footer */
+        .dash-footer {
+            text-align: center;
+            padding: 0.75rem;
+            font-size: 0.7rem;
+            color: #9ca3af;
+        }
+
         /* Responsive */
         @media (max-width: 1200px) {
             .dash-stats-row {
                 grid-template-columns: repeat(3, 1fr);
             }
-            .dash-charts-row,
-            .dash-bottom-row {
+            .dash-charts-row {
+                grid-template-columns: 1fr;
+            }
+            .dash-charts-row--2col {
+                grid-template-columns: 1fr;
+            }
+            .dash-charts-row--3col-custom {
+                grid-template-columns: 1fr 1fr;
+            }
+            .dash-chart-col-stacked {
+                grid-column: span 2;
+            }
+            .dash-charts-row--1col {
                 grid-template-columns: 1fr;
             }
             .dash-summary-bar__stats {
@@ -4553,12 +4737,19 @@
             .dash-header__right {
                 width: 100%;
                 justify-content: flex-start;
+                flex-wrap: wrap;
+            }
+            .dash-flow-row {
+                flex-wrap: wrap;
             }
         }
 
         @media (max-width: 768px) {
             .dash-stats-row {
                 grid-template-columns: repeat(2, 1fr);
+            }
+            .dash-stat-card__value {
+                font-size: 26px;
             }
             .dash-kpi-grid {
                 grid-template-columns: 1fr;
@@ -4568,6 +4759,15 @@
             }
             .dash-date-picker__input {
                 width: 130px;
+            }
+            .dash-indicadores-grid {
+                grid-template-columns: 1fr;
+            }
+            .dash-charts-row--3col-custom {
+                grid-template-columns: 1fr;
+            }
+            .dash-chart-col-stacked {
+                grid-column: span 1;
             }
         }
 
@@ -6207,6 +6407,28 @@
         </div>
     </div>
 
+    <!-- Modal Todos los Elementos -->
+    <div id="modalAllElements" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;overflow-y:auto;">
+        <div style="background:white;margin:40px auto;max-width:700px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.25);">
+            <div style="padding:20px;border-bottom:2px solid #3b82f6;display:flex;justify-content:space-between;align-items:center;">
+                <h2 style="margin:0;font-size:18px;">Todos los Elementos</h2>
+                <button type="button" style="background:none;border:none;font-size:24px;cursor:pointer;" onclick="document.getElementById('modalAllElements').style.display='none'">✕</button>
+            </div>
+            <div id="modalAllElementsContent" style="padding:20px;max-height:70vh;overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <!-- Modal Todas las Categorías -->
+    <div id="modalAllCategorias" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;overflow-y:auto;">
+        <div style="background:white;margin:40px auto;max-width:700px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.25);">
+            <div style="padding:20px;border-bottom:2px solid #8b5cf6;display:flex;justify-content:space-between;align-items:center;">
+                <h2 style="margin:0;font-size:18px;">Todas las Categorías</h2>
+                <button type="button" style="background:none;border:none;font-size:24px;cursor:pointer;" onclick="document.getElementById('modalAllCategorias').style.display='none'">✕</button>
+            </div>
+            <div id="modalAllCategoriasContent" style="padding:20px;max-height:70vh;overflow-y:auto;"></div>
+        </div>
+    </div>
+
     <!-- jsPDF para generación de PDFs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- script.js de recepcion-items para generatePDFFromCase -->
@@ -6216,7 +6438,9 @@
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="../script-v2.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script src="../admin.js"></script>
+    <script src="admin-dashboard.js"></script>
 
     <!-- SIDEBAR NAVIGATION -->
     <script>
@@ -6240,6 +6464,9 @@
             }
 
             // Cargar datos según la sección
+            if (section === 'dashboard' && window.DashboardModule) {
+                window.DashboardModule.loadStats();
+            }
             if (section === 'clientes' && window.AdminPanelManager) {
                 window.AdminPanelManager.loadClientes();
             }
@@ -6379,141 +6606,8 @@
                 dashDateRange.value = `${day}/${month}/${year} - ${lastDay}/${month}/${year}`;
             }
 
-            // ============================================
-            // DASHBOARD CHARTS - Chart.js
-            // ============================================
-            initDashboardCharts();
+            // Dashboard charts are now managed by admin-dashboard.js (DashboardModule)
         });
-
-        function initDashboardCharts() {
-            // Colores del dashboard
-            const colors = {
-                blue: '#3b82f6',
-                green: '#22c55e',
-                purple: '#a855f7',
-                orange: '#f97316',
-                teal: '#14b8a6',
-                red: '#ef4444',
-                gray: '#6b7280'
-            };
-
-            // 1. Gráfico de Evolución de Procesos (Line Chart)
-            const ctxEvolucion = document.getElementById('chartEvolucion');
-            if (ctxEvolucion) {
-                new Chart(ctxEvolucion, {
-                    type: 'line',
-                    data: {
-                        labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
-                        datasets: [{
-                            label: 'Procesos',
-                            data: [30, 45, 35, 50, 42, 60, 55, 70, 65, 80, 75, 90],
-                            borderColor: colors.blue,
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            fill: true,
-                            tension: 0.4,
-                            pointRadius: 3,
-                            pointBackgroundColor: colors.blue,
-                            borderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                grid: { color: '#f3f4f6' },
-                                ticks: { font: { size: 11 }, color: '#6b7280' }
-                            },
-                            x: {
-                                grid: { display: false },
-                                ticks: { font: { size: 11 }, color: '#6b7280' }
-                            }
-                        }
-                    }
-                });
-            }
-
-            // 2. Gráfico de Procesos por Estado (Doughnut)
-            const ctxEstado = document.getElementById('chartEstado');
-            if (ctxEstado) {
-                const estadoData = [
-                    { label: 'Completados', value: 152, color: colors.green },
-                    { label: 'En Proceso', value: 98, color: colors.blue },
-                    { label: 'Pendientes', value: 64, color: colors.orange },
-                    { label: 'Cancelados', value: 28, color: colors.red },
-                    { label: 'En Revisión', value: 14, color: colors.purple }
-                ];
-
-                new Chart(ctxEstado, {
-                    type: 'doughnut',
-                    data: {
-                        labels: estadoData.map(d => d.label),
-                        datasets: [{
-                            data: estadoData.map(d => d.value),
-                            backgroundColor: estadoData.map(d => d.color),
-                            borderWidth: 0,
-                            hoverOffset: 4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        cutout: '70%',
-                        plugins: { legend: { display: false } }
-                    }
-                });
-
-                // Renderizar leyenda
-                const legendContainer = document.getElementById('legendEstado');
-                if (legendContainer) {
-                    const total = estadoData.reduce((sum, d) => sum + d.value, 0);
-                    legendContainer.innerHTML = estadoData.map(d => {
-                        const pct = Math.round((d.value / total) * 100);
-                        return `
-                            <div class="dash-legend-item">
-                                <span class="dash-legend-item__color" style="background:${d.color}"></span>
-                                <span class="dash-legend-item__label">${d.label} (${pct}%)</span>
-                            </div>
-                        `;
-                    }).join('');
-                }
-            }
-
-            // 3. Gráfico de Ensayos por Tipo (Bar)
-            const ctxTipo = document.getElementById('chartTipo');
-            if (ctxTipo) {
-                new Chart(ctxTipo, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Eléctricos', 'Mecánicos', 'Ambientales', 'Otros', 'Calibración'],
-                        datasets: [{
-                            data: [92, 58, 34, 20, 10],
-                            backgroundColor: [colors.blue, colors.green, colors.teal, colors.purple, colors.orange],
-                            borderRadius: 6,
-                            barThickness: 32
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                grid: { color: '#f3f4f6' },
-                                ticks: { font: { size: 11 }, color: '#6b7280' }
-                            },
-                            x: {
-                                grid: { display: false },
-                                ticks: { font: { size: 11 }, color: '#6b7280' }
-                            }
-                        }
-                    }
-                });
-            }
-        }
     </script>
 
     <!-- USUARIOS PANEL -->

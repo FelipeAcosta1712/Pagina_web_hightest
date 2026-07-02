@@ -7544,7 +7544,6 @@ async function guardarDetalleProceso(procesoId) {
                         detalle.push({
                             proceso_id: procesoId,
                             ensayo_id: ensayoId,
-                            ensayo_nombre: ensayo?.nombre || '',
                             cantidad,
                             marca: marca || '',
                             observaciones: obs || ''
@@ -7557,7 +7556,6 @@ async function guardarDetalleProceso(procesoId) {
                     detalle.push({
                         proceso_id: procesoId,
                         ensayo_id: ensayoId,
-                        ensayo_nombre: ensayo?.nombre || '',
                         cantidad,
                         marca: '',
                         observaciones: obs || ''

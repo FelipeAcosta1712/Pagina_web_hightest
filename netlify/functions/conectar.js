@@ -2228,6 +2228,439 @@ exports.handler = async (event) => {
                 });
             }
 
+            // =============================================
+            // DASHBOARD - Estadísticas generales
+            // =============================================
+            if (payload.action === 'get_dashboard_stats') {
+                try {
+                    const [clientesRes, procesosRes, cotizacionesRes, informesRes, ensayosRes, marcacionesRes] = await Promise.all([
+                        supabase.from('clientes').select('id, created_at'),
+                        supabase.from('procesos_acreditados').select('*'),
+                        supabase.from('cotizaciones_ac').select('id, cliente, estado, total_valor, created_at, cotizacion'),
+                        supabase.from('informes_ensayo_ac').select('id, proceso_id, created_at, activo'),
+                        supabase.from('ensayos_acreditados').select('id, nombre, categoria'),
+                        supabase.from('marcaciones_ac').select('id, proceso_id, estado')
+                    ]);
+
+                    const clientes = clientesRes.data || [];
+                    const procesos = procesosRes.data || [];
+                    const cotizaciones = cotizacionesRes.data || [];
+                    const informes = informesRes.data || [];
+                    const ensayos = ensayosRes.data || [];
+                    const marcaciones = marcacionesRes.data || [];
+
+                    // ── KPIs principales ──
+                    const totalProcesos = procesos.length;
+                    const totalClientes = clientes.length;
+                    const totalCotizaciones = cotizaciones.length;
+                    const totalInformes = informes.length;
+                    const totalEnsayos = ensayos.length;
+
+                    // Unidades Recibidas (SUM detalle_procesos_ac.cantidad)
+                    let unidadesRecibidas = 0;
+                    try {
+                        const { data: detalleAll } = await supabase.from('detalle_procesos_ac').select('cantidad');
+                        if (Array.isArray(detalleAll)) {
+                            unidadesRecibidas = detalleAll.reduce((sum, d) => sum + (parseInt(d.cantidad) || 0), 0);
+                        }
+                    } catch (_) {}
+
+                    // Informes Generados (procesos con n_informe válido)
+                    const informesGenerados = procesos.filter(p => {
+                        const n = (p.n_informe || '').trim();
+                        return n && n !== '-' && n !== '—';
+                    }).length;
+
+                    // Clientes Atendidos (COUNT DISTINCT cliente)
+                    const clientesSet = new Set();
+                    procesos.forEach(p => {
+                        const c = (p.cliente || '').trim();
+                        if (c && c !== '-' && c !== '—') clientesSet.add(c);
+                    });
+                    const clientesAtendidos = clientesSet.size;
+
+                    // Procesos Finalizados
+                    const procesosFinalizados = procesos.filter(p => (p.estado || '').trim().toLowerCase() === 'finalizado').length;
+                    const procesosActivos = totalProcesos - procesosFinalizados;
+
+                    // ── Recepciones por Mes ──
+                    const recepcionesPorMes = {};
+                    procesos.forEach(p => {
+                        if (p.fecha_recepcion) {
+                            const fecha = new Date(p.fecha_recepcion);
+                            const key = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+                            recepcionesPorMes[key] = (recepcionesPorMes[key] || 0) + 1;
+                        }
+                    });
+
+                    // ── Procesos por Estado ──
+                    const procesosPorEstado = {};
+                    procesos.forEach(p => {
+                        const estado = (p.estado || 'Sin estado').trim();
+                        procesosPorEstado[estado] = (procesosPorEstado[estado] || 0) + 1;
+                    });
+
+                    // ── Cotizaciones por estado ──
+                    const cotizacionesPorEstado = {};
+                    cotizaciones.forEach(c => {
+                        const estado = (c.estado || 'borrador').trim();
+                        cotizacionesPorEstado[estado] = (cotizacionesPorEstado[estado] || 0) + 1;
+                    });
+                    const valorTotalCotizado = cotizaciones.reduce((sum, c) => sum + (parseFloat(c.total_valor) || 0), 0);
+
+                    // ── Top 10 elementos más recibidos (desde detalle_procesos_ac) ──
+                    const { data: detalleElementos } = await supabase
+                        .from('detalle_procesos_ac')
+                        .select('cantidad, proceso_id, ensayos_acreditados(nombre)');
+                    const elementosPorCantidad = {};
+                    const elementoRecepciones = {};
+                    (detalleElementos || []).forEach(d => {
+                        const nombre = (d.ensayos_acreditados?.nombre || '').trim();
+                        if (!nombre || nombre === '-') return;
+                        const cant = parseInt(d.cantidad) || 0;
+                        elementosPorCantidad[nombre] = (elementosPorCantidad[nombre] || 0) + cant;
+                        if (!elementoRecepciones[nombre]) elementoRecepciones[nombre] = new Set();
+                        elementoRecepciones[nombre].add(d.proceso_id);
+                    });
+                    const topEnsayos = Object.entries(elementosPorCantidad)
+                        .map(([nombre, count]) => ({ nombre, count, recepciones: elementoRecepciones[nombre]?.size || 0 }))
+                        .sort((a, b) => b.count - a.count)
+                        .slice(0, 10);
+
+                    // ── Elementos por Categoría ──
+                    const { data: detalleConEnsayo } = await supabase
+                        .from('detalle_procesos_ac')
+                        .select('cantidad, ensayos_acreditados(categoria)');
+                    const categoriaUnidades = {};
+                    (detalleConEnsayo || []).forEach(d => {
+                        const cat = d.ensayos_acreditados?.categoria || 'Otros';
+                        const cant = parseInt(d.cantidad) || 0;
+                        categoriaUnidades[cat] = (categoriaUnidades[cat] || 0) + cant;
+                    });
+                    const totalUnidadesCat = Object.values(categoriaUnidades).reduce((a, b) => a + b, 0) || 1;
+                    const elementosPorCategoria = Object.entries(categoriaUnidades)
+                        .map(([nombre, unidades]) => ({ nombre, unidades, porcentaje: Math.round((unidades / totalUnidadesCat) * 100) }))
+                        .sort((a, b) => b.unidades - a.unidades);
+
+                    // ── Top 5 Clientes por Unidades Recibidas ──
+                    const { data: detalleConProceso } = await supabase
+                        .from('detalle_procesos_ac')
+                        .select('cantidad, proceso_id, procesos_acreditados(cliente)');
+                    const clienteUnidades = {};
+                    (detalleConProceso || []).forEach(d => {
+                        const cliente = (d.procesos_acreditados?.cliente || '').trim();
+                        if (!cliente || cliente === '-' || cliente === '—') return;
+                        clienteUnidades[cliente] = (clienteUnidades[cliente] || 0) + (parseInt(d.cantidad) || 0);
+                    });
+                    const topClientesUnidades = Object.entries(clienteUnidades)
+                        .map(([nombre, unidades]) => ({ nombre, unidades }))
+                        .sort((a, b) => b.unidades - a.unidades)
+                        .slice(0, 5);
+
+                    // ── Top clientes por procesos (para la gráfica de barras) ──
+                    const clienteProcesoCount = {};
+                    procesos.forEach(p => {
+                        const cliente = (p.cliente || '').trim();
+                        if (!cliente || cliente === '-' || cliente === '—') return;
+                        clienteProcesoCount[cliente] = (clienteProcesoCount[cliente] || 0) + 1;
+                    });
+                    const topClientes = Object.entries(clienteProcesoCount)
+                        .map(([nombre, count]) => ({ nombre, count }))
+                        .sort((a, b) => b.count - a.count)
+                        .slice(0, 10);
+
+                    // ── Actividad reciente (últimos 6 procesos) ──
+                    const actividadReciente = procesos
+                        .sort((a, b) => (b.fecha_recepcion || '').localeCompare(a.fecha_recepcion || ''))
+                        .slice(0, 6)
+                        .map(p => {
+                            const numero = p.numero_proceso || p.n_remision || p.numero || p.id || '';
+                            const nInf = (p.n_informe || '').trim();
+                            const informeReal = (nInf && nInf !== '-' && nInf !== '—') ? nInf : '';
+                            return {
+                                numero_proceso: numero,
+                                cliente: p.cliente || '',
+                                informe: informeReal,
+                                informe_a_nombre_de: p.informe_a_nombre_de || '',
+                                estado: p.estado || '',
+                                fecha: p.fecha_recepcion || ''
+                            };
+                        });
+
+                    // ── Últimas recepciones (para la tabla) ──
+                    const ultimasRecepciones = procesos
+                        .sort((a, b) => (b.fecha_recepcion || '').localeCompare(a.fecha_recepcion || ''))
+                        .slice(0, 5)
+                        .map(p => {
+                            const num = (p.numero_proceso || '').trim();
+                            const nInf = (p.n_informe || '').trim();
+                            let estado = (p.estado || '').trim();
+                            // Mapear estados a etiquetas legibles
+                            const estadoMap = {
+                                'recepcion': 'Recepción',
+                                'lavado': 'Lavado',
+                                'en-proceso-de-ensayo': 'Ensayo',
+                                'entrega-cliente': 'Entrega',
+                                'informe-de-ensayo': 'Informe',
+                                'finalizado': 'Finalizado'
+                            };
+                            estado = estadoMap[estado.toLowerCase()] || estado;
+                            // Contar elementos de este proceso
+                            const elemCount = (marcaciones || []).filter(m => m.proceso_id === p.id).length;
+                            return {
+                                numero_proceso: num,
+                                cliente: p.cliente || '',
+                                fecha: p.fecha_recepcion || '',
+                                estado,
+                                elementos: elemCount
+                            };
+                        });
+
+                    // ── Indicadores del Laboratorio ──
+                    const elementoMasRecibido = topEnsayos.length > 0 ? { nombre: topEnsayos[0].nombre, unidades: topEnsayos[0].count } : null;
+                    const clienteMasUnidades = topClientesUnidades.length > 0 ? { nombre: topClientesUnidades[0].nombre, unidades: topClientesUnidades[0].unidades } : null;
+                    const recepcionMasReciente = ultimasRecepciones.length > 0 ? ultimasRecepciones[0].numero_proceso : null;
+                    const promedioUnidadesPorRecepcion = totalProcesos > 0 ? Math.round((unidadesRecibidas / totalProcesos) * 10) / 10 : 0;
+
+                    // Tiempo promedio de proceso (días entre fecha_recepcion y fecha_finalizado)
+                    let tiempoPromedioDias = 0;
+                    const procesosConFechas = procesos.filter(p => p.fecha_recepcion && p.fecha_finalizado);
+                    if (procesosConFechas.length > 0) {
+                        const totalDias = procesosConFechas.reduce((sum, p) => {
+                            const inicio = new Date(p.fecha_recepcion);
+                            const fin = new Date(p.fecha_finalizado);
+                            const dias = Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24));
+                            return sum + (dias > 0 ? dias : 0);
+                        }, 0);
+                        tiempoPromedioDias = Math.round((totalDias / procesosConFechas.length) * 10) / 10;
+                    }
+
+                    // ── Flujo de procesos ──
+                    const flujoProcesos = {
+                        recibidos: procesos.filter(p => (p.estado || '').trim().toLowerCase() === 'recepcion').length || totalProcesos,
+                        informe: procesos.filter(p => (p.estado || '').trim().toLowerCase() === 'informe-de-ensayo').length,
+                        entrega: procesos.filter(p => (p.estado || '').trim().toLowerCase() === 'entrega-cliente').length,
+                        finalizado: procesosFinalizados
+                    };
+
+                    // ── Marcaciones resumen ──
+                    const marcacionesResumen = { total: marcaciones.length, marcados: 0, pendientes: 0 };
+                    marcaciones.forEach(m => {
+                        const est = (m.estado || '').toLowerCase();
+                        if (est === 'marcado') marcacionesResumen.marcados++;
+                        else if (est === 'pendiente') marcacionesResumen.pendientes++;
+                    });
+
+                    const informesActivos = informes.filter(i => i.activo).length;
+                    const informesVigentes = new Set(informes.map(i => i.proceso_id)).size;
+
+                    return jsonResponse(200, {
+                        ok: true,
+                        stats: {
+                            totalClientes,
+                            totalProcesos,
+                            totalCotizaciones,
+                            totalInformes,
+                            totalEnsayos,
+                            ingresosMes: procesos.reduce((sum, p) => sum + (parseFloat(p.valor) || 0), 0),
+                            unidadesRecibidas,
+                            informesGenerados,
+                            clientesAtendidos,
+                            procesosFinalizados,
+                            procesosActivos,
+                            recepcionesPorMes,
+                            valorTotalCotizado,
+                            procesosPorEstado,
+                            cotizacionesPorEstado,
+                            topClientes,
+                            topClientesUnidades,
+                            topEnsayos,
+                            allElementos: Object.entries(elementosPorCantidad)
+                                .map(([nombre, count]) => ({ nombre, count, recepciones: elementoRecepciones[nombre]?.size || 0 }))
+                                .sort((a, b) => b.count - a.count),
+                            elementosPorCategoria,
+                            actividadReciente,
+                            ultimasRecepciones,
+                            elementoMasRecibido,
+                            clienteMasUnidades,
+                            recepcionMasReciente,
+                            promedioUnidadesPorRecepcion,
+                            tiempoPromedioDias,
+                            flujoProcesos,
+                            marcacionesResumen,
+                            informesActivos,
+                            informesVigentes
+                        }
+                    });
+                } catch (err) {
+                    return jsonResponse(500, { ok: false, error: 'Error obteniendo stats: ' + err.message });
+                }
+            }
+
+            // ── REPARACIÓN: Reconstruir detalle_procesos_ac desde borradores ──
+            if (payload.action === 'repair_detalle_procesos') {
+                const log = [];
+                const stats = { procesosReconstruidos: 0, procesosOmitidos: 0, registrosInsertados: 0, elementosSinCoincidencia: [] };
+
+                try {
+                    // 1. Obtener todos los procesos
+                    const { data: procesos, error: errProcesos } = await supabase
+                        .from('procesos_acreditados')
+                        .select('id, numero_proceso, cliente');
+                    if (errProcesos) return jsonResponse(500, { ok: false, error: 'Error leyendo procesos: ' + errProcesos.message });
+
+                    // 2. Obtener procesos que YA tienen detalle
+                    const { data: conDetalle } = await supabase
+                        .from('detalle_procesos_ac')
+                        .select('proceso_id');
+                    const idsConDetalle = new Set((conDetalle || []).map(d => d.proceso_id));
+
+                    // 3. Filtrar solo procesos sin detalle
+                    const sinDetalle = (procesos || []).filter(p => !idsConDetalle.has(p.id));
+                    log.push(`Procesos totales: ${(procesos || []).length}`);
+                    log.push(`Ya tienen detalle: ${idsConDetalle.size}`);
+                    log.push(`Sin detalle (candidatos): ${sinDetalle.length}`);
+
+                    if (sinDetalle.length === 0) {
+                        return jsonResponse(200, { ok: true, message: 'No hay procesos sin detalle', stats, log });
+                    }
+
+                    // 4. Obtener todos los borradores
+                    const { data: borrRows } = await supabase
+                        .from('borradores')
+                        .select('datos');
+                    const allDrafts = [];
+                    if (Array.isArray(borrRows)) {
+                        borrRows.forEach(row => {
+                            if (Array.isArray(row.datos)) {
+                                row.datos.forEach(d => {
+                                    if (!allDrafts.some(x => JSON.stringify(x) === JSON.stringify(d))) {
+                                        allDrafts.push(d);
+                                    }
+                                });
+                            }
+                        });
+                    }
+                    log.push(`Borradores disponibles: ${allDrafts.length}`);
+
+                    // 5. Obtener catálogo de ensayos (nombre → id)
+                    const { data: ensayos } = await supabase
+                        .from('ensayos_acreditados')
+                        .select('id, nombre');
+                    const ensayoMap = {};
+                    (ensayos || []).forEach(e => {
+                        const key = (e.nombre || '').trim().toLowerCase();
+                        if (key) ensayoMap[key] = e.id;
+                    });
+                    log.push(`Ensayos en catálogo: ${(ensayos || []).length}`);
+
+                    // 6. Para cada proceso sin detalle, buscar borrador y reconstruir
+                    for (const proceso of sinDetalle) {
+                        const numProceso = (proceso.numero_proceso || '').trim();
+
+                        // Buscar borrador por cotizacion/numero_proceso
+                        const borrador = allDrafts.find(d => {
+                            const cot = String(d.cotizacion || d.quoteNumber || '').trim();
+                            return cot === numProceso;
+                        });
+
+                        if (!borrador) {
+                            log.push(`⚠ ${numProceso}: sin borrador encontrado`);
+                            stats.procesosOmitidos++;
+                            continue;
+                        }
+
+                        const items = Array.isArray(borrador.items) ? borrador.items : [];
+                        if (items.length === 0) {
+                            log.push(`⚠ ${numProceso}: borrador sin items`);
+                            stats.procesosOmitidos++;
+                            continue;
+                        }
+
+                        const detalleInsert = [];
+
+                        for (const item of items) {
+                            const nombre = (item.name || '').trim();
+                            const ensayoId = ensayoMap[nombre.toLowerCase()];
+
+                            if (!ensayoId) {
+                                log.push(`⚠ ${numProceso}: elemento "${nombre}" sin coincidencia en ensayos_acreditados`);
+                                stats.elementosSinCoincidencia.push({ proceso: numProceso, elemento: nombre });
+                                continue;
+                            }
+
+                            // Si tiene brandSummary, crear un registro por marca
+                            const brandSummary = Array.isArray(item.brandSummary) ? item.brandSummary : [];
+                            if (brandSummary.length > 0) {
+                                for (const bs of brandSummary) {
+                                    const cantidad = parseInt(bs.count) || 0;
+                                    if (cantidad > 0) {
+                                        detalleInsert.push({
+                                            proceso_id: proceso.id,
+                                            ensayo_id: ensayoId,
+                                            cantidad,
+                                            marca: bs.brand || '',
+                                            observaciones: item.observaciones || '',
+                                            marcacion: 'Pendiente'
+                                        });
+                                    }
+                                }
+                            } else {
+                                // Sin brandSummary: crear un registro con la cantidad total
+                                const cantidad = parseInt(item.quantity) || 0;
+                                if (cantidad > 0) {
+                                    detalleInsert.push({
+                                        proceso_id: proceso.id,
+                                        ensayo_id: ensayoId,
+                                        cantidad,
+                                        marca: '',
+                                        observaciones: item.observaciones || '',
+                                        marcacion: 'Pendiente'
+                                    });
+                                }
+                            }
+                        }
+
+                        if (detalleInsert.length === 0) {
+                            log.push(`⚠ ${numProceso}: 0 registros válidos para insertar`);
+                            stats.procesosOmitidos++;
+                            continue;
+                        }
+
+                        // Insertar detalle (idempotente: verificar una vez más)
+                        const { data: yaExiste } = await supabase
+                            .from('detalle_procesos_ac')
+                            .select('id')
+                            .eq('proceso_id', proceso.id)
+                            .limit(1);
+
+                        if (Array.isArray(yaExiste) && yaExiste.length > 0) {
+                            log.push(`⏭ ${numProceso}: detalle creado concurrentemente, omitiendo`);
+                            stats.procesosOmitidos++;
+                            continue;
+                        }
+
+                        const { error: errInsert } = await supabase
+                            .from('detalle_procesos_ac')
+                            .insert(detalleInsert);
+
+                        if (errInsert) {
+                            log.push(`✗ ${numProceso}: error insertando (${errInsert.message})`);
+                            stats.procesosOmitidos++;
+                            continue;
+                        }
+
+                        log.push(`✓ ${numProceso}: ${detalleInsert.length} registros insertados`);
+                        stats.procesosReconstruidos++;
+                        stats.registrosInsertados += detalleInsert.length;
+                    }
+
+                    return jsonResponse(200, { ok: true, stats, log });
+                } catch (err) {
+                    return jsonResponse(500, { ok: false, error: 'Error en reparación: ' + err.message, stats, log });
+                }
+            }
+
             return jsonResponse(400, { ok: false, error: 'Acción no soportada' });
         } catch (err) {
             return jsonResponse(500, { ok: false, error: err.message });
