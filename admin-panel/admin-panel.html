@@ -319,8 +319,30 @@
                     </div>
                 </div>
 
-                <!-- Row 3: Actividad + Indicadores + \u00daltimas Recepciones -->
-                <div class="dash-charts-row">
+                <!-- Row: Top 5 Clientes por Procesos + Indicadores (2 columns) -->
+                <div class="dash-charts-row dash-charts-row--2col">
+                    <div class="dash-chart-card">
+                        <div class="dash-chart-card__header">
+                            <h3 class="dash-chart-card__title">Top 6 Clientes por Procesos</h3>
+                        </div>
+                        <div class="dash-chart-card__body dash-chart-card__body--progress">
+                            <div class="dash-top5cp" id="top5ClientesProcesosList"></div>
+                        </div>
+                        <div class="dash-chart-card__footer"><a href="#" class="dash-chart-card__link" id="verTodosClientesProcesos">Ver todos los clientes</a></div>
+                    </div>
+
+                    <div class="dash-chart-card">
+                        <div class="dash-chart-card__header">
+                            <h3 class="dash-chart-card__title">Indicadores del Laboratorio</h3>
+                        </div>
+                        <div class="dash-chart-card__body">
+                            <div class="dash-indicadores-grid" id="indicadoresGrid"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 3: Actividad + Últimas Recepciones -->
+                <div class="dash-charts-row dash-charts-row--2col">
                     <div class="dash-chart-card">
                         <div class="dash-chart-card__header">
                             <h3 class="dash-chart-card__title">Actividad Reciente</h3>
@@ -331,18 +353,9 @@
                         </div>
                     </div>
 
-                    <div class="dash-chart-card dash-chart-card--indicadores">
-                        <div class="dash-chart-card__header">
-                            <h3 class="dash-chart-card__title">Indicadores del Laboratorio</h3>
-                        </div>
-                        <div class="dash-chart-card__body">
-                            <div class="dash-indicadores-grid" id="indicadoresGrid"></div>
-                        </div>
-                    </div>
-
                     <div class="dash-chart-card">
                         <div class="dash-chart-card__header">
-                            <h3 class="dash-chart-card__title">\u00daltimas Recepciones</h3>
+                            <h3 class="dash-chart-card__title">Ultimas Recepciones</h3>
                         </div>
                         <div class="dash-chart-card__body dash-chart-card__body--table">
                             <div class="dash-recepciones-table" id="recepcionesTable"></div>
@@ -4124,6 +4137,7 @@
             gap: 0.75rem;
             margin-bottom: 1rem;
             padding: 0 0.25rem;
+            align-items: stretch;
         }
 
         .dash-chart-card {
@@ -4131,6 +4145,8 @@
             border: 1px solid #e5e7eb;
             border-radius: 10px;
             padding: 0.85rem;
+            display: flex;
+            flex-direction: column;
         }
 
         .dash-chart-card__header {
@@ -4158,6 +4174,12 @@
 
         .dash-chart-card__body {
             min-height: 170px;
+            position: relative;
+        }
+
+        .dash-chart-card__body canvas {
+            width: 100% !important;
+            max-height: 220px;
         }
 
         .dash-chart-card__body--donut {
@@ -4489,6 +4511,86 @@
             cursor: pointer;
         }
 
+        /* Top 5 Clientes por Procesos */
+        .dash-chart-card__body--progress {
+            min-height: 170px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .dash-top5cp {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+            width: 100%;
+        }
+
+        .dash-top5cp-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .dash-top5cp-item__rank {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #f3f4f6;
+            color: #374151;
+            font-size: 0.7rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .dash-top5cp-item:nth-child(1) .dash-top5cp-item__rank { background: #dbeafe; color: #1d4ed8; }
+        .dash-top5cp-item:nth-child(2) .dash-top5cp-item__rank { background: #ede9fe; color: #7c3aed; }
+        .dash-top5cp-item:nth-child(3) .dash-top5cp-item__rank { background: #fef3c7; color: #d97706; }
+
+        .dash-top5cp-item__info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .dash-top5cp-item__header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.25rem;
+        }
+
+        .dash-top5cp-item__name {
+            font-size: 0.72rem;
+            font-weight: 500;
+            color: #1f2937;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .dash-top5cp-item__stats {
+            font-size: 0.65rem;
+            color: #6b7280;
+            flex-shrink: 0;
+            margin-left: 0.4rem;
+        }
+
+        .dash-top5cp-item__bar {
+            height: 6px;
+            background: #f3f4f6;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .dash-top5cp-item__bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.6s ease;
+        }
+
         /* 2-column charts row */
         .dash-charts-row--2col {
             grid-template-columns: 1fr 1fr;
@@ -4503,6 +4605,7 @@
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
+            height: 100%;
         }
 
         /* 1-column charts row */
@@ -4598,44 +4701,161 @@
         .dash-recepciones-table__badge--finalizado { background: #f3f4f6; color: #4b5563; }
 
         /* Indicadores del Laboratorio */
+        /* Indicadores del Laboratorio - Moderno */
         .dash-indicadores-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+            display: flex;
+            flex-direction: column;
             gap: 0.75rem;
         }
 
-        .dash-indicador {
-            background: #f9fafb;
-            border-radius: 8px;
-            padding: 0.75rem;
-            text-align: center;
+        .dash-indicadores-row {
+            display: grid;
+            grid-template-columns: 160px 1fr 1fr;
+            gap: 0.75rem;
         }
 
-        .dash-indicador__icon {
-            font-size: 1.3rem;
-            margin-bottom: 0.3rem;
+        .dash-indicadores-row--3 {
+            grid-template-columns: 1.2fr 1fr 1fr;
         }
+
+        .dash-indicador {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 14px 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
+            animation: indicadorFadeIn 0.4s ease forwards;
+            opacity: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dash-indicador::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            border-radius: 14px 0 0 14px;
+        }
+
+        .dash-indicador--blue::before { background: #3b82f6; }
+        .dash-indicador--purple::before { background: #8b5cf6; }
+        .dash-indicador--green::before { background: #10b981; }
+        .dash-indicador--orange::before { background: #f59e0b; }
+        .dash-indicador--teal::before { background: #14b8a6; }
+        .dash-indicador--indigo::before { background: #6366f1; }
+
+        .dash-indicador:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transform: translateY(-2px);
+        }
+
+        @keyframes indicadorFadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .dash-indicador:nth-child(1) { animation-delay: 0s; }
+        .dash-indicador:nth-child(2) { animation-delay: 0.05s; }
+        .dash-indicador:nth-child(3) { animation-delay: 0.1s; }
+        .dash-indicador:nth-child(4) { animation-delay: 0.15s; }
+        .dash-indicador:nth-child(5) { animation-delay: 0.2s; }
+        .dash-indicador:nth-child(6) { animation-delay: 0.25s; }
+
+        .dash-indicador__icon-circle {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .dash-indicador__icon-circle--blue { background: #dbeafe; }
+        .dash-indicador__icon-circle--purple { background: #ede9fe; }
+        .dash-indicador__icon-circle--green { background: #d1fae5; }
+        .dash-indicador__icon-circle--orange { background: #ffedd5; }
+        .dash-indicador__icon-circle--teal { background: #ccfbf1; }
+        .dash-indicador__icon-circle--indigo { background: #e0e7ff; }
+
+        .dash-indicador__content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .dash-indicador__title {
+            font-size: 0.6rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+        }
+
+        .dash-indicador__title--blue { color: #3b82f6; }
+        .dash-indicador__title--purple { color: #8b5cf6; }
+        .dash-indicador__title--green { color: #10b981; }
+        .dash-indicador__title--orange { color: #f59e0b; }
+        .dash-indicador__title--teal { color: #14b8a6; }
+        .dash-indicador__title--indigo { color: #6366f1; }
 
         .dash-indicador__value {
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             font-weight: 700;
             color: #111827;
             display: block;
             line-height: 1.2;
+            margin-bottom: 2px;
         }
 
         .dash-indicador__value--small {
-            font-size: 0.75rem;
+            font-size: 0.68rem;
         }
 
-        .dash-indicador__label {
-            font-size: 0.6rem;
+        .dash-indicador__sub {
+            font-size: 0.55rem;
             color: #6b7280;
-            margin-top: 0.15rem;
         }
 
-        .dash-indicador--full {
-            grid-column: 1 / -1;
+        .dash-indicador__badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: #059669;
+            background: #d1fae5;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-top: 6px;
+        }
+
+        .dash-indicador__meta {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid #f3f4f6;
+            font-size: 0.55rem;
+            color: #9ca3af;
+        }
+
+        .dash-indicador__meta-icon {
+            font-size: 0.7rem;
+        }
+
+        .dash-indicadores-footer {
+            font-size: 0.6rem;
+            color: #9ca3af;
+            text-align: left;
+            margin-top: 4px;
         }
 
         /* Flow Row */
@@ -4744,6 +4964,18 @@
             }
         }
 
+        @media (max-width: 1024px) {
+            .dash-indicadores-row {
+                grid-template-columns: 1fr 1fr;
+            }
+            .dash-indicadores-row .dash-indicador:last-child {
+                grid-column: span 2;
+            }
+            .dash-indicadores-row--3 {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
         @media (max-width: 768px) {
             .dash-stats-row {
                 grid-template-columns: repeat(2, 1fr);
@@ -4761,6 +4993,10 @@
                 width: 130px;
             }
             .dash-indicadores-grid {
+                grid-template-columns: 1fr;
+            }
+            .dash-indicadores-row,
+            .dash-indicadores-row--3 {
                 grid-template-columns: 1fr;
             }
             .dash-charts-row--3col-custom {
@@ -6426,6 +6662,17 @@
                 <button type="button" style="background:none;border:none;font-size:24px;cursor:pointer;" onclick="document.getElementById('modalAllCategorias').style.display='none'">✕</button>
             </div>
             <div id="modalAllCategoriasContent" style="padding:20px;max-height:70vh;overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <!-- Modal Todos los Clientes por Procesos -->
+    <div id="modalAllClientesProcesos" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;overflow-y:auto;">
+        <div style="background:white;margin:40px auto;max-width:700px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.25);">
+            <div style="padding:20px;border-bottom:2px solid #3b82f6;display:flex;justify-content:space-between;align-items:center;">
+                <h2 style="margin:0;font-size:18px;">Todos los Clientes por Procesos</h2>
+                <button type="button" style="background:none;border:none;font-size:24px;cursor:pointer;" onclick="document.getElementById('modalAllClientesProcesos').style.display='none'">✕</button>
+            </div>
+            <div id="modalAllClientesProcesosContent" style="padding:20px;max-height:70vh;overflow-y:auto;"></div>
         </div>
     </div>
 

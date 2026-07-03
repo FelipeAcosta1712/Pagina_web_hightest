@@ -63,6 +63,7 @@ const DashboardModule = {
         this.renderTop10Elementos();
         this.renderElementosPorCategoria();
         this.renderTop5ClientesUnidades();
+        this.renderTop5ClientesProcesos();
         this.renderActividadReciente();
         this.renderIndicadores();
         this.renderUltimasRecepciones();
@@ -235,11 +236,11 @@ const DashboardModule = {
         const allCats = this.stats.elementosPorCategoria || [];
         if (allCats.length === 0) { container.innerHTML = '<div style="text-align:center;padding:1rem;color:#9ca3af;font-size:0.75rem;">Sin datos</div>'; return; }
 
-        const top10 = allCats.slice(0, 10);
-        const colors = ['#3B82F6', '#8B5CF6', '#F59E0B', '#EC4899', '#10B981', '#06B6D4', '#EF4444', '#84CC16', '#14B8A6', '#F97316'];
+        const top8 = allCats.slice(0, 8);
+        const colors = ['#3B82F6', '#8B5CF6', '#F59E0B', '#EC4899', '#10B981', '#06B6D4', '#EF4444', '#84CC16'];
 
         container.innerHTML = '';
-        top10.forEach((cat, i) => {
+        top8.forEach((cat, i) => {
             const color = colors[i % colors.length];
             const item = document.createElement('div');
             item.className = 'dash-legend-item';
@@ -249,7 +250,7 @@ const DashboardModule = {
 
         this.charts.categorias = new Chart(canvas.getContext('2d'), {
             type: 'doughnut',
-            data: { labels: allCats.map(c => c.nombre), datasets: [{ data: allCats.map(c => c.unidades), backgroundColor: colors.slice(0, allCats.length), borderWidth: 2, borderColor: '#fff' }] },
+            data: { labels: top8.map(c => c.nombre), datasets: [{ data: top8.map(c => c.unidades), backgroundColor: colors.slice(0, top8.length), borderWidth: 2, borderColor: '#fff' }] },
             options: { responsive: true, maintainAspectRatio: false, cutout: '55%', plugins: { legend: { display: false } } }
         });
 
@@ -298,31 +299,117 @@ const DashboardModule = {
         const clientes = (this.stats.topClientesUnidades || []).slice(0, 5);
         if (clientes.length === 0) return;
 
+        const splitLabel = (name) => {
+            if (name.length <= 18) return name;
+            const words = name.split(' ');
+            const lines = [];
+            let current = '';
+            words.forEach(w => {
+                if ((current + ' ' + w).trim().length > 18 && current) {
+                    lines.push(current.trim());
+                    current = w;
+                } else {
+                    current = (current + ' ' + w).trim();
+                }
+            });
+            if (current) lines.push(current.trim());
+            return lines;
+        };
+
         this.charts.clientesUnidades = new Chart(canvas.getContext('2d'), {
             type: 'bar',
             data: {
-                labels: clientes.map(c => c.nombre.length > 20 ? c.nombre.substring(0, 20) + '...' : c.nombre),
+                labels: clientes.map(c => splitLabel(c.nombre)),
                 datasets: [{ label: 'Unidades', data: clientes.map(c => c.unidades), backgroundColor: '#3b82f6', borderRadius: 4, maxBarThickness: 25 }]
             },
             options: {
                 indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: { padding: { left: 0, right: 40 } },
                 plugins: {
                     legend: { display: false },
                     datalabels: { display: true, anchor: 'end', align: 'right', color: '#374151', font: { size: 10, weight: 'bold' }, formatter: v => v }
                 },
-                scales: { x: { beginAtZero: true } }
+                scales: {
+                    x: { beginAtZero: true, grid: { display: false } },
+                    y: { ticks: { font: { size: 11 }, autoSkip: false, padding: 8 }, grid: { display: false } }
+                }
             },
             plugins: [ChartDataLabels]
         });
+    },
+
+    // ── Top 5 Clientes por Procesos ──
+    renderTop5ClientesProcesos() {
+        const container = document.getElementById('top5ClientesProcesosList');
+        if (!container) return;
+        const clientes = (this.stats.top5ClientesProcesos || []).slice(0, 6);
+        if (clientes.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:1rem;color:#9ca3af;font-size:0.75rem;">Sin datos</div>';
+            return;
+        }
+        const maxCount = clientes[0]?.count || 1;
+        const colors = ['#3B82F6', '#8B5CF6', '#F59E0B', '#10B981', '#EF4444', '#06B6D4'];
+        container.innerHTML = '';
+        clientes.forEach((cliente, i) => {
+            const pct = maxCount > 0 ? Math.round((cliente.count / maxCount) * 100) : 0;
+            const item = document.createElement('div');
+            item.className = 'dash-top5cp-item';
+            item.innerHTML = `
+                <div class="dash-top5cp-item__rank">${i + 1}</div>
+                <div class="dash-top5cp-item__info">
+                    <div class="dash-top5cp-item__header">
+                        <span class="dash-top5cp-item__name">${cliente.nombre}</span>
+                        <span class="dash-top5cp-item__stats">${cliente.count} procs · ${cliente.porcentaje}%</span>
+                    </div>
+                    <div class="dash-top5cp-item__bar">
+                        <div class="dash-top5cp-item__bar-fill" style="width:${pct}%;background:${colors[i]}"></div>
+                    </div>
+                </div>`;
+            container.appendChild(item);
+        });
+        this.bindClientesProcesosModal();
+    },
+
+    bindClientesProcesosModal() {
+        const btn = document.getElementById('verTodosClientesProcesos');
+        if (btn) {
+            btn.onclick = (e) => {
+                e.preventDefault();
+                this.showAllClientesProcesosModal();
+            };
+        }
+    },
+
+    showAllClientesProcesosModal() {
+        const container = document.getElementById('modalAllClientesProcesosContent');
+        const modal = document.getElementById('modalAllClientesProcesos');
+        if (!container || !modal) return;
+
+        const allClientes = this.stats.allClientesProcesos || [];
+        if (allClientes.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:2rem;color:#9ca3af;">Sin datos disponibles</div>';
+        } else {
+            const colors = ['#3B82F6', '#8B5CF6', '#F59E0B', '#EC4899', '#10B981', '#06B6D4', '#EF4444', '#84CC16', '#14B8A6', '#F97316'];
+            let html = '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
+            html += '<thead><tr style="border-bottom:2px solid #e5e7eb;text-align:left;"><th style="padding:8px 12px;">#</th><th style="padding:8px 12px;">Cliente</th><th style="padding:8px 12px;text-align:right;">Procesos</th><th style="padding:8px 12px;text-align:right;">%</th></tr></thead><tbody>';
+            allClientes.forEach((cliente, i) => {
+                const color = colors[i % colors.length];
+                html += `<tr style="border-bottom:1px solid #f3f4f6;"><td style="padding:8px 12px;color:#6b7280;">${i + 1}</td><td style="padding:8px 12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};margin-right:8px;"></span>${cliente.nombre}</td><td style="padding:8px 12px;text-align:right;font-weight:600;">${cliente.count}</td><td style="padding:8px 12px;text-align:right;">${cliente.porcentaje}%</td></tr>`;
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        modal.style.display = 'block';
     },
 
     // ── Actividad Reciente ──
     renderActividadReciente() {
         const container = document.getElementById('activityList');
         if (!container) return;
-        const actividad = this.stats.actividadReciente || [];
+        const actividad = (this.stats.actividadReciente || []).slice(0, 5);
         const icons = {
             'recepcion': { emoji: '\ud83d\udce6', color: 'blue' },
             'lavado': { emoji: '\ud83e\uddf9', color: 'purple' },
@@ -347,7 +434,7 @@ const DashboardModule = {
 
             const div = document.createElement('div');
             div.className = 'dash-activity-item';
-            div.innerHTML = `<div class="dash-activity-item__icon dash-activity-item__icon--${icon.color}">${icon.emoji}</div><div class="dash-activity-item__content"><span class="dash-activity-item__text">${this.capitalizeFirst(item.estado || 'Nuevo proceso')}</span><span class="dash-activity-item__detail">${detail}</span></div><span class="dash-activity-item__time">${this.getTimeAgo(item.fecha)}</span>`;
+            div.innerHTML = `<div class="dash-activity-item__icon dash-activity-item__icon--${icon.color}">${icon.emoji}</div><div class="dash-activity-item__content"><span class="dash-activity-item__text">${this.capitalizeFirst(item.estado || 'Nuevo proceso')}</span><span class="dash-activity-item__detail">${detail}</span></div><span class="dash-activity-item__time">${item.fecha ? new Date(item.fecha + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}</span>`;
             container.appendChild(div);
         });
     },
@@ -358,21 +445,68 @@ const DashboardModule = {
         if (!container) return;
         const s = this.stats;
 
-        const indicadores = [
-            { icon: '\ud83d\udce6', value: s.elementoMasRecibido?.nombre || '--', valueClass: 'dash-indicador__value--small', label: 'Elemento m\u00e1s recibido', sub: s.elementoMasRecibido ? `${s.elementoMasRecibido.unidades} unidades` : '' },
-            { icon: '\ud83d\udc65', value: s.clienteMasUnidades?.nombre || '--', valueClass: 'dash-indicador__value--small', label: 'Cliente con m\u00e1s unidades', sub: s.clienteMasUnidades ? `${s.clienteMasUnidades.unidades} unidades` : '' },
-            { icon: '\ud83d\udce6', value: s.recepcionMasReciente || '--', label: 'Recepci\u00f3n m\u00e1s reciente', sub: '' },
-            { icon: '\ud83d\udcca', value: s.promedioUnidadesPorRecepcion || '0', label: 'Promedio unidades/recepci\u00f3n', sub: 'elementos' },
-            { icon: '\u23f1\ufe0f', value: s.tiempoPromedioDias || '0', label: 'Tiempo promedio de proceso', sub: 'd\u00edas' }
-        ];
-
-        container.innerHTML = '';
-        indicadores.forEach(ind => {
-            const div = document.createElement('div');
-            div.className = 'dash-indicador';
-            div.innerHTML = `<div class="dash-indicador__icon">${ind.icon}</div><span class="dash-indicador__value ${ind.valueClass || ''}">${ind.value}</span><span class="dash-indicador__label">${ind.label}</span>${ind.sub ? `<span class="dash-indicador__label">${ind.sub}</span>` : ''}`;
-            container.appendChild(div);
-        });
+        container.innerHTML = `
+            <div class="dash-indicadores-row">
+                <div class="dash-indicador dash-indicador--blue">
+                    <div class="dash-indicador__icon-circle dash-indicador__icon-circle--blue">\ud83d\udce6</div>
+                    <div class="dash-indicador__content">
+                        <div class="dash-indicador__title dash-indicador__title--blue">Elemento m\u00e1s recibido</div>
+                        <span class="dash-indicador__value dash-indicador__value--small">${s.elementoMasRecibido?.nombre || '--'}</span>
+                        <div class="dash-indicador__sub">${s.elementoMasRecibido ? s.elementoMasRecibido.unidades + ' unidades recibidas' : ''}</div>
+                    </div>
+                </div>
+                <div class="dash-indicador dash-indicador--purple">
+                    <div class="dash-indicador__icon-circle dash-indicador__icon-circle--purple">\ud83d\udc65</div>
+                    <div class="dash-indicador__content">
+                        <div class="dash-indicador__title dash-indicador__title--purple">Cliente con m\u00e1s unidades</div>
+                        <span class="dash-indicador__value dash-indicador__value--small">${s.clienteMasUnidades?.nombre || '--'}</span>
+                        <div class="dash-indicador__sub">${s.clienteMasUnidades ? s.clienteMasUnidades.unidades + ' unidades recibidas' : ''}</div>
+                    </div>
+                </div>
+                <div class="dash-indicador dash-indicador--indigo">
+                    <div class="dash-indicador__icon-circle dash-indicador__icon-circle--indigo">\ud83d\udc64</div>
+                    <div class="dash-indicador__content">
+                        <div class="dash-indicador__title dash-indicador__title--indigo">Cliente con m\u00e1s recepciones</div>
+                        <span class="dash-indicador__value dash-indicador__value--small">${s.clienteMasRecepciones?.nombre || '--'}</span>
+                        <div class="dash-indicador__sub">${s.clienteMasRecepciones ? s.clienteMasRecepciones.recepciones + ' recepciones' : ''}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="dash-indicadores-row dash-indicadores-row--3">
+                <div class="dash-indicador dash-indicador--green">
+                    <div class="dash-indicador__icon-circle dash-indicador__icon-circle--green">\ud83d\udcc4</div>
+                    <div class="dash-indicador__content">
+                        <div class="dash-indicador__title dash-indicador__title--green">Recepci\u00f3n m\u00e1s reciente</div>
+                        <span class="dash-indicador__value">${s.recepcionMasReciente || '--'}</span>
+                        <div class="dash-indicador__meta">
+                            <span class="dash-indicador__meta-icon">\ud83d\udcc5</span> Reciente
+                        </div>
+                    </div>
+                </div>
+                <div class="dash-indicador dash-indicador--orange">
+                    <div class="dash-indicador__icon-circle dash-indicador__icon-circle--orange">\ud83d\udcca</div>
+                    <div class="dash-indicador__content">
+                        <div class="dash-indicador__title dash-indicador__title--orange">Promedio</div>
+                        <span class="dash-indicador__value">${s.promedioUnidadesPorRecepcion || '0'}</span>
+                        <div class="dash-indicador__sub">unidades/recepci\u00f3n</div>
+                        <div class="dash-indicador__meta">
+                            <span class="dash-indicador__meta-icon">\ud83d\udce6</span> por elementos
+                        </div>
+                    </div>
+                </div>
+                <div class="dash-indicador dash-indicador--teal">
+                    <div class="dash-indicador__icon-circle dash-indicador__icon-circle--teal">\u23f1\ufe0f</div>
+                    <div class="dash-indicador__content">
+                        <div class="dash-indicador__title dash-indicador__title--teal">Tiempo promedio</div>
+                        <span class="dash-indicador__value">${s.tiempoPromedioEntrega || '0'} <small style="font-size:0.6em;font-weight:400;color:#6b7280;">d\u00edas</small></span>
+                        <div class="dash-indicador__meta">
+                            <span class="dash-indicador__meta-icon">\u2192</span> Recepci\u00f3n \u2192 Entrega
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="dash-indicadores-footer">\u24d3 Los indicadores se calculan seg\u00fan el rango de fechas seleccionado.</div>
+        `;
     },
 
     // \u00daltimas Recepciones (Table)
@@ -392,7 +526,7 @@ const DashboardModule = {
         recepciones.forEach(r => {
             const row = document.createElement('div');
             row.className = 'dash-recepciones-table__row';
-            const fecha = r.fecha ? new Date(r.fecha).toLocaleDateString('es-CO') : '--';
+            const fecha = r.fecha ? new Date(r.fecha + 'T00:00:00').toLocaleDateString('es-CO') : '--';
             row.innerHTML = `<span>${r.numero_proceso}</span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.cliente}</span><span>${fecha}</span><span><span class="dash-recepciones-table__badge dash-recepciones-table__badge--${estadoClass(r.estado)}">${r.estado}</span></span><span style="text-align:right;font-weight:500">${r.elementos}</span>`;
             container.appendChild(row);
         });

@@ -4099,7 +4099,7 @@ const AdminPanelManager = {
             let dateBase = '';
             let estado = '';
             if (isAcreditado) {
-                dateBase = row.fecha_entrega_cliente || row.fecha_recepcion || '';
+                dateBase = row.fecha_recepcion || '';
                 estado = (row.estado || '').toLowerCase();
             } else {
                 dateBase = row.deliveryDate || row.receptionDate || '';

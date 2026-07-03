@@ -2233,13 +2233,14 @@ exports.handler = async (event) => {
             // =============================================
             if (payload.action === 'get_dashboard_stats') {
                 try {
-                    const [clientesRes, procesosRes, cotizacionesRes, informesRes, ensayosRes, marcacionesRes] = await Promise.all([
-                        supabase.from('clientes').select('id, created_at'),
-                        supabase.from('procesos_acreditados').select('*'),
-                        supabase.from('cotizaciones_ac').select('id, cliente, estado, total_valor, created_at, cotizacion'),
-                        supabase.from('informes_ensayo_ac').select('id, proceso_id, created_at, activo'),
-                        supabase.from('ensayos_acreditados').select('id, nombre, categoria'),
-                        supabase.from('marcaciones_ac').select('id, proceso_id, estado')
+                    const [clientesRes, procesosRes, cotizacionesRes, informesRes, ensayosRes, detalleElementosRes, marcacionesRes] = await Promise.all([
+                        supabase.from('clientes').select('id, created_at').range(0, 9999),
+                        supabase.from('procesos_acreditados').select('*').range(0, 9999),
+                        supabase.from('cotizaciones_ac').select('id, cliente, estado, total_valor, created_at, cotizacion').range(0, 9999),
+                        supabase.from('informes_ensayo_ac').select('id, proceso_id, created_at, activo').range(0, 9999),
+                        supabase.from('ensayos_acreditados').select('id, nombre, categoria').range(0, 9999),
+                        supabase.from('detalle_procesos_ac').select('proceso_id, cantidad').range(0, 9999),
+                        supabase.from('marcaciones_ac').select('id, proceso_id, estado').range(0, 9999)
                     ]);
 
                     const clientes = clientesRes.data || [];
@@ -2247,6 +2248,7 @@ exports.handler = async (event) => {
                     const cotizaciones = cotizacionesRes.data || [];
                     const informes = informesRes.data || [];
                     const ensayos = ensayosRes.data || [];
+                    const detalleElementosAll = detalleElementosRes.data || [];
                     const marcaciones = marcacionesRes.data || [];
 
                     // ── KPIs principales ──
@@ -2259,7 +2261,7 @@ exports.handler = async (event) => {
                     // Unidades Recibidas (SUM detalle_procesos_ac.cantidad)
                     let unidadesRecibidas = 0;
                     try {
-                        const { data: detalleAll } = await supabase.from('detalle_procesos_ac').select('cantidad');
+                        const { data: detalleAll } = await supabase.from('detalle_procesos_ac').select('cantidad').range(0, 9999);
                         if (Array.isArray(detalleAll)) {
                             unidadesRecibidas = detalleAll.reduce((sum, d) => sum + (parseInt(d.cantidad) || 0), 0);
                         }
@@ -2286,9 +2288,9 @@ exports.handler = async (event) => {
                     // ── Recepciones por Mes ──
                     const recepcionesPorMes = {};
                     procesos.forEach(p => {
-                        if (p.fecha_recepcion) {
-                            const fecha = new Date(p.fecha_recepcion);
-                            const key = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+                        const fechaStr = (p.fecha_recepcion || '').substring(0, 10);
+                        if (fechaStr && /^\d{4}-\d{2}-\d{2}$/.test(fechaStr)) {
+                            const key = fechaStr.substring(0, 7);
                             recepcionesPorMes[key] = (recepcionesPorMes[key] || 0) + 1;
                         }
                     });
@@ -2311,7 +2313,8 @@ exports.handler = async (event) => {
                     // ── Top 10 elementos más recibidos (desde detalle_procesos_ac) ──
                     const { data: detalleElementos } = await supabase
                         .from('detalle_procesos_ac')
-                        .select('cantidad, proceso_id, ensayos_acreditados(nombre)');
+                        .select('cantidad, proceso_id, ensayos_acreditados(nombre)')
+                        .range(0, 9999);
                     const elementosPorCantidad = {};
                     const elementoRecepciones = {};
                     (detalleElementos || []).forEach(d => {
@@ -2330,7 +2333,8 @@ exports.handler = async (event) => {
                     // ── Elementos por Categoría ──
                     const { data: detalleConEnsayo } = await supabase
                         .from('detalle_procesos_ac')
-                        .select('cantidad, ensayos_acreditados(categoria)');
+                        .select('cantidad, ensayos_acreditados(categoria)')
+                        .range(0, 9999);
                     const categoriaUnidades = {};
                     (detalleConEnsayo || []).forEach(d => {
                         const cat = d.ensayos_acreditados?.categoria || 'Otros';
@@ -2345,7 +2349,8 @@ exports.handler = async (event) => {
                     // ── Top 5 Clientes por Unidades Recibidas ──
                     const { data: detalleConProceso } = await supabase
                         .from('detalle_procesos_ac')
-                        .select('cantidad, proceso_id, procesos_acreditados(cliente)');
+                        .select('cantidad, proceso_id, procesos_acreditados(cliente)')
+                        .range(0, 9999);
                     const clienteUnidades = {};
                     (detalleConProceso || []).forEach(d => {
                         const cliente = (d.procesos_acreditados?.cliente || '').trim();
@@ -2369,9 +2374,24 @@ exports.handler = async (event) => {
                         .sort((a, b) => b.count - a.count)
                         .slice(0, 10);
 
+                    // ── Top 5 Clientes por Procesos (con porcentaje) ──
+                    const totalProcesosConCliente = Object.values(clienteProcesoCount).reduce((a, b) => a + b, 0) || 1;
+                    const allClientesProcesos = Object.entries(clienteProcesoCount)
+                        .map(([nombre, count]) => ({ nombre, count, porcentaje: Math.round((count / totalProcesosConCliente) * 100) }))
+                        .sort((a, b) => b.count - a.count);
+                    const top5ClientesProcesos = allClientesProcesos.slice(0, 6);
+
                     // ── Actividad reciente (últimos 6 procesos) ──
-                    const actividadReciente = procesos
-                        .sort((a, b) => (b.fecha_recepcion || '').localeCompare(a.fecha_recepcion || ''))
+                    const actividadReciente = [...procesos]
+                        .sort((a, b) => {
+                            const tsA = new Date(a.fecha_recepcion || a.created_at || 0).getTime();
+                            const tsB = new Date(b.fecha_recepcion || b.created_at || 0).getTime();
+                            if (tsB !== tsA) return tsB - tsA;
+                            const tsCreateA = new Date(a.created_at || 0).getTime();
+                            const tsCreateB = new Date(b.created_at || 0).getTime();
+                            if (tsCreateB !== tsCreateA) return tsCreateB - tsCreateA;
+                            return (b.id || 0) - (a.id || 0);
+                        })
                         .slice(0, 6)
                         .map(p => {
                             const numero = p.numero_proceso || p.n_remision || p.numero || p.id || '';
@@ -2388,11 +2408,19 @@ exports.handler = async (event) => {
                         });
 
                     // ── Últimas recepciones (para la tabla) ──
-                    const ultimasRecepciones = procesos
-                        .sort((a, b) => (b.fecha_recepcion || '').localeCompare(a.fecha_recepcion || ''))
-                        .slice(0, 5)
+                    const ultimasRecepciones = [...procesos]
+                        .sort((a, b) => {
+                            const tsA = new Date(a.fecha_recepcion || a.created_at || 0).getTime();
+                            const tsB = new Date(b.fecha_recepcion || b.created_at || 0).getTime();
+                            if (tsB !== tsA) return tsB - tsA;
+                            const tsCreateA = new Date(a.created_at || 0).getTime();
+                            const tsCreateB = new Date(b.created_at || 0).getTime();
+                            if (tsCreateB !== tsCreateA) return tsCreateB - tsCreateA;
+                            return (b.id || 0) - (a.id || 0);
+                        })
+                        .slice(0, 7)
                         .map(p => {
-                            const num = (p.numero_proceso || '').trim();
+                            const num = (p.numero_proceso || p.n_remision || p.numero || '').trim();
                             const nInf = (p.n_informe || '').trim();
                             let estado = (p.estado || '').trim();
                             // Mapear estados a etiquetas legibles
@@ -2406,7 +2434,7 @@ exports.handler = async (event) => {
                             };
                             estado = estadoMap[estado.toLowerCase()] || estado;
                             // Contar elementos de este proceso
-                            const elemCount = (marcaciones || []).filter(m => m.proceso_id === p.id).length;
+                            const elemCount = detalleElementosAll.filter(d => d.proceso_id === p.id).reduce((sum, d) => sum + (parseInt(d.cantidad) || 0), 0);
                             return {
                                 numero_proceso: num,
                                 cliente: p.cliente || '',
@@ -2422,17 +2450,20 @@ exports.handler = async (event) => {
                     const recepcionMasReciente = ultimasRecepciones.length > 0 ? ultimasRecepciones[0].numero_proceso : null;
                     const promedioUnidadesPorRecepcion = totalProcesos > 0 ? Math.round((unidadesRecibidas / totalProcesos) * 10) / 10 : 0;
 
-                    // Tiempo promedio de proceso (días entre fecha_recepcion y fecha_finalizado)
-                    let tiempoPromedioDias = 0;
-                    const procesosConFechas = procesos.filter(p => p.fecha_recepcion && p.fecha_finalizado);
-                    if (procesosConFechas.length > 0) {
-                        const totalDias = procesosConFechas.reduce((sum, p) => {
+                    // Cliente con más recepciones (procesos)
+                    const clienteMasRecepciones = topClientes.length > 0 ? { nombre: topClientes[0].nombre, recepciones: topClientes[0].count } : null;
+
+                    // Tiempo promedio de entrega (recepción → entrega al cliente)
+                    let tiempoPromedioEntrega = 0;
+                    const procesosConEntrega = procesos.filter(p => p.fecha_recepcion && p.fecha_entrega_cliente);
+                    if (procesosConEntrega.length > 0) {
+                        const totalDiasEntrega = procesosConEntrega.reduce((sum, p) => {
                             const inicio = new Date(p.fecha_recepcion);
-                            const fin = new Date(p.fecha_finalizado);
+                            const fin = new Date(p.fecha_entrega_cliente);
                             const dias = Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24));
                             return sum + (dias > 0 ? dias : 0);
                         }, 0);
-                        tiempoPromedioDias = Math.round((totalDias / procesosConFechas.length) * 10) / 10;
+                        tiempoPromedioEntrega = Math.round((totalDiasEntrega / procesosConEntrega.length) * 10) / 10;
                     }
 
                     // ── Flujo de procesos ──
@@ -2474,6 +2505,8 @@ exports.handler = async (event) => {
                             cotizacionesPorEstado,
                             topClientes,
                             topClientesUnidades,
+                            top5ClientesProcesos,
+                            allClientesProcesos,
                             topEnsayos,
                             allElementos: Object.entries(elementosPorCantidad)
                                 .map(([nombre, count]) => ({ nombre, count, recepciones: elementoRecepciones[nombre]?.size || 0 }))
@@ -2483,9 +2516,10 @@ exports.handler = async (event) => {
                             ultimasRecepciones,
                             elementoMasRecibido,
                             clienteMasUnidades,
+                            clienteMasRecepciones,
                             recepcionMasReciente,
                             promedioUnidadesPorRecepcion,
-                            tiempoPromedioDias,
+                            tiempoPromedioEntrega,
                             flujoProcesos,
                             marcacionesResumen,
                             informesActivos,
