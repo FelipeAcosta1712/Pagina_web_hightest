@@ -2469,8 +2469,8 @@ exports.handler = async (event) => {
                     // ── Flujo de procesos ──
                     const flujoProcesos = {
                         recibidos: procesos.filter(p => (p.estado || '').trim().toLowerCase() === 'recepcion').length || totalProcesos,
-                        informe: procesos.filter(p => (p.estado || '').trim().toLowerCase() === 'informe-de-ensayo').length,
-                        entrega: procesos.filter(p => (p.estado || '').trim().toLowerCase() === 'entrega-cliente').length,
+                        informe: procesos.filter(p => { const e = (p.estado || '').trim().toLowerCase(); return e === 'informe-de-ensayo' || e === 'informe'; }).length,
+                        entrega: procesos.filter(p => { const e = (p.estado || '').trim().toLowerCase(); return e === 'entrega-cliente' || e === 'entrega'; }).length,
                         finalizado: procesosFinalizados
                     };
 
@@ -2692,6 +2692,629 @@ exports.handler = async (event) => {
                     return jsonResponse(200, { ok: true, stats, log });
                 } catch (err) {
                     return jsonResponse(500, { ok: false, error: 'Error en reparación: ' + err.message, stats, log });
+                }
+            }
+
+            // ── Configuración de la empresa (desde clientes) ──
+            if (payload.action === 'get_empresa_config') {
+                try {
+                    const { data, error } = await supabase
+                        .from('clientes')
+                        .select('*')
+                        .ilike('nombre_empresa', '%high test%')
+                        .limit(1)
+                        .single();
+
+                    if (error || !data) {
+                        // Si no encuentra, devolver valores vacíos
+                        return jsonResponse(200, { ok: true, config: {
+                            nombre: 'HIGH TEST SAS',
+                            nit: '',
+                            direccion: '',
+                            ciudad: 'Bogotá D.C.',
+                            telefono: '',
+                            email: '',
+                            web: 'www.hightestsas.com',
+                            representante_legal: '',
+                            soporte_email: ''
+                        }});
+                    }
+
+                    const config = {
+                        nombre: data.nombre_empresa || '',
+                        nit: data.nit || data.nit_empresa || '',
+                        direccion: data.direccion || '',
+                        ciudad: 'Bogotá D.C.',
+                        telefono: data.telefono || '',
+                        email: data.email || '',
+                        web: 'www.hightestsas.com',
+                        representante_legal: data.representante_legal || data.contacto_principal || '',
+                        soporte_email: data.soporte_email || data.email || ''
+                    };
+
+                    return jsonResponse(200, { ok: true, config });
+                } catch (err) {
+                    return jsonResponse(500, { ok: false, error: err.message });
+                }
+            }
+
+            if (payload.action === 'update_empresa_config') {
+                try {
+                    const { config } = payload;
+                    if (!config) {
+                        return jsonResponse(400, { ok: false, error: 'Datos de configuración requeridos' });
+                    }
+
+                    // Buscar el cliente High Test
+                    const { data: existing } = await supabase
+                        .from('clientes')
+                        .select('id')
+                        .ilike('nombre_empresa', '%high test%')
+                        .limit(1)
+                        .single();
+
+                    if (existing) {
+                        // Actualizar
+                        const updateData = {
+                            nombre_empresa: config.nombre,
+                            nit: config.nit,
+                            direccion: config.direccion,
+                            telefono: config.telefono,
+                            email: config.email,
+                            contacto_principal: config.representante_legal
+                        };
+                        const { error } = await supabase
+                            .from('clientes')
+                            .update(updateData)
+                            .eq('id', existing.id);
+
+                        if (error) {
+                            return jsonResponse(500, { ok: false, error: error.message });
+                        }
+                    }
+
+                    return jsonResponse(200, { ok: true, message: 'Configuración guardada exitosamente' });
+                } catch (err) {
+                    return jsonResponse(500, { ok: false, error: err.message });
+                }
+            }
+
+            // ── Configuración del Sistema (parámetros) ──
+            if (payload.action === 'get_system_config') {
+                try {
+                    const { data, error } = await supabase
+                        .from('system_config')
+                        .select('*')
+                        .limit(1)
+                        .single();
+
+                    if (error || !data) {
+                        // Devolver valores por defecto
+                        return jsonResponse(200, { ok: true, config: {
+                            auto_guardado: true,
+                            frecuencia_auto_guardado: 5,
+                            generar_pdf_auto: true,
+                            notificacionesCorreo: true
+                        }});
+                    }
+
+                    return jsonResponse(200, { ok: true, config: data });
+                } catch (err) {
+                    return jsonResponse(200, { ok: true, config: {
+                        auto_guardado: true,
+                        frecuencia_auto_guardado: 5,
+                        generar_pdf_auto: true,
+                        notificacionesCorreo: true
+                    }});
+                }
+            }
+
+            if (payload.action === 'update_system_config') {
+                try {
+                    const { config } = payload;
+                    if (!config) {
+                        return jsonResponse(400, { ok: false, error: 'Configuración requerida' });
+                    }
+
+                    const { data: existing } = await supabase
+                        .from('system_config')
+                        .select('id')
+                        .limit(1)
+                        .single();
+
+                    if (existing) {
+                        const { error } = await supabase
+                            .from('system_config')
+                            .update(config)
+                            .eq('id', existing.id);
+                        if (error) return jsonResponse(500, { ok: false, error: error.message });
+                    } else {
+                        const { error } = await supabase
+                            .from('system_config')
+                            .insert(config);
+                        if (error) return jsonResponse(500, { ok: false, error: error.message });
+                    }
+
+                    return jsonResponse(200, { ok: true, message: 'Configuración guardada' });
+                } catch (err) {
+                    return jsonResponse(500, { ok: false, error: err.message });
+                }
+            }
+
+            // ── Estadísticas de Base de Datos ──
+            if (payload.action === 'get_db_stats') {
+                try {
+                    // 1. Verificar conexión real con una consulta
+                    let connected = false;
+                    try {
+                        const { error: pingError } = await supabase
+                            .from('clientes')
+                            .select('id')
+                            .limit(1);
+                        connected = !pingError;
+                    } catch (e) {
+                        connected = false;
+                    }
+
+                    if (!connected) {
+                        return jsonResponse(200, {
+                            ok: true,
+                            stats: {
+                                connected: false,
+                                estado: 'Sin conexión',
+                                proveedor: 'Supabase PostgreSQL',
+                                tableCount: null,
+                                dbSize: null,
+                                totalRecords: null,
+                                counts: {}
+                            }
+                        });
+                    }
+
+                    // 2. Contar tablas del usuario desde information_schema
+                    let tableCount = null;
+                    try {
+                        const { data: tableData, error: tableError } = await supabase
+                            .rpc('count_user_tables');
+                        if (!tableError && tableData !== null && tableData !== undefined) {
+                            tableCount = parseInt(tableData) || 0;
+                        }
+                    } catch (e) {
+                        // RPC no existe, no hay fallback hardcodeado
+                        tableCount = null;
+                    }
+
+                    // 3. Obtener tamaño de la BD
+                    let dbSize = null;
+                    try {
+                        const { data: sizeData, error: sizeError } = await supabase
+                            .rpc('get_db_size');
+                        if (!sizeError && sizeData) {
+                            dbSize = sizeData;
+                        }
+                    } catch (e) {
+                        // RPC no existe, no hay fallback
+                        dbSize = null;
+                    }
+
+                    // 4. Contar registros de todas las tablas funcionales conocidas
+                    const functionalTables = [
+                        'clientes', 'procesos', 'detalle_proceso',
+                        'informes_ensayo_ac', 'marcaciones', 'ensayos',
+                        'cotizaciones', 'empresa_config', 'system_config'
+                    ];
+                    let totalRecords = 0;
+                    const counts = {};
+
+                    for (const table of functionalTables) {
+                        try {
+                            const { count, error } = await supabase
+                                .from(table)
+                                .select('*', { count: 'exact', head: true });
+                            if (!error) {
+                                counts[table] = count || 0;
+                                totalRecords += (count || 0);
+                            }
+                        } catch (e) {
+                            // Tabla no existe o sin permisos, se omite
+                        }
+                    }
+
+                    return jsonResponse(200, {
+                        ok: true,
+                        stats: {
+                            connected: true,
+                            estado: 'Conectado',
+                            proveedor: 'Supabase PostgreSQL',
+                            tableCount,
+                            dbSize,
+                            totalRecords,
+                            counts
+                        }
+                    });
+                } catch (err) {
+                    return jsonResponse(500, { ok: false, error: err.message });
+                }
+            }
+
+            // ── Estadísticas de Storage ──
+            if (payload.action === 'get_storage_stats') {
+                try {
+                    const { data: buckets, error: bucketsError } = await supabase
+                        .storage
+                        .listBuckets();
+
+                    if (bucketsError) {
+                        return jsonResponse(200, {
+                            ok: true,
+                            storage: {
+                                usedMB: null,
+                                totalMB: null,
+                                percentage: null,
+                                buckets: [],
+                                lastBackup: null,
+                                error: 'No se pudieron listar los buckets'
+                            }
+                        });
+                    }
+
+                    let totalSizeBytes = 0;
+                    const bucketStats = [];
+
+                    for (const bucket of (buckets || [])) {
+                        try {
+                            const { data: files } = await supabase
+                                .storage
+                                .from(bucket.name)
+                                .list('', { limit: 1000 });
+
+                            let bucketSize = 0;
+                            if (files) {
+                                for (const file of files) {
+                                    bucketSize += file.metadata?.size || 0;
+                                }
+                            }
+                            totalSizeBytes += bucketSize;
+                            bucketStats.push({
+                                name: bucket.name,
+                                sizeMB: parseFloat((bucketSize / (1024 * 1024)).toFixed(2)),
+                                files: files?.length || 0
+                            });
+                        } catch (e) {
+                            bucketStats.push({ name: bucket.name, sizeMB: 0, files: 0, error: true });
+                        }
+                    }
+
+                    const usedMB = parseFloat((totalSizeBytes / (1024 * 1024)).toFixed(2));
+
+                    // Buscar último respaldo (solo si el bucket existe)
+                    let lastBackup = null;
+                    let hasBackupBucket = false;
+                    try {
+                        const { data: backupFiles, error: backupErr } = await supabase
+                            .storage
+                            .from('backups')
+                            .list('', { limit: 1, sortBy: { column: 'created_at', order: 'desc' } });
+                        if (!backupErr && backupFiles && backupFiles.length > 0) {
+                            lastBackup = backupFiles[0].created_at;
+                            hasBackupBucket = true;
+                        } else if (!backupErr) {
+                            hasBackupBucket = true;
+                        }
+                    } catch (e) {
+                        hasBackupBucket = false;
+                    }
+
+                    return jsonResponse(200, {
+                        ok: true,
+                        storage: {
+                            usedMB,
+                            totalMB: null,
+                            percentage: null,
+                            buckets: bucketStats,
+                            lastBackup,
+                            hasBackupBucket
+                        }
+                    });
+                } catch (err) {
+                    return jsonResponse(500, { ok: false, error: err.message });
+                }
+            }
+
+            // ── Crear Backup ──
+            if (payload.action === 'create_backup') {
+                try {
+                    const backupData = {
+                        fecha: new Date().toISOString(),
+                        tablas: {}
+                    };
+
+                    const tablesToBackup = ['clientes', 'procesos', 'detalle_proceso', 'informes_ensayo_ac', 'marcaciones', 'ensayos'];
+
+                    for (const table of tablesToBackup) {
+                        try {
+                            const { data, error } = await supabase
+                                .from(table)
+                                .select('*');
+                            if (!error) {
+                                backupData.tablas[table] = data;
+                            }
+                        } catch (e) {
+                            backupData.tablas[table] = [];
+                        }
+                    }
+
+                    // Guardar en storage
+                    const fileName = `backup_${new Date().toISOString().slice(0, 10)}_${Date.now()}.json`;
+                    const backupJson = JSON.stringify(backupData);
+
+                    const { error: uploadError } = await supabase
+                        .storage
+                        .from('backups')
+                        .upload(fileName, backupJson, {
+                            contentType: 'application/json',
+                            upsert: false
+                        });
+
+                    if (uploadError) {
+                        // Si el bucket no existe, crearlo
+                        try {
+                            await supabase.storage.createBucket('backups', { public: false });
+                            await supabase.storage
+                                .from('backups')
+                                .upload(fileName, backupJson, {
+                                    contentType: 'application/json',
+                                    upsert: false
+                                });
+                        } catch (e) {
+                            return jsonResponse(500, { ok: false, error: 'No se pudo crear el backup: ' + e.message });
+                        }
+                    }
+
+                    return jsonResponse(200, {
+                        ok: true,
+                        message: 'Backup creado exitosamente',
+                        fileName,
+                        size: (backupJson.length / 1024).toFixed(2) + ' KB',
+                        tables: Object.keys(backupData.tablas).length
+                    });
+                } catch (err) {
+                    return jsonResponse(500, { ok: false, error: err.message });
+                }
+            }
+
+            // ── Restaurar Backup ──
+            if (payload.action === 'restore_backup') {
+                try {
+                    const { fileName } = payload;
+                    if (!fileName) {
+                        return jsonResponse(400, { ok: false, error: 'Nombre del archivo requerido' });
+                    }
+
+                    // Descargar backup
+                    const { data: fileData, error: downloadError } = await supabase
+                        .storage
+                        .from('backups')
+                        .download(fileName);
+
+                    if (downloadError) {
+                        return jsonResponse(500, { ok: false, error: 'Error descargando backup: ' + downloadError.message });
+                    }
+
+                    const backupText = await fileData.text();
+                    const backupData = JSON.parse(backupText);
+
+                    let restored = 0;
+                    for (const [table, records] of Object.entries(backupData.tablas || {})) {
+                        if (records && records.length > 0) {
+                            try {
+                                // Eliminar registros existentes
+                                await supabase.from(table).delete().neq('id', records[0].id || '');
+                                // Insertar registros del backup
+                                const { error } = await supabase.from(table).insert(records);
+                                if (!error) restored += records.length;
+                            } catch (e) {
+                                // Continuar con siguiente tabla
+                            }
+                        }
+                    }
+
+                    return jsonResponse(200, {
+                        ok: true,
+                        message: `Backup restaurado: ${restored} registros recuperados`,
+                        restored
+                    });
+                } catch (err) {
+                    return jsonResponse(500, { ok: false, error: err.message });
+                }
+            }
+
+            // ── Exportar Datos ──
+            if (payload.action === 'export_data') {
+                try {
+                    const exportData = {
+                        fecha: new Date().toISOString(),
+                        sistema: 'HighTest Admin Panel',
+                        datos: {}
+                    };
+
+                    const tablesToExport = ['clientes', 'procesos', 'detalle_proceso', 'informes_ensayo_ac', 'marcaciones', 'ensayos'];
+
+                    for (const table of tablesToExport) {
+                        try {
+                            const { data, error } = await supabase
+                                .from(table)
+                                .select('*');
+                            if (!error) {
+                                exportData.datos[table] = data;
+                            }
+                        } catch (e) {
+                            exportData.datos[table] = [];
+                        }
+                    }
+
+                    const csvContent = JSON.stringify(exportData, null, 2);
+
+                    return jsonResponse(200, {
+                        ok: true,
+                        data: exportData,
+                        size: (csvContent.length / 1024).toFixed(2) + ' KB'
+                    });
+                } catch (err) {
+                    return jsonResponse(500, { ok: false, error: err.message });
+                }
+            }
+
+            // ── Listar Backups ──
+            if (payload.action === 'list_backups') {
+                try {
+                    const { data: files, error } = await supabase
+                        .storage
+                        .from('backups')
+                        .list('', { limit: 20, sortBy: { column: 'created_at', order: 'desc' } });
+
+                    if (error) {
+                        return jsonResponse(200, { ok: true, backups: [] });
+                    }
+
+                    const backups = (files || []).map(f => ({
+                        name: f.name,
+                        size: f.metadata?.size || 0,
+                        created: f.created_at
+                    }));
+
+                    return jsonResponse(200, { ok: true, backups });
+                } catch (err) {
+                    return jsonResponse(200, { ok: true, backups: [] });
+                }
+            }
+
+            // ── Restaurar Backup ──
+            if (payload.action === 'restore_backup') {
+                try {
+                    const { data: files, error: listErr } = await supabase
+                        .storage
+                        .from('backups')
+                        .list('', { limit: 20, sortBy: { column: 'created_at', order: 'desc' } });
+
+                    if (listErr || !files || files.length === 0) {
+                        return jsonResponse(200, { ok: true, backups: [], message: 'No hay respaldos disponibles' });
+                    }
+
+                    const backups = files.map(f => ({
+                        name: f.name,
+                        size: f.metadata?.size || 0,
+                        created: f.created_at
+                    }));
+
+                    return jsonResponse(200, { ok: true, backups });
+                } catch (err) {
+                    return jsonResponse(500, { ok: false, error: err.message });
+                }
+            }
+
+            // ── Exportar Datos ──
+            if (payload.action === 'export_data') {
+                try {
+                    const tables = ['clientes', 'procesos', 'detalle_proceso', 'informes_ensayo_ac', 'marcaciones', 'ensayos', 'cotizaciones'];
+                    const exportObj = { exported_at: new Date().toISOString(), tables: {} };
+
+                    for (const tbl of tables) {
+                        const { data, error } = await supabase.from(tbl).select('*').limit(5000);
+                        if (!error) exportObj.tables[tbl] = data || [];
+                    }
+
+                    return jsonResponse(200, { ok: true, data: exportObj });
+                } catch (err) {
+                    return jsonResponse(500, { ok: false, error: err.message });
+                }
+            }
+
+            // ── Reportes Stats ──
+            if (payload.action === 'get_reportes_stats') {
+                try {
+                    const { desde, hasta } = payload;
+
+                    // Query base
+                    let query = supabase.from('procesos_acreditados').select('*');
+                    if (desde) query = query.gte('fecha_recepcion', desde);
+                    if (hasta) query = query.lte('fecha_recepcion', hasta);
+
+                    const { data: procesos, error } = await query;
+                    if (error) throw error;
+
+                    const total = (procesos || []).length;
+
+                    const completados = (procesos || []).filter(p =>
+                        p.estado && (p.estado.toLowerCase().includes('completado') || p.estado.toLowerCase().includes('entregado') || p.estado.toLowerCase().includes('finalizado'))
+                    ).length;
+
+                    const enProceso = total - completados;
+
+                    // Ingresos estimados (si existe campo valor)
+                    let ingresos = 0;
+                    (procesos || []).forEach(p => {
+                        if (p.valor) ingresos += Number(p.valor) || 0;
+                    });
+
+                    // Procesos por cliente
+                    const porCliente = {};
+                    (procesos || []).forEach(p => {
+                        const cliente = p.cliente || 'Sin cliente';
+                        porCliente[cliente] = (porCliente[cliente] || 0) + 1;
+                    });
+
+                    const topClientes = Object.entries(porCliente)
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 10)
+                        .map(([cliente, count]) => ({ cliente, count }));
+
+                    // Procesos por mes
+                    const porMes = {};
+                    (procesos || []).forEach(p => {
+                        if (p.fecha_recepcion) {
+                            const mes = p.fecha_recepcion.slice(0, 7);
+                            porMes[mes] = (porMes[mes] || 0) + 1;
+                        }
+                    });
+
+                    const timeline = Object.entries(porMes)
+                        .sort((a, b) => a[0].localeCompare(b[0]))
+                        .map(([mes, count]) => ({ mes, count }));
+
+                    // Tiempos de entrega (días entre fecha_recepcion y fecha_entrega)
+                    let tiemposEntrega = [];
+                    (procesos || []).forEach(p => {
+                        if (p.fecha_recepcion && p.fecha_entrega) {
+                            const inicio = new Date(p.fecha_recepcion);
+                            const fin = new Date(p.fecha_entrega);
+                            const dias = Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24));
+                            if (dias >= 0) tiemposEntrega.push(dias);
+                        }
+                    });
+
+                    const promedioEntrega = tiemposEntrega.length > 0
+                        ? (tiemposEntrega.reduce((a, b) => a + b, 0) / tiemposEntrega.length).toFixed(1)
+                        : null;
+
+                    // Ensayos realizados (contar ensayos asociados)
+                    const ensayosRealizados = (procesos || []).reduce((sum, p) => sum + (p.num_ensayos || 0), 0);
+
+                    return jsonResponse(200, {
+                        ok: true,
+                        stats: {
+                            total,
+                            completados,
+                            enProceso,
+                            ingresos,
+                            topClientes,
+                            timeline,
+                            promedioEntrega,
+                            ensayosRealizados
+                        }
+                    });
+                } catch (err) {
+                    return jsonResponse(500, { ok: false, error: err.message });
                 }
             }
 
