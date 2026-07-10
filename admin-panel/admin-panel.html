@@ -8486,10 +8486,12 @@
 
             // Logout del sidebar
             const sidebarLogoutBtn = document.getElementById('sidebarLogoutBtn');
-            const adminLogoutBtn = document.getElementById('adminLogoutBtn');
-            if (sidebarLogoutBtn && adminLogoutBtn) {
+            if (sidebarLogoutBtn) {
                 sidebarLogoutBtn.addEventListener('click', function() {
-                    adminLogoutBtn.click();
+                    if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+                        localStorage.removeItem('hightest_user');
+                        window.location.href = '../index.html';
+                    }
                 });
             }
 
