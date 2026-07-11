@@ -470,6 +470,30 @@ exports.handler = async (event) => {
                     return jsonResponse(500, { ok: false, error: 'Error al eliminar proceso', detail: error.message });
                 }
 
+                // También eliminar de borradores si existe
+                try {
+                    const { data: allDrafts } = await supabase
+                        .from('borradores')
+                        .select('id, datos');
+                    if (Array.isArray(allDrafts)) {
+                        for (const row of allDrafts) {
+                            const drafts = Array.isArray(row.datos) ? row.datos : [];
+                            const filtered = drafts.filter(d => {
+                                const key = d.cotizacion || d.quoteNumber || d.numero_proceso || '';
+                                return key !== numero;
+                            });
+                            if (filtered.length !== drafts.length) {
+                                await supabase
+                                    .from('borradores')
+                                    .update({ datos: filtered, updated_at: new Date().toISOString() })
+                                    .eq('id', row.id);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Error eliminando borrador asociado:', e);
+                }
+
                 return jsonResponse(200, { ok: true, message: 'Proceso eliminado' });
             }
 
@@ -2357,10 +2381,11 @@ exports.handler = async (event) => {
                         if (!cliente || cliente === '-' || cliente === '—') return;
                         clienteUnidades[cliente] = (clienteUnidades[cliente] || 0) + (parseInt(d.cantidad) || 0);
                     });
-                    const topClientesUnidades = Object.entries(clienteUnidades)
-                        .map(([nombre, unidades]) => ({ nombre, unidades }))
-                        .sort((a, b) => b.unidades - a.unidades)
-                        .slice(0, 5);
+                    const totalUnidadesClientes = Object.values(clienteUnidades).reduce((a, b) => a + b, 0) || 1;
+                    const allClientesUnidades = Object.entries(clienteUnidades)
+                        .map(([nombre, unidades]) => ({ nombre, unidades, porcentaje: Math.round((unidades / totalUnidadesClientes) * 100) }))
+                        .sort((a, b) => b.unidades - a.unidades);
+                    const topClientesUnidades = allClientesUnidades.slice(0, 6);
 
                     // ── Top clientes por procesos (para la gráfica de barras) ──
                     const clienteProcesoCount = {};
@@ -2505,6 +2530,7 @@ exports.handler = async (event) => {
                             cotizacionesPorEstado,
                             topClientes,
                             topClientesUnidades,
+                            allClientesUnidades,
                             top5ClientesProcesos,
                             allClientesProcesos,
                             topEnsayos,

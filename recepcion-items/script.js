@@ -4681,6 +4681,20 @@ function resetForm() {
     // Reiniciar totales y estado
 
     try {
+        // Liberar el número anterior de la lista de held (bloqueado temporalmente)
+        if (selectedCode) {
+            try {
+                const held = getHeldReceptionNumbers();
+                if (held[selectedCode]) {
+                    delete held[selectedCode];
+                    setHeldReceptionNumbers(held);
+                }
+            } catch (e) { console.warn('Error liberando número anterior del hold:', e); }
+        }
+
+        // Limpiar la selección guardada en localStorage para que no se restaure el viejo
+        localStorage.removeItem('selected_reception_number');
+
         if (quoteEl) {
             // SIEMPRE liberar el campo
             quoteEl.disabled = false;
@@ -4762,9 +4776,7 @@ function resetForm() {
 
     // Reinicializar dropdown de números de recepción con restricciones aplicadas
     try {
-        if (!selectedIsHeld) {
-            initializeQuoteNumbers();
-        }
+        initializeQuoteNumbers();
     } catch (e) {
         console.warn('No se pudo reinicializar números de recepción:', e);
     }

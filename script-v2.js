@@ -721,6 +721,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (res.ok) {
                                 Toast.show({ title: 'Eliminado', message: `Proceso ${id} eliminado`, variant: 'success' });
                                 cargarProcesos();
+                                if (typeof RecepcionAnalyticsModule !== 'undefined') {
+                                    RecepcionAnalyticsModule.init();
+                                }
                             } else {
                                 throw new Error(res.error || 'No se pudo eliminar');
                             }

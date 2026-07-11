@@ -63,6 +63,7 @@ const DashboardModule = {
         this.renderTop10Elementos();
         this.renderElementosPorCategoria();
         this.renderTop5ClientesUnidades();
+        this.bindClientesUnidadesModal();
         this.renderTop5ClientesProcesos();
         this.renderActividadReciente();
         this.renderIndicadores();
@@ -296,7 +297,7 @@ const DashboardModule = {
         if (!canvas || typeof Chart === 'undefined') return;
         if (this.charts.clientesUnidades) this.charts.clientesUnidades.destroy();
 
-        const clientes = (this.stats.topClientesUnidades || []).slice(0, 5);
+        const clientes = (this.stats.topClientesUnidades || []).slice(0, 6);
         if (clientes.length === 0) return;
 
         const splitLabel = (name) => {
@@ -320,7 +321,7 @@ const DashboardModule = {
             type: 'bar',
             data: {
                 labels: clientes.map(c => splitLabel(c.nombre)),
-                datasets: [{ label: 'Unidades', data: clientes.map(c => c.unidades), backgroundColor: '#3b82f6', borderRadius: 4, maxBarThickness: 25 }]
+                datasets: [{ label: 'Unidades', data: clientes.map(c => c.unidades), backgroundColor: '#3b82f6', borderRadius: 4, maxBarThickness: 30, barPercentage: 0.85 }]
             },
             options: {
                 indexAxis: 'y',
@@ -397,6 +398,40 @@ const DashboardModule = {
             allClientes.forEach((cliente, i) => {
                 const color = colors[i % colors.length];
                 html += `<tr style="border-bottom:1px solid #f3f4f6;"><td style="padding:8px 12px;color:#6b7280;">${i + 1}</td><td style="padding:8px 12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};margin-right:8px;"></span>${cliente.nombre}</td><td style="padding:8px 12px;text-align:right;font-weight:600;">${cliente.count}</td><td style="padding:8px 12px;text-align:right;">${cliente.porcentaje}%</td></tr>`;
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        modal.style.display = 'block';
+    },
+
+    // ── Modal: Todos los Clientes por Unidades ──
+    bindClientesUnidadesModal() {
+        const btn = document.getElementById('verTodosClientesUnidades');
+        if (btn) {
+            btn.onclick = (e) => {
+                e.preventDefault();
+                this.showAllClientesUnidadesModal();
+            };
+        }
+    },
+
+    showAllClientesUnidadesModal() {
+        const container = document.getElementById('modalAllClientesUnidadesContent');
+        const modal = document.getElementById('modalAllClientesUnidades');
+        if (!container || !modal) return;
+
+        const allClientes = this.stats.allClientesUnidades || [];
+        if (allClientes.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:2rem;color:#9ca3af;">Sin datos disponibles</div>';
+        } else {
+            const colors = ['#3B82F6', '#8B5CF6', '#F59E0B', '#EC4899', '#10B981', '#06B6D4', '#EF4444', '#84CC16', '#14B8A6', '#F97316'];
+            let html = '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
+            html += '<thead><tr style="border-bottom:2px solid #e5e7eb;text-align:left;"><th style="padding:8px 12px;">#</th><th style="padding:8px 12px;">Cliente</th><th style="padding:8px 12px;text-align:right;">Unidades</th><th style="padding:8px 12px;text-align:right;">%</th></tr></thead><tbody>';
+            allClientes.forEach((cliente, i) => {
+                const color = colors[i % colors.length];
+                html += `<tr style="border-bottom:1px solid #f3f4f6;"><td style="padding:8px 12px;color:#6b7280;">${i + 1}</td><td style="padding:8px 12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};margin-right:8px;"></span>${cliente.nombre}</td><td style="padding:8px 12px;text-align:right;font-weight:600;">${cliente.unidades}</td><td style="padding:8px 12px;text-align:right;">${cliente.porcentaje}%</td></tr>`;
             });
             html += '</tbody></table>';
             container.innerHTML = html;

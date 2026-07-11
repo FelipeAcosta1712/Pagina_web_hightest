@@ -296,11 +296,12 @@
 
                         <div class="dash-chart-card">
                             <div class="dash-chart-card__header">
-                                <h3 class="dash-chart-card__title">Top 5 Clientes por Unidades Recibidas</h3>
+                                <h3 class="dash-chart-card__title">Top 6 Clientes por Unidades Recibidas</h3>
                             </div>
                             <div class="dash-chart-card__body">
                                 <canvas id="chartClientesUnidades"></canvas>
                             </div>
+                            <div class="dash-chart-card__footer"><a href="#" class="dash-chart-card__link" id="verTodosClientesUnidades">Ver todos los clientes</a></div>
                         </div>
                     </div>
 
@@ -4885,6 +4886,10 @@
             height: 100%;
         }
 
+        .dash-chart-col-stacked .dash-chart-card {
+            flex: 1;
+        }
+
         /* 1-column charts row */
         .dash-charts-row--1col {
             grid-template-columns: 1fr;
@@ -7688,6 +7693,17 @@
         </div>
     </div>
 
+    <!-- Modal Todos los Clientes por Unidades -->
+    <div id="modalAllClientesUnidades" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;overflow-y:auto;">
+        <div style="background:white;margin:40px auto;max-width:700px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.25);">
+            <div style="padding:20px;border-bottom:2px solid #3b82f6;display:flex;justify-content:space-between;align-items:center;">
+                <h2 style="margin:0;font-size:18px;">Todos los Clientes por Unidades Recibidas</h2>
+                <button type="button" style="background:none;border:none;font-size:24px;cursor:pointer;" onclick="document.getElementById('modalAllClientesUnidades').style.display='none'">✕</button>
+            </div>
+            <div id="modalAllClientesUnidadesContent" style="padding:20px;max-height:70vh;overflow-y:auto;"></div>
+        </div>
+    </div>
+
     <!-- jsPDF para generación de PDFs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- script.js de recepcion-items para generatePDFFromCase -->
@@ -8440,12 +8456,32 @@
 
         }
 
-        // Función para sincronizar el nombre del usuario en el sidebar
-        function syncSidebarUserName() {
+        // Función para sincronizar el nombre y rol del usuario en el sidebar
+        function syncSidebarUserInfo() {
             const adminUserName = document.getElementById('adminUserName');
             const sidebarUserName = document.getElementById('sidebarUserName');
+            const sidebarUserRole = document.getElementById('sidebarUserRole');
             if (adminUserName && sidebarUserName && adminUserName.textContent.trim()) {
                 sidebarUserName.textContent = adminUserName.textContent.trim();
+            }
+            // Sincronizar rol desde localStorage
+            if (sidebarUserRole) {
+                try {
+                    const stored = JSON.parse(localStorage.getItem('hightest_user') || '{}');
+                    const roleKey = (stored.role || '').toLowerCase().trim();
+                    const roleLabels = {
+                        'administrador': 'Administrador',
+                        'director_tecnico': 'Director Técnico',
+                        'tecnico_ensayos': 'Técnico de Ensayos',
+                        'operador': 'Operador',
+                        'cliente': 'Cliente',
+                        'asistente': 'Asistente',
+                        'coordinador': 'Coordinador'
+                    };
+                    sidebarUserRole.textContent = roleLabels[roleKey] || (stored.role || 'Usuario');
+                } catch (e) {
+                    sidebarUserRole.textContent = 'Usuario';
+                }
             }
         }
 
@@ -8498,9 +8534,9 @@
             // Observar cambios en el nombre del usuario y sincronizar
             const adminUserName = document.getElementById('adminUserName');
             if (adminUserName) {
-                syncSidebarUserName();
+                syncSidebarUserInfo();
                 const observer = new MutationObserver(function() {
-                    syncSidebarUserName();
+                    syncSidebarUserInfo();
                 });
                 observer.observe(adminUserName, { childList: true, characterData: true, subtree: true });
             }
@@ -10740,6 +10776,7 @@
                         const items = c.items ? c.items.length : 0;
                         const esEntrega = e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente';
                         let accionBtns = '<button type="button" onclick="mostrarVistaPrevia(\'' + c.cotizacion + '\')" style="background:#f1f5f9;color:#475569;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #d1d5db;cursor:pointer;">👁️ Ver</button>';
+                        accionBtns += ' <button type="button" onclick="RecepcionAnalyticsModule.eliminarCaso(\'' + c.cotizacion + '\')" style="background:#fef2f2;color:#dc2626;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #fecaca;cursor:pointer;">🗑️</button>';
                         return `<tr style="border-bottom:1px solid #ddd;">
                             <td style="padding:10px;border:1px solid #ddd;">${c.cotizacion}</td>
                             <td style="padding:10px;border:1px solid #ddd;">${c.cliente}</td>
@@ -10907,6 +10944,29 @@
                 div.innerHTML = html;
                 if (!window._pagCallbacks) window._pagCallbacks = {};
                 window._pagCallbacks[containerId] = callback;
+            },
+
+            async eliminarCaso(numero) {
+                if (!confirm('¿Eliminar el caso ' + numero + '? Esta acción no se puede deshacer.')) return;
+                try {
+                    const res = await fetch('/.netlify/functions/conectar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'delete_proceso', numero_proceso: numero })
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                        await this.cargarCasos();
+                        this.actualizarCardsResumen();
+                        this.refrescarHistorial();
+                        alert('Caso ' + numero + ' eliminado');
+                    } else {
+                        alert('Error: ' + (data.error || 'No se pudo eliminar'));
+                    }
+                } catch (e) {
+                    console.error('Error eliminando caso:', e);
+                    alert('Error al eliminar: ' + e.message);
+                }
             }
         };
 
