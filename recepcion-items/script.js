@@ -2501,6 +2501,99 @@ function saveSignature(type) {
     }
 }
 
+// =======================================================
+// FIRMA EN PANTALLA COMPLETA
+// =======================================================
+
+let _fullscreenSignatureType = null;
+let _fullscreenSignaturePad = null;
+
+function openSignatureFullscreen(type) {
+    _fullscreenSignatureType = type;
+    const modal = document.getElementById('signatureFullscreenModal');
+    const canvas = document.getElementById('signatureCanvasFullscreen');
+    const title = document.getElementById('signatureFullscreenTitle');
+    if (!modal || !canvas) return;
+
+    const labels = { Recepcion: 'Recepción', Entrega: 'Entrega', HighTest: 'HIGH TEST' };
+    title.textContent = `Firma de ${labels[type] || type} - Pantalla completa`;
+
+    modal.style.display = 'flex';
+
+    // Esperar a que el modal sea visible para dimensionar el canvas
+    requestAnimationFrame(() => {
+        const rect = canvas.getBoundingClientRect();
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = rect.width * ratio;
+        canvas.height = rect.height * ratio;
+        canvas.getContext('2d').scale(ratio, ratio);
+
+        _fullscreenSignaturePad = new SignaturePad(canvas, {
+            backgroundColor: 'rgba(255, 255, 255, 0)',
+            penColor: 'rgb(0, 0, 0)',
+            velocityFilterWeight: 0.7,
+            minWidth: 0.5,
+            maxWidth: 2.5
+        });
+
+        // Restaurar firma previa si existe
+        const canvasId = `signatureCanvas${type}`;
+        if (signatureData[canvasId]) {
+            _fullscreenSignaturePad.fromDataURL(signatureData[canvasId]);
+        }
+    });
+}
+
+function closeSignatureFullscreen() {
+    const modal = document.getElementById('signatureFullscreenModal');
+    if (modal) modal.style.display = 'none';
+    _fullscreenSignaturePad = null;
+    _fullscreenSignatureType = null;
+}
+
+function clearSignatureFullscreen() {
+    if (_fullscreenSignaturePad) {
+        _fullscreenSignaturePad.clear();
+    }
+}
+
+function saveAndCloseFullscreen() {
+    if (!_fullscreenSignaturePad || _fullscreenSignaturePad.isEmpty()) {
+        showNotification('❌ Dibuje una firma antes de guardar', 'warning');
+        return;
+    }
+    if (!_fullscreenSignatureType) return;
+
+    const canvasId = `signatureCanvas${_fullscreenSignatureType}`;
+    const dataURL = _fullscreenSignaturePad.toDataURL();
+
+    // Guardar en el objeto global signatureData
+    signatureData[canvasId] = dataURL;
+
+    // Copiar la firma al canvas original (pequeño)
+    const originalCanvas = document.getElementById(canvasId);
+    if (originalCanvas && signaturePads[canvasId]) {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        originalCanvas.width = originalCanvas.offsetWidth * ratio;
+        originalCanvas.height = originalCanvas.offsetHeight * ratio;
+        originalCanvas.getContext('2d').scale(ratio, ratio);
+        signaturePads[canvasId].clear();
+        signaturePads[canvasId].fromDataURL(dataURL);
+    }
+
+    const labels = { Recepcion: 'Recepción del Cliente', Entrega: 'Entrega del Cliente', HighTest: 'HIGH TEST SAS' };
+    showNotification(`💾 Firma de ${labels[_fullscreenSignatureType] || _fullscreenSignatureType} guardada`, 'success');
+
+    closeSignatureFullscreen();
+}
+
+// Cerrar con Escape
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('signatureFullscreenModal')?.style.display === 'flex') {
+        closeSignatureFullscreen();
+    }
+});
+
 /**
  * Inicializa la librería SignaturePad en el elemento canvas 'signatureCanvas'.
  * Configura las propiedades de dibujo y maneja el redimensionamiento del canvas
@@ -6638,10 +6731,31 @@ async function loadDraftsFromServer() {
         if (!resp.ok) throw new Error('Error al conectar con servidor');
         const result = await resp.json();
         if (result && result.ok && Array.isArray(result.data)) {
-            localStorage.setItem('cmr_drafts', JSON.stringify(result.data));
+            // Fusionar: server drafts + locales que no están en server
+            const localDrafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
+            const merged = [];
+
+            // Agregar borradores del servidor (preservando status 'entrega' local)
+            result.data.forEach(serverDraft => {
+                const localDraft = localDrafts.find(d => d.cotizacion && d.cotizacion === serverDraft.cotizacion);
+                if (localDraft && localDraft.status === 'entrega' && serverDraft.status !== 'entrega') {
+                    merged.push({ ...serverDraft, status: 'entrega' });
+                } else {
+                    merged.push(serverDraft);
+                }
+            });
+
+            // Agregar borradores locales que NO están en el servidor
+            localDrafts.forEach(localDraft => {
+                if (!merged.find(d => d.cotizacion && d.cotizacion === localDraft.cotizacion)) {
+                    merged.push(localDraft);
+                }
+            });
+
+            localStorage.setItem('cmr_drafts', JSON.stringify(merged));
             try { refreshCasesSelect(); } catch(e){}
             try { showNotification('🔄 Borradores cargados desde servidor', 'info'); } catch(e){}
-            return result.data;
+            return merged;
         }
     } catch (error) {
         console.warn('⚠️ No se pudo cargar borradores desde servidor:', error.message || error);
@@ -7674,14 +7788,13 @@ async function pdfCompletoAction() {
     // Solo genera el PDF Completo; no abre correo automáticamente
     generatePDF();
 
-    // Actualizar proceso existente a ENTREGA CLIENTE
+    // Actualizar proceso existente a ENTREGA CLIENTE en BD
     await actualizarProcesoAEntrega();
 
-    // Guardar borrador final en servidor y marcar como completado
-    await saveAsDraft();
+    // Marcar borrador como completado (guarda formulario + status 'entrega' en servidor)
     const cot2 = document.getElementById('quoteNumber')?.value;
     if (cot2) {
-        try { updateDraftStatus(cot2, 'entrega'); } catch(e) {}
+        try { await updateDraftStatus(cot2, 'entrega'); } catch(e) {}
     }
 }
 
@@ -7720,7 +7833,10 @@ async function saveAsDraft() {
         // Mantener historial: fusionar timestamp y status
         const existing = allDrafts[existingIdx];
         formData._createdAt = existing._createdAt || existing.timestamp || formData.timestamp;
-        allDrafts[existingIdx] = Object.assign({}, existing, formData);
+        allDrafts[existingIdx] = Object.assign({}, existing, formData, {
+            // Preservar status más avanzado si el existente ya está en 'entrega'
+            status: _statusLevel(existing.status) > _statusLevel(formData.status) ? existing.status : formData.status
+        });
     } else {
         // Nuevo borrador
         formData._createdAt = formData.timestamp;
@@ -7755,7 +7871,7 @@ function findDraftIndexByCotizacion(cotizacion) {
 }
 
 // Helper: actualizar estado de un borrador (p.ej. 'recepcion' o 'entrega')
-function updateDraftStatus(cotizacion, status) {
+async function updateDraftStatus(cotizacion, status) {
     if (!cotizacion) return false;
     const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
     const idx = drafts.findIndex(d => d.cotizacion && d.cotizacion === cotizacion);
@@ -7778,7 +7894,7 @@ function updateDraftStatus(cotizacion, status) {
     }
     
     localStorage.setItem('cmr_drafts', JSON.stringify(drafts));
-    try { saveDraftsToServer(drafts); } catch(e) {}
+    try { await saveDraftsToServer(drafts); } catch(e) {}
     setTimeout(refreshCasesSelect, 100);
     return true;
 }
@@ -8764,6 +8880,20 @@ function _getKeyCaso(c) {
     return c && (c.cotizacion || c.quoteNumber || c.numero_proceso || '');
 }
 
+// Jerarquía de status: valor más alto = más avanzado en el flujo
+const _STATUS_HIERARCHY = {
+    'recepcion': 0,
+    'lavado': 1,
+    'en-proceso-de-ensayo': 2,
+    'entrega': 3,
+    'entrega-cliente': 3,
+    'finalizado': 4
+};
+
+function _statusLevel(status) {
+    return _STATUS_HIERARCHY[status] ?? 0;
+}
+
 function _insertIfNewer(map, caso) {
     if (!caso || typeof caso !== 'object') return;
     const key = _getKeyCaso(caso);
@@ -8772,14 +8902,24 @@ function _insertIfNewer(map, caso) {
     if (!existing) {
         map.set(key, caso);
     } else {
-        const tsNew = caso.timestamp || caso.updated_at || caso.created_at || '';
-        const tsOld = existing.timestamp || existing.updated_at || existing.created_at || '';
         const casoIsProceso = caso._source === 'supabase_proceso';
-        const existingIsProceso = existing._source === 'supabase_proceso';
-        const shouldOverwrite = casoIsProceso || tsNew > tsOld;
+        const casoLevel = _statusLevel(caso.status);
+        const existingLevel = _statusLevel(existing.status);
+        // Si el caso nuevo es un proceso de Supabase, solo sobreescribe
+        // si su status es igual o más avanzado que el existente.
+        // Esto evita que un proceso en 'recepcion' en BD sobreescriba
+        // un caso local ya marcado como 'entrega'.
+        let shouldOverwrite;
+        if (casoIsProceso) {
+            shouldOverwrite = casoLevel >= existingLevel;
+        } else {
+            const tsNew = caso.timestamp || caso.updated_at || caso.created_at || '';
+            const tsOld = existing.timestamp || existing.updated_at || existing.created_at || '';
+            shouldOverwrite = tsNew > tsOld;
+        }
         if (shouldOverwrite) {
             const preserveFields = [
-                'signatureData', 'items', 'formData', 'cotizacion',
+                'status', 'signatureData', 'items', 'formData', 'cotizacion',
                 'cliente', 'nitEmpresa', 'facturar',
                 'informe', 'observaciones', 'clienteEmail', 'empresaEmail', 'copiaEmail',
                 'lavado', 'elementosLavados', 'tipoLavado', 'fechaLavado', 'responsableLavado', 'observacionesLavado',
@@ -8893,8 +9033,12 @@ function obtenerCasosUnificadosConRender(callback) {
     const casos = obtenerCasosUnificados();
 
     if (window._fetchEnCurso) {
+        // Fetch en curso: registrar callback para cuando termine
         window._callbacksRender.push(callback);
     }
+    // NOTA: si el fetch ya terminó, el callback NO se ejecuta aquí
+    // para evitar recursión infinita. El caller debe re-renderizar
+    // con los datos devueltos por obtenerCasosUnificados().
 
     return casos;
 }
@@ -9130,6 +9274,9 @@ function actualizarEstadisticas() {
     document.getElementById('stat-completados').textContent = completados;
     document.getElementById('stat-enProgreso').textContent = enProgreso;
     document.getElementById('stat-discrepancias').textContent = discrepancias;
+
+    // Almacenar para filtro de discrepancias
+    window._estadisticasCaseStats = caseStats;
     
     // Llenar tabla de casos
     const tbody = document.getElementById('estadisticasCasoTableBody');
@@ -9195,10 +9342,105 @@ function actualizarEstadisticas() {
     }
 }
 
-// Paginación de estadísticas
+    // Paginación de estadísticas
 function paginarEstadisticas(pagina) {
     window._paginaEstadisticas = pagina;
     actualizarEstadisticas();
+    document.getElementById('estadisticasCasoTableBody').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// =======================================================
+// FILTRO DE DISCREPANCIAS EN ESTADÍSTICAS
+// =======================================================
+window._filtroDiscrepancias = false;
+
+function filtrarEstadisticasPorDiscrepancias() {
+    window._filtroDiscrepancias = true;
+    window._paginaEstadisticas = 1;
+    _renderEstadisticasTabla();
+    const indicator = document.getElementById('discrepanciaFilterIndicator');
+    if (indicator) indicator.style.display = 'flex';
+}
+
+function limpiarFiltroDiscrepancias() {
+    window._filtroDiscrepancias = false;
+    window._paginaEstadisticas = 1;
+    _renderEstadisticasTabla();
+    const indicator = document.getElementById('discrepanciaFilterIndicator');
+    if (indicator) indicator.style.display = 'none';
+}
+
+function _renderEstadisticasTabla() {
+    const tbody = document.getElementById('estadisticasCasoTableBody');
+    if (!tbody) return;
+
+    const casoStats = window._estadisticasCaseStats;
+    if (!casoStats) { actualizarEstadisticas(); return; }
+
+    let entries = Object.entries(casoStats);
+
+    if (window._filtroDiscrepancias) {
+        entries = entries.filter(([_, stats]) => stats.totalRecibidos !== stats.totalEntregados);
+    }
+
+    entries.sort((a, b) => String(b[0]).localeCompare(String(a[0])));
+
+    const itemsPorPagina = 20;
+    const totalPaginas = Math.ceil(entries.length / itemsPorPagina);
+    let pagina = window._paginaEstadisticas || 1;
+    if (pagina > totalPaginas) pagina = totalPaginas;
+    if (pagina < 1) pagina = 1;
+    window._paginaEstadisticas = pagina;
+    const inicio = (pagina - 1) * itemsPorPagina;
+    const paginados = entries.slice(inicio, inicio + itemsPorPagina);
+
+    tbody.innerHTML = '';
+    if (entries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="padding: 16px; text-align: center; color: #666;">No hay discrepancias</td></tr>';
+    } else {
+        paginados.forEach(([cotizacion, stats]) => {
+            const diferencia = stats.totalEntregados - stats.totalRecibidos;
+            const diferenciasStyle = diferencia !== 0 ? 'background: #ffebee; color: #c62828; font-weight: bold;' : '';
+            const row = `
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${cotizacion}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${stats.cliente}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${stats.informeNombre}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${stats.facturarNombre}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${stats.totalItems}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${stats.totalRecibidos}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${stats.totalEntregados}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center; ${diferenciasStyle}">${diferencia > 0 ? '+' : ''}${diferencia}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">
+                        <button type="button" class="btn btn-small" onclick="mostrarDetallesEstadisticas('${cotizacion}')" style="padding: 6px 10px; font-size: 12px;">👁️ Ver</button>
+                    </td>
+                </tr>`;
+            tbody.innerHTML += row;
+        });
+    }
+
+    // Paginación
+    const pagDiv = document.getElementById('paginacionEstadisticas');
+    if (pagDiv) {
+        if (totalPaginas <= 1) { pagDiv.innerHTML = ''; return; }
+        let html = `<span style="font-size: 13px; color: #666;">Mostrando ${inicio + 1}-${Math.min(inicio + itemsPorPagina, entries.length)} de ${entries.length}</span>`;
+        html += `<button type="button" class="btn btn-small" onclick="paginarEstadisticasFiltro(1)" ${pagina === 1 ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">«</button>`;
+        html += `<button type="button" class="btn btn-small" onclick="paginarEstadisticasFiltro(${pagina - 1})" ${pagina === 1 ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">‹</button>`;
+        let startPage = Math.max(1, pagina - 2);
+        let endPage = Math.min(totalPaginas, startPage + 4);
+        if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+        for (let i = startPage; i <= endPage; i++) {
+            html += `<button type="button" class="btn btn-small" onclick="paginarEstadisticasFiltro(${i})" style="padding: 4px 10px; font-size: 13px; ${i === pagina ? 'background: #022859; color: white;' : ''}">${i}</button>`;
+        }
+        html += `<button type="button" class="btn btn-small" onclick="paginarEstadisticasFiltro(${pagina + 1})" ${pagina === totalPaginas ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">›</button>`;
+        html += `<button type="button" class="btn btn-small" onclick="paginarEstadisticasFiltro(${totalPaginas})" ${pagina === totalPaginas ? 'disabled' : ''} style="padding: 4px 10px; font-size: 13px;">»</button>`;
+        pagDiv.innerHTML = html;
+    }
+}
+
+function paginarEstadisticasFiltro(pagina) {
+    window._paginaEstadisticas = pagina;
+    _renderEstadisticasTabla();
     document.getElementById('estadisticasCasoTableBody').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 

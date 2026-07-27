@@ -331,6 +331,7 @@
                                 <canvas id="signatureCanvasRecepcion" class="signature-canvas" width="400" height="150"></canvas>
                                 <div class="signature-controls">
                                     <button type="button" class="btn btn-secondary" onclick="clearSignature('Recepcion')">🗑️ Limpiar</button>
+                                    <button type="button" class="btn btn-info" onclick="openSignatureFullscreen('Recepcion')" title="Abrir firma en pantalla completa">⛶ Firmar en pantalla completa</button>
                                     <button type="button" class="btn btn-primary" onclick="saveSignature('Recepcion')">💾 Guardar</button>
                                 </div>
                             </div>
@@ -379,6 +380,7 @@
                                 <canvas id="signatureCanvasEntrega" class="signature-canvas" width="400" height="150"></canvas>
                                 <div class="signature-controls">
                                     <button type="button" class="btn btn-secondary" onclick="clearSignature('Entrega')">🗑️ Limpiar</button>
+                                    <button type="button" class="btn btn-info" onclick="openSignatureFullscreen('Entrega')" title="Abrir firma en pantalla completa">⛶ Firmar en pantalla completa</button>
                                     <button type="button" class="btn btn-primary" onclick="saveSignature('Entrega')">💾 Guardar</button>
                                 </div>
                             </div>
@@ -552,6 +554,23 @@
                 <button type="button" onclick="cerrarVistaPrevia()" style="background:none; border:none; font-size:24px; cursor:pointer;">✕</button>
             </div>
             <div id="modalPreviewContent" style="padding:20px; max-height:70vh; overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <!-- Modal de firma en pantalla completa -->
+    <div id="signatureFullscreenModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10010; justify-content:center; align-items:center; flex-direction:column;">
+        <div style="background:#fff; border-radius:12px; box-shadow:0 8px 40px rgba(0,0,0,0.4); width:90%; max-width:700px; display:flex; flex-direction:column; overflow:hidden;">
+            <div style="padding:16px 24px; background:linear-gradient(135deg, #022859, #0a4a8a); color:#fff; display:flex; justify-content:space-between; align-items:center;">
+                <h3 id="signatureFullscreenTitle" style="margin:0; font-size:18px;">Firma en pantalla completa</h3>
+                <button type="button" onclick="closeSignatureFullscreen()" style="background:none; border:none; color:#fff; font-size:28px; cursor:pointer; line-height:1;">&times;</button>
+            </div>
+            <div style="padding:20px; display:flex; justify-content:center; align-items:center; background:#f8fafc; min-height:300px;">
+                <canvas id="signatureCanvasFullscreen" style="border:2px dashed #3b82f6; border-radius:8px; background:#fff; cursor:crosshair; touch-action:none; width:100%; max-width:650px; height:350px;"></canvas>
+            </div>
+            <div style="padding:14px 24px; border-top:1px solid #e2e8f0; display:flex; justify-content:center; gap:12px; background:#fff;">
+                <button type="button" class="btn btn-secondary" onclick="clearSignatureFullscreen()" style="padding:10px 24px; border-radius:8px; font-weight:600;">🗑️ Limpiar</button>
+                <button type="button" class="btn btn-primary" onclick="saveAndCloseFullscreen()" style="padding:10px 24px; border-radius:8px; font-weight:600; background:linear-gradient(135deg, #8b5cf6, #6366f1);">💾 Guardar y cerrar</button>
+            </div>
         </div>
     </div>
 

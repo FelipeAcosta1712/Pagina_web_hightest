@@ -1089,15 +1089,20 @@
                             <div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">En Progreso</div>
                             <div style="font-size: 28px; font-weight: 700; color: #f59e0b;" id="stat-enProgreso">0</div>
                         </div>
-                        <div style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid #e5e7eb; border-left: 4px solid #ef4444;">
-                            <div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">Discrepancias</div>
+                        <div style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid #e5e7eb; border-left: 4px solid #ef4444; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;" onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 4px 12px rgba(239,68,68,0.3)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'" onclick="RecepcionAnalyticsModule.filtrarDiscrepancias()">
+                            <div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">⚠️ Discrepancias</div>
                             <div style="font-size: 28px; font-weight: 700; color: #ef4444;" id="stat-discrepancias">0</div>
+                            <div style="font-size: 11px; color: #ef4444; margin-top: 4px;">Clic para filtrar</div>
                         </div>
                     </div>
 
                     <div style="background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden;">
-                        <div style="padding: 16px; border-bottom: 1px solid #e5e7eb;">
+                        <div style="padding: 16px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
                             <h3 style="margin: 0; font-size: 15px; font-weight: 700;">Resumen por Caso</h3>
+                            <div id="discrepanciaFilterIndicator" style="display: none; background: #fef2f2; color: #ef4444; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;">
+                                ⚠️ Mostrando solo discrepancias
+                                <button type="button" onclick="RecepcionAnalyticsModule.limpiarFiltroDiscrepancias()" style="background: #ef4444; color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; margin-left: 8px; font-size: 12px; line-height: 1;">✕</button>
+                            </div>
                         </div>
                         <div style="overflow-x: auto;">
                             <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #222;">
@@ -10837,20 +10842,38 @@
                 document.getElementById('stat-enProgreso').textContent = this.casos.length - completados;
                 document.getElementById('stat-discrepancias').textContent = discrepancias;
 
+                // Almacenar para filtro de discrepancias
+                this._casoStats = casoStats;
+                this._filtroDiscrepancias = false;
+                document.getElementById('discrepanciaFilterIndicator').style.display = 'none';
+
+                this._renderTablaEstadisticas();
+            },
+
+            _renderTablaEstadisticas() {
+                const tbody = document.getElementById('estadisticasCasoTableBody');
+                if (!tbody) return;
+                const casoStats = this._casoStats;
+                if (!casoStats) return;
+
+                let entries = Object.values(casoStats);
+                if (this._filtroDiscrepancias) {
+                    entries = entries.filter(c => c.totalRecibidos !== c.totalEntregados);
+                }
+                entries.sort((a, b) => String(b.cotizacion).localeCompare(String(a.cotizacion)));
+
                 const porPagina = 20;
-                const casoArray = Object.values(casoStats).sort((a, b) => String(b.cotizacion).localeCompare(String(a.cotizacion)));
-                const totalPag = Math.ceil(casoArray.length / porPagina);
+                const totalPag = Math.ceil(entries.length / porPagina);
                 if (this.paginaEstadisticas > totalPag) this.paginaEstadisticas = totalPag || 1;
                 const inicio = (this.paginaEstadisticas - 1) * porPagina;
-                const paginados = casoArray.slice(inicio, inicio + porPagina);
+                const paginados = entries.slice(inicio, inicio + porPagina);
 
                 if (paginados.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:#999;">No hay datos</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:#999;">No hay discrepancias</td></tr>';
                 } else {
                     tbody.innerHTML = paginados.map(c => {
                         const diff = c.totalEntregados - c.totalRecibidos;
                         const diffStyle = diff !== 0 ? 'background:#ffebee;color:#c62828;font-weight:bold;' : '';
-                        const diffLabel = diff !== 0 ? '<div style="color:#e91e63;font-size:11px;margin-top:4px;font-weight:bold;">⚠️ Discrepancia</div>' : '';
                         return `<tr style="border-bottom:1px solid #ddd;">
                             <td style="padding:10px;border:1px solid #ddd;">${c.cotizacion}</td>
                             <td style="padding:10px;border:1px solid #ddd;">${c.cliente}</td>
@@ -10862,12 +10885,25 @@
                             <td style="padding:10px;border:1px solid #ddd;text-align:center;${diffStyle}">${diff > 0 ? '+' : ''}${diff}</td>
                             <td style="padding:10px;border:1px solid #ddd;text-align:center;">
                                 <button type="button" onclick="mostrarDetallesEstadisticas('${c.cotizacion}')" style="background:#f1f5f9;color:#475569;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #d1d5db;cursor:pointer;">👁️ Ver</button>
-                                ${diffLabel}
                             </td>
                         </tr>`;
                     }).join('');
                 }
-                this.renderPaginacion('paginacionEstadisticas', totalPag, this.paginaEstadisticas, (p) => { this.paginaEstadisticas = p; this.actualizarEstadisticas(); });
+                this.renderPaginacion('paginacionEstadisticas', totalPag, this.paginaEstadisticas, (p) => { this.paginaEstadisticas = p; this._renderTablaEstadisticas(); });
+            },
+
+            filtrarDiscrepancias() {
+                this._filtroDiscrepancias = true;
+                this.paginaEstadisticas = 1;
+                document.getElementById('discrepanciaFilterIndicator').style.display = 'flex';
+                this._renderTablaEstadisticas();
+            },
+
+            limpiarFiltroDiscrepancias() {
+                this._filtroDiscrepancias = false;
+                this.paginaEstadisticas = 1;
+                document.getElementById('discrepanciaFilterIndicator').style.display = 'none';
+                this._renderTablaEstadisticas();
             },
 
             ejecutarBusqueda() {

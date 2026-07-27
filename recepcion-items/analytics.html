@@ -190,13 +190,20 @@
                         <h4 style="margin: 0; color: #ff9800;">En Progreso</h4>
                         <div style="font-size: 28px; font-weight: bold; color: #ff9800;" id="stat-enProgreso">0</div>
                     </div>
-                    <div style="background: #fce4ec; padding: 15px; border-radius: 8px; border-left: 4px solid #e91e63;">
-                        <h4 style="margin: 0; color: #e91e63;">Discrepancias</h4>
+                    <div style="background: #fce4ec; padding: 15px; border-radius: 8px; border-left: 4px solid #e91e63; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;" onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 4px 12px rgba(233,30,99,0.3)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'" onclick="filtrarEstadisticasPorDiscrepancias()">
+                        <h4 style="margin: 0; color: #e91e63;">⚠️ Discrepancias</h4>
                         <div style="font-size: 28px; font-weight: bold; color: #e91e63;" id="stat-discrepancias">0</div>
+                        <div style="font-size: 11px; color: #e91e63; margin-top: 4px;">Clic para filtrar</div>
                     </div>
                 </div>
 
-                <h4>Resumen por Caso</h4>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                    <h4 style="margin: 0;">Resumen por Caso</h4>
+                    <div id="discrepanciaFilterIndicator" style="display: none; background: #fce4ec; color: #e91e63; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;">
+                        ⚠️ Mostrando solo discrepancias
+                        <button type="button" onclick="limpiarFiltroDiscrepancias()" style="background: #e91e63; color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; margin-left: 8px; font-size: 12px; line-height: 1;">✕</button>
+                    </div>
+                </div>
                 <div style="overflow-x: auto;">
                     <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
                         <thead style="background-color: #f5f5f5;">
@@ -423,6 +430,8 @@
 
         function _cargarHistorialInicial() {
             if (!validateAccessToAnalytics()) return;
+            // Invalidar cache para forzar fetch fresco de Supabase
+            try { invalidarCacheCasos(); } catch(e) {}
             try { showReportsTab('historial'); } catch(e) { console.error('Error showReportsTab:', e); }
             try { refrescarHistorial(); } catch(e) { console.error('Error refrescarHistorial:', e); }
 
