@@ -12049,7 +12049,7 @@ function renderMarcacionProcesosList() {
         else if (upperEstado.includes('finalizado')) badge = '<span class="marcacion-estado-badge no-conforme">Finalizado</span>';
         else if (upperEstado.includes('informe') || upperEstado.includes('entrega')) badge = '<span class="marcacion-estado-badge marcado">Entrega</span>';
 
-        const r = marcacionResumen[p.id] || null;
+        const r = marcacionResumen[p.id] || marcacionResumen[String(p.id)] || marcacionResumen[(p.numero_proceso || '').trim()] || null;
         let statusHtml = '';
         let cardBorder = '#e2e8f0';
         let cardBg = '#fff';

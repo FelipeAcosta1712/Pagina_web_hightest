@@ -1267,10 +1267,59 @@ exports.handler = async (event) => {
                     }
                     resumen[pid].total++;
                     const est = String(m.estado || '').toLowerCase();
-                    if (est === 'marcado') resumen[pid].marcados++;
+                    if (est === 'marcado' || est === 'revisado') resumen[pid].marcados++;
                     else if (est === 'pendiente') resumen[pid].pendientes++;
                     else resumen[pid].otros++;
                 });
+
+                // Also add entries keyed by numero_proceso for robust frontend lookup
+                try {
+                    const [procesosRes, detalleRes] = await Promise.all([
+                        supabase.from('procesos_acreditados').select('id, numero_proceso'),
+                        supabase.from('detalle_procesos_ac').select('id, proceso_id')
+                    ]);
+                    const procesos = procesosRes.data;
+                    const detalles = detalleRes.data;
+
+                    // Build map: procesos_acreditados.id → numero_proceso
+                    const idToNum = {};
+                    if (procesos) {
+                        procesos.forEach(p => {
+                            const pid = String(p.id || '').trim();
+                            const num = (p.numero_proceso || '').trim();
+                            if (pid && num) idToNum[pid] = num;
+                        });
+                    }
+
+                    // Build map: detalle_procesos_ac.id → numero_proceso (through proceso_id FK)
+                    const detalleToNum = {};
+                    if (detalles) {
+                        detalles.forEach(d => {
+                            const did = String(d.id || '').trim();
+                            const parentPid = String(d.proceso_id || '').trim();
+                            if (did && idToNum[parentPid]) detalleToNum[did] = idToNum[parentPid];
+                        });
+                    }
+
+                    // For each resumen entry, try to add numero_proceso key
+                    const pids = Object.keys(resumen);
+                    pids.forEach(pid => {
+                        const num = idToNum[pid];
+                        if (num && !resumen[num]) resumen[num] = resumen[pid];
+                        if (num && !resumen[pid]) resumen[pid] = resumen[num];
+                    });
+
+                    // For resumen keys that don't match any procesos_acreditados.id,
+                    // check if they match a detalle_procesos_ac.id (the old proceso_id might be a detalle_id)
+                    pids.forEach(pid => {
+                        if (!idToNum[pid] && detalleToNum[pid]) {
+                            const num = detalleToNum[pid];
+                            if (num && !resumen[num]) resumen[num] = resumen[pid];
+                        }
+                    });
+                } catch (e) {
+                    console.error('[get_marcaciones_resumen] Error enriching:', e.message);
+                }
 
                 return jsonResponse(200, { ok: true, resumen });
             }
