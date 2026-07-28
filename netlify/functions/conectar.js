@@ -77,7 +77,6 @@ exports.handler = async (event) => {
         process.env.SUPABASE_URL,
         process.env.SUPABASE_KEY
     );
-    console.log('[SUPABASE HOST]', new URL(process.env.SUPABASE_URL).hostname);
 
     // 3. Procesamiento de la petición POST
     if (event.httpMethod === 'POST') {
@@ -1346,22 +1345,17 @@ exports.handler = async (event) => {
                 // Fetch marcaciones with detalle_id for proper bridging
                 const { data: marcData, error: marcErr } = await supabase
                     .from('marcaciones_ac')
-                    .select('proceso_id, detalle_id, estado');
+                    .select('proceso_id, detalle_id, estado')
+                    .limit(10000);
 
                 if (marcErr) {
                     return jsonResponse(500, { ok: false, error: 'Error al consultar resumen de marcaciones', detail: marcErr.message });
                 }
 
-                console.log('[DEBUG-RESUMEN] Total marcaciones_ac rows:', (marcData || []).length);
-                const ones512 = (marcData || []).filter(m => String(m.proceso_id) === '512');
-                console.log('[DEBUG-RESUMEN] Rows with proceso_id=512:', ones512.length, JSON.stringify(ones512));
-                const sample = (marcData || []).slice(0, 5);
-                console.log('[DEBUG-RESUMEN] First 5 rows:', JSON.stringify(sample));
-
                 // Fetch lookup tables in parallel
                 const [procesosRes, detalleRes] = await Promise.all([
-                    supabase.from('procesos_acreditados').select('id, numero_proceso'),
-                    supabase.from('detalle_procesos_ac').select('id, proceso_id')
+                    supabase.from('procesos_acreditados').select('id, numero_proceso').limit(10000),
+                    supabase.from('detalle_procesos_ac').select('id, proceso_id').limit(10000)
                 ]);
 
                 const procesos = procesosRes.data || [];
@@ -1393,52 +1387,34 @@ exports.handler = async (event) => {
 
                 // Resolve each marcacion to its real procesos_acreditados.id
                 const resumen = {};
-                const debug512Trace = [];
                 (marcData || []).forEach(m => {
                     const rawPid = String(m.proceso_id || '').trim();
                     const detalleId = String(m.detalle_id || '').trim();
                     if (!rawPid && !detalleId) return;
 
-                    if (String(m.proceso_id) === '512' || String(m.detalle_id) === '512') {
-                        console.log('[TRACE-512]', { proceso_id: m.proceso_id, detalle_id: m.detalle_id, estado: m.estado });
-                    }
-
                     // Try to resolve to a valid procesos_acreditados.id
                     let realPid = null;
-                    let resolvedBy = 'none';
 
                     // 1. Direct match: proceso_id IS a procesos_acreditados.id
                     if (rawPid && idToNum[rawPid]) {
                         realPid = rawPid;
-                        resolvedBy = 'strategy1_direct';
                     }
                     // 2. Bridge: detalle_id → detalle_procesos_ac.proceso_id → procesos_acreditados.id
                     else if (detalleId && detalleIdToParentId[detalleId]) {
                         realPid = detalleIdToParentId[detalleId];
-                        resolvedBy = 'strategy2_detalle_bridge';
                     }
                     // 3. Bridge: proceso_id → detalle_procesos_ac.id → detalle_procesos_ac.proceso_id
                     else if (rawPid && detalleIdToParentId[rawPid]) {
                         realPid = detalleIdToParentId[rawPid];
-                        resolvedBy = 'strategy3_pid_as_detalle';
                     }
                     // 4. proceso_id might be a numero_proceso string
                     else if (rawPid && numToId[rawPid]) {
                         realPid = numToId[rawPid];
-                        resolvedBy = 'strategy4_num_to_id';
                     }
 
                     // If we still can't resolve, use rawPid as fallback (preserves old behavior)
                     const key = realPid || rawPid;
                     if (!key) return;
-
-                    if (String(m.proceso_id) === '512' || String(m.detalle_id) === '512') {
-                        console.log('[TRACE-512-RESUELTO]', { rawPid: m.proceso_id, realPid, key, estado: m.estado });
-                    }
-
-                    if (String(m.proceso_id) === '512' || key === '512') {
-                        debug512Trace.push({ rawPid, detalleId, realPid, resolvedBy, key, estado: m.estado });
-                    }
 
                     if (!resumen[key]) {
                         resumen[key] = { total: 0, marcados: 0, pendientes: 0, otros: 0 };
@@ -1450,54 +1426,13 @@ exports.handler = async (event) => {
                     else resumen[key].otros++;
                 });
 
-                console.log('[DEBUG-RESUMEN] Trace for proceso 512:', JSON.stringify(debug512Trace));
-                console.log('[DEBUG-RESUMEN] resumen["512"]:', JSON.stringify(resumen['512']));
-                console.log('[DEBUG-RESUMEN] All resumen keys:', Object.keys(resumen));
-
                 // Duplicate entries under numero_proceso key for frontend lookup
                 Object.keys(resumen).forEach(pid => {
                     const num = idToNum[pid];
                     if (num && !resumen[num]) resumen[num] = resumen[pid];
                 });
 
-                console.log('[get_marcaciones_resumen] Resumen keys:', Object.keys(resumen));
-                console.log('[DEBUG-RESUMEN] FINAL resumen["512"]:', JSON.stringify(resumen['512']));
-                console.log('[DEBUG-RESUMEN] FINAL resumen["R26 0130"]:', JSON.stringify(resumen['R26 0130']));
-                console.log('[DEBUG-RESUMEN] idToNum["512"]:', idToNum['512']);
-
-                console.log('[DEBUG-512] Buscando el proceso con 168 marcaciones...');
-                for (const [key, value] of Object.entries(resumen)) {
-                    if (value && value.total === 168) {
-                        console.log('[DEBUG-512] ENCONTRADO', { key, value });
-                    }
-                }
-                console.log('[DEBUG-512] Primeras 20 claves:', Object.keys(resumen).slice(0, 20));
-                console.log('[DEBUG-512] Total de claves:', Object.keys(resumen).length);
-
-                console.log('[DEBUG-MISSING] Procesos sin resumen:');
-                for (const p of procesos) {
-                    const key = String(p.id);
-                    if (!resumen[key]) {
-                        console.log('[DEBUG-MISSING]', { id: p.id, numero: p.numero_proceso, cliente: p.cliente });
-                    }
-                }
-                console.log('[DEBUG-MISSING] Total:', procesos.filter(p => !resumen[String(p.id)]).length);
-
-                return jsonResponse(200, {
-                    ok: true,
-                    resumen,
-                    _debug: {
-                        totalMarcaciones: (marcData || []).length,
-                        rowsWith512: ones512.length,
-                        rowsWith512Data: ones512,
-                        trace512: debug512Trace,
-                        resumen512: resumen['512'] || null,
-                        resumen512after: resumen['512'] || null,
-                        resumenNumero: resumen['R26 0130'] || null,
-                        idToNum512: idToNum['512'] || null,
-                        allKeys: Object.keys(resumen)
-                    }
-                });
+                return jsonResponse(200, { ok: true, resumen });
             }
 
             // =============================================
