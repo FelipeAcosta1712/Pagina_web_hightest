@@ -1466,6 +1466,15 @@ exports.handler = async (event) => {
                 console.log('[DEBUG-512] Primeras 20 claves:', Object.keys(resumen).slice(0, 20));
                 console.log('[DEBUG-512] Total de claves:', Object.keys(resumen).length);
 
+                console.log('[DEBUG-MISSING] Procesos sin resumen:');
+                for (const p of procesos) {
+                    const key = String(p.id);
+                    if (!resumen[key]) {
+                        console.log('[DEBUG-MISSING]', { id: p.id, numero: p.numero_proceso, cliente: p.cliente });
+                    }
+                }
+                console.log('[DEBUG-MISSING] Total:', procesos.filter(p => !resumen[String(p.id)]).length);
+
                 return jsonResponse(200, {
                     ok: true,
                     resumen,
