@@ -9101,6 +9101,9 @@
                         'resumen[R26 0130]:', this.marcacionesResumen['R26 0130'],
                         'all keys:', Object.keys(this.marcacionesResumen)
                     );
+                    if (marcacionesResult._debug) {
+                        console.log('[DEBUG-BACKEND]', JSON.stringify(marcacionesResult._debug, null, 2));
+                    }
 
                     const usuariosResult = await usuariosRes.json();
                     if (usuariosResult.ok && Array.isArray(usuariosResult.usuarios)) {
