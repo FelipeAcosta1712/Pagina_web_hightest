@@ -77,6 +77,7 @@ exports.handler = async (event) => {
         process.env.SUPABASE_URL,
         process.env.SUPABASE_KEY
     );
+    console.log('[SUPABASE HOST]', new URL(process.env.SUPABASE_URL).hostname);
 
     // 3. Procesamiento de la petición POST
     if (event.httpMethod === 'POST') {
