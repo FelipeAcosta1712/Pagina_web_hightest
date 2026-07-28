@@ -5,6 +5,59 @@
 
 console.log('📧 Email con Información Completa v2.0 - Sin archivos adjuntos');
 
+// MODAL PERSONALIZADO REUTILIZABLE
+function showCustomModal({ title, icon, fields, onConfirm, confirmText = 'Aceptar', confirmColor = '#1c37cf' }) {
+    const modal = document.createElement('div');
+    modal.id = 'custom-modal-' + Date.now();
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:99999;backdrop-filter:blur(4px);';
+
+    let fieldsHTML = '';
+    fields.forEach((f, i) => {
+        const val = f.value || '';
+        const required = f.required ? '<span style="color:#ef4444;margin-left:2px;">*</span>' : '';
+        const sub = f.subtitle ? `<span style="display:block;margin-top:3px;font-size:11px;color:#9ca3af;">${f.subtitle}</span>` : '';
+        fieldsHTML += `
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;">${f.label}${required}</label>
+                <input type="${f.type || 'text'}" id="modal-field-${i}" value="${val}" placeholder="${f.placeholder || ''}"
+                    style="width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;outline:none;transition:border-color .2s;box-sizing:border-box;"
+                    onfocus="this.style.borderColor='#1c37cf'" onblur="this.style.borderColor='#d1d5db'">
+                ${sub}
+            </div>`;
+    });
+
+    modal.innerHTML = `
+        <div style="background:#fff;border-radius:16px;padding:28px 30px;width:400px;max-width:92%;box-shadow:0 20px 60px rgba(0,0,0,0.25);animation:modalIn .2s ease;">
+            <div style="text-align:center;margin-bottom:20px;">
+                <div style="font-size:32px;margin-bottom:6px;">${icon || '✉️'}</div>
+                <h3 style="margin:0;font-size:18px;color:#111827;font-weight:700;">${title}</h3>
+            </div>
+            ${fieldsHTML}
+            <div style="display:flex;gap:10px;margin-top:22px;">
+                <button id="modal-confirm" style="flex:1;padding:10px 0;border:none;border-radius:8px;background:${confirmColor};color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .2s;" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">${confirmText}</button>
+                <button id="modal-cancel" style="flex:1;padding:10px 0;border:none;border-radius:8px;background:#f3f4f6;color:#374151;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">Cancelar</button>
+            </div>
+        </div>
+        <style>@keyframes modalIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}</style>`;
+
+    document.body.appendChild(modal);
+
+    const getValues = () => fields.map((_, i) => document.getElementById(`modal-field-${i}`).value.trim());
+
+    document.getElementById('modal-confirm').onclick = () => {
+        const vals = getValues();
+        modal.remove();
+        onConfirm(vals);
+    };
+    document.getElementById('modal-cancel').onclick = () => modal.remove();
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+    setTimeout(() => {
+        const firstInput = modal.querySelector('input');
+        if (firstInput) firstInput.focus();
+    }, 100);
+}
+
 // CONFIGURACIÓN EMAILJS
 const EMAIL_COMPLETO_CONFIG = {
     serviceId: 'service_xxiz7yg',
@@ -114,55 +167,98 @@ function crearBotonEmailCompleto() {
         return a;
     };
 
-    // Solicita email y ejecuta envío
-    const askEmailAndSend = (tipo) => {
+    // Modal visual para envío de email (Recepción / Entrega Total)
+    const mostrarModalEmail = (tipo) => {
         let sugerido = '';
+        let sugeridoCC = correoAdicional || '';
         try {
             const d = typeof collectFormData === 'function' ? collectFormData() : {};
             sugerido = d?.clienteEmail || '';
         } catch {}
-        const correo = prompt('Ingrese el correo destino', sugerido || '');
-        if (!correo) { if (window.showNotification) showNotification('Envío cancelado: sin correo.', 'warning'); return; }
-        if (/^\S+@\S+\.\S+$/.test(correo) === false) { alert('Correo inválido'); return; }
-        if (tipo === 'recepcion' && typeof openComposeRecepcion === 'function') {
-            openComposeRecepcion(correo, correoAdicional);
-        } else if (tipo === 'entrega' && typeof openComposeEntregaTotal === 'function') {
-            openComposeEntregaTotal(correo, correoAdicional);
-        } else {
-            abrirModalEmailCompleto();
-        }
+
+        const esRecepcion = tipo === 'recepcion';
+        const titulo = esRecepcion ? 'Enviar Recepción por Email' : 'Enviar Entrega Total por Email';
+        const icono = esRecepcion ? '📥' : '📦';
+        const botonTexto = esRecepcion ? 'Enviar Recepción' : 'Enviar Entrega Total';
+        const botonColor = esRecepcion ? '#1c37cf' : '#7c3aed';
+
+        showCustomModal({
+            title: titulo,
+            icon: icono,
+            confirmText: botonTexto,
+            confirmColor: botonColor,
+            fields: [
+                { label: 'Correo destino', type: 'email', value: sugerido, placeholder: 'destinatario@ejemplo.com', required: true },
+                { label: 'Correo copia (CC)', type: 'email', value: sugeridoCC, placeholder: 'copia@ejemplo.com (opcional)', subtitle: 'Recibirá una copia del correo enviado' }
+            ],
+            onConfirm: (vals) => {
+                const correo = vals[0];
+                const cc = vals[1];
+                if (!correo) { if (window.showNotification) showNotification('Envío cancelado: ingrese un correo destino.', 'warning'); return; }
+                if (/^\S+@\S+\.\S+$/.test(correo) === false) { if (window.showNotification) showNotification('Correo inválido. Verifique el formato.', 'error'); return; }
+                if (cc && !/^\S+@\S+\.\S+$/.test(cc)) { if (window.showNotification) showNotification('Correo copia inválido. Verifique el formato.', 'error'); return; }
+                correoAdicional = cc || '';
+                if (esRecepcion && typeof openComposeRecepcion === 'function') {
+                    openComposeRecepcion(correo, correoAdicional);
+                } else if (!esRecepcion && typeof openComposeEntregaTotal === 'function') {
+                    openComposeEntregaTotal(correo, correoAdicional);
+                } else {
+                    abrirModalEmailCompleto();
+                }
+            }
+        });
     };
 
-    // Solicita correo adicional
-    const askAdditionalEmail = () => {
-        const actual = correoAdicional || '';
-        const correo = prompt('Ingrese el correo electrónico adicional (copia)', actual);
-        if (correo === null) return;
-        if (correo && !/^\S+@\S+\.\S+$/.test(correo)) { alert('Correo inválido'); return; }
-        correoAdicional = correo || '';
-        if (correoAdicional) {
-            if (window.showNotification) showNotification(`Correo adicional guardado: ${correoAdicional}`, 'success');
-        } else {
-            if (window.showNotification) showNotification('Correo adicional eliminado.', 'info');
-        }
+    // Modal visual para correo adicional (CC)
+    const mostrarModalCorreoAdicional = () => {
+        showCustomModal({
+            title: 'Correo de Copia (CC)',
+            icon: '✉️',
+            confirmText: correoAdicional ? 'Actualizar' : 'Guardar',
+            confirmColor: '#2563eb',
+            fields: [
+                { label: 'Correo electrónico adicional', type: 'email', value: correoAdicional || '', placeholder: 'copia@ejemplo.com', subtitle: 'Este correo recibirá copia de todos los envíos realizados desde aquí' }
+            ],
+            onConfirm: (vals) => {
+                const correo = vals[0];
+                if (correo && !/^\S+@\S+\.\S+$/.test(correo)) { if (window.showNotification) showNotification('Correo inválido. Verifique el formato.', 'error'); return; }
+                correoAdicional = correo || '';
+                if (correoAdicional) {
+                    if (window.showNotification) showNotification(`Correo de copia guardado: ${correoAdicional}`, 'success');
+                } else {
+                    if (window.showNotification) showNotification('Correo de copia eliminado.', 'info');
+                }
+            }
+        });
     };
 
-    // Solicita número y abre WhatsApp
-    const askWhatsAppAndSend = () => {
+    // Modal visual para WhatsApp
+    const mostrarModalWhatsApp = () => {
         let sugerido = '';
         try {
             const sel = document.getElementById('empresaSelect');
             if (sel?.selectedOptions?.[0]) sugerido = sel.selectedOptions[0].getAttribute('data-phone') || '';
         } catch {}
-        const numero = prompt('Ingrese el número de WhatsApp (solo dígitos, con indicativo si aplica)', sugerido || '');
-        if (!numero) { if (window.showNotification) showNotification('Envío por WhatsApp cancelado: sin número.', 'warning'); return; }
-        if (typeof openWhatsApp === 'function') openWhatsApp(numero); else abrirModalEmailCompleto();
+
+        showCustomModal({
+            title: 'Enviar por WhatsApp',
+            icon: '🟢',
+            confirmText: 'Enviar por WhatsApp',
+            confirmColor: '#16a34a',
+            fields: [
+                { label: 'Número de WhatsApp', type: 'tel', value: sugerido, placeholder: 'Ej: 3001234567', required: true, subtitle: 'Solo dígitos, con indicativo de país si aplica (Ej: 573001234567)' }
+            ],
+            onConfirm: (vals) => {
+                const numero = vals[0];
+                if (!numero) { if (window.showNotification) showNotification('Envío cancelado: ingrese un número de WhatsApp.', 'warning'); return; }
+                if (typeof openWhatsApp === 'function') openWhatsApp(numero); else abrirModalEmailCompleto();
+            }
+        });
     };
 
-    menu.appendChild(makeItem('📥', 'Enviar Recepción (Email)', () => askEmailAndSend('recepcion')));
-    menu.appendChild(makeItem('📦', 'Enviar Entrega Total (Email)', () => askEmailAndSend('entrega')));
-    menu.appendChild(makeItem('🟢', 'Enviar por WhatsApp', () => askWhatsAppAndSend(), '#16a34a'));
-    menu.appendChild(makeItem('✉️', 'Agregar otro correo electrónico', () => askAdditionalEmail(), '#2563eb'));
+    menu.appendChild(makeItem('📥', 'Enviar Recepción (Email)', () => mostrarModalEmail('recepcion')));
+    menu.appendChild(makeItem('📦', 'Enviar Entrega Total (Email)', () => mostrarModalEmail('entrega')));
+    menu.appendChild(makeItem('🟢', 'Enviar por WhatsApp', () => mostrarModalWhatsApp(), '#16a34a'));
 
     boton.addEventListener('click', () => {
         const visible = menu.style.display === 'block';

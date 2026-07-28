@@ -4,736 +4,528 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#022859">
-    <title>Reportes & Análisis - HIGH TEST SAS</title>
+    <title>Analíticas - HIGH TEST SAS</title>
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="pagination-styles.css">
-    <link rel="stylesheet" href="table-styles.css">
-    <link rel="stylesheet" href="responsive.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <style>
-        body {
-            background-color: #f8f9fa;
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #f0f2f5; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #1e293b; }
+        .dash-container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+        /* Header */
+        .dash-header { background: linear-gradient(135deg, #022859 0%, #034d7d 60%, #0a6abf 100%); color: #fff; padding: 28px 32px; border-radius: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; box-shadow: 0 4px 20px rgba(2,40,89,0.25); }
+        .dash-header h1 { font-size: 24px; font-weight: 700; }
+        .dash-header p { opacity: 0.85; font-size: 13px; margin-top: 4px; }
+        .dash-header .user-badge { background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 20px; font-size: 12px; backdrop-filter: blur(4px); }
+        .btn-volver { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 20px; padding: 8px 16px; background: #022859; color: #fff; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: 600; transition: background 0.2s; }
+        .btn-volver:hover { background: #034d7d; }
+
+        /* Tabs */
+        .tab-bar { display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap; }
+        .tab-btn { padding: 10px 20px; border: 2px solid #e2e8f0; background: #fff; color: #64748b; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
+        .tab-btn:hover { border-color: #022859; color: #022859; }
+        .tab-btn.active { background: #022859; color: #fff; border-color: #022859; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Tables */
+        .table-card { background: #fff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 24px; }
+        .table-card .table-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .table-card .table-header h3 { font-size: 15px; font-weight: 700; color: #334155; }
+        .table-card table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .table-card thead th { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+        .table-card tbody td { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+        .table-card tbody tr:hover { background: #f8fafc; }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .badge-recepcion { background: #dbeafe; color: #1d4ed8; }
+        .badge-completado { background: #dcfce7; color: #15803d; }
+        .badge-progreso { background: #fef3c7; color: #b45309; }
+        .badge-discrepancia { background: #fee2e2; color: #dc2626; }
+
+        /* Search */
+        .search-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+        .search-bar input, .search-bar select { padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: #fff; }
+        .search-bar input { flex: 1; min-width: 200px; }
+        .search-bar select { min-width: 150px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s; }
+        .btn-primary { background: #022859; color: #fff; }
+        .btn-primary:hover { background: #034d7d; }
+        .btn-secondary { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+        .btn-secondary:hover { background: #e2e8f0; }
+        .btn-danger { background: #ef4444; color: #fff; }
+        .btn-success { background: #16a34a; color: #fff; }
+
+        /* Pagination */
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; padding: 14px; flex-wrap: wrap; }
+        .pagination button { padding: 6px 12px; border: 1px solid #e2e8f0; background: #fff; border-radius: 6px; cursor: pointer; font-size: 12px; }
+        .pagination button.active { background: #022859; color: #fff; border-color: #022859; }
+        .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .pagination span { font-size: 12px; color: #64748b; }
+
+        /* Filter indicator */
+        .filter-indicator { display: none; background: #fef2f2; color: #dc2626; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; align-items: center; gap: 6px; }
+        .filter-indicator.show { display: inline-flex; }
+
+        /* Access denied */
+        .access-denied { background: #fff3cd; border: 1px solid #ffc107; padding: 40px; border-radius: 12px; text-align: center; margin-top: 60px; }
+        .access-denied h2 { color: #856404; margin-bottom: 10px; }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .dash-header { padding: 20px; }
+            .dash-header h1 { font-size: 20px; }
         }
-        .dashboard-header {
-            background: linear-gradient(135deg, #022859 0%, #034d7d 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        .dashboard-header h1 {
-            margin: 0 0 10px 0;
-            font-size: 28px;
-        }
-        .dashboard-header p {
-            margin: 0;
-            opacity: 0.9;
-        }
-        .btn-volver {
-            display: inline-block;
-            margin-bottom: 20px;
-            padding: 10px 20px;
-            background: #022859;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            transition: background 0.3s;
-        }
-        .btn-volver:hover {
-            background: #034d7d;
-        }
-        .access-denied {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            padding: 30px;
-            border-radius: 8px;
-            text-align: center;
-            margin-top: 40px;
-        }
-        .access-denied h2 {
-            color: #856404;
-            margin-bottom: 10px;
-        }
-        .access-denied p {
-            color: #856404;
-            margin-bottom: 20px;
-        }
-        /* Mejoras visuales para tablas y botones en Reportes */
-        .report-tab table { width: 100%; border-collapse: collapse; font-size: 14px; color: #222; }
-        .report-tab thead th {
-            background-color: #f1f5f9;
-            color: #222;
-            font-weight: 600;
-            padding: 12px;
-            border: 1px solid #e6eef6;
-            text-align: left;
-        }
-        .report-tab tbody td {
-            padding: 10px 12px;
-            border: 1px solid #eef4fb;
-            vertical-align: middle;
-            color: #222;
-        }
-        .report-tab tbody tr:nth-child(even) { background: #ffffff; }
-        .report-tab tbody tr:nth-child(odd) { background: #fbfdff; }
-        .report-tab tbody tr:hover { background: #f3fbff; }
-        #historialContainer, #resultadosBusquedaContainer { padding: 6px 0; }
-        .btn-small { padding: 6px 10px; font-size: 13px; border-radius: 6px; border: 1px solid #d1dbe6; background: #fff; cursor: pointer; }
-        .btn-small:hover { box-shadow: 0 1px 4px rgba(2,40,89,0.08); }
-        .badge { display: inline-block; padding: 6px 10px; border-radius: 14px; font-size: 13px; color: #fff; }
-        .badge-recepcion { background: #ff9800; }
-        .badge-completado { background: #28a745; }
-        /* Ajustes específicos de columnas para mejorar lectura */
-        th[data-col="num"] { width: 90px; white-space: nowrap; }
-        th[data-col="cliente"] { width: 18%; }
-        th[data-col="informe"] { width: 18%; }
-        th[data-col="factura"] { width: 16%; }
-        th[data-col="fechaRec"] { width: 110px; white-space: nowrap; }
-        th[data-col="fechaEnt"] { width: 110px; white-space: nowrap; }
-        th[data-col="empresa"] { width: 24%; }
-        th[data-col="fecha"] { width: 14%; }
-        th[data-col="items"] { width: 6%; text-align: center; }
-        th[data-col="estado"] { width: 8%; text-align: center; }
-        th[data-col="acciones"] { width: 8%; text-align: center; }
-        .report-tab tbody td:last-child { white-space: nowrap; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Botón Volver -->
-        <a href="recepcion-items.html" class="btn-volver">⬅️ Volver al Formulario</a>
+    <div class="dash-container">
+        <a href="recepcion-items.html" class="btn-volver"><i class="fas fa-arrow-left"></i> Volver al Formulario</a>
 
-        <!-- Encabezado del Dashboard -->
-        <div class="dashboard-header">
-            <h1>📊 Reportes & Análisis</h1>
-            <p>Visualiza estadísticas, historial y realiza búsquedas avanzadas de casos</p>
-            <p style="font-size: 12px; margin-top: 10px;">Usuario: <strong id="currentUserDisplay">-</strong></p>
+        <div class="dash-header">
+            <div>
+                <h1><i class="fas fa-chart-line"></i> Analíticas</h1>
+                <p>Estadísticas, historial y reportes del sistema de recepción de items</p>
+            </div>
+            <div class="user-badge"><i class="fas fa-user"></i> <span id="currentUserDisplay">-</span></div>
         </div>
 
-        <!-- Contenido Principal -->
-        <div id="dashboardContent" style="display: none;">
-            <!-- Pestañas de navegación -->
-            <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-                <button type="button" class="btn btn-primary" onclick="showReportsTab('historial')" id="tabHistorial">
-                    📋 Historial Completo
-                </button>
-                <button type="button" class="btn btn-secondary" onclick="showReportsTab('estadisticas')" id="tabEstadisticas">
-                    📈 Estadísticas
-                </button>
-                <button type="button" class="btn btn-secondary" onclick="showReportsTab('busqueda')" id="tabBusqueda">
-                    🔍 Búsqueda Avanzada
-                </button>
+        <!-- Access Denied -->
+        <div id="accessDenied" class="access-denied" style="display:none;">
+            <h2><i class="fas fa-lock"></i> Acceso Restringido</h2>
+            <p>No tiene permisos para acceder a esta página.</p>
+            <a href="recepcion-items.html" class="btn-volver">Volver al Formulario</a>
+        </div>
+
+        <!-- Content -->
+        <div id="dashboardContent" style="display:none;">
+            <!-- Tabs -->
+            <div class="tab-bar">
+                <button class="tab-btn active" onclick="showTab('historial')" id="tabHistorial"><i class="fas fa-list"></i> Historial</button>
+                <button class="tab-btn" onclick="showTab('estadisticas')" id="tabEstadisticas"><i class="fas fa-table"></i> Estadísticas</button>
+                <button class="tab-btn" onclick="showTab('busqueda')" id="tabBusqueda"><i class="fas fa-search"></i> Búsqueda</button>
             </div>
 
-            <!-- TAB 1: HISTORIAL COMPLETO -->
-            <div id="tabContentHistorial" class="report-tab" style="display: block; background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <h3>📋 Historial de Transacciones</h3>
-                
-                <div style="margin-bottom: 15px;">
-                    <input type="text" id="searchHistorial" placeholder="🔍 Buscar rápido (cliente, número, empresa)..." 
-                           style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;">
+            <!-- ==================== TAB: HISTORIAL ==================== -->
+            <div id="tabHistorialContent" class="tab-content active">
+                <div class="table-card">
+                    <div class="table-header">
+                        <h3><i class="fas fa-list"></i> Historial de Transacciones</h3>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn btn-success" onclick="refrescarHistorial()"><i class="fas fa-sync"></i> Refrescar</button>
+                            <button class="btn btn-primary" onclick="abrirModalDescargaPDFs()"><i class="fas fa-file-pdf"></i> Descargar PDFs</button>
+                        </div>
+                    </div>
+                    <div style="padding: 12px 20px;">
+                        <div class="search-bar">
+                            <input type="text" id="searchHistorial" placeholder="Buscar por cliente, número, empresa...">
+                            <button class="btn btn-secondary" onclick="refrescarHistorial()"><i class="fas fa-search"></i></button>
+                        </div>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nº Recepción</th>
+                                    <th>Cliente</th>
+                                    <th>Informe a Nombre de</th>
+                                    <th>Factura a Nombre de</th>
+                                    <th>Fecha Recepción</th>
+                                    <th>Fecha Entrega</th>
+                                    <th>Items</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historialTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="paginacionHistorial"></div>
                 </div>
-
-                <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button type="button" class="btn btn-success" onclick="exportarJSON()">
-                        📥 Exportar JSON
-                    </button>
-                    <button type="button" class="btn btn-info" onclick="importarJSON()">
-                        📤 Importar JSON
-                    </button>
-                    <button type="button" class="btn btn-warning" onclick="refrescarHistorial()">
-                        🔄 Refrescar
-                    </button>
-                    <button type="button" class="btn btn-primary" onclick="abrirModalDescargaPDFs()" style="background: #022859; color: white; font-weight: 600;">
-                        📄 Descargar PDFs
-                    </button>
-                </div>
-
-                <div id="historialContainer" style="overflow-x: auto;">
-                    <table id="historialTable" style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-                        <thead style="background-color: #f5f5f5; border-bottom: 2px solid #022859;">
-                            <tr>
-                                <th data-col="num">Nº Recepción</th>
-                                <th data-col="cliente">Cliente</th>
-                                <th data-col="empresa">Informe a Nombre de</th>
-                                <th data-col="facturar">Factura a Nombre de</th>
-                                <th data-col="fecha">Fecha Recepción</th>
-                                <th data-col="fecha">Fecha Entrega</th>
-                                <th data-col="items">Items</th>
-                                <th data-col="estado">Estado</th>
-                                <th data-col="acciones">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="historialTableBody">
-                            <!-- Se llenará dinámicamente con JavaScript -->
-                        </tbody>
-                    </table>
-                </div>
-                <div id="paginacionHistorial" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 15px; flex-wrap: wrap;"></div>
             </div>
 
-            <!-- TAB 2: ESTADÍSTICAS -->
-            <div id="tabContentEstadisticas" class="report-tab" style="display: none; background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <h3>📈 Estadísticas de Recepción/Entrega</h3>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 25px;">
-                    <div style="background: #e8f4f8; padding: 15px; border-radius: 8px; border-left: 4px solid #022859;">
-                        <h4 style="margin: 0; color: #022859;">Total de Casos</h4>
-                        <div style="font-size: 28px; font-weight: bold; color: #022859;" id="stat-totalCasos">0</div>
+            <!-- ==================== TAB: ESTADÍSTICAS ==================== -->
+            <div id="tabEstadisticasContent" class="tab-content">
+                <div class="table-card">
+                    <div class="table-header">
+                        <h3><i class="fas fa-table"></i> Resumen por Caso</h3>
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                            <div class="filter-indicator" id="discrepanciaFilterIndicator">
+                                <i class="fas fa-exclamation-triangle"></i> Solo discrepancias
+                                <button onclick="limpiarFiltroDiscrepancias()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;">&times;</button>
+                            </div>
+                            <button class="btn btn-secondary" onclick="filtrarEstadisticasPorDiscrepancias()"><i class="fas fa-filter"></i> Discrepancias</button>
+                            <button class="btn btn-secondary" onclick="limpiarFiltroDiscrepancias()"><i class="fas fa-times"></i> Limpiar</button>
+                        </div>
                     </div>
-                    <div style="background: #e8f8f0; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745;">
-                        <h4 style="margin: 0; color: #28a745;">Casos Completados</h4>
-                        <div style="font-size: 28px; font-weight: bold; color: #28a745;" id="stat-completados">0</div>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nº Recepción</th>
+                                    <th>Cliente</th>
+                                    <th>Informe a Nombre de</th>
+                                    <th>Factura a Nombre de</th>
+                                    <th style="text-align:center;">Items</th>
+                                    <th style="text-align:center;">Recibidos</th>
+                                    <th style="text-align:center;">Entregados</th>
+                                    <th style="text-align:center;">Discrepancia</th>
+                                </tr>
+                            </thead>
+                            <tbody id="estadisticasCasoTableBody"></tbody>
+                        </table>
                     </div>
-                    <div style="background: #fff3e0; padding: 15px; border-radius: 8px; border-left: 4px solid #ff9800;">
-                        <h4 style="margin: 0; color: #ff9800;">En Progreso</h4>
-                        <div style="font-size: 28px; font-weight: bold; color: #ff9800;" id="stat-enProgreso">0</div>
-                    </div>
-                    <div style="background: #fce4ec; padding: 15px; border-radius: 8px; border-left: 4px solid #e91e63; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;" onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 4px 12px rgba(233,30,99,0.3)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'" onclick="filtrarEstadisticasPorDiscrepancias()">
-                        <h4 style="margin: 0; color: #e91e63;">⚠️ Discrepancias</h4>
-                        <div style="font-size: 28px; font-weight: bold; color: #e91e63;" id="stat-discrepancias">0</div>
-                        <div style="font-size: 11px; color: #e91e63; margin-top: 4px;">Clic para filtrar</div>
-                    </div>
+                    <div class="pagination" id="paginacionEstadisticas"></div>
                 </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
-                    <h4 style="margin: 0;">Resumen por Caso</h4>
-                    <div id="discrepanciaFilterIndicator" style="display: none; background: #fce4ec; color: #e91e63; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;">
-                        ⚠️ Mostrando solo discrepancias
-                        <button type="button" onclick="limpiarFiltroDiscrepancias()" style="background: #e91e63; color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; margin-left: 8px; font-size: 12px; line-height: 1;">✕</button>
-                    </div>
-                </div>
-                <div style="overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-                        <thead style="background-color: #f5f5f5;">
-                            <tr>
-                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Nº Recepción</th>
-                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Cliente</th>
-                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Informe a Nombre de</th>
-                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Factura a Nombre de</th>
-                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Items</th>
-                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Recibidos Total</th>
-                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Entregados Total</th>
-                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Discrepancia</th>
-                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="estadisticasCasoTableBody">
-                            <!-- Se llenará dinámicamente -->
-                        </tbody>
-                    </table>
-                </div>
-                <div id="paginacionEstadisticas" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 15px; flex-wrap: wrap;"></div>
             </div>
 
-            <!-- TAB 3: BÚSQUEDA AVANZADA -->
-            <div id="tabContentBusqueda" class="report-tab" style="display: none; background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                <h3>🔍 Búsqueda Avanzada</h3>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                    <div>
-                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Número de Recepción:</label>
-                        <input type="text" id="filtroNumRecepcion" placeholder="Ej: R26 0001" 
-                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+            <!-- ==================== TAB: BÚSQUEDA ==================== -->
+            <div id="tabBusquedaContent" class="tab-content">
+                <div class="table-card">
+                    <div class="table-header">
+                        <h3><i class="fas fa-search"></i> Búsqueda Avanzada</h3>
                     </div>
-                    <div>
-                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Cliente:</label>
-                        <input type="text" id="filtroCliente" placeholder="Nombre del cliente"
-                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                    <div style="padding: 16px 20px;">
+                        <div class="search-bar">
+                            <input type="text" id="filtroNumRecepcion" placeholder="Nº Recepción">
+                            <input type="text" id="filtroClienteBusqueda" placeholder="Cliente">
+                            <select id="filtroEstadoBusqueda">
+                                <option value="">Todos los estados</option>
+                                <option value="recepcion">Recepción</option>
+                                <option value="lavado">Lavado</option>
+                                <option value="en-proceso-de-ensayo">En Proceso de Ensayo</option>
+                                <option value="entrega-cliente">Entrega Cliente</option>
+                                <option value="finalizado">Finalizado</option>
+                            </select>
+                            <input type="month" id="filtroMesBusqueda">
+                            <button class="btn btn-primary" onclick="ejecutarBusquedaAvanzada()"><i class="fas fa-search"></i> Buscar</button>
+                            <button class="btn btn-secondary" onclick="limpiarFiltros()"><i class="fas fa-times"></i> Limpiar</button>
+                        </div>
                     </div>
-                    <div>
-                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Informe a Nombre de:</label>
-                        <select id="filtroEmpresa" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
-                            <option value="">Todas</option>
-                        </select>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nº Recepción</th>
+                                    <th>Cliente</th>
+                                    <th>Informe a Nombre de</th>
+                                    <th>Fecha Recepción</th>
+                                    <th>Fecha Entrega</th>
+                                    <th>Items</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultadosBusquedaBody"></tbody>
+                        </table>
                     </div>
-                    <div>
-                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Estado:</label>
-                        <select id="filtroEstado" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
-                            <option value="">Todos</option>
-                            <option value="recepcion">Recepción</option>
-                            <option value="lavado">Lavado</option>
-                            <option value="en-proceso-de-ensayo">En Proceso de Ensayo</option>
-                            <option value="entrega-cliente">Entrega Cliente</option>
-                            <option value="informe-de-ensayo">Informe de Ensayo</option>
-                            <option value="finalizado">Finalizado</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Mes:</label>
-                        <input type="month" id="filtroMes" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
-                    </div>
-                    <div>
-                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Fecha Desde:</label>
-                        <input type="date" id="filtroFechaDesde" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
-                    </div>
-                    <div>
-                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Fecha Hasta:</label>
-                        <input type="date" id="filtroFechaHasta" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
-                    </div>
+                    <div class="pagination" id="paginacionBusqueda"></div>
                 </div>
-
-                <div style="margin-bottom: 20px;">
-                    <button type="button" class="btn btn-primary" onclick="ejecutarBusquedaAvanzada()">
-                        🔎 Buscar
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="limpiarFiltros()">
-                        🔄 Limpiar Filtros
-                    </button>
-                </div>
-
-                <div id="resultadosBusquedaContainer" style="overflow-x: auto;">
-                    <table id="resultadosBusquedaTable" style="width: 100%; border-collapse: collapse;">
-                        <thead style="background-color: #f5f5f5;">
-                            <tr>
-                                <th data-col="num" style="width: 90px; white-space: nowrap;">Nº Recepción</th>
-                                <th data-col="cliente">Cliente</th>
-                                <th data-col="informe">Informe a Nombre de</th>
-                                <th data-col="factura">Factura a Nombre de</th>
-                                <th data-col="fechaRec" style="width: 110px;">Fecha Recepción</th>
-                                <th data-col="fechaEnt" style="width: 110px; white-space: nowrap;">Fecha Entrega</th>
-                                <th data-col="items">Items</th>
-                                <th data-col="estado">Estado</th>
-                                <th data-col="acciones" style="width: 80px; min-width: 80px;">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="resultadosBusquedaBody">
-                            <!-- Se llenará dinámicamente -->
-                        </tbody>
-                    </table>
-                </div>
-                <div id="paginacionBusqueda" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 15px; flex-wrap: wrap;"></div>
             </div>
         </div>
 
-        <!-- Acceso Denegado -->
-        <div id="accessDenied" class="access-denied" style="display: none;">
-            <h2>🔒 Acceso Denegado</h2>
-            <p>Solo administradores y directores técnicos pueden acceder a esta sección de reportes.</p>
-            <p>Por favor, <a href="index.html">vuelve al formulario</a>.</p>
-        </div>
-    </div>
-
-    <!-- Modal Vista Previa -->
-    <div id="modalVistaPrevia" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
-        <div style="background: white; margin: 20px auto; max-width: 900px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-            <div style="padding: 20px; border-bottom: 2px solid #022859; display: flex; justify-content: space-between; align-items: center;">
-                <h2 style="margin: 0;">👁️ Vista Previa del Caso</h2>
-                <button type="button" style="background: none; border: none; font-size: 24px; cursor: pointer;" onclick="cerrarVistaPrevia()">✕</button>
-            </div>
-            <div id="modalPreviewContent" style="padding: 20px; max-height: 70vh; overflow-y: auto;"></div>
-        </div>
-    </div>
-
-    <!-- Modal Detalles de Estadísticas por Caso -->
-    <div id="modalEstadisticasDetalle" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
-        <div style="background: white; margin: 20px auto; max-width: 800px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-            <div style="padding: 20px; border-bottom: 2px solid #022859; display: flex; justify-content: space-between; align-items: center;">
-                <h2 style="margin: 0;">📊 Detalles por Caso - <span id="modalDetalleCotizacion">-</span></h2>
-                <button type="button" style="background: none; border: none; font-size: 24px; cursor: pointer;" onclick="cerrarModalEstadisticasDetalle()">✕</button>
-            </div>
-            <div style="padding: 20px;">
-                <p><strong>Cliente:</strong> <span id="modalDetalleCliente">-</span></p>
-                <div style="overflow-x: auto; margin-top: 15px;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead style="background-color: #f5f5f5;">
-                            <tr>
-                                <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Elemento</th>
-                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Cant. Recibida</th>
-                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Cant. Entregada</th>
-                                <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Diferencia</th>
-                            </tr>
-                        </thead>
-                        <tbody id="modalDetalleItemsBody">
-                            <!-- Se llenará dinámicamente -->
-                        </tbody>
-                    </table>
+        <!-- Modal Descarga PDFs -->
+        <div id="modalDescargaPDFs" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+            <div style="background:#fff; border-radius:12px; width:90%; max-width:800px; max-height:85vh; display:flex; flex-direction:column;">
+                <div style="padding:16px 20px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="margin:0; font-size:16px;"><i class="fas fa-file-pdf"></i> Descargar PDFs</h3>
+                    <button onclick="cerrarModalDescargaPDFs()" style="background:none;border:none;font-size:20px;cursor:pointer;">&times;</button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Descarga de PDFs -->
-    <div id="modalDescargaPDFs" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
-        <div style="background: white; margin: 30px auto; max-width: 980px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-            <div style="padding: 20px; border-bottom: 2px solid #022859; display: flex; justify-content: space-between; align-items: center;">
-                <h2 style="margin: 0;">📄 Descarga de PDFs</h2>
-                <button type="button" style="background: none; border: none; font-size: 24px; cursor: pointer;" onclick="cerrarModalDescargaPDFs()">✕</button>
-            </div>
-            <div style="padding: 20px;">
-                <!-- Filtros -->
-                <div style="display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
-                    <input type="text" id="busquedaPDFModal" placeholder="🔍 Buscar por número o cliente..." 
-                           style="flex: 1; min-width: 200px; padding: 8px 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 13px;"
-                           oninput="renderizarListaPDFs()">
-                    <select id="filtroEstadoPDFModal" style="padding: 8px 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 13px;" onchange="renderizarListaPDFs()">
-                        <option value="">Todos los estados</option>
-                        <option value="recepcion">Recepción</option>
-                        <option value="entrega">Entrega</option>
-                        <option value="finalizado">Finalizado</option>
-                    </select>
+                <div style="padding:12px 20px; border-bottom:1px solid #e2e8f0;">
+                    <input type="text" id="busquedaPDFModal" placeholder="Buscar por número o cliente..." style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;">
                 </div>
-                <!-- Acciones masivas -->
-                <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
-                    <label style="font-size: 12px; font-weight: 600; color: #333;">Seleccionados: <span id="contadorSeleccionados">0</span></label>
-                    <button type="button" onclick="descargarSeleccionados('recepcion')" style="padding: 6px 12px; background: #1565c0; color: white; border: none; border-radius: 5px; font-size: 12px; cursor: pointer; font-weight: 600;">
-                        📥 Recepción
-                    </button>
-                    <button type="button" onclick="descargarSeleccionados('entrega')" style="padding: 6px 12px; background: #2e7d32; color: white; border: none; border-radius: 5px; font-size: 12px; cursor: pointer; font-weight: 600;">
-                        📥 Entrega
-                    </button>
-                    <button type="button" onclick="descargarSeleccionados('ambos')" style="padding: 6px 12px; background: #6a1b9a; color: white; border: none; border-radius: 5px; font-size: 12px; cursor: pointer; font-weight: 600;">
-                        📥 Rec + Ent
-                    </button>
-                    <span style="color: #ccc;">|</span>
-                    <button type="button" onclick="descargarTodosLosPDFs()" style="padding: 6px 14px; background: #022859; color: white; border: none; border-radius: 5px; font-size: 12px; cursor: pointer; font-weight: 700;">
-                        📥 Descargar Todos
-                    </button>
+                <div style="padding:8px 20px; display:flex; gap:8px; flex-wrap:wrap;">
+                    <button onclick="descargarSeleccionados('recepcion')" class="btn btn-primary"><i class="fas fa-download"></i> Recepción</button>
+                    <button onclick="descargarSeleccionados('entrega')" class="btn btn-success"><i class="fas fa-download"></i> Entrega</button>
+                    <button onclick="descargarSeleccionados('ambos')" class="btn" style="background:#7c3aed;color:#fff;"><i class="fas fa-download"></i> Ambos</button>
+                    <button onclick="descargarTodosLosPDFs()" class="btn btn-danger"><i class="fas fa-download"></i> Todos</button>
+                    <span style="color:#94a3b8; font-size:12px; align-self:center;">Seleccionados: <strong id="contadorSeleccionados">0</strong></span>
                 </div>
-                <!-- Contador -->
-                <div id="contadorPDFModal" style="font-size: 11px; color: #888; margin-bottom: 8px;"></div>
-                <!-- Lista de casos -->
-                <div id="listaPDFsModal" style="max-height: 50vh; overflow-y: auto;">
-                    <!-- Se llenará dinámicamente -->
-                </div>
-            </div>
-            <div style="padding: 15px 20px; border-top: 1px solid #eee; text-align: right;">
-                <button type="button" onclick="cerrarModalDescargaPDFs()" style="padding: 8px 20px; background: #6c757d; color: white; border: none; border-radius: 5px; font-size: 13px; cursor: pointer;">Cerrar</button>
+                <div id="contadorPDFModal" style="padding:0 20px; font-size:11px; color:#94a3b8; margin-top:4px;"></div>
+                <div id="listaPDFsModal" style="flex:1; overflow-y:auto; padding:0 20px 16px;"></div>
             </div>
         </div>
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="auth.js"></script>
     <script src="script.js"></script>
     <script>
-        function validateAccessToAnalytics() {
-            var session = JSON.parse(localStorage.getItem('hightest_session') || '{}');
-            var userRole = (session && session.user && session.user.rol) ? session.user.rol : session.rol;
-            var displayName = (session && session.user && (session.user.nombre || session.user.email)) ? (session.user.nombre || session.user.email) : (session.nombre || session.email || 'Desconocido');
+    // =======================================================
+    // ANALYTICS
+    // =======================================================
 
-            var permittedRoles = ['administrador', 'director_tecnico'];
+    function validateAccessToAnalytics() {
+        var session = JSON.parse(localStorage.getItem('hightest_session') || '{}');
+        var userRole = (session && session.user && session.user.rol) ? session.user.rol : session.rol;
+        var displayName = (session && session.user && (session.user.nombre || session.user.email)) ? (session.user.nombre || session.user.email) : (session.nombre || session.email || 'Desconocido');
+        var permittedRoles = ['administrador', 'director_tecnico'];
+        if (!userRole || !permittedRoles.includes(userRole)) {
+            document.getElementById('dashboardContent').style.display = 'none';
+            document.getElementById('accessDenied').style.display = 'block';
+            return false;
+        }
+        document.getElementById('dashboardContent').style.display = 'block';
+        document.getElementById('accessDenied').style.display = 'none';
+        document.getElementById('currentUserDisplay').textContent = displayName;
+        return true;
+    }
 
-            if (!userRole || !permittedRoles.includes(userRole)) {
-                document.getElementById('dashboardContent').style.display = 'none';
-                document.getElementById('accessDenied').style.display = 'block';
-                return false;
-            }
+    // ---- TABS ----
+    function showTab(name) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        const content = document.getElementById('tab' + name.charAt(0).toUpperCase() + name.slice(1) + 'Content');
+        const btn = document.getElementById('tab' + name.charAt(0).toUpperCase() + name.slice(1));
+        if (content) content.classList.add('active');
+        if (btn) btn.classList.add('active');
+        if (name === 'historial') refrescarHistorial();
+        if (name === 'estadisticas') actualizarEstadisticas();
+        if (name === 'busqueda') ejecutarBusquedaAvanzada();
+    }
 
-            document.getElementById('dashboardContent').style.display = 'block';
-            document.getElementById('accessDenied').style.display = 'none';
-            document.getElementById('currentUserDisplay').textContent = displayName;
+    // ---- DATA LOADING ----
+    function loadData() {
+        try { invalidarCacheCasos(); } catch(e) {}
+        obtenerCasosUnificadosConRender(() => refrescarHistorial());
+        refrescarHistorial();
+    }
+
+    // ---- HISTORIAL ----
+    function refrescarHistorial() {
+        const tbody = document.getElementById('historialTableBody');
+        if (!tbody) return;
+        const casos = obtenerCasosUnificados();
+        const search = (document.getElementById('searchHistorial')?.value || '').toLowerCase();
+        const filtrados = casos.filter(c => !search || JSON.stringify(c).toLowerCase().includes(search));
+        filtrados.sort((a, b) => String(b.cotizacion || '').localeCompare(String(a.cotizacion || '')));
+
+        const porPagina = 20;
+        const totalPag = Math.ceil(filtrados.length / porPagina) || 1;
+        let pag = window._pagHistorial || 1;
+        if (pag > totalPag) pag = totalPag;
+        window._pagHistorial = pag;
+        const start = (pag - 1) * porPagina;
+        const page = filtrados.slice(start, start + porPagina);
+
+        tbody.innerHTML = page.length === 0
+            ? '<tr><td colspan="8" style="text-align:center;padding:20px;color:#94a3b8;">No hay registros</td></tr>'
+            : page.map(c => {
+                const e = (c.estado || c.status || '').toLowerCase();
+                const esEntrega = e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente';
+                const badgeClass = esEntrega ? 'badge-completado' : 'badge-recepcion';
+                return `<tr>
+                    <td><strong>${c.cotizacion || 'N/A'}</strong></td>
+                    <td>${c.cliente || '-'}</td>
+                    <td>${c.informeNombre || '-'}</td>
+                    <td>${c.facturarNombre || '-'}</td>
+                    <td>${c.fechaRecepcion || '-'}</td>
+                    <td>${c.fechaEntrega || '-'}</td>
+                    <td style="text-align:center;">${(c.items && c.items.length > 0) ? c.items.length : (c.total_items || 0)}</td>
+                    <td><span class="badge ${badgeClass}">${e || 'borrador'}</span></td>
+                </tr>`;
+            }).join('');
+
+        renderPagination('paginacionHistorial', totalPag, pag, (p) => { window._pagHistorial = p; refrescarHistorial(); }, filtrados.length, start, porPagina);
+    }
+
+    // ---- ESTADÍSTICAS ----
+    window._filtroDisc = false;
+    function actualizarEstadisticas() { renderTablaEstadisticas(); }
+    function filtrarEstadisticasPorDiscrepancias() { window._filtroDisc = true; window._pagEst = 1; document.getElementById('discrepanciaFilterIndicator').classList.add('show'); renderTablaEstadisticas(); }
+    function limpiarFiltroDiscrepancias() { window._filtroDisc = false; window._pagEst = 1; document.getElementById('discrepanciaFilterIndicator').classList.remove('show'); renderTablaEstadisticas(); }
+
+    function renderTablaEstadisticas() {
+        const tbody = document.getElementById('estadisticasCasoTableBody');
+        if (!tbody) return;
+        const casos = obtenerCasosUnificados();
+        const stats = {};
+        casos.forEach(c => {
+            const key = c.cotizacion || 'N/A';
+            if (!stats[key]) stats[key] = { cotizacion: key, cliente: c.cliente || '-', informe: c.informeNombre || '-', facturar: c.facturarNombre || '-', totalItems: 0, rec: 0, ent: 0 };
+            (c.items || []).forEach(item => {
+                stats[key].rec += parseInt(item.quantity) || 0;
+                stats[key].ent += parseInt(item.quantity2) || 0;
+                stats[key].totalItems++;
+            });
+        });
+        let entries = Object.values(stats);
+        if (window._filtroDisc) entries = entries.filter(e => e.rec !== e.ent);
+        entries.sort((a, b) => String(b.cotizacion).localeCompare(String(a.cotizacion)));
+
+        const porPagina = 20;
+        const totalPag = Math.ceil(entries.length / porPagina) || 1;
+        let pag = window._pagEst || 1;
+        if (pag > totalPag) pag = totalPag;
+        window._pagEst = pag;
+        const start = (pag - 1) * porPagina;
+        const page = entries.slice(start, start + porPagina);
+
+        tbody.innerHTML = page.length === 0
+            ? '<tr><td colspan="8" style="text-align:center;padding:20px;color:#94a3b8;">No hay registros</td></tr>'
+            : page.map(s => {
+                const diff = s.ent - s.rec;
+                const diffStyle = diff !== 0 ? 'background:#fee2e2;color:#dc2626;font-weight:700;' : '';
+                return `<tr>
+                    <td><strong>${s.cotizacion}</strong></td>
+                    <td>${s.cliente}</td>
+                    <td>${s.informe}</td>
+                    <td>${s.facturar}</td>
+                    <td style="text-align:center;">${s.totalItems}</td>
+                    <td style="text-align:center;">${s.rec}</td>
+                    <td style="text-align:center;">${s.ent}</td>
+                    <td style="text-align:center;${diffStyle}">${diff !== 0 ? (diff > 0 ? '+' : '') + diff : '-'}</td>
+                </tr>`;
+            }).join('');
+
+        renderPagination('paginacionEstadisticas', totalPag, pag, (p) => { window._pagEst = p; renderTablaEstadisticas(); }, entries.length, start, porPagina);
+    }
+
+    // ---- BÚSQUEDA ----
+    function ejecutarBusquedaAvanzada() { window._pagBusq = 1; renderBusqueda(); }
+    function limpiarFiltros() {
+        ['filtroNumRecepcion','filtroClienteBusqueda','filtroEstadoBusqueda','filtroMesBusqueda'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+        window._pagBusq = 1; renderBusqueda();
+    }
+
+    function renderBusqueda() {
+        const tbody = document.getElementById('resultadosBusquedaBody');
+        if (!tbody) return;
+        const num = (document.getElementById('filtroNumRecepcion')?.value || '').toLowerCase();
+        const cliente = (document.getElementById('filtroClienteBusqueda')?.value || '').toLowerCase();
+        const estado = (document.getElementById('filtroEstadoBusqueda')?.value || '').toLowerCase();
+        const mes = document.getElementById('filtroMesBusqueda')?.value || '';
+        const casos = obtenerCasosUnificados();
+        let filtrados = casos.filter(c => {
+            if (num && !(c.cotizacion || '').toLowerCase().includes(num)) return false;
+            if (cliente && !(c.cliente || '').toLowerCase().includes(cliente)) return false;
+            if (estado && !(c.estado || c.status || '').toLowerCase().includes(estado)) return false;
+            if (mes && c.fechaRecepcion && !c.fechaRecepcion.startsWith(mes)) return false;
             return true;
+        }).sort((a, b) => String(b.cotizacion || '').localeCompare(String(a.cotizacion || '')));
+
+        const porPagina = 20;
+        const totalPag = Math.ceil(filtrados.length / porPagina) || 1;
+        let pag = window._pagBusq || 1;
+        if (pag > totalPag) pag = totalPag;
+        window._pagBusq = pag;
+        const start = (pag - 1) * porPagina;
+        const page = filtrados.slice(start, start + porPagina);
+
+        tbody.innerHTML = page.length === 0
+            ? '<tr><td colspan="7" style="text-align:center;padding:20px;color:#94a3b8;">No se encontraron resultados</td></tr>'
+            : page.map(c => {
+                const e = (c.estado || c.status || '').toLowerCase();
+                const esEntrega = e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente';
+                const badgeClass = esEntrega ? 'badge-completado' : 'badge-recepcion';
+                return `<tr>
+                    <td><strong>${c.cotizacion || 'N/A'}</strong></td>
+                    <td>${c.cliente || '-'}</td>
+                    <td>${c.informeNombre || '-'}</td>
+                    <td>${c.fechaRecepcion || '-'}</td>
+                    <td>${c.fechaEntrega || '-'}</td>
+                    <td style="text-align:center;">${(c.items && c.items.length > 0) ? c.items.length : (c.total_items || 0)}</td>
+                    <td><span class="badge ${badgeClass}">${e || 'borrador'}</span></td>
+                </tr>`;
+            }).join('');
+
+        renderPagination('paginacionBusqueda', totalPag, pag, (p) => { window._pagBusq = p; renderBusqueda(); }, filtrados.length, start, porPagina);
+    }
+
+    // ---- PAGINATION HELPER ----
+    function renderPagination(containerId, totalPag, currentPag, onPage, total, start, perPage) {
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        if (totalPag <= 1) { el.innerHTML = ''; return; }
+        let html = `<span>Mostrando ${start + 1}-${Math.min(start + perPage, total)} de ${total}</span>`;
+        html += `<button ${currentPag <= 1 ? 'disabled' : ''} data-p="1">&laquo;</button>`;
+        html += `<button ${currentPag <= 1 ? 'disabled' : ''} data-p="${currentPag - 1}">&lsaquo;</button>`;
+        for (let i = Math.max(1, currentPag - 2); i <= Math.min(totalPag, currentPag + 2); i++) {
+            html += `<button data-p="${i}" class="${i === currentPag ? 'active' : ''}">${i}</button>`;
         }
+        html += `<button ${currentPag >= totalPag ? 'disabled' : ''} data-p="${currentPag + 1}">&rsaquo;</button>`;
+        html += `<button ${currentPag >= totalPag ? 'disabled' : ''} data-p="${totalPag}">&raquo;</button>`;
+        el.innerHTML = html;
+        el.querySelectorAll('button[data-p]').forEach(btn => {
+            btn.addEventListener('click', () => { const p = parseInt(btn.dataset.p); if (p >= 1 && p <= totalPag) onPage(p); });
+        });
+    }
 
-        function _cargarHistorialInicial() {
-            if (!validateAccessToAnalytics()) return;
-            // Invalidar cache para forzar fetch fresco de Supabase
-            try { invalidarCacheCasos(); } catch(e) {}
-            try { showReportsTab('historial'); } catch(e) { console.error('Error showReportsTab:', e); }
-            try { refrescarHistorial(); } catch(e) { console.error('Error refrescarHistorial:', e); }
+    // ---- PDF DOWNLOAD MODAL ----
+    var _casosSeleccionados = {};
+    function abrirModalDescargaPDFs() { _casosSeleccionados = {}; document.getElementById('modalDescargaPDFs').style.display = 'flex'; renderizarListaPDFs(); }
+    function cerrarModalDescargaPDFs() { document.getElementById('modalDescargaPDFs').style.display = 'none'; }
 
-            var _si = document.getElementById('searchHistorial');
-            if (_si) {
-                _si.addEventListener('input', function() { refrescarHistorial(); });
-            }
-        }
+    function renderizarListaPDFs() {
+        const container = document.getElementById('listaPDFsModal');
+        const contador = document.getElementById('contadorPDFModal');
+        if (!container) return;
+        const casos = obtenerCasosUnificados();
+        const busqueda = (document.getElementById('busquedaPDFModal')?.value || '').toLowerCase();
+        const filtrados = casos.filter(c => {
+            const num = (c.cotizacion || '').toLowerCase();
+            const cliente = (c.cliente || '').toLowerCase();
+            return !busqueda || num.includes(busqueda) || cliente.includes(busqueda);
+        }).sort((a, b) => String(b.cotizacion || '').localeCompare(String(a.cotizacion || '')));
+        if (contador) contador.textContent = filtrados.length + ' casos';
+        if (filtrados.length === 0) { container.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;">No hay casos</div>'; return; }
+        let html = '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead style="background:#f8fafc;"><tr>';
+        html += '<th style="padding:6px;border-bottom:1px solid #e2e8f0;width:30px;"><input type="checkbox" onchange="toggleAllPDFs(this.checked)"></th>';
+        html += '<th style="padding:6px;border-bottom:1px solid #e2e8f0;">N° Proceso</th>';
+        html += '<th style="padding:6px;border-bottom:1px solid #e2e8f0;">Cliente</th>';
+        html += '<th style="padding:6px;border-bottom:1px solid #e2e8f0;">Estado</th>';
+        html += '<th style="padding:6px;border-bottom:1px solid #e2e8f0;">Acción</th>';
+        html += '</tr></thead><tbody>';
+        filtrados.forEach(c => {
+            const num = c.cotizacion || 'N/A';
+            const e = (c.estado || c.status || '').toLowerCase();
+            const esEntrega = e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente';
+            const checked = _casosSeleccionados[num] ? 'checked' : '';
+            html += `<tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:6px;text-align:center;"><input type="checkbox" class="pdf-chk" data-num="${num}" ${checked} onchange="togglePDFCaso('${num}',this.checked)"></td>
+                <td style="padding:6px;font-weight:600;">${num}</td>
+                <td style="padding:6px;">${(c.cliente || '-').substring(0,25)}</td>
+                <td style="padding:6px;"><span class="badge ${esEntrega ? 'badge-completado' : 'badge-recepcion'}">${e || '-'}</span></td>
+                <td style="padding:6px;">
+                    <button onclick="descargaIndividualPDF('${num}','recepcion')" style="padding:2px 6px;font-size:10px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:4px;cursor:pointer;">📄 Rec</button>
+                    ${esEntrega ? `<button onclick="descargaIndividualPDF('${num}','entrega')" style="padding:2px 6px;font-size:10px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:4px;cursor:pointer;">📄 Ent</button>` : ''}
+                </td></tr>`;
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
 
-        document.addEventListener('DOMContentLoaded', _cargarHistorialInicial);
+    function toggleAllPDFs(checked) { document.querySelectorAll('.pdf-chk').forEach(cb => { cb.checked = checked; _casosSeleccionados[cb.dataset.num] = checked; }); actualizarContadorPDFs(); }
+    function togglePDFCaso(num, checked) { _casosSeleccionados[num] = checked; actualizarContadorPDFs(); }
+    function actualizarContadorPDFs() { let c = 0; for (let k in _casosSeleccionados) if (_casosSeleccionados[k]) c++; document.getElementById('contadorSeleccionados').textContent = c; }
 
-        var _intentos = 0;
-        var _pollCarga = setInterval(function() {
-            _intentos++;
-            if (_intentos > 30) { clearInterval(_pollCarga); return; }
-            try {
-                var dc = document.getElementById('dashboardContent');
-                if (!dc || dc.style.display === 'none') return;
-                var tbody = document.getElementById('historialTableBody');
-                if (!tbody) return;
-                if (tbody.querySelectorAll('tr').length <= 1) {
-                    refrescarHistorial();
-                } else {
-                    clearInterval(_pollCarga);
-                }
-            } catch(e) {}
-        }, 1000);
+    function descargarSeleccionados(tipo) {
+        const sel = Object.keys(_casosSeleccionados).filter(k => _casosSeleccionados[k]);
+        if (!sel.length) return alert('No hay casos seleccionados.');
+        const casos = obtenerCasosUnificados().filter(c => sel.includes(c.cotizacion || c.quoteNumber) && c.items && c.items.length > 0);
+        if (!casos.length) return alert('No hay casos válidos.');
+        casos.forEach(c => { generarPDFFromCasoDirecto(c, tipo === 'ambos' ? 'recepcion' : tipo); if (tipo === 'ambos') setTimeout(() => generarPDFFromCasoDirecto(c, 'entrega'), 1500); });
+    }
 
-        // =======================================================
-        // MODAL DE DESCARGA DE PDFs
-        // =======================================================
+    function descargaIndividualPDF(num, tipo) {
+        const caso = obtenerCasosUnificados().find(c => (c.cotizacion || c.quoteNumber) === num);
+        if (caso) generarPDFFromCasoDirecto(caso, tipo);
+    }
 
-        var _casosSeleccionados = {};
+    function descargarTodosLosPDFs() {
+        const casos = obtenerCasosUnificados().filter(c => c.items && c.items.length > 0);
+        if (!casos.length) return alert('No hay casos con items.');
+        casos.forEach(c => { generarPDFFromCasoDirecto(c, 'recepcion'); setTimeout(() => generarPDFFromCasoDirecto(c, 'entrega'), 1500); });
+    }
 
-        function abrirModalDescargaPDFs() {
-            _casosSeleccionados = {};
-            document.getElementById('modalDescargaPDFs').style.display = 'block';
-            document.body.style.overflow = 'hidden';
-            renderizarListaPDFs();
-        }
+    function generarPDFFromCasoDirecto(caso, tipo) {
+        try { if (typeof generatePDFFromCase === 'function') generatePDFFromCase(caso, tipo); } catch(e) { console.error('PDF error:', e); }
+    }
 
-        function cerrarModalDescargaPDFs() {
-            document.getElementById('modalDescargaPDFs').style.display = 'none';
-            document.body.style.overflow = '';
-        }
+    document.getElementById('busquedaPDFModal')?.addEventListener('input', renderizarListaPDFs);
 
-        function toggleSeleccionarTodos(chk) {
-            var checkboxes = document.querySelectorAll('.pdf-modal-chk');
-            checkboxes.forEach(function(cb) {
-                cb.checked = chk.checked;
-                _casosSeleccionados[cb.dataset.num] = chk.checked;
-            });
-            actualizarContadorSeleccionados();
-        }
-
-        function toggleCaso(num, checked) {
-            _casosSeleccionados[num] = checked;
-            var checkboxes = document.querySelectorAll('.pdf-modal-chk');
-            var todos = checkboxes.length > 0 && Array.from(checkboxes).every(function(cb) { return cb.checked; });
-            var selectAll = document.getElementById('selectAllPDFChk');
-            if (selectAll) selectAll.checked = todos;
-            actualizarContadorSeleccionados();
-        }
-
-        function actualizarContadorSeleccionados() {
-            var count = 0;
-            for (var k in _casosSeleccionados) {
-                if (_casosSeleccionados[k]) count++;
-            }
-            var el = document.getElementById('contadorSeleccionados');
-            if (el) el.textContent = count;
-        }
-
-        function renderizarListaPDFs() {
-            var container = document.getElementById('listaPDFsModal');
-            var contador = document.getElementById('contadorPDFModal');
-            if (!container) return;
-
-            var casos = [];
-            try { casos = obtenerCasosUnificados(); } catch(e) { console.error(e); }
-
-            var busqueda = (document.getElementById('busquedaPDFModal')?.value || '').toLowerCase();
-            var filtroEstado = (document.getElementById('filtroEstadoPDFModal')?.value || '').toLowerCase();
-
-            var filtrados = casos.filter(function(caso) {
-                var num = (caso.cotizacion || caso.quoteNumber || caso.numero_proceso || '').toLowerCase();
-                var cliente = (caso.cliente || caso.clienteRecepcionNombre || '').toLowerCase();
-                var estado = (caso.estado || caso.status || '').toLowerCase();
-
-                if (busqueda && !num.includes(busqueda) && !cliente.includes(busqueda)) return false;
-                if (filtroEstado) {
-                    if (filtroEstado === 'entrega') {
-                        if (estado !== 'entrega' && estado !== 'entrega-cliente') return false;
-                    } else if (filtroEstado === 'finalizado') {
-                        if (estado !== 'finalizado') return false;
-                    } else if (filtroEstado === 'recepcion') {
-                        if (estado !== 'recepcion') return false;
-                    }
-                }
-                return true;
-            });
-
-            filtrados.sort(function(a, b) {
-                var numA = a.cotizacion || a.quoteNumber || '';
-                var numB = b.cotizacion || b.quoteNumber || '';
-                return String(numB).localeCompare(String(numA));
-            });
-
-            var totalConItems = filtrados.filter(function(c) { return c.items && c.items.length > 0; }).length;
-            var conEntrega = filtrados.filter(function(c) {
-                var e = (c.estado || c.status || '').toLowerCase();
-                return (c.items && c.items.length > 0) && (e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente');
-            }).length;
-
-            if (contador) {
-                contador.textContent = filtrados.length + ' casos mostrados — ' + totalConItems + ' con items — ' + conEntrega + ' con entrega completada';
-            }
-
-            if (filtrados.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:30px; color:#999;">No hay casos que coincidan con los filtros</div>';
-                return;
-            }
-
-            var html = '<table style="width:100%; border-collapse:collapse; font-size:13px;">';
-            html += '<thead style="background:#f5f5f5; border-bottom:2px solid #022859;"><tr>';
-            html += '<th style="padding:8px; text-align:center; border:1px solid #ddd; width:36px;"><input type="checkbox" id="selectAllPDFChk" onchange="toggleSeleccionarTodos(this)" style="cursor:pointer;"></th>';
-            html += '<th style="padding:8px; text-align:left; border:1px solid #ddd; width:90px;">N° Proceso</th>';
-            html += '<th style="padding:8px; text-align:left; border:1px solid #ddd;">Cliente</th>';
-            html += '<th style="padding:8px; text-align:left; border:1px solid #ddd;">Fecha Rec.</th>';
-            html += '<th style="padding:8px; text-align:left; border:1px solid #ddd;">Fecha Ent.</th>';
-            html += '<th style="padding:8px; text-align:center; border:1px solid #ddd;">Items</th>';
-            html += '<th style="padding:8px; text-align:center; border:1px solid #ddd;">Estado</th>';
-            html += '<th style="padding:8px; text-align:center; border:1px solid #ddd; width:150px;">Descargar</th>';
-            html += '</tr></thead><tbody>';
-
-            filtrados.forEach(function(caso) {
-                var num = caso.cotizacion || caso.quoteNumber || 'N/A';
-                var cliente = caso.cliente || caso.clienteRecepcionNombre || 'N/A';
-                var fechaRec = caso.fechaRecepcion || '-';
-                var fechaEnt = caso.fechaEntrega || '-';
-                var itemCount = (caso.items ? caso.items.length : 0);
-                var estado = (caso.estado || caso.status || 'recepcion').toLowerCase();
-                var esEntrega = estado === 'entrega' || estado === 'finalizado' || estado === 'entrega-cliente';
-
-                var estadoColor = '#ff9800';
-                if (esEntrega) estadoColor = '#28a745';
-                else if (estado === 'recepcion') estadoColor = '#007bff';
-                else if (estado === 'informe-de-ensayo') estadoColor = '#9c27b0';
-
-                var checked = _casosSeleccionados[num] ? 'checked' : '';
-
-                html += '<tr style="border-bottom:1px solid #eee;">';
-                html += '<td style="padding:6px 8px; border:1px solid #ddd; text-align:center;"><input type="checkbox" class="pdf-modal-chk" data-num="' + num + '" ' + checked + ' onchange="toggleCaso(\'' + num + '\', this.checked)" style="cursor:pointer;"></td>';
-                html += '<td style="padding:6px 8px; border:1px solid #ddd; font-weight:600;">' + num + '</td>';
-                html += '<td style="padding:6px 8px; border:1px solid #ddd;">' + cliente + '</td>';
-                html += '<td style="padding:6px 8px; border:1px solid #ddd; white-space:nowrap;">' + fechaRec + '</td>';
-                html += '<td style="padding:6px 8px; border:1px solid #ddd; white-space:nowrap;">' + fechaEnt + '</td>';
-                html += '<td style="padding:6px 8px; border:1px solid #ddd; text-align:center;">' + itemCount + '</td>';
-                html += '<td style="padding:6px 8px; border:1px solid #ddd; text-align:center;">';
-                html += '<span style="background:' + estadoColor + '; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">' + (caso.estado || caso.status || '-') + '</span>';
-                html += '</td>';
-                html += '<td style="padding:6px 8px; border:1px solid #ddd; text-align:center;">';
-                var tieneItems = caso.items && caso.items.length > 0;
-                if (tieneItems) {
-                    html += '<button type="button" onclick="descargaIndividualPDF(\'' + num + '\', \'recepcion\')" style="padding:3px 7px; font-size:10px; margin-right:3px; background:#e3f2fd; color:#1565c0; border:1px solid #bbdefb; border-radius:3px; cursor:pointer;" title="PDF Recepción">📄 Rec</button>';
-                    if (esEntrega) {
-                        html += '<button type="button" onclick="descargaIndividualPDF(\'' + num + '\', \'entrega\')" style="padding:3px 7px; font-size:10px; background:#e8f5e9; color:#2e7d32; border:1px solid #c8e6c9; border-radius:3px; cursor:pointer;" title="PDF Entrega">📄 Ent</button>';
-                    }
-                }
-                html += '</td></tr>';
-            });
-
-            html += '</tbody></table>';
-            container.innerHTML = html;
-            actualizarContadorSeleccionados();
-        }
-
-        function descargarSeleccionados(tipo) {
-            var seleccionados = [];
-            for (var k in _casosSeleccionados) {
-                if (_casosSeleccionados[k]) seleccionados.push(k);
-            }
-            if (seleccionados.length === 0) {
-                alert('No hay casos seleccionados. Marca los casos con el checkbox.');
-                return;
-            }
-
-            var casos = [];
-            try { casos = obtenerCasosUnificados(); } catch(e) { console.error(e); }
-
-            var casosFiltrados = casos.filter(function(caso) {
-                var num = caso.cotizacion || caso.quoteNumber || caso.numero_proceso;
-                return seleccionados.indexOf(num) !== -1 && caso.items && caso.items.length > 0;
-            });
-
-            if (tipo === 'entrega') {
-                casosFiltrados = casosFiltrados.filter(function(c) {
-                    var e = (c.estado || c.status || '').toLowerCase();
-                    return e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente';
-                });
-            }
-
-            if (casosFiltrados.length === 0) {
-                alert('No hay casos seleccionados válidos para PDFs de ' + (tipo === 'recepcion' ? 'recepción' : tipo === 'entrega' ? 'entrega' : 'recepción y entrega') + '.');
-                return;
-            }
-
-            if (tipo === 'ambos') {
-                var total = casosFiltrados.length * 2;
-                if (!confirm('Se descargarán ' + casosFiltrados.length + ' casos x 2 PDFs (recepción + entrega) = ' + total + ' archivos. ¿Continuar?')) return;
-                var index = 0;
-                function downloadNextAmbos() {
-                    if (index >= casosFiltrados.length) {
-                        alert('✅ Se descargaron ' + total + ' PDFs.');
-                        return;
-                    }
-                    generarPDFFromCasoDirecto(casosFiltrados[index], 'recepcion');
-                    setTimeout(function() {
-                        generarPDFFromCasoDirecto(casosFiltrados[index], 'entrega');
-                        index++;
-                        setTimeout(downloadNextAmbos, 1500);
-                    }, 1500);
-                }
-                downloadNextAmbos();
-            } else {
-                var msg = 'Se descargarán ' + casosFiltrados.length + ' PDFs de ' + (tipo === 'recepcion' ? 'recepción' : 'entrega') + '. ¿Continuar?';
-                if (!confirm(msg)) return;
-                var index2 = 0;
-                function downloadNext() {
-                    if (index2 >= casosFiltrados.length) {
-                        alert('✅ Se descargaron ' + casosFiltrados.length + ' PDFs de ' + (tipo === 'recepcion' ? 'recepción' : 'entrega') + '.');
-                        return;
-                    }
-                    generarPDFFromCasoDirecto(casosFiltrados[index2], tipo);
-                    index2++;
-                    setTimeout(downloadNext, 1500);
-                }
-                downloadNext();
-            }
-        }
-
-        function descargaIndividualPDF(numRecepcion, tipo) {
-            var casos = [];
-            try { casos = obtenerCasosUnificados(); } catch(e) { console.error(e); }
-            var caso = casos.find(function(c) { return (c.cotizacion || c.quoteNumber || c.numero_proceso) === numRecepcion; });
-            if (!caso) {
-                alert('Caso no encontrado.');
-                return;
-            }
-            generarPDFFromCasoDirecto(caso, tipo);
-        }
-
-        function descargarTodosLosPDFs() {
-            var casos = [];
-            try { casos = obtenerCasosUnificados(); } catch(e) { console.error(e); }
-
-            var conItems = casos.filter(function(c) { return c.items && c.items.length > 0; });
-
-            if (conItems.length === 0) {
-                alert('No hay casos con items para descargar.');
-                return;
-            }
-
-            if (!confirm('Se descargarán ' + conItems.length + ' PDFs de recepción y ' + conItems.length + ' PDFs de entrega (total ' + (conItems.length * 2) + ' archivos). ¿Continuar?')) return;
-
-            var total = conItems.length * 2;
-            var descargados = 0;
-            var index = 0;
-
-            function downloadNext() {
-                if (index >= conItems.length) {
-                    alert('✅ Se descargaron ' + descargados + ' PDFs en total.');
-                    return;
-                }
-                generarPDFFromCasoDirecto(conItems[index], 'recepcion');
-                descargados++;
-                setTimeout(function() {
-                    generarPDFFromCasoDirecto(conItems[index], 'entrega');
-                    descargados++;
-                    index++;
-                    setTimeout(downloadNext, 1500);
-                }, 1500);
-            }
-            downloadNext();
-        }
-
-        function generarPDFFromCasoDirecto(caso, tipo) {
-            try {
-                if (typeof __pdfGenerating !== 'undefined' && __pdfGenerating) {
-                    setTimeout(function() { generarPDFFromCasoDirecto(caso, tipo); }, 2000);
-                    return;
-                }
-                if (typeof generatePDFFromCase === 'function') {
-                    generatePDFFromCase(caso, tipo);
-                } else {
-                    console.error('generatePDFFromCase no está disponible');
-                }
-            } catch(e) {
-                console.error('Error generando PDF:', e);
-                if (typeof __pdfGenerating !== 'undefined') __pdfGenerating = false;
-            }
-        }
+    // ---- INIT ----
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!validateAccessToAnalytics()) return;
+        loadData();
+    });
     </script>
 </body>
 </html>

@@ -964,6 +964,22 @@ exports.handler = async (event) => {
                 return jsonResponse(200, { ok: true, detalle });
             }
 
+            // Eliminar detalle de proceso (para reemplazar con datos actualizados)
+            if (payload.action === 'delete_detalle_proceso') {
+                const procesoId = payload.proceso_id;
+                if (!procesoId) {
+                    return jsonResponse(400, { ok: false, error: 'proceso_id requerido' });
+                }
+                const { error } = await supabase
+                    .from('detalle_procesos_ac')
+                    .delete()
+                    .eq('proceso_id', procesoId);
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error eliminando detalle', detail: error.message });
+                }
+                return jsonResponse(200, { ok: true });
+            }
+
             // Obtener conteo de items por todos los procesos (para modal PDFs)
             if (payload.action === 'get_all_detalle_procesos') {
                 // Contar desde ambas tablas y usar el mayor
@@ -2275,6 +2291,41 @@ exports.handler = async (event) => {
                     const detalleElementosAll = detalleElementosRes.data || [];
                     const marcaciones = marcacionesRes.data || [];
 
+                    // Último cliente creado
+                    let ultimoCliente = null;
+                    try {
+                        const { data: latestClient } = await supabase
+                            .from('clientes')
+                            .select('*')
+                            .order('created_at', { ascending: false })
+                            .limit(1);
+                        if (latestClient && latestClient.length > 0) {
+                            const c = latestClient[0];
+                            const nombre = pickFirstValue(c, ['nombre', 'nombre_completo', 'contacto', 'representante', 'nombre_empresa', 'empresa', 'razon_social']) || c.email || 'Sin nombre';
+                            ultimoCliente = {
+                                nombre,
+                                fecha: c.created_at || null
+                            };
+                        }
+                        // Calcular frecuencia promedio entre clientes
+                        if (clientes.length >= 2) {
+                            const fechas = clientes
+                                .map(c => c.created_at ? new Date(c.created_at).getTime() : 0)
+                                .filter(t => t > 0)
+                                .sort((a, b) => b - a);
+                            if (fechas.length >= 2) {
+                                let totalDias = 0;
+                                for (let i = 0; i < fechas.length - 1; i++) {
+                                    totalDias += (fechas[i] - fechas[i + 1]) / (1000 * 60 * 60 * 24);
+                                }
+                                const promedioDias = totalDias / (fechas.length - 1);
+                                ultimoCliente = ultimoCliente || {};
+                                ultimoCliente.frecuenciaDias = Math.round(promedioDias * 10) / 10;
+                                ultimoCliente.totalClientes = clientes.length;
+                            }
+                        }
+                    } catch (_) {}
+
                     // ── KPIs principales ──
                     const totalProcesos = procesos.length;
                     const totalClientes = clientes.length;
@@ -2493,9 +2544,10 @@ exports.handler = async (event) => {
 
                     // ── Flujo de procesos ──
                     const flujoProcesos = {
-                        recibidos: procesos.filter(p => (p.estado || '').trim().toLowerCase() === 'recepcion').length || totalProcesos,
-                        informe: procesos.filter(p => { const e = (p.estado || '').trim().toLowerCase(); return e === 'informe-de-ensayo' || e === 'informe'; }).length,
-                        entrega: procesos.filter(p => { const e = (p.estado || '').trim().toLowerCase(); return e === 'entrega-cliente' || e === 'entrega'; }).length,
+                        recibidos: procesos.filter(p => normalizeStatusKey(p.estado) === 'recepcion').length || totalProcesos,
+                        informe: procesos.filter(p => { const e = normalizeStatusKey(p.estado); return e === 'informe-de-ensayo'; }).length,
+                        ensayo: procesos.filter(p => { const e = normalizeStatusKey(p.estado); return e === 'en-proceso-de-ensayo'; }).length,
+                        entrega: procesos.filter(p => { const e = normalizeStatusKey(p.estado); return e === 'entrega-cliente'; }).length,
                         finalizado: procesosFinalizados
                     };
 
@@ -2549,7 +2601,8 @@ exports.handler = async (event) => {
                             flujoProcesos,
                             marcacionesResumen,
                             informesActivos,
-                            informesVigentes
+                            informesVigentes,
+                            ultimoCliente
                         }
                     });
                 } catch (err) {

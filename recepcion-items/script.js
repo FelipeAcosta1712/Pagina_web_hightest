@@ -7115,25 +7115,17 @@ function openComposeGeneral() {
 // Utilidad: intenta abrir Gmail; si el usuario prefiere Outlook Web, lo abrimos con su esquema
 function openWebMail(to, cc, subject, body) {
     // Preferencia simple basada en si el usuario está logueado en Gmail (heurística mínima) o fuerza Outlook si detecta dominion corporativo
-    const preferOutlook = /@(outlook|hotmail|live|office|microsoft)\./i.test(to) || /@(outlook|hotmail|live|office|microsoft)\./i.test(cc || '');
-
     const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&cc=${encodeURIComponent(cc || '')}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(to)}&cc=${encodeURIComponent(cc || '')}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
-    // Abrimos en una nueva pestaña; si el navegador bloquea, usamos mailto como fallback
-    const targetUrl = preferOutlook ? outlookUrl : gmailUrl;
-    const win = window.open(targetUrl, '_blank');
-    if (!win) {
-        try {
-            const mailto = `mailto:${to}?cc=${encodeURIComponent(cc || '')}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-            window.location.href = mailto;
-            if (typeof showNotification === 'function') showNotification('Se abrió el cliente de correo (fallback). Si usas Gmail/Outlook Web, permite las ventanas emergentes.', 'info');
-        } catch (e) {
-            console.error('Error abriendo correo:', e);
-            if (typeof showNotification === 'function') showNotification('No se pudo abrir el correo. Verifica bloqueadores de ventanas emergentes.', 'error');
-            else alert('No se pudo abrir el correo. Verifica bloqueadores de ventanas emergentes.');
-        }
-    }
+    // Crear enlace temporal y hacer clic - más confiable que window.open contra bloqueadores
+    const a = document.createElement('a');
+    a.href = gmailUrl;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    if (typeof showNotification === 'function') showNotification('Abriendo Gmail...', 'info');
 }
 
 // Nuevo: Redacción para Entrega Total en Gmail/Outlook
@@ -7715,8 +7707,14 @@ async function guardarDetalleProceso(procesoId) {
         });
         const checkResult = await checkRes.json();
         if (checkResult.ok && Array.isArray(checkResult.detalle) && checkResult.detalle.length > 0) {
-            console.log('[guardarDetalleProceso] Detalle ya existe para proceso', procesoId, '- no se duplica');
-            return;
+            // Ya existe detalle: eliminar el viejo y reinsertar con datos nuevos
+            try {
+                await fetch('/.netlify/functions/conectar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'delete_detalle_proceso', proceso_id: procesoId })
+                });
+            } catch (e) { console.warn('[guardarDetalleProceso] Error eliminando detalle viejo:', e); }
         }
 
         // Insertar detalle
@@ -8866,6 +8864,7 @@ function procesoACaso(p) {
         status: (estadoRaw === 'finalizado' || estadoRaw === 'entrega-cliente') ? 'entrega' : (estadoRaw || 'recepcion'),
         estado: estadoRaw || 'recepcion',
         items: [],
+        total_items: parseInt(p.total_items) || 0,
         n_informe: p.n_informe || '',
         numero_proceso: nroProceso,
         informeNombre: p.informe_a_nombre_de || '',
@@ -8919,7 +8918,7 @@ function _insertIfNewer(map, caso) {
         }
         if (shouldOverwrite) {
             const preserveFields = [
-                'status', 'signatureData', 'items', 'formData', 'cotizacion',
+                'status', 'signatureData', 'items', 'total_items', 'formData', 'cotizacion',
                 'cliente', 'nitEmpresa', 'facturar',
                 'informe', 'observaciones', 'clienteEmail', 'empresaEmail', 'copiaEmail',
                 'lavado', 'elementosLavados', 'tipoLavado', 'fechaLavado', 'responsableLavado', 'observacionesLavado',
@@ -9809,10 +9808,6 @@ function initializeSessionMonitoring() {
     resetSessionTimer();
     console.log('✅ Monitoreo de sesión iniciado (30 minutos de inactividad)');
 }
-
-window.addEventListener('load', function() {
-    setTimeout(limpiarSeccionesTablas, 100);
-});
 
 // Inicialización cuando se carga la página
 document.addEventListener('DOMContentLoaded', function() {
@@ -11683,11 +11678,13 @@ function generarHTMLItems(items, status) {
         html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">No Usado</th>';
         html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Usado</th>';
         html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Lavados</th>';
+        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Observaciones</th>';
     } else if (status === 'recepcion') {
         // Recepción: mostrar recibidos y entregados
         html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Recibidos</th>';
         html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Entregados</th>';
         html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Marcas</th>';
+        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Observaciones</th>';
     } else {
         // Borrador: mostrar todas las columnas como en completado
         html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Recibidos</th>';
@@ -11696,6 +11693,7 @@ function generarHTMLItems(items, status) {
         html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">No Usado</th>';
         html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Usado</th>';
         html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Lavados</th>';
+        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Observaciones</th>';
     }
     html += '</tr></thead><tbody>';
     
@@ -11711,11 +11709,13 @@ function generarHTMLItems(items, status) {
             html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity3 || '-'}</td>`;
             html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity4 || '-'}</td>`;
             html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.status || 0}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${item.observaciones || '-'}</td>`;
         } else if (status === 'recepcion') {
             // Mostrar quantity (recibidos) y quantity2 (entregados) y marcas
             html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity || 0}</td>`;
             html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity2 || 0}</td>`;
             html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${escapeHtml(getBrandText(item.brandSummary))}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${item.observaciones || '-'}</td>`;
         } else {
             // Borrador: mostrar todas las columnas
             html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity || 0}</td>`;
@@ -11724,6 +11724,7 @@ function generarHTMLItems(items, status) {
             html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity3 || '-'}</td>`;
             html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity4 || '-'}</td>`;
             html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.status || 0}</td>`;
+            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${item.observaciones || '-'}</td>`;
         }
         html += '</tr>';
     });
@@ -11766,11 +11767,14 @@ function mostrarDetallesEstadisticas(cotizacion) {
     if (Array.isArray(caso.items) && caso.items.length > 0) {
         caso.items.forEach(item => {
             const nombre = item.name || item.elemento || item.nombre || 'Unknown';
-            if (!itemsMap[nombre]) itemsMap[nombre] = { recibidos: 0, entregados: 0 };
+            if (!itemsMap[nombre]) itemsMap[nombre] = { recibidos: 0, entregados: 0, observaciones: '' };
             const recibidos = parseInt(item.quantity) || 0;
             const entregados = parseInt(item.quantity2) || 0;
             itemsMap[nombre].recibidos += recibidos;
             itemsMap[nombre].entregados += entregados;
+            if (item.observaciones && !itemsMap[nombre].observaciones) {
+                itemsMap[nombre].observaciones = item.observaciones;
+            }
         });
     }
     
@@ -11779,17 +11783,23 @@ function mostrarDetallesEstadisticas(cotizacion) {
         if (caso.savedRowsData?.ensayos_acreditados) {
             Object.entries(caso.savedRowsData.ensayos_acreditados).forEach(([idx, item]) => {
                 const nombre = item.elemento || item.nombre || 'Unknown';
-                if (!itemsMap[nombre]) itemsMap[nombre] = { recibidos: 0, entregados: 0 };
+                if (!itemsMap[nombre]) itemsMap[nombre] = { recibidos: 0, entregados: 0, observaciones: '' };
                 itemsMap[nombre].recibidos += parseInt(item.cantRecibida) || 0;
                 itemsMap[nombre].entregados += parseInt(item.cantEntregada) || 0;
+                if (item.observaciones && !itemsMap[nombre].observaciones) {
+                    itemsMap[nombre].observaciones = item.observaciones;
+                }
             });
         }
         if (caso.savedRowsData?.ensayos_no_acreditados) {
             Object.entries(caso.savedRowsData.ensayos_no_acreditados).forEach(([idx, item]) => {
                 const nombre = item.elemento || item.nombre || 'Unknown';
-                if (!itemsMap[nombre]) itemsMap[nombre] = { recibidos: 0, entregados: 0 };
+                if (!itemsMap[nombre]) itemsMap[nombre] = { recibidos: 0, entregados: 0, observaciones: '' };
                 itemsMap[nombre].recibidos += parseInt(item.cantRecibida) || 0;
                 itemsMap[nombre].entregados += parseInt(item.cantEntregada) || 0;
+                if (item.observaciones && !itemsMap[nombre].observaciones) {
+                    itemsMap[nombre].observaciones = item.observaciones;
+                }
             });
         }
     }
@@ -11805,7 +11815,7 @@ function mostrarDetallesEstadisticas(cotizacion) {
     
     const items = Object.entries(itemsMap).sort((a,b) => b[1].recibidos - a[1].recibidos);
     if (items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="padding: 16px; text-align: center; color: #666;">No hay items registrados</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="padding: 16px; text-align: center; color: #666;">No hay items registrados</td></tr>';
     } else {
         items.forEach(([nombre, data]) => {
             const diferencia = data.entregados - data.recibidos;
@@ -11816,6 +11826,7 @@ function mostrarDetallesEstadisticas(cotizacion) {
                     <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${data.recibidos}</td>
                     <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${data.entregados}</td>
                     <td style="padding: 10px; border: 1px solid #ddd; text-align: center; ${diferenciasStyle}">${diferencia > 0 ? '+' : ''}${diferencia}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: left;">${data.observaciones || '-'}</td>
                 </tr>
             `;
             tbody.innerHTML += row;

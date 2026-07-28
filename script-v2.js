@@ -8265,6 +8265,7 @@ const AnalisisProcesosModule = {
                             <th style="padding:6px 8px; border:1px solid #ddd; text-align:center;">No Usado</th>
                             <th style="padding:6px 8px; border:1px solid #ddd; text-align:center;">Usado</th>
                             <th style="padding:6px 8px; border:1px solid #ddd; text-align:center;">Lavados</th>
+                            <th style="padding:6px 8px; border:1px solid #ddd; text-align:left;">Observaciones</th>
                         </tr>
                     </thead><tbody>`;
                 totalItems.forEach(item => {
@@ -8276,6 +8277,7 @@ const AnalisisProcesosModule = {
                         <td style="padding:5px 8px; border:1px solid #ddd; text-align:center;">${item.quantity3 || '-'}</td>
                         <td style="padding:5px 8px; border:1px solid #ddd; text-align:center;">${item.quantity4 || '-'}</td>
                         <td style="padding:5px 8px; border:1px solid #ddd; text-align:center;">${item.status || 0}</td>
+                        <td style="padding:5px 8px; border:1px solid #ddd; text-align:left;">${escapeHtml(item.observaciones || '-')}</td>
                     </tr>`;
                 });
                 itemsHTML += '</tbody></table>';

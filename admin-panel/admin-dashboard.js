@@ -114,6 +114,33 @@ const DashboardModule = {
         set('dashClientes', this.formatNumber(s.clientesAtendidos || 0));
         set('dashFinalizados', this.formatNumber(s.procesosFinalizados || 0));
         set('dashActivos', this.formatNumber(s.procesosActivos || 0));
+
+        // Último Cliente
+        const ultimo = s.ultimoCliente;
+        const nombreEl = document.getElementById('ultimoClienteNombre');
+        const fechaEl = document.getElementById('ultimoClienteFecha');
+        const freqEl = document.getElementById('clientesFrecuencia');
+        const freqLabel = document.getElementById('clientesFrecuenciaLabel');
+        if (ultimo && nombreEl) {
+            nombreEl.textContent = ultimo.nombre || '-';
+            if (fechaEl) {
+                fechaEl.textContent = ultimo.fecha ? this.getTimeAgo(ultimo.fecha) : 'Sin fecha';
+            }
+            if (freqEl && ultimo.frecuenciaDias !== undefined) {
+                const d = ultimo.frecuenciaDias;
+                if (d < 1) {
+                    freqEl.textContent = '< 1 día';
+                } else if (d < 2) {
+                    freqEl.textContent = '~1 día';
+                } else {
+                    freqEl.textContent = `~${Math.round(d)} días`;
+                }
+                if (freqLabel) freqLabel.textContent = `Se crea un cliente nuevo`;
+            }
+        } else if (nombreEl) {
+            nombreEl.textContent = 'Sin registros';
+            if (fechaEl) fechaEl.textContent = 'No hay clientes creados';
+        }
     },
 
     // ── Recepciones por Mes (Bar Chart) ──
@@ -573,6 +600,7 @@ const DashboardModule = {
         const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
         set('flowRecibidos', f.recibidos || 0);
         set('flowInforme', f.informe || 0);
+        set('flowEnsayo', f.ensayo || 0);
         set('flowEntrega', f.entrega || 0);
         set('flowFinalizado', f.finalizado || 0);
     },

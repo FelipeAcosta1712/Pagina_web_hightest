@@ -342,6 +342,32 @@
                     </div>
                 </div>
 
+                <!-- Row: Último Cliente Registrado -->
+                <div class="dash-charts-row" style="margin-top:12px; grid-template-columns:1fr;">
+                    <div class="dash-chart-card" style="border-left:3px solid #e11d48; padding:0;">
+                        <div class="dash-chart-card__body" style="padding:4px 20px; display:flex; align-items:center; gap:0;">
+                            <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
+                                <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#fff1f2;color:#e11d48;font-size:13px;flex-shrink:0;">👤</span>
+                                <div style="min-width:0;">
+                                    <div style="font-size:15px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Último Cliente</div>
+                                    <div style="font-weight:700; font-size:16px; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" id="ultimoClienteNombre">-</div>
+                                </div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:24px; flex-shrink:0;">
+                                <div style="text-align:center;">
+                                    <div style="font-size:13px; color:#64748b;" id="ultimoClienteFecha">Cargando...</div>
+                                </div>
+                                <div style="width:1px; height:28px; background:#e2e8f0;"></div>
+                                <div style="text-align:center;">
+                                    <div style="font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Frecuencia</div>
+                                    <div style="font-weight:700; font-size:16px; color:#022859;" id="clientesFrecuencia">-</div>
+                                    <div style="font-size:12px; color:#64748b;" id="clientesFrecuenciaLabel">Se crea un cliente nuevo</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Row 3: Actividad + Últimas Recepciones -->
                 <div class="dash-charts-row dash-charts-row--2col">
                     <div class="dash-chart-card">
@@ -373,6 +399,14 @@
                         </div>
                         <div class="dash-flow-card__value" id="flowRecibidos">0</div>
                         <div class="dash-flow-card__label">Recibidos</div>
+                    </div>
+                    <div class="dash-flow-separator">→</div>
+                    <div class="dash-flow-card">
+                        <div class="dash-flow-card__icon dash-flow-card__icon--purple">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        </div>
+                        <div class="dash-flow-card__value" id="flowEnsayo">0</div>
+                        <div class="dash-flow-card__label">Proceso de Ensayo</div>
                     </div>
                     <div class="dash-flow-separator">→</div>
                     <div class="dash-flow-card">
@@ -4373,6 +4407,7 @@
         .dash-stat-card__icon--orange { background: #fff7ed; color: #ea580c; }
         .dash-stat-card__icon--teal { background: #fefce8; color: #ca8a04; }
         .dash-stat-card__icon--emerald { background: #ecfdf5; color: #059669; }
+        .dash-stat-card__icon--rose { background: #fff1f2; color: #e11d48; }
 
         .dash-stat-card__top {
             display: flex;
@@ -7644,6 +7679,7 @@
                                 <th style="padding: 10px; text-align: center; border: 1px solid #e6eef6;">Cant. Recibida</th>
                                 <th style="padding: 10px; text-align: center; border: 1px solid #e6eef6;">Cant. Entregada</th>
                                 <th style="padding: 10px; text-align: center; border: 1px solid #e6eef6;">Diferencia</th>
+                                <th style="padding: 10px; text-align: left; border: 1px solid #e6eef6;">Observaciones</th>
                             </tr>
                         </thead>
                         <tbody id="modalDetalleItemsBody">
@@ -10590,7 +10626,7 @@
                         let color = '#ff9800';
                         if (e === 'recepcion') color = '#007bff';
                         else if (e === 'informe-de-ensayo') color = '#9c27b0';
-                        const items = c.items ? c.items.length : 0;
+                        const items = (c.items && c.items.length > 0) ? c.items.length : (c.total_items || 0);
                         html += '<tr style="border-bottom:1px solid #eee;">';
                         html += '<td style="padding:8px 10px;border:1px solid #ddd;font-weight:600;">' + c.cotizacion + '</td>';
                         html += '<td style="padding:8px 10px;border:1px solid #ddd;">' + (c.cliente || '-') + '</td>';
@@ -10659,6 +10695,7 @@
                     const procesosSupabase = [];
                     if (dataProcesos.ok && Array.isArray(dataProcesos.procesos)) {
                         dataProcesos.procesos.forEach(p => {
+                            const totalItemsFromMarc = parseInt(p.total_items) || 0;
                             procesosSupabase.push({
                                 id: p.id,
                                 cotizacion: p.numero_proceso || '',
@@ -10673,7 +10710,8 @@
                                 nitEmpresa: p.nit_empresa || p.empresa || '',
                                 timestamp: p.updated_at || p.created_at || '',
                                 _source: 'supabase',
-                                items: []
+                                items: [],
+                                total_items: totalItemsFromMarc
                             });
                         });
                     }
@@ -10778,7 +10816,7 @@
                         if (e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente') color = '#28a745';
                         else if (e === 'recepcion') color = '#007bff';
                         else if (e === 'informe-de-ensayo') color = '#9c27b0';
-                        const items = c.items ? c.items.length : 0;
+                        const items = (c.items && c.items.length > 0) ? c.items.length : (c.total_items || 0);
                         const esEntrega = e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente';
                         let accionBtns = '<button type="button" onclick="mostrarVistaPrevia(\'' + c.cotizacion + '\')" style="background:#f1f5f9;color:#475569;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #d1d5db;cursor:pointer;">👁️ Ver</button>';
                         accionBtns += ' <button type="button" onclick="RecepcionAnalyticsModule.eliminarCaso(\'' + c.cotizacion + '\')" style="background:#fef2f2;color:#dc2626;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #fecaca;cursor:pointer;">🗑️</button>';
@@ -10823,7 +10861,7 @@
                         cliente: c.cliente || '-',
                         informeNombre: c.informeNombre || '-',
                         facturarNombre: c.facturarNombre || '-',
-                        totalItems: c.items ? c.items.length : 0,
+                        totalItems: (c.items && c.items.length > 0) ? c.items.length : (c.total_items || 0),
                         totalRecibidos: recibidos,
                         totalEntregados: entregados
                     };
@@ -10943,7 +10981,7 @@
                         if (e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente') color = '#28a745';
                         else if (e === 'recepcion') color = '#007bff';
                         else if (e === 'informe-de-ensayo') color = '#9c27b0';
-                        const items = c.items ? c.items.length : 0;
+                        const items = (c.items && c.items.length > 0) ? c.items.length : (c.total_items || 0);
                         return `<tr style="border-bottom:1px solid #ddd;">
                             <td style="padding:10px;border:1px solid #ddd;">${c.cotizacion}</td>
                             <td style="padding:10px;border:1px solid #ddd;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.cliente}</td>
