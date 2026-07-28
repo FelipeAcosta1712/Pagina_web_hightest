@@ -1399,6 +1399,10 @@ exports.handler = async (event) => {
                     const detalleId = String(m.detalle_id || '').trim();
                     if (!rawPid && !detalleId) return;
 
+                    if (String(m.proceso_id) === '512' || String(m.detalle_id) === '512') {
+                        console.log('[TRACE-512]', { proceso_id: m.proceso_id, detalle_id: m.detalle_id, estado: m.estado });
+                    }
+
                     // Try to resolve to a valid procesos_acreditados.id
                     let realPid = null;
                     let resolvedBy = 'none';
@@ -1427,6 +1431,10 @@ exports.handler = async (event) => {
                     // If we still can't resolve, use rawPid as fallback (preserves old behavior)
                     const key = realPid || rawPid;
                     if (!key) return;
+
+                    if (String(m.proceso_id) === '512' || String(m.detalle_id) === '512') {
+                        console.log('[TRACE-512-RESUELTO]', { rawPid: m.proceso_id, realPid, key, estado: m.estado });
+                    }
 
                     if (String(m.proceso_id) === '512' || key === '512') {
                         debug512Trace.push({ rawPid, detalleId, realPid, resolvedBy, key, estado: m.estado });
