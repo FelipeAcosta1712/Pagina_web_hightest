@@ -9094,6 +9094,14 @@
                         this.marcacionesResumen = {};
                     }
 
+                    console.log('[DEBUG P1 Resumen]',
+                        'total processes:', this.processes.length,
+                        'total resumen keys:', Object.keys(this.marcacionesResumen).length,
+                        'resumen[512]:', this.marcacionesResumen['512'],
+                        'resumen[R26 0130]:', this.marcacionesResumen['R26 0130'],
+                        'all keys:', Object.keys(this.marcacionesResumen)
+                    );
+
                     const usuariosResult = await usuariosRes.json();
                     if (usuariosResult.ok && Array.isArray(usuariosResult.usuarios)) {
                         this.usuarios = usuariosResult.usuarios;
@@ -9123,6 +9131,9 @@
                     const num = (p.numero_proceso || '').trim();
                     if (!id && !num) return;
                     const existing = r[id] || r[String(id)] || r[num] || null;
+                    if (String(p.id) === '512') {
+                        console.log('[DEBUG P2 buildResumenKeys]', { id: p.id, idType: typeof p.id, num: p.numero_proceso, rId512: r['512'], rId512str: r[String(512)], rNum: r[p.numero_proceso], existing: existing });
+                    }
                     if (existing) {
                         if (id !== undefined && id !== null) r[String(id).trim()] = existing;
                         if (num) r[num] = existing;
@@ -9141,13 +9152,13 @@
                     });
                     const result = await res.json();
                     if (result.ok && result.resumen) {
-                        // Merge: sobrescribir con datos frescos de BD, pero conservar entries locales calculados
-                        const localEntries = {};
-                        Object.keys(this.marcacionesResumen).forEach(k => {
-                            if (!result.resumen[k]) localEntries[k] = this.marcacionesResumen[k];
+                        // Solo agregar entradas del backend que tengan marcaciones (total > 0)
+                        // Las entradas locales calculadas en openDetail/guardarTodas se preservan
+                        Object.keys(result.resumen).forEach(k => {
+                            if (result.resumen[k].total > 0) {
+                                this.marcacionesResumen[k] = result.resumen[k];
+                            }
                         });
-                        this.marcacionesResumen = result.resumen;
-                        Object.assign(this.marcacionesResumen, localEntries);
                         this.buildResumenKeys();
                     }
                 } catch (e) {
@@ -9160,7 +9171,11 @@
                 const r = this.marcacionesResumen;
                 const id = process.id;
                 const num = (process.numero_proceso || '').trim();
-                return r[id] || r[String(id)] || r[num] || r[String(id).trim()] || null;
+                const resultado = r[id] || r[String(id)] || r[num] || r[String(id).trim()] || null;
+                if (String(process.id) === '512') {
+                    console.log('[DEBUG P3 getResumen]', { id: process.id, idType: typeof process.id, num: process.numero_proceso, resultado });
+                }
+                return resultado;
             },
 
             filterProcesses() {
@@ -9254,6 +9269,10 @@
                     const resumen = this.getResumen(p);
                     const totalItems = resumen ? resumen.total : 0;
                     const marcados = resumen ? resumen.marcados : 0;
+
+                    if (String(p.id) === '512') {
+                        console.log('[DEBUG P4 render]', { id: p.id, num: p.numero_proceso, resumen, totalItems, marcados });
+                    }
 
                     // Determinar estado según marcaciones reales
                     let cardClass, statusClass, statusIcon, statusText;
