@@ -1343,18 +1343,28 @@ exports.handler = async (event) => {
             // MARCACIONES - Resumen por todos los procesos
             // =============================================
             if (payload.action === 'get_marcaciones_resumen') {
+                // Count total rows to detect pagination truncation
+                const { count: totalReal, error: countError } = await supabase
+                    .from('marcaciones_ac')
+                    .select('*', { count: 'exact', head: true });
+
+                console.log('[DEBUG-COUNT] Total real en marcaciones_ac:', totalReal, 'error:', countError);
+
                 // Fetch marcaciones with detalle_id for proper bridging
                 const { data: marcData, error: marcErr } = await supabase
                     .from('marcaciones_ac')
-                    .select('proceso_id, detalle_id, estado');
+                    .select('proceso_id, detalle_id, estado')
+                    .range(0, 100000);
+
+                console.log('[DEBUG-RANGE] Filas recibidas:', marcData?.length || 0);
+
+                const rows512 = (marcData || []).filter(r => String(r.proceso_id) === '512');
+                console.log('[DEBUG-RANGE] Filas proceso 512:', rows512.length);
 
                 if (marcErr) {
                     return jsonResponse(500, { ok: false, error: 'Error al consultar resumen de marcaciones', detail: marcErr.message });
                 }
 
-                console.log('[DEBUG-RESUMEN] Total marcaciones_ac rows:', (marcData || []).length);
-                const ones512 = (marcData || []).filter(m => String(m.proceso_id) === '512');
-                console.log('[DEBUG-RESUMEN] Rows with proceso_id=512:', ones512.length, JSON.stringify(ones512));
                 const sample = (marcData || []).slice(0, 5);
                 console.log('[DEBUG-RESUMEN] First 5 rows:', JSON.stringify(sample));
 
