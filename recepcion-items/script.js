@@ -7637,7 +7637,9 @@ async function actualizarProcesoAEntrega() {
 // Guarda cada elemento recibido en detalle_procesos_ac
 async function guardarDetalleProceso(procesoId) {
     const numeroProceso = document.getElementById('quoteNumber')?.value || 'desconocido';
-    const detalle = [];
+
+    // Agregar por ensayo_id + marca para evitar filas duplicadas
+    const aggMap = {};
 
     if (savedRowsData?.ensayos_acreditados) {
         for (const [key, row] of Object.entries(savedRowsData.ensayos_acreditados)) {
@@ -7649,39 +7651,74 @@ async function guardarDetalleProceso(procesoId) {
 
             const units = getRowUnits('ensayos_acreditados', index);
             const obs = String(row.observaciones || '').trim();
+            const cantRecibida = parseInt(row.cantRecibida) || 0;
 
-            if (units && units.length > 0) {
-                const brandGroups = {};
-                for (const unit of units) {
-                    const marca = unit.brand || '';
-                    if (!brandGroups[marca]) brandGroups[marca] = 0;
-                    brandGroups[marca]++;
+            // Detectar si units[] está desactualizado respecto a cantRecibida
+            const unitsStale = units.length > 0 && cantRecibida > 0 && units.length !== cantRecibida;
+
+            let effectiveUnits = units;
+
+            if (unitsStale) {
+                console.warn('[guardarDetalleProceso] units[] desactualizado', {
+                    ensayo: ensayoId,
+                    unitsLen: units.length,
+                    cantRecibida
+                });
+
+                // Reconstruir units preservando marcas del array viejo
+                if (cantRecibida > units.length) {
+                    // Cantidad aumentó: mantener marcas existentes + agregar con marca predominante
+                    const brandCounts = {};
+                    for (const u of units) {
+                        const b = u.brand || 'Sin marca';
+                        brandCounts[b] = (brandCounts[b] || 0) + 1;
+                    }
+                    const predominantBrand = Object.entries(brandCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Sin marca';
+                    effectiveUnits = [...units];
+                    for (let i = units.length; i < cantRecibida; i++) {
+                        effectiveUnits.push({ sequence: i + 1, brand: predominantBrand, observations: '', code: '' });
+                    }
+                } else {
+                    // Cantidad disminuyó: recortar array
+                    effectiveUnits = units.slice(0, cantRecibida);
                 }
-                for (const [marca, cantidad] of Object.entries(brandGroups)) {
-                    if (cantidad > 0) {
-                        detalle.push({
+            }
+
+            if (effectiveUnits && effectiveUnits.length > 0) {
+                for (const unit of effectiveUnits) {
+                    const marca = unit.brand || '';
+                    const aggKey = ensayoId + '||' + marca;
+                    if (!aggMap[aggKey]) {
+                        aggMap[aggKey] = {
                             proceso_id: procesoId,
                             ensayo_id: ensayoId,
-                            cantidad,
+                            cantidad: 0,
                             marca: marca || '',
                             observaciones: obs || ''
-                        });
+                        };
                     }
+                    aggMap[aggKey].cantidad++;
                 }
             } else {
                 const cantidad = parseInt(row.cantRecibida) || 0;
+                const aggKey = ensayoId + '||';
                 if (cantidad > 0) {
-                    detalle.push({
-                        proceso_id: procesoId,
-                        ensayo_id: ensayoId,
-                        cantidad,
-                        marca: '',
-                        observaciones: obs || ''
-                    });
+                    if (!aggMap[aggKey]) {
+                        aggMap[aggKey] = {
+                            proceso_id: procesoId,
+                            ensayo_id: ensayoId,
+                            cantidad: 0,
+                            marca: '',
+                            observaciones: obs || ''
+                        };
+                    }
+                    aggMap[aggKey].cantidad += cantidad;
                 }
             }
         }
     }
+
+    const detalle = Object.values(aggMap);
 
     if (detalle.length === 0) {
         console.error('[guardarDetalleProceso] No se generó detalle para insertar:', {
@@ -7699,33 +7736,17 @@ async function guardarDetalleProceso(procesoId) {
     }
 
     try {
-        // Verificar si ya existe detalle para este proceso
-        const checkRes = await fetch('/.netlify/functions/conectar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'get_detalle_proceso', proceso_id: procesoId })
-        });
-        const checkResult = await checkRes.json();
-        if (checkResult.ok && Array.isArray(checkResult.detalle) && checkResult.detalle.length > 0) {
-            // Ya existe detalle: eliminar el viejo y reinsertar con datos nuevos
-            try {
-                await fetch('/.netlify/functions/conectar', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'delete_detalle_proceso', proceso_id: procesoId })
-                });
-            } catch (e) { console.warn('[guardarDetalleProceso] Error eliminando detalle viejo:', e); }
-        }
-
-        // Insertar detalle
+        // Sync atómico: UPDATE si existe, INSERT si no, DELETE duplicados y huérfanos
         const response = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'add_detalle_proceso', detalle })
+            body: JSON.stringify({ action: 'sync_detalle_proceso', proceso_id: procesoId, detalle })
         });
         const result = await response.json();
-        if (!response.ok) {
-            console.error('[guardarDetalleProceso] Error guardando detalle:', result?.error, result?.detail);
+        if (!response.ok || !result.ok) {
+            console.error('[guardarDetalleProceso] Error en sync:', result?.error, result?.detail, result?.ops);
+        } else {
+            console.log('[guardarDetalleProceso] Sync exitoso:', result.ops, '→ filas finales:', result.detalle.length);
         }
     } catch (err) {
         console.error('[guardarDetalleProceso] Error en guardarDetalleProceso:', err);

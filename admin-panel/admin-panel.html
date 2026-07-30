@@ -9083,6 +9083,12 @@
                     const procesosResult = await procesosRes.json();
                     if (procesosResult.ok && Array.isArray(procesosResult.procesos)) {
                         this.processes = procesosResult.procesos;
+                        console.table(
+                            this.processes.map(p => ({
+                                id: p.id,
+                                numero_proceso: p.numero_proceso
+                            }))
+                        );
                     } else {
                         this.processes = [];
                     }
@@ -9107,6 +9113,50 @@
                 }
                 this.filteredProcesses = [...this.processes];
                 this.sortProcesses();
+                this.buildResumenKeys();
+            },
+
+            buildResumenKeys() {
+                const r = this.marcacionesResumen;
+                this.processes.forEach(p => {
+                    const id = p.id;
+                    const num = (p.numero_proceso || '').trim();
+                    if (!id && !num) return;
+                    const existing = r[id] || r[String(id)] || r[num] || null;
+                    if (existing) {
+                        if (id !== undefined && id !== null) r[String(id).trim()] = existing;
+                        if (num) r[num] = existing;
+                    }
+                });
+            },
+
+            async refreshResumen() {
+                try {
+                    const res = await fetch('/.netlify/functions/conectar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'get_marcaciones_resumen' })
+                    });
+                    const result = await res.json();
+                    if (result.ok && result.resumen) {
+                        Object.keys(result.resumen).forEach(k => {
+                            if (result.resumen[k].total > 0) {
+                                this.marcacionesResumen[k] = result.resumen[k];
+                            }
+                        });
+                        this.buildResumenKeys();
+                    }
+                } catch (e) {
+                    console.warn('[Marcación] Error refrescando resumen:', e);
+                }
+            },
+
+            getResumen(process) {
+                if (!process) return null;
+                const r = this.marcacionesResumen;
+                const id = process.id;
+                const num = (process.numero_proceso || '').trim();
+                return r[id] || r[String(id)] || r[num] || r[String(id).trim()] || null;
             },
 
             filterProcesses() {
@@ -9129,11 +9179,11 @@
                         (p.n_informe || '').toLowerCase().includes(this.currentSearch);
 
                     if (!matchSearch) return false;
-                    if (this.currentStatusFilter === 'todos') return true;
-
-                    const resumen = this.marcacionesResumen[p.id] || this.marcacionesResumen[p.numero_proceso] || null;
+                    const resumen = this.getResumen(p);
                     const totalItems = resumen ? resumen.total : 0;
                     const marcados = resumen ? resumen.marcados : 0;
+
+                    if (this.currentStatusFilter === 'todos') return true;
 
                     if (this.currentStatusFilter === 'completado') return totalItems > 0 && marcados >= totalItems;
                     if (this.currentStatusFilter === 'sin-marcacion') return totalItems === 0;
@@ -9156,7 +9206,7 @@
             updateCards() {
                 let total = this.processes.length, completados = 0, enProgreso = 0, sinMarcar = 0;
                 this.processes.forEach(p => {
-                    const resumen = this.marcacionesResumen[p.id] || this.marcacionesResumen[p.numero_proceso] || null;
+                    const resumen = this.getResumen(p);
                     const totalItems = resumen ? resumen.total : 0;
                     const marcados = resumen ? resumen.marcados : 0;
                     if (totalItems > 0 && marcados >= totalItems) completados++;
@@ -9197,7 +9247,7 @@
                     const fecha = this.formatDate(p.fecha_recepcion);
 
                     // Buscar resumen por ID numérico O por número de proceso
-                    const resumen = this.marcacionesResumen[p.id] || this.marcacionesResumen[numero] || null;
+                    const resumen = this.getResumen(p);
                     const totalItems = resumen ? resumen.total : 0;
                     const marcados = resumen ? resumen.marcados : 0;
 
@@ -9495,6 +9545,19 @@
                         if (!m.unidad) m.unidad = 'U-' + counterByElemento[key];
                         if (!m.fecha_modificacion) m.fecha_modificacion = new Date().toISOString();
                     });
+
+                    // Calcular resumen local desde las marcaciones cargadas
+                    const total = this.currentMarcaciones.length;
+                    const marcados = this.currentMarcaciones.filter(m => ['marcado','revisado'].includes((m.estado||'').toLowerCase())).length;
+                    const pendientes = this.currentMarcaciones.filter(m => (m.estado||'').toLowerCase() === 'pendiente').length;
+                    const otros = total - marcados - pendientes;
+                    const resumenEntry = { total, marcados, pendientes, otros };
+                    const pid = String(proceso.id || '').trim();
+                    const num = (proceso.numero_proceso || '').trim();
+                    const realPid = String(this.currentMarcaciones[0].proceso_id || '').trim();
+                    if (pid) this.marcacionesResumen[pid] = resumenEntry;
+                    if (num) this.marcacionesResumen[num] = resumenEntry;
+                    if (realPid && realPid !== pid) this.marcacionesResumen[realPid] = resumenEntry;
                 }
 
                 // 2. Cargar detalle del proceso
@@ -9668,7 +9731,22 @@
 
                 const groups = {};
                 const defaultGroupOrder = [];
+
+                // Deduplicar filas con mismo ensayo_id + misma marca (datos legacy duplicados)
+                // Si hay duplicados, quedarse con el de mayor cantidad (el más reciente)
+                const deduped = {};
                 this.currentDetalle.forEach(item => {
+                    const mk = (item.marca || '').trim();
+                    const dedupKey = (item.ensayo_id || '') + '||' + mk;
+                    if (!deduped[dedupKey]) {
+                        deduped[dedupKey] = { ...item };
+                    } else if ((item.cantidad || 0) >= (deduped[dedupKey].cantidad || 0)) {
+                        deduped[dedupKey] = { ...item };
+                    }
+                });
+                const detalleItems = Object.values(deduped);
+
+                detalleItems.forEach(item => {
                     const key = item.ensayo_id || ('_idx_' + defaultGroupOrder.length);
                     if (!groups[key]) {
                         groups[key] = { ensayo_id: item.ensayo_id, ensayo_nombre: item.ensayo_nombre || 'Elemento', totalCantidad: 0, marcaCantidades: {} };
@@ -9718,20 +9796,27 @@
                     else if (upper.includes('SECCION')) unidadLabel = 'Secc';
                     else if (upper.includes('CUERPO') || upper.includes('PÉRTIGA') || upper.includes('PERTIGA')) unidadLabel = 'cuerpos';
 
-                    // Calcular unidades ensayables (igual que recepcion-items)
+                    // Cargar unidades ensayables: BD > memoria > cálculo automático
                     if (!(key in this.currentGroupUnidades)) {
-                        let unidadesEnsayables = total;
-                        if (upper.includes('PAR DE') || upper.includes('PARES DE')) unidadesEnsayables = total * 2;
-                        else if (upper.includes('SECCION')) {
-                            const match = upper.match(/(\d+)\s*SECCION/);
-                            const numSecciones = match ? parseInt(match[1], 10) : total;
-                            unidadesEnsayables = total * numSecciones;
-                        } else if (upper.includes('CUERPO') || upper.includes('PÉRTIGA') || upper.includes('PERTIGA')) {
-                            const match = upper.match(/(\d+)\s*(CUERPO|PÉRTIGA|PERTIGA)/);
-                            const numCuerpos = match ? parseInt(match[1], 10) : 4;
-                            unidadesEnsayables = total * numCuerpos;
+                        // 1. Intentar cargar desde BD (unidades_ensayables en detalle)
+                        const savedValue = this.currentDetalle.find(d => (d.ensayo_id || '') === key && d.unidades_ensayables > 0);
+                        if (savedValue && savedValue.unidades_ensayables) {
+                            this.currentGroupUnidades[key] = savedValue.unidades_ensayables;
+                        } else {
+                            // 2. Calcular automáticamente desde el nombre
+                            let unidadesEnsayables = total;
+                            if (upper.includes('PAR DE') || upper.includes('PARES DE')) unidadesEnsayables = total * 2;
+                            else if (upper.includes('SECCION')) {
+                                const match = upper.match(/(\d+)\s*SECCION/);
+                                const numSecciones = match ? parseInt(match[1], 10) : total;
+                                unidadesEnsayables = total * numSecciones;
+                            } else if (upper.includes('CUERPO') || upper.includes('PÉRTIGA') || upper.includes('PERTIGA')) {
+                                const match = upper.match(/(\d+)\s*(CUERPO|PÉRTIGA|PERTIGA)/);
+                                const numCuerpos = match ? parseInt(match[1], 10) : 4;
+                                unidadesEnsayables = total * numCuerpos;
+                            }
+                            this.currentGroupUnidades[key] = unidadesEnsayables;
                         }
-                        this.currentGroupUnidades[key] = unidadesEnsayables;
                     }
                     const unidadesEnsayables = this.currentGroupUnidades[key];
                     totalGeneral += unidadesEnsayables;
@@ -9863,8 +9948,9 @@
 
                 const counter = document.getElementById('marcGenCounter');
                 const percent = document.getElementById('marcGenPercent');
-                if (counter) counter.textContent = `${total} de ${total}`;
-                if (percent) percent.textContent = total > 0 ? '100%' : '0%';
+                const doneCount = marcados + revisados;
+                if (counter) counter.textContent = `${doneCount} de ${total}`;
+                if (percent) percent.textContent = total > 0 ? Math.round((doneCount / total) * 100) + '%' : '0%';
             },
 
             renderConsecutivosTable() {
@@ -10182,6 +10268,16 @@
                     if (result.ok) {
                         btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3" width="14" height="14" style="display:inline;vertical-align:middle;"><polyline points="20 6 9 17 4 12"/></svg>';
                         setTimeout(() => { btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="display:inline;vertical-align:middle;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>'; btn.disabled = false; }, 1200);
+                        // Actualizar resumen localmente
+                        const pid = String(this.currentProcess.id || '').trim();
+                        const num = (this.currentProcess.numero_proceso || '').trim();
+                        const total = consecutivosPayload.length;
+                        const marcados = consecutivosPayload.filter(m => m.estado === 'Marcado' || m.estado === 'Revisado').length;
+                        const pendientes = consecutivosPayload.filter(m => m.estado === 'Pendiente').length;
+                        const otros = total - marcados - pendientes;
+                        const nuevoResumen = { total, marcados, pendientes, otros };
+                        if (pid) this.marcacionesResumen[pid] = nuevoResumen;
+                        if (num && num !== pid) this.marcacionesResumen[num] = nuevoResumen;
                         this.renderStatusCards();
                     } else {
                         throw new Error(result.error || 'Error al guardar');
@@ -10205,6 +10301,10 @@
                 }
 
                 try {
+                    console.log('SAVE process', {
+                        id: this.currentProcess.id,
+                        numero_proceso: this.currentProcess.numero_proceso
+                    });
                     const consecutivosPayload = this.currentMarcaciones.map(m => ({
                         proceso_id: this.currentProcess.id,
                         consecutivo: m.consecutivo || '',
@@ -10230,7 +10330,18 @@
                     if (result.ok) {
                         if (btn) { btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3" width="14" height="14" style="display:inline;vertical-align:middle;"><polyline points="20 6 9 17 4 12"/></svg> Guardado'; setTimeout(() => { btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="display:inline;vertical-align:middle;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Guardar Todo'; btn.disabled = false; }, 2000); }
                         alert('Marcación guardada correctamente (' + consecutivosPayload.length + ' registros)');
-                        // Re-render con datos en memoria (no recargar de BD que no tiene unidad/fecha_modificacion)
+                        // Actualizar resumen localmente para reflejo inmediato de colores
+                        const pid = String(this.currentProcess.id || '').trim();
+                        const num = (this.currentProcess.numero_proceso || '').trim();
+                        const total = consecutivosPayload.length;
+                        const marcados = consecutivosPayload.filter(m => m.estado === 'Marcado' || m.estado === 'Revisado').length;
+                        const pendientes = consecutivosPayload.filter(m => m.estado === 'Pendiente').length;
+                        const otros = total - marcados - pendientes;
+                        const nuevoResumen = { total, marcados, pendientes, otros };
+                        if (pid) this.marcacionesResumen[pid] = nuevoResumen;
+                        if (num && num !== pid) this.marcacionesResumen[num] = nuevoResumen;
+                        // Refrescar desde BD para consistencia
+                        await this.refreshResumen();
                         this.renderConsecutivosTable();
                         this.renderStatusCards();
                     } else {
@@ -10253,14 +10364,28 @@
                 this.renderConsecutivosTable();
             },
 
-            backToList() {
+            async backToList() {
                 this.selectedIds.clear();
+                await this.refreshResumen();
                 this.showList();
             },
 
             updateGroupUnidades(key, value) {
                 const nuevas = parseInt(value, 10) || 1;
                 this.currentGroupUnidades[key] = nuevas;
+                // Guardar en BD
+                if (this.currentProcess) {
+                    fetch('/.netlify/functions/conectar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'update_unidades_ensayables',
+                            proceso_id: this.currentProcess.id,
+                            ensayo_id: key,
+                            unidades: nuevas
+                        })
+                    }).catch(e => console.warn('[Marcación] Error guardando ensayables:', e));
+                }
                 // Regenerar consecutivos automáticamente
                 this.regenerateMarcacion(true);
             },
@@ -10275,9 +10400,23 @@
                 }
                 this.selectedIds.clear();
 
+                // Deduplicar filas con mismo ensayo_id + misma marca (datos legacy duplicados)
+                // Si hay duplicados, quedarse con el de mayor cantidad (el más reciente)
+                const deduped2 = {};
+                this.currentDetalle.forEach(item => {
+                    const mk2 = (item.marca || '').trim();
+                    const dedupKey2 = (item.ensayo_id || '') + '||' + mk2;
+                    if (!deduped2[dedupKey2]) {
+                        deduped2[dedupKey2] = { ...item };
+                    } else if ((item.cantidad || 0) >= (deduped2[dedupKey2].cantidad || 0)) {
+                        deduped2[dedupKey2] = { ...item };
+                    }
+                });
+                const detalleItems2 = Object.values(deduped2);
+
                 const groups = {};
                 const groupOrder = [];
-                this.currentDetalle.forEach(item => {
+                detalleItems2.forEach(item => {
                     const key = item.ensayo_id || ('_idx_' + groupOrder.length);
                     if (!groups[key]) {
                         groups[key] = { ensayo_id: item.ensayo_id, ensayo_nombre: item.ensayo_nombre || 'Elemento', totalCantidad: 0, marcaCantidades: {} };
