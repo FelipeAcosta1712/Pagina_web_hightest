@@ -11992,6 +11992,212 @@ let marcacionProcesoNumero = null;
 let marcacionIsExistente = false;
 let marcacionResumen = {};
 
+// =======================================================
+// RESISTENCIA DEL PUENTE - Constantes y tabla de conductores
+// =======================================================
+
+const PIES_POR_METRO = 3.28084;
+const FACTOR_TOLERANCIA = 1.05;
+const RESISTENCIA_CONEXIONES = 0.32;
+
+const TABLA_CONDUCTORES = {
+    16:  { resistencia: 0.328 },
+    25:  { resistencia: 0.207 },
+    35:  { resistencia: 0.164 },
+    50:  { resistencia: 0.104 },
+    70:  { resistencia: 0.0825 },
+    95:  { resistencia: 0.0518 },
+    120: { resistencia: 0.0440 },
+    150: { resistencia: 0.0367 }
+};
+
+const _rmExpandedCards = new Set();
+
+function isPuenteTemporal(elemento) {
+    return (elemento || '').toUpperCase().includes('PUENTE TEMPORAL');
+}
+
+function calcularRM(calibre, longitud) {
+    if (calibre == null || longitud == null) {
+        return { rm: null, error: null };
+    }
+    const cal = Number(calibre);
+    const lon = Number(longitud);
+
+    if (!TABLA_CONDUCTORES[cal]) {
+        return { rm: null, error: 'Calibre no configurado' };
+    }
+    if (!lon || lon <= 0) {
+        return { rm: null, error: null };
+    }
+
+    const resistencia = TABLA_CONDUCTORES[cal].resistencia;
+    const pies = lon * PIES_POR_METRO;
+    const kft = pies / 1000;
+    const RL = resistencia * kft;
+    const RLmΩ = RL * 1000;
+    const RM = (FACTOR_TOLERANCIA * RLmΩ) + RESISTENCIA_CONEXIONES;
+
+    return { rm: Math.round(RM * 1000) / 1000, error: null };
+}
+
+function renderResistenciaPuente(consecutivo, handlerPrefix) {
+    const hp = handlerPrefix ? handlerPrefix + '.' : '';
+    const calibres = Object.keys(TABLA_CONDUCTORES).map(k =>
+        `<option value="${k}">${k}</option>`
+    ).join('');
+
+    return `
+    <div id="rmCard_${consecutivo}" style="background:linear-gradient(135deg,#f0f9ff,#eff6ff);border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px;margin:4px 0;">
+        <div style="font-weight:700;color:#022859;font-size:0.82rem;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+            <span style="font-size:1.1rem;">&#9889;</span> Resistencia del puente
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px 16px;align-items:end;">
+            <div>
+                <label style="display:block;font-size:0.7rem;font-weight:600;color:#475569;margin-bottom:3px;">Calibre (mm²)</label>
+                <select id="rmCalibre_${consecutivo}" onchange="${hp}onCalibreChange('${consecutivo}')" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.78rem;background:#fff;">
+                    <option value="">— Seleccionar —</option>
+                    ${calibres}
+                </select>
+            </div>
+            <div>
+                <label style="display:block;font-size:0.7rem;font-weight:600;color:#475569;margin-bottom:3px;">Longitud (m)</label>
+                <input type="number" id="rmLongitud_${consecutivo}" min="0" step="0.01" placeholder="0.00" onchange="${hp}onLongitudChange('${consecutivo}')" oninput="${hp}onLongitudChange('${consecutivo}')" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.78rem;">
+            </div>
+            <div>
+                <label style="display:block;font-size:0.7rem;font-weight:600;color:#475569;margin-bottom:3px;">RM Máxima (mΩ)</label>
+                <input type="text" id="rmMaxima_${consecutivo}" readonly style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:0.78rem;background:#f1f5f9;color:#334155;font-weight:600;">
+            </div>
+            <div>
+                <label style="display:block;font-size:0.7rem;font-weight:600;color:#475569;margin-bottom:3px;">RM Medida (mΩ)</label>
+                <input type="number" id="rmMedida_${consecutivo}" min="0" step="0.001" placeholder="0.000" onchange="${hp}onRMMedidaChange('${consecutivo}')" oninput="${hp}onRMMedidaChange('${consecutivo}')" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.78rem;">
+            </div>
+        </div>
+    </div>`;
+}
+
+function toggleRMCard(consecutivo) {
+    const row = document.getElementById('rmRow_' + consecutivo);
+    if (!row) return;
+    const isVisible = row.style.display !== 'none';
+    row.style.display = isVisible ? 'none' : '';
+    if (!isVisible) {
+        _rmExpandedCards.add(consecutivo);
+        cargarDatosRM(consecutivo);
+    } else {
+        _rmExpandedCards.delete(consecutivo);
+    }
+}
+
+function cargarDatosRM(consecutivo) {
+    const c = marcacionConsecutivos.find(x => x.consecutivo === consecutivo);
+    if (!c) return;
+
+    const calibreEl = document.getElementById('rmCalibre_' + consecutivo);
+    const longitudEl = document.getElementById('rmLongitud_' + consecutivo);
+    const rmMedidaEl = document.getElementById('rmMedida_' + consecutivo);
+
+    if (calibreEl && c.calibre_mm2 != null) calibreEl.value = c.calibre_mm2;
+    if (longitudEl && c.longitud_m != null) longitudEl.value = c.longitud_m;
+    if (rmMedidaEl && c.rm_medida != null) rmMedidaEl.value = c.rm_medida;
+
+    const calibre = calibreEl ? calibreEl.value : '';
+    const longitud = longitudEl ? longitudEl.value : '';
+
+    if (calibre && longitud) {
+        const result = calcularRM(Number(calibre), Number(longitud));
+        const rmMaximaEl = document.getElementById('rmMaxima_' + consecutivo);
+        if (rmMaximaEl) rmMaximaEl.value = result.rm != null ? result.rm.toFixed(3) : '';
+        c.rm_maxima = result.rm;
+    }
+
+    actualizarResultadoRM(consecutivo);
+}
+
+function onCalibreChange(consecutivo) {
+    const c = marcacionConsecutivos.find(x => x.consecutivo === consecutivo);
+    const calibreEl = document.getElementById('rmCalibre_' + consecutivo);
+    const longitudEl = document.getElementById('rmLongitud_' + consecutivo);
+    const rmMaximaEl = document.getElementById('rmMaxima_' + consecutivo);
+
+    const calibre = calibreEl ? calibreEl.value : '';
+    const longitud = longitudEl ? longitudEl.value : '';
+
+    if (c) c.calibre_mm2 = calibre ? Number(calibre) : null;
+
+    if (!calibre || !longitud) {
+        if (rmMaximaEl) rmMaximaEl.value = '';
+        if (c) c.rm_maxima = null;
+        actualizarResultadoRM(consecutivo);
+        return;
+    }
+
+    const result = calcularRM(Number(calibre), Number(longitud));
+    if (rmMaximaEl) rmMaximaEl.value = result.rm != null ? result.rm.toFixed(3) : '';
+    if (c) c.rm_maxima = result.rm;
+    actualizarResultadoRM(consecutivo);
+}
+
+function onLongitudChange(consecutivo) {
+    const c = marcacionConsecutivos.find(x => x.consecutivo === consecutivo);
+    const calibreEl = document.getElementById('rmCalibre_' + consecutivo);
+    const longitudEl = document.getElementById('rmLongitud_' + consecutivo);
+    const rmMaximaEl = document.getElementById('rmMaxima_' + consecutivo);
+
+    const calibre = calibreEl ? calibreEl.value : '';
+    const longitud = longitudEl ? longitudEl.value : '';
+
+    if (c) c.longitud_m = longitud ? Number(longitud) : null;
+
+    if (!calibre || !longitud) {
+        if (rmMaximaEl) rmMaximaEl.value = '';
+        if (c) c.rm_maxima = null;
+        actualizarResultadoRM(consecutivo);
+        return;
+    }
+
+    const result = calcularRM(Number(calibre), Number(longitud));
+    if (rmMaximaEl) rmMaximaEl.value = result.rm != null ? result.rm.toFixed(3) : '';
+    if (c) c.rm_maxima = result.rm;
+    actualizarResultadoRM(consecutivo);
+}
+
+function onRMMedidaChange(consecutivo) {
+    const c = marcacionConsecutivos.find(x => x.consecutivo === consecutivo);
+    const rmMedidaEl = document.getElementById('rmMedida_' + consecutivo);
+    if (c) c.rm_medida = rmMedidaEl && rmMedidaEl.value ? Number(rmMedidaEl.value) : null;
+    actualizarResultadoRM(consecutivo);
+}
+
+function actualizarResultadoRM(consecutivo) {
+    const rmMedidaEl = document.getElementById('rmMedida_' + consecutivo);
+    if (!rmMedidaEl) return;
+
+    const rmMaximaEl = document.getElementById('rmMaxima_' + consecutivo);
+    const rmMaxima = rmMaximaEl ? rmMaximaEl.value : '';
+    const rmMedida = rmMedidaEl.value;
+
+    if (!rmMedida || !rmMaxima) {
+        rmMedidaEl.style.border = '2px solid #d1d5db';
+        rmMedidaEl.style.boxShadow = 'none';
+        return;
+    }
+
+    const medida = Number(rmMedida);
+    const maxima = Number(rmMaxima);
+
+    if (medida <= maxima) {
+        rmMedidaEl.style.border = '2px solid #16a34a';
+        rmMedidaEl.style.boxShadow = '0 0 0 2px rgba(22,163,74,0.2)';
+    } else if (medida <= maxima + 5) {
+        rmMedidaEl.style.border = '2px solid #f59e0b';
+        rmMedidaEl.style.boxShadow = '0 0 0 2px rgba(245,158,11,0.2)';
+    } else {
+        rmMedidaEl.style.border = '2px solid #dc2626';
+        rmMedidaEl.style.boxShadow = '0 0 0 2px rgba(220,38,38,0.2)';
+    }
+}
+
 /**
  * Abre el selector de procesos para marcación.
  * Carga todos los procesos desde la BD y muestra la lista.
@@ -12440,7 +12646,11 @@ async function selectProcesoMarcacion(numeroProceso) {
                         nci: marc.nci || '',
                         itemIndex: itemIdx >= 0 ? itemIdx : 0,
                         accion: true,
-                        updated_at: marc.updated_at || null
+                        updated_at: marc.updated_at || null,
+                        calibre_mm2: marc.calibre_mm2 ?? null,
+                        longitud_m: marc.longitud_m ?? null,
+                        rm_maxima: marc.rm_maxima ?? null,
+                        rm_medida: marc.rm_medida ?? null
                     };
                 });
                 // console.log('CONSECUTIVOS RECONSTRUIDOS:', marcacionConsecutivos);
@@ -12638,15 +12848,19 @@ function renderConsecutivos(filter) {
         'Pendiente': ''
     };
 
-    tbody.innerHTML = data.map((c, i) => {
+    const rows = [];
+    data.forEach((c, i) => {
         const fechaMod = c.updated_at ? new Date(c.updated_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
         const mc = marcaColors[c.marca] || defaultMarcaColor;
         const obsValue = escapeHtml(c.observaciones || '');
         const hasObs = (c.observaciones || '').trim().length > 0;
         const obsBg = hasObs ? 'background:#fffbeb; border:1px solid #fcd34d;' : 'border:1px solid #e2e8f0;';
         const rowClass = estadoRowClasses[c.estado] || '';
-        return `
-        <tr class="${rowClass}">
+        const esPT = isPuenteTemporal(c.elemento);
+        const rmExpanded = _rmExpandedCards.has(c.consecutivo);
+        const toggleIcon = rmExpanded ? '&#9660;' : '&#9654;';
+
+        rows.push(`<tr class="${rowClass}">
             <td class="marcacion-row-num">${c.consecutivo}</td>
             <td class="marcacion-td-elemento">${escapeHtml(c.elemento)}</td>
             <td>
@@ -12679,12 +12893,30 @@ function renderConsecutivos(filter) {
             </td>
             <td class="marcacion-ultima-mod">${fechaMod}</td>
             <td style="text-align:center; white-space:nowrap;">
+                ${esPT ? `<button class="marcacion-action-btn" title="Resistencia del puente" onclick="toggleRMCard('${c.consecutivo}')" style="color:${rmExpanded ? '#0288d1' : '#64748b'};font-size:11px;"><i class="fas fa-bolt"></i></button>` : ''}
                 <button class="marcacion-action-btn" title="Mover arriba" onclick="moverConsecutivo('${c.consecutivo}', -1)" style="color:#64748b;"><i class="fas fa-arrow-up"></i></button>
                 <button class="marcacion-action-btn" title="Mover abajo" onclick="moverConsecutivo('${c.consecutivo}', 1)" style="color:#64748b;"><i class="fas fa-arrow-down"></i></button>
                 <button class="marcacion-action-btn" title="Eliminar" onclick="eliminarConsecutivo('${c.consecutivo}')" style="margin-left:2px;color:#ef4444;"><i class="fas fa-trash"></i></button>
             </td>
-        </tr>`;
-    }).join('');
+        </tr>`);
+
+        if (esPT) {
+            rows.push(`<tr id="rmRow_${c.consecutivo}" class="rm-expandable-row" style="${rmExpanded ? '' : 'display:none;'}">
+                <td colspan="9" style="padding:0 8px 8px 8px;">
+                    ${renderResistenciaPuente(c.consecutivo, '')}
+                </td>
+            </tr>`);
+        }
+    });
+    tbody.innerHTML = rows.join('');
+
+    _rmExpandedCards.forEach(consecutivo => {
+        const row = document.getElementById('rmRow_' + consecutivo);
+        if (row) {
+            row.style.display = '';
+            cargarDatosRM(consecutivo);
+        }
+    });
 }
 
 /**
@@ -13040,7 +13272,11 @@ async function guardarMarcacion() {
                     unidad: c.unidad || '',
                     estado: c.estado || 'Pendiente',
                     observacion: c.observaciones || '',
-                    nci: c.nci || ''
+                    nci: c.nci || '',
+                    calibre_mm2: c.calibre_mm2 ?? null,
+                    longitud_m: c.longitud_m ?? null,
+                    rm_maxima: c.rm_maxima ?? null,
+                    rm_medida: c.rm_medida ?? null
                 };
             });
 

@@ -1199,7 +1199,11 @@ exports.handler = async (event) => {
                             consecutivo: item.consecutivo,
                             estado: item.estado !== undefined ? item.estado : (match.estado || 'Pendiente'),
                             observacion: item.observacion !== undefined ? item.observacion : (match.observacion || ''),
-                            nci: item.nci !== undefined ? item.nci : (match.nci || '')
+                            nci: item.nci !== undefined ? item.nci : (match.nci || ''),
+                            calibre_mm2: item.calibre_mm2 ?? match.calibre_mm2 ?? null,
+                            longitud_m: item.longitud_m ?? match.longitud_m ?? null,
+                            rm_maxima: item.rm_maxima ?? match.rm_maxima ?? null,
+                            rm_medida: item.rm_medida ?? match.rm_medida ?? null
                         });
                     } else {
                         toInsert.push({
@@ -1211,7 +1215,11 @@ exports.handler = async (event) => {
                             descripcion: item.descripcion || '',
                             estado: item.estado || 'Pendiente',
                             observacion: item.observacion || '',
-                            nci: item.nci || ''
+                            nci: item.nci || '',
+                            calibre_mm2: item.calibre_mm2 ?? null,
+                            longitud_m: item.longitud_m ?? null,
+                            rm_maxima: item.rm_maxima ?? null,
+                            rm_medida: item.rm_medida ?? null
                         });
                     }
                 }
@@ -1237,7 +1245,7 @@ exports.handler = async (event) => {
                 for (const u of toUpdate) {
                     const { error: updErr } = await supabase
                         .from('marcaciones_ac')
-                        .update({ consecutivo: u.consecutivo, estado: u.estado, observacion: u.observacion, nci: u.nci })
+                        .update({ consecutivo: u.consecutivo, estado: u.estado, observacion: u.observacion, nci: u.nci, calibre_mm2: u.calibre_mm2, longitud_m: u.longitud_m, rm_maxima: u.rm_maxima, rm_medida: u.rm_medida })
                         .eq('id', u.id);
                     if (updErr) {
                         console.error('[create_marcaciones_batch] Error updating id=' + u.id + ':', updErr.message);
