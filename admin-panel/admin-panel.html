@@ -151,10 +151,9 @@
                         <p class="dash-header__subtitle">Resumen general de la gestión del laboratorio</p>
                     </div>
                     <div class="dash-header__right">
-                        <div class="dash-date-picker">
-                            <input type="text" class="dash-date-picker__input" id="dashDateRange" value="01/06/2026 - 28/06/2026" readonly>
-                            <svg class="dash-date-picker__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        </div>
+                        <select class="dash-filter-select" id="dashMonthFilter">
+                            <option value="">Todos los meses</option>
+                        </select>
                         <select class="dash-filter-select" id="dashClientFilter">
                             <option>Todos los clientes</option>
                         </select>
@@ -1190,7 +1189,7 @@
                                     <select id="filtroEstado" onchange="RecepcionAnalyticsModule.paginaBusqueda=1;RecepcionAnalyticsModule.ejecutarBusqueda();" style="width: 100%; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px;">
                                         <option value="">Todos</option>
                                         <option value="recepcion">Recepción</option>
-                                        <option value="lavado">Lavado</option>
+                                        <!-- <option value="lavado">Lavado</option> -->
                                         <option value="en-proceso-de-ensayo">En Proceso de Ensayo</option>
                                         <option value="entrega">Entrega Cliente</option>
                                         <option value="informe-de-ensayo">Informe de Ensayo</option>
@@ -1199,15 +1198,15 @@
                                 </div>
                                 <div>
                                     <label style="display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: #475569;">Mes</label>
-                                    <input type="month" id="filtroMes" style="width: 100%; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px;">
+                                    <input type="month" id="filtroMes" onchange="RecepcionAnalyticsModule.paginaBusqueda=1;RecepcionAnalyticsModule.ejecutarBusqueda();" style="width: 100%; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px;">
                                 </div>
                                 <div>
                                     <label style="display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: #475569;">Fecha Desde</label>
-                                    <input type="date" id="filtroFechaDesde" style="width: 100%; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px;">
+                                    <input type="date" id="filtroFechaDesde" onchange="RecepcionAnalyticsModule.paginaBusqueda=1;RecepcionAnalyticsModule.ejecutarBusqueda();" style="width: 100%; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px;">
                                 </div>
                                 <div>
                                     <label style="display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: #475569;">Fecha Hasta</label>
-                                    <input type="date" id="filtroFechaHasta" style="width: 100%; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px;">
+                                    <input type="date" id="filtroFechaHasta" onchange="RecepcionAnalyticsModule.paginaBusqueda=1;RecepcionAnalyticsModule.ejecutarBusqueda();" style="width: 100%; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px;">
                                 </div>
                             </div>
                             <div style="display: flex; gap: 8px; margin-bottom: 16px;">
@@ -1314,7 +1313,7 @@
                                 <select id="adminFilterStatus" class="control__select" aria-label="Filtrar por estado">
                                 <option value="">Todos los estados</option>
                                 <option value="recepcion">Recepción</option>
-                                <option value="lavado">Lavado</option>
+                                <!-- <option value="lavado">Lavado</option> -->
                                 <option value="en-proceso-de-ensayo">Proceso de ensayo</option>
                                 <option value="entrega-cliente">Entrega cliente</option>
                                 <option value="informe-de-ensayo">Informe</option>
@@ -1375,7 +1374,7 @@
                                     <select id="adminFilterFinalizedStatus" class="control__select" aria-label="Filtrar finalizados por estado">
                                         <option value="">Todos los estados</option>
                                         <option value="recepcion">Recepción</option>
-                                        <option value="lavado">Lavado</option>
+                                        <!-- <option value="lavado">Lavado</option> -->
                                         <option value="en-proceso-de-ensayo">Proceso de ensayo</option>
                                         <option value="entrega-cliente">Entrega cliente</option>
                                         <option value="informe-de-ensayo">Informe</option>
@@ -1511,7 +1510,7 @@
                                 <select id="adminFilterStatusNoAcreditados" class="control__select" aria-label="Filtrar por estado">
                                 <option value="">Todos los estados</option>
                                 <option value="recepcion">Recepción</option>
-                                <option value="lavado">Lavado</option>
+                                <!-- <option value="lavado">Lavado</option> -->
                                 <option value="en-proceso-de-ensayo">Proceso de ensayo</option>
                                 <option value="entrega-cliente">Entrega cliente</option>
                                 <option value="informe-de-ensayo">Informe</option>
@@ -1572,7 +1571,7 @@
                                     <select id="adminFilterFinalizedStatusNoAcreditados" class="control__select" aria-label="Filtrar finalizados por estado">
                                         <option value="">Todos los estados</option>
                                         <option value="recepcion">Recepción</option>
-                                        <option value="lavado">Lavado</option>
+                                        <!-- <option value="lavado">Lavado</option> -->
                                         <option value="en-proceso-de-ensayo">Proceso de ensayo</option>
                                         <option value="entrega-cliente">Entrega cliente</option>
                                         <option value="informe-de-ensayo">Informe</option>
@@ -1730,8 +1729,8 @@
                                             <p style="margin:0;font-size:0.65rem;color:#64748b;">Unidades ensayables por elemento</p>
                                         </div>
                                     </div>
-                                    <button type="button" class="btn btn-primary btn-sm" onclick="MarcacionPanel.regenerateMarcacion()" style="padding:5px 10px;font-size:0.7rem;border-radius:6px;font-weight:600;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:4px;background:#0288d1;color:#fff;">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11" style="display:inline;vertical-align:middle;"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg> Regenerar
+                                    <button type="button" id="regenerateBtn" class="btn btn-primary btn-sm" onclick="MarcacionPanel.regenerateMarcacion()" style="padding:5px 10px;font-size:0.7rem;border-radius:6px;font-weight:600;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:4px;background:#0288d1;color:#fff;">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11" style="display:inline;vertical-align:middle;"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg> <span id="regenerateBtnLabel">Generar</span>
                                     </button>
                                 </div>
                                 <div class="marcacion-table-wrapper" style="overflow-x:auto;background:#fff;max-height:300px;overflow-y:auto;">
@@ -1788,6 +1787,16 @@
                                 <!-- Barra de acciones en lote -->
                                 <div id="marcBulkActions" style="display:none;padding:6px 14px;background:#eff6ff;border-bottom:1px solid #bfdbfe;align-items:center;gap:8px;flex-wrap:wrap;">
                                     <span id="marcSelectedCount" style="font-size:0.72rem;font-weight:600;color:#1e40af;">0 seleccionados</span>
+                                    <div style="display:flex;align-items:center;gap:4px;margin-left:8px;">
+                                        <span style="font-size:0.68rem;color:#475569;">Estado:</span>
+                                        <select id="bulkEstadoSelect" style="font-size:0.68rem;padding:3px 6px;border:1px solid #93c5fd;border-radius:4px;background:#fff;color:#1e293b;">
+                                            <option value="Pendiente">Pendiente</option>
+                                            <option value="Marcado">Marcado</option>
+                                            <option value="Revisado">Revisado</option>
+                                            <option value="No Conforme">No Conforme</option>
+                                        </select>
+                                        <button onclick="MarcacionPanel.bulkChangeEstado()" title="Aplicar estado a seleccionados" style="padding:4px 10px;border:1px solid #0288d1;border-radius:4px;background:#0288d1;color:#fff;font-size:0.68rem;font-weight:600;cursor:pointer;">Aplicar</button>
+                                    </div>
                                     <div style="display:flex;gap:4px;margin-left:auto;">
                                         <button onclick="MarcacionPanel.bulkMoveUp()" title="Mover arriba" style="padding:4px 8px;border:1px solid #93c5fd;border-radius:4px;background:#fff;color:#1d4ed8;font-size:0.68rem;cursor:pointer;display:inline-flex;align-items:center;gap:3px;">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><polyline points="18 15 12 9 6 15"/></svg> Subir
@@ -2768,7 +2777,7 @@
                         <select id="analisisFilterEstado" style="width:100%; padding:6px 8px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
                             <option value="">Todos</option>
                             <option value="recepcion">Recepción</option>
-                            <option value="lavado">Lavado</option>
+                            <!-- <option value="lavado">Lavado</option> -->
                             <option value="en-proceso-de-ensayo">En Proceso</option>
                             <option value="entrega-cliente">Entrega Cliente</option>
                             <option value="informe-de-ensayo">Informe</option>
@@ -2873,7 +2882,7 @@
                     <label for="processStatusSelect">Estado *</label>
                     <select id="processStatusSelect" class="control__select" required>
                         <option value="recepcion">Recepción</option>
-                        <option value="lavado">Lavado</option>
+                        <!-- <option value="lavado">Lavado</option> -->
                         <option value="en-proceso-de-ensayo">Proceso de ensayo</option>
                         <option value="entrega-cliente">Entrega cliente</option>
                         <option value="informe-de-ensayo">Informe</option>
@@ -2946,7 +2955,7 @@
                     <label for="statusProcessSelect">Estado *</label>
                     <select id="statusProcessSelect" class="control__select" required>
                         <option value="recepcion">Recepción</option>
-                        <option value="lavado">Lavado</option>
+                        <!-- <option value="lavado">Lavado</option> -->
                         <option value="en-proceso-de-ensayo">Proceso de ensayo</option>
                         <option value="entrega-cliente">Entrega cliente</option>
                         <option value="informe-de-ensayo">Informe</option>
@@ -9046,6 +9055,7 @@
             currentProcess: null,
             currentDetalle: [],
             currentMarcaciones: [],
+            unidadesCalc: {},
             currentConsecutivosFilter: '',
             currentPage: 1,
             perPage: 30,
@@ -9083,12 +9093,6 @@
                     const procesosResult = await procesosRes.json();
                     if (procesosResult.ok && Array.isArray(procesosResult.procesos)) {
                         this.processes = procesosResult.procesos;
-                        console.table(
-                            this.processes.map(p => ({
-                                id: p.id,
-                                numero_proceso: p.numero_proceso
-                            }))
-                        );
                     } else {
                         this.processes = [];
                     }
@@ -9139,10 +9143,12 @@
                     });
                     const result = await res.json();
                     if (result.ok && result.resumen) {
+                        const remoteKeys = new Set(Object.keys(result.resumen));
+                        Object.keys(this.marcacionesResumen).forEach(k => {
+                            if (!remoteKeys.has(k)) delete this.marcacionesResumen[k];
+                        });
                         Object.keys(result.resumen).forEach(k => {
-                            if (result.resumen[k].total > 0) {
-                                this.marcacionesResumen[k] = result.resumen[k];
-                            }
+                            this.marcacionesResumen[k] = result.resumen[k];
                         });
                         this.buildResumenKeys();
                     }
@@ -9479,7 +9485,6 @@
                         body: JSON.stringify({ action: 'get_proceso', numero_proceso: numero })
                     });
                     const freshResult = await freshRes.json();
-                    console.log('[get_proceso]', { ok: freshResult.ok, informe_a_nombre_de: freshResult.proceso?.informe_a_nombre_de, cliente: freshResult.proceso?.cliente, full: freshResult.proceso });
                     if (freshResult.ok && freshResult.proceso) {
                         proceso = freshResult.proceso;
                         // Sincronizar this.processes para que la lista quede consistente
@@ -9502,12 +9507,12 @@
                 document.querySelector('.marc-header__title').textContent = 'Marcación de Elementos';
                 document.querySelector('.marc-header__subtitle').textContent = 'Genere y asigne los consecutivos a cada unidad ensayable del proceso.';
 
-                console.log('[Antes renderProcessBar]', { informe_a_nombre_de: proceso.informe_a_nombre_de, cliente: proceso.cliente, full: proceso });
                 this.renderProcessBar(proceso);
 
                 this.currentDetalle = [];
                 this.currentMarcaciones = [];
                 this.currentGroupUnidades = {};
+                this.unidadesCalc = {};
                 this.currentGroupOrder = [];
 
                 // 1. Cargar marcaciones existentes (consecutivos)
@@ -9647,10 +9652,10 @@
                 this.renderElements();
                 this.renderStatusCards();
                 this.renderConsecutivosTable();
+                this.updateRegenerateButton();
             },
 
             renderProcessBar(proceso) {
-                console.log('[renderProcessBar]', { cliente: proceso.cliente, informe_a_nombre_de: proceso.informe_a_nombre_de, full: proceso });
                 const container = document.getElementById('marcProcessBar');
                 const fecha = (proceso.fecha_recepcion || '').substring(0, 10) || '—';
                 const fechaEjec = (proceso.fecha_ejecucion || '').substring(0, 10) || '';
@@ -9682,15 +9687,16 @@
                     <div class="marcacion-process-field" style="display:flex;flex-direction:column;gap:2px;">
                         <span class="marcacion-process-label" style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.6px;color:#64748b;font-weight:600;">Fecha de ejecución</span>
                         <span class="marcacion-process-value" style="font-size:0.88rem;font-weight:700;color:#1e293b;">
-                            <input type="date" value="${fechaEjec}"
+                            <input type="date" id="marcFechaEjecucion" value="${fechaEjec}"
                                 onchange="MarcacionPanel.guardarCampoProceso('fecha_ejecucion', this.value)"
+                                oninput="this.classList.remove('is-invalid'); const fb = this.nextElementSibling; if(fb) fb.remove();"
                                 style="border:1px solid #d1d5db;border-radius:6px;padding:4px 8px;font-size:13px;">
                         </span>
                     </div>
                     <div class="marcacion-process-field" style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:140px;">
                         <span class="marcacion-process-label" style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.6px;color:#64748b;font-weight:600;">Responsable de marcación</span>
                         <span class="marcacion-process-value" style="font-size:0.88rem;font-weight:700;color:#1e293b;">
-                            <select onchange="MarcacionPanel.guardarCampoProceso('responsable_marcacion', this.value)"
+                            <select id="marcResponsableMarcacion" onchange="MarcacionPanel.guardarCampoProceso('responsable_marcacion', this.value); this.classList.remove('is-invalid'); const fb = this.nextElementSibling; if(fb) fb.remove();"
                                 style="border:1px solid #d1d5db;border-radius:6px;padding:4px 8px;font-size:13px;width:100%;color:#1e293b;">
                                 <option value="">— Seleccionar —</option>
                                 ${this.usuarios.map(u => `<option value="${this.escapeAttr(u.nombre)}" ${(proceso.responsable_marcacion || '') === u.nombre ? 'selected' : ''}>${this.escapeHtml(u.nombre)}</option>`).join('')}
@@ -9814,11 +9820,22 @@
                                 const match = upper.match(/(\d+)\s*(CUERPO|PÉRTIGA|PERTIGA)/);
                                 const numCuerpos = match ? parseInt(match[1], 10) : 4;
                                 unidadesEnsayables = total * numCuerpos;
+                            } else {
+                                const tramosMatch = g.ensayo_nombre.match(/\((\d+)\s*tramos?\)/i);
+                                if (tramosMatch) {
+                                    unidadesEnsayables = total * parseInt(tramosMatch[1], 10);
+                                }
                             }
                             this.currentGroupUnidades[key] = unidadesEnsayables;
                         }
+                        this.unidadesCalc[key] = this.currentGroupUnidades[key];
+                    }
+                    if (!(key in this.unidadesCalc)) {
+                        this.unidadesCalc[key] = this.currentGroupUnidades[key];
                     }
                     const unidadesEnsayables = this.currentGroupUnidades[key];
+                    const calcVal = this.unidadesCalc[key];
+                    const isManual = unidadesEnsayables !== calcVal;
                     totalGeneral += unidadesEnsayables;
 
                     rowsHtml += `<tr draggable="true" data-group-key="${key}" data-idx="${idx}"
@@ -9835,9 +9852,16 @@
                         </td>
                         <td style="text-align:center;">${total} <small style="color:#64748b;">${unidadLabel}</small></td>
                         <td style="text-align:center;">
-                            <input type="number" min="1" max="${total}" value="${unidadesEnsayables}"
-                                onchange="MarcacionPanel.updateGroupUnidades('${key}', this.value)"
-                                style="width:70px;text-align:center;padding:6px 4px;border:2px solid #cbd5e1;border-radius:8px;font-size:14px;font-weight:700;background:#f8fafc;">
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                                <div style="display:flex;align-items:center;gap:3px;">
+                                    <input type="number" min="1" value="${unidadesEnsayables}" id="ensayables_${key}"
+                                        oninput="MarcacionPanel.onEnsayablesInput('${key}', this.value)"
+                                        onchange="MarcacionPanel.updateGroupUnidades('${key}', this.value)"
+                                        style="width:70px;text-align:center;padding:6px 4px;border:2px solid ${isManual ? '#f59e0b' : '#cbd5e1'};border-radius:8px;font-size:14px;font-weight:700;background:${isManual ? '#fffbeb' : '#f8fafc'};">
+                                    ${isManual ? '<span style="font-size:10px;">✏️</span>' : ''}
+                                </div>
+                                <div id="ensayablesMsg_${key}" style="font-size:0.6rem;color:#b45309;max-width:180px;text-align:center;line-height:1.2;">${isManual ? `Valor ajustado. Se generarán ${unidadesEnsayables} en lugar de ${calcVal}` : ''}</div>
+                            </div>
                         </td>
                         <td style="text-align:center;font-weight:700;color:#022859;" id="marcTotalGen_${idx}">${unidadesEnsayables}</td>
                     </tr>`;
@@ -10016,9 +10040,14 @@
                             </select>
                         </td>
                         <td>
-                            <input type="text" value="${obsValue}" placeholder="Obs..."
-                                onchange="MarcacionPanel.onFieldChange(this, '${m.id}', 'observacion')"
-                                style="${hasObs ? 'background:#fffbeb;border:1px solid #fcd34d;color:#92400e;font-weight:600;' : 'border:1px solid #e2e8f0;color:#64748b;'}width:100%;font-size:0.6rem;padding:2px 4px;border-radius:4px;">
+                            <div style="display:flex;align-items:center;gap:2px;">
+                                <input type="text" value="${obsValue}" placeholder="Obs..." id="obs_${m.id}"
+                                    onchange="MarcacionPanel.onFieldChange(this, '${m.id}', 'observacion')"
+                                    style="${hasObs ? 'background:#fffbeb;border:1px solid #fcd34d;color:#92400e;font-weight:600;' : 'border:1px solid #e2e8f0;color:#64748b;'}width:100%;font-size:0.6rem;padding:2px 4px;border-radius:4px;">
+                                <button onclick="MarcacionPanel.openObsModal('${m.id}')" title="Expandir observación" style="flex-shrink:0;width:18px;height:18px;border:1px solid #d1d5db;border-radius:4px;background:#f8fafc;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;color:#64748b;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f8fafc'">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                                </button>
+                            </div>
                         </td>
                         <td>
                             <select class="marcacion-estado-select" data-value="${estado}" onchange="MarcacionPanel.onFieldChange(this, '${m.id}', 'estado');this.setAttribute('data-value',this.value);" style="font-size:0.62rem;padding:2px 4px;">
@@ -10237,7 +10266,41 @@
                 if (field === 'estado') this.renderStatusCards();
             },
 
+            openObsModal(id) {
+                const m = this.currentMarcaciones.find(x => String(x.id) === String(id));
+                if (!m) return;
+                const currentObs = m.observacion || '';
+                const modal = document.createElement('div');
+                modal.className = 'cfg-modal-overlay';
+                modal.innerHTML = `
+                    <div class="cfg-modal" style="max-width:500px;">
+                        <div class="cfg-modal__header">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            <h3>Observación — ${this.escapeHtml(m.elemento || '')} ${this.escapeHtml(m.descripcion || '')}</h3>
+                        </div>
+                        <div class="cfg-modal__body">
+                            <textarea id="obsModalText" rows="6" style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:8px;font-size:0.8rem;resize:vertical;font-family:inherit;">${this.escapeHtml(currentObs)}</textarea>
+                        </div>
+                        <div class="cfg-modal__footer">
+                            <button class="cfg-btn cfg-btn--secondary" onclick="this.closest('.cfg-modal-overlay').remove()">Cancelar</button>
+                            <button class="cfg-btn cfg-btn--primary" id="obsModalSave">Guardar</button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(modal);
+                setTimeout(() => { modal.classList.add('show'); document.getElementById('obsModalText').focus(); }, 10);
+                modal.querySelector('#obsModalSave').onclick = () => {
+                    const val = document.getElementById('obsModalText').value;
+                    m.observacion = val;
+                    const input = document.getElementById('obs_' + id);
+                    if (input) input.value = val;
+                    modal.remove();
+                    this.renderConsecutivosTable();
+                };
+                modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+            },
+
             async guardarFila(btn, id) {
+                if (!this.validarDatosGeneralesMarcacion()) return;
                 const m = this.currentMarcaciones.find(x => String(x.id) === String(id) || String(x.consecutivo) === String(id));
                 if (!m) return;
                 btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="animation:spin 1s linear infinite;display:inline;vertical-align:middle;"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>';
@@ -10291,20 +10354,16 @@
             },
 
             async guardarTodas() {
+                if (!this.currentProcess) {
+                    alert('No hay proceso seleccionado.');
+                    return;
+                }
+                if (!this.validarDatosGeneralesMarcacion()) return;
+
                 const btn = document.getElementById('marcSaveAllBtn');
                 if (btn) {                 btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="animation:spin 1s linear infinite;display:inline;vertical-align:middle;"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg> Guardando...'; btn.disabled = true; }
 
-                if (!this.currentProcess) {
-                    alert('No hay proceso seleccionado.');
-                    if (btn) { btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="display:inline;vertical-align:middle;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Guardar Todo'; btn.disabled = false; }
-                    return;
-                }
-
                 try {
-                    console.log('SAVE process', {
-                        id: this.currentProcess.id,
-                        numero_proceso: this.currentProcess.numero_proceso
-                    });
                     const consecutivosPayload = this.currentMarcaciones.map(m => ({
                         proceso_id: this.currentProcess.id,
                         consecutivo: m.consecutivo || '',
@@ -10370,10 +10429,25 @@
                 this.showList();
             },
 
+            onEnsayablesInput(key, value) {
+                const nuevas = parseInt(value, 10) || 1;
+                const calcVal = this.unidadesCalc[key] || nuevas;
+                const isManual = nuevas !== calcVal;
+                const input = document.getElementById('ensayables_' + key);
+                const msg = document.getElementById('ensayablesMsg_' + key);
+                if (input) {
+                    input.style.borderColor = isManual ? '#f59e0b' : '#cbd5e1';
+                    input.style.background = isManual ? '#fffbeb' : '#f8fafc';
+                }
+                if (msg) {
+                    msg.textContent = isManual ? `Valor ajustado. Se generarán ${nuevas} en lugar de ${calcVal}` : '';
+                }
+                this.currentGroupUnidades[key] = nuevas;
+            },
+
             updateGroupUnidades(key, value) {
                 const nuevas = parseInt(value, 10) || 1;
                 this.currentGroupUnidades[key] = nuevas;
-                // Guardar en BD
                 if (this.currentProcess) {
                     fetch('/.netlify/functions/conectar', {
                         method: 'POST',
@@ -10386,7 +10460,6 @@
                         })
                     }).catch(e => console.warn('[Marcación] Error guardando ensayables:', e));
                 }
-                // Regenerar consecutivos automáticamente
                 this.regenerateMarcacion(true);
             },
 
@@ -10395,13 +10468,42 @@
                     alert('No hay elementos para generar marcación.');
                     return;
                 }
-                if (!skipConfirm && this.currentMarcaciones.length > 0 && !confirm('Esto reemplazará los consecutivos actuales. ¿Continuar?')) {
+                if (skipConfirm) {
+                    this._doRegenerate();
                     return;
                 }
+                const isFirst = this.currentMarcaciones.length === 0;
+                const title = isFirst ? 'Generar consecutivos' : 'Actualizar consecutivos';
+                const message = isFirst
+                    ? 'Se generarán los consecutivos para los elementos ensayables de esta recepción.<br><br>Una vez generados, podrás iniciar el proceso de marcación.<br><br>¿Deseas continuar?'
+                    : 'Se sincronizarán los consecutivos con los cambios realizados en la recepción.<br><br>Las marcaciones existentes se conservarán siempre que los elementos continúen existiendo. Solo se agregarán o eliminarán las necesarias según los cambios realizados.<br><br>¿Deseas continuar?';
+                const confirmText = isFirst ? 'Generar' : 'Actualizar';
+
+                const modal = document.createElement('div');
+                modal.className = 'cfg-modal-overlay';
+                modal.innerHTML = `
+                    <div class="cfg-modal">
+                        <div class="cfg-modal__header">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+                                <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                            </svg>
+                            <h3>${title}</h3>
+                        </div>
+                        <div class="cfg-modal__body"><p>${message}</p></div>
+                        <div class="cfg-modal__footer">
+                            <button class="cfg-btn cfg-btn--secondary" onclick="this.closest('.cfg-modal-overlay').remove()">Cancelar</button>
+                            <button class="cfg-btn cfg-btn--primary" id="cfgModalConfirm">${confirmText}</button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(modal);
+                setTimeout(() => modal.classList.add('show'), 10);
+                modal.querySelector('#cfgModalConfirm').onclick = () => { modal.remove(); this._doRegenerate(); };
+                modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+            },
+
+            _doRegenerate() {
                 this.selectedIds.clear();
 
-                // Deduplicar filas con mismo ensayo_id + misma marca (datos legacy duplicados)
-                // Si hay duplicados, quedarse con el de mayor cantidad (el más reciente)
                 const deduped2 = {};
                 this.currentDetalle.forEach(item => {
                     const mk2 = (item.marca || '').trim();
@@ -10436,13 +10538,10 @@
                     }
                 });
 
-                this.currentMarcaciones = [];
-                let globalNum = 1;
-
-                groupOrder.forEach((key, itemIdx) => {
+                const desired = [];
+                groupOrder.forEach((key) => {
                     const g = groups[key];
 
-                    // Usar unidades ensayables del usuario o calcular desde el nombre
                     let unidadesEnsayables = this.currentGroupUnidades[key];
                     if (unidadesEnsayables === undefined) {
                         unidadesEnsayables = g.totalCantidad || 1;
@@ -10456,16 +10555,20 @@
                             const match = upper.match(/(\d+)\s*(CUERPO|PÉRTIGA|PERTIGA)/);
                             const numCuerpos = match ? parseInt(match[1], 10) : 4;
                             unidadesEnsayables = (g.totalCantidad || 1) * numCuerpos;
+                        } else {
+                            const tramosMatch = g.ensayo_nombre.match(/\((\d+)\s*tramos?\)/i);
+                            if (tramosMatch) {
+                                unidadesEnsayables = (g.totalCantidad || 1) * parseInt(tramosMatch[1], 10);
+                            }
                         }
                         this.currentGroupUnidades[key] = unidadesEnsayables;
                     }
-
-                    const numUnidades = unidadesEnsayables;
 
                     const marcaStr = Object.entries(g.marcaCantidades)
                         .map(([marca, cant]) => `${cant} ${marca}`)
                         .join(', ') || 'Sin marca';
 
+                    const multiplier = Math.round(unidadesEnsayables / (g.totalCantidad || 1));
                     const marcaEntries = marcaStr.split(',').map(s => s.trim()).filter(Boolean);
                     const marcasExpandidas = [];
                     marcaEntries.forEach(entry => {
@@ -10473,37 +10576,145 @@
                         if (match) {
                             const cant = parseInt(match[1], 10);
                             const nombre = match[2].trim();
-                            for (let k = 0; k < cant; k++) marcasExpandidas.push(nombre);
+                            for (let k = 0; k < cant * multiplier; k++) marcasExpandidas.push(nombre);
                         } else {
-                            marcasExpandidas.push(entry);
+                            for (let k = 0; k < multiplier; k++) marcasExpandidas.push(entry);
                         }
                     });
-                    if (marcasExpandidas.length === 0) marcasExpandidas.push('Sin marca');
+                    if (marcasExpandidas.length === 0) {
+                        for (let k = 0; k < multiplier; k++) marcasExpandidas.push('Sin marca');
+                    }
 
-                    for (let u = 0; u < numUnidades; u++) {
-                        const numStr = String(globalNum).padStart(3, '0');
-                        const marcaNombre = marcasExpandidas[u % marcasExpandidas.length] || 'Sin marca';
-                        const unidadLabel = `U-${u + 1}`;
-
-                        this.currentMarcaciones.push({
-                            id: 'new_' + globalNum,
-                            consecutivo: numStr,
+                    for (let u = 0; u < unidadesEnsayables; u++) {
+                        desired.push({
                             elemento: g.ensayo_nombre,
-                            descripcion: marcaNombre,
-                            unidad: unidadLabel,
-                            estado: 'Pendiente',
-                            observacion: '',
-                            nci: '',
-                            fecha_modificacion: new Date().toISOString()
+                            descripcion: marcasExpandidas[u % marcasExpandidas.length] || 'Sin marca',
+                            unidad: 'U-' + (u + 1)
                         });
-                        globalNum++;
                     }
                 });
+
+                if (this.currentMarcaciones.length === 0) {
+                    this.currentMarcaciones = desired.map((d, idx) => ({
+                        id: 'new_' + (idx + 1),
+                        consecutivo: String(idx + 1).padStart(3, '0'),
+                        elemento: d.elemento,
+                        descripcion: d.descripcion,
+                        unidad: d.unidad,
+                        estado: 'Pendiente',
+                        observacion: '',
+                        nci: '',
+                        fecha_modificacion: new Date().toISOString()
+                    }));
+                } else {
+                    const desiredCounts = {};
+                    desired.forEach(d => {
+                        const idKey = (d.elemento.trim() + '||' + d.descripcion.trim()).toLowerCase();
+                        desiredCounts[idKey] = (desiredCounts[idKey] || 0) + 1;
+                    });
+
+                    const preservedCounts = {};
+                    const preserved = [];
+                    this.currentMarcaciones.forEach(m => {
+                        const idKey = ((m.elemento || '').trim() + '||' + (m.descripcion || '').trim()).toLowerCase();
+                        const used = preservedCounts[idKey] || 0;
+                        if (used < (desiredCounts[idKey] || 0)) {
+                            preservedCounts[idKey] = used + 1;
+                            preserved.push({
+                                id: m.id,
+                                consecutivo: m.consecutivo,
+                                elemento: m.elemento,
+                                descripcion: m.descripcion,
+                                unidad: m.unidad,
+                                estado: m.estado || 'Pendiente',
+                                observacion: m.observacion || '',
+                                nci: m.nci || '',
+                                fecha_modificacion: m.fecha_modificacion || new Date().toISOString()
+                            });
+                        }
+                    });
+
+                    const newItems = [];
+                    const addedCounts = {};
+                    desired.forEach(d => {
+                        const idKey = (d.elemento.trim() + '||' + d.descripcion.trim()).toLowerCase();
+                        const kept = preservedCounts[idKey] || 0;
+                        const added = addedCounts[idKey] || 0;
+                        if (kept + added < (desiredCounts[idKey] || 0)) {
+                            addedCounts[idKey] = added + 1;
+                            newItems.push({
+                                id: 'new_' + (preserved.length + newItems.length + 1),
+                                consecutivo: '',
+                                elemento: d.elemento,
+                                descripcion: d.descripcion,
+                                unidad: d.unidad,
+                                estado: 'Pendiente',
+                                observacion: '',
+                                nci: '',
+                                fecha_modificacion: new Date().toISOString()
+                            });
+                        }
+                    });
+
+                    this.currentMarcaciones = [...preserved, ...newItems];
+                    this.currentMarcaciones.forEach((m, idx) => {
+                        m.consecutivo = String(idx + 1).padStart(3, '0');
+                    });
+                }
 
                 this.renderConsecutivosTable();
                 this.renderStatusCards();
                 this.renderElements();
                 this.renderSummaryCards();
+                this.updateRegenerateButton();
+            },
+
+            updateRegenerateButton() {
+                const label = document.getElementById('regenerateBtnLabel');
+                if (label) {
+                    label.textContent = this.currentMarcaciones.length === 0 ? 'Generar' : 'Actualizar';
+                }
+            },
+
+            _checkEmptyState() {
+                if (this.currentMarcaciones.length === 0 && this.currentProcess) {
+                    const pid = String(this.currentProcess.id || '').trim();
+                    const num = (this.currentProcess.numero_proceso || '').trim();
+                    if (pid) delete this.marcacionesResumen[pid];
+                    if (num) delete this.marcacionesResumen[num];
+                    this.updateRegenerateButton();
+                }
+            },
+
+            validarDatosGeneralesMarcacion() {
+                const fecha = document.getElementById('marcFechaEjecucion');
+                const responsable = document.getElementById('marcResponsableMarcacion');
+                let valid = true;
+                let firstInvalid = null;
+
+                [fecha, responsable].forEach(el => {
+                    if (!el) return;
+                    el.classList.remove('is-invalid');
+                    const oldFb = el.parentElement.querySelector('.invalid-feedback');
+                    if (oldFb) oldFb.remove();
+                });
+
+                if (fecha && !fecha.value.trim()) {
+                    valid = false;
+                    fecha.classList.add('is-invalid');
+                    fecha.insertAdjacentHTML('afterend', '<div class="invalid-feedback" style="display:block;font-size:0.72rem;color:#dc2626;margin-top:2px;">Fecha de ejecución es obligatoria.</div>');
+                    if (!firstInvalid) firstInvalid = fecha;
+                }
+
+                if (responsable && !responsable.value.trim()) {
+                    valid = false;
+                    responsable.classList.add('is-invalid');
+                    responsable.insertAdjacentHTML('afterend', '<div class="invalid-feedback" style="display:block;font-size:0.72rem;color:#dc2626;margin-top:2px;">Responsable de marcación es obligatorio.</div>');
+                    if (!firstInvalid) firstInvalid = responsable;
+                }
+
+                if (firstInvalid) firstInvalid.focus();
+                return valid;
             },
 
             guardarCampoProceso(campo, valor) {
@@ -10649,6 +10860,47 @@
                 this.renderConsecutivosTable();
                 this.renderStatusCards();
                 this.renderSummaryCards();
+                this._checkEmptyState();
+            },
+
+            bulkChangeEstado() {
+                if (this.selectedIds.size === 0) return;
+                const select = document.getElementById('bulkEstadoSelect');
+                const newEstado = select ? select.value : 'Pendiente';
+                const count = this.selectedIds.size;
+
+                const modal = document.createElement('div');
+                modal.className = 'cfg-modal-overlay';
+                modal.innerHTML = `
+                    <div class="cfg-modal">
+                        <div class="cfg-modal__header">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+                                <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                            </svg>
+                            <h3>Cambiar estado</h3>
+                        </div>
+                        <div class="cfg-modal__body"><p>Se actualizará el estado de <strong>${count} marcación${count > 1 ? 'es' : ''}</strong> seleccionada${count > 1 ? 's' : ''} a <strong>${newEstado}</strong>.<br><br>¿Deseas continuar?</p></div>
+                        <div class="cfg-modal__footer">
+                            <button class="cfg-btn cfg-btn--secondary" onclick="this.closest('.cfg-modal-overlay').remove()">Cancelar</button>
+                            <button class="cfg-btn cfg-btn--primary" id="cfgBulkConfirm">Aplicar</button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(modal);
+                setTimeout(() => modal.classList.add('show'), 10);
+                modal.querySelector('#cfgBulkConfirm').onclick = () => {
+                    modal.remove();
+                    this.currentMarcaciones.forEach(m => {
+                        if (this.selectedIds.has(String(m.id))) {
+                            m.estado = newEstado;
+                        }
+                    });
+                    this.selectedIds.clear();
+                    this.renderConsecutivosTable();
+                    this.renderStatusCards();
+                    this.renderSummaryCards();
+                    this.updateBulkBar();
+                };
+                modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
             },
 
             renumerarConsecutivos() {
@@ -10665,14 +10917,14 @@
                 this.renderConsecutivosTable();
                 this.renderStatusCards();
                 this.renderSummaryCards();
+                this._checkEmptyState();
             },
 
-            clearAll() {
+            async clearAll() {
                 if (!confirm('¿Eliminar todas las marcaciones? Esta acción no se puede deshacer.')) return;
                 this.currentMarcaciones = [];
                 this.selectedIds.clear();
-                this.renderConsecutivosTable();
-                this.renderStatusCards();
+                await this.guardarTodas();
             },
 
             formatDate(dateStr) {

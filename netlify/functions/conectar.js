@@ -554,7 +554,6 @@ exports.handler = async (event) => {
                     return jsonResponse(404, { ok: false, error: 'Proceso no encontrado' });
                 }
 
-                console.log('[Backend get_proceso]', { numero_proceso: proceso.numero_proceso, informe_a_nombre_de: proceso.informe_a_nombre_de, cliente: proceso.cliente, full: proceso });
                 return jsonResponse(200, { ok: true, proceso });
             }
 
@@ -1020,13 +1019,6 @@ exports.handler = async (event) => {
                     p_detalle: newDetalle
                 });
 
-                console.log('[sync_detalle_proceso] RPC response:', JSON.stringify({ data, error }, null, 2));
-                console.log('[sync_detalle_proceso] data type:', typeof data, 'isArray:', Array.isArray(data));
-                if (Array.isArray(data)) {
-                    console.log('[sync_detalle_proceso] data length:', data.length);
-                    data.forEach((row, i) => console.log(`[sync_detalle_proceso] row[${i}]:`, JSON.stringify(row)));
-                }
-
                 if (error) {
                     console.error('[sync_detalle_proceso] RPC error:', error.message);
                     return jsonResponse(500, { ok: false, error: 'Error en sync', detail: error.message });
@@ -1144,7 +1136,7 @@ exports.handler = async (event) => {
             }
 
             // =============================================
-            // MARCACIONES - Insertar/actualizar consecutivos
+            // MARCACIONES - Sync inteligente (preserva estado por identidad de elemento)
             // =============================================
             if (payload.action === 'create_marcaciones_batch') {
                 const { marcaciones } = payload;
@@ -1158,35 +1150,60 @@ exports.handler = async (event) => {
                 }
 
                 if (marcaciones.length === 0) {
-                    return jsonResponse(200, { ok: true, updated: [], deleted: 0 });
+                    const { error: delErr } = await supabase
+                        .from('marcaciones_ac')
+                        .delete()
+                        .eq('proceso_id', procesoId);
+                    if (delErr) {
+                        console.error('[create_marcaciones_batch] Error deleting all:', delErr.message);
+                        return jsonResponse(500, { ok: false, error: 'Error eliminando marcaciones', detail: delErr.message });
+                    }
+                    return jsonResponse(200, { ok: true, updated: [], inserted: [], deleted: 'all' });
                 }
 
-                // FASE 1: Eliminar marcaciones existentes para este proceso
-                const { error: deleteError } = await supabase
+                // FASE 1: Fetch existentes
+                const { data: existingRows, error: fetchError } = await supabase
                     .from('marcaciones_ac')
-                    .delete()
-                    .eq('proceso_id', procesoId);
+                    .select('*')
+                    .eq('proceso_id', procesoId)
+                    .order('consecutivo', { ascending: true });
 
-                if (deleteError) {
-                    console.error('[create_marcaciones_batch] Error eliminando marcaciones existentes:', deleteError.message);
-                    return jsonResponse(500, {
-                        ok: false,
-                        error: 'Error al eliminar marcaciones existentes',
-                        detail: deleteError.message
-                    });
+                if (fetchError) {
+                    console.error('[create_marcaciones_batch] Error fetching existentes:', fetchError.message);
+                    return jsonResponse(500, { ok: false, error: 'Error consultando marcaciones existentes', detail: fetchError.message });
                 }
 
-                // FASE 2: Insertar todas las marcaciones nuevas
-                const results = [];
-                let hasError = false;
-                let firstError = null;
+                const existing = existingRows || [];
 
-                const BATCH_SIZE = 50;
+                // FASE 2: Build cola de existentes por identidad (elemento + descripcion)
+                const existingByElement = {};
+                existing.forEach(row => {
+                    const key = ((row.elemento || '').trim() + '||' + (row.descripcion || '').trim()).toLowerCase();
+                    if (!existingByElement[key]) existingByElement[key] = [];
+                    existingByElement[key].push(row);
+                });
 
-                for (let i = 0; i < marcaciones.length; i += BATCH_SIZE) {
-                    const batch = marcaciones.slice(i, i + BATCH_SIZE)
-                        .map(item => ({
-                            proceso_id: item.proceso_id,
+                const toUpdate = [];
+                const toInsert = [];
+                const matchedExistingIds = new Set();
+
+                for (const item of marcaciones) {
+                    const elemKey = ((item.elemento || '').trim() + '||' + (item.descripcion || '').trim()).toLowerCase();
+                    const queue = existingByElement[elemKey];
+                    const match = queue && queue.length > 0 ? queue.shift() : null;
+
+                    if (match) {
+                        matchedExistingIds.add(match.id);
+                        toUpdate.push({
+                            id: match.id,
+                            consecutivo: item.consecutivo,
+                            estado: item.estado !== undefined ? item.estado : (match.estado || 'Pendiente'),
+                            observacion: item.observacion !== undefined ? item.observacion : (match.observacion || ''),
+                            nci: item.nci !== undefined ? item.nci : (match.nci || '')
+                        });
+                    } else {
+                        toInsert.push({
+                            proceso_id: procesoId,
                             detalle_id: item.detalle_id || null,
                             ensayo_id: item.ensayo_id || null,
                             consecutivo: item.consecutivo,
@@ -1195,27 +1212,58 @@ exports.handler = async (event) => {
                             estado: item.estado || 'Pendiente',
                             observacion: item.observacion || '',
                             nci: item.nci || ''
-                        }));
+                        });
+                    }
+                }
 
-                    if (batch.length === 0) continue;
+                // FASE 3: Eliminar sobrantes
+                const toDelete = existing.filter(r => !matchedExistingIds.has(r.id));
+                let deletedCount = 0;
+                if (toDelete.length > 0) {
+                    const delIds = toDelete.map(r => r.id);
+                    const { error: delErr } = await supabase
+                        .from('marcaciones_ac')
+                        .delete()
+                        .in('id', delIds);
+                    if (delErr) {
+                        console.error('[create_marcaciones_batch] Error deleting orphans:', delErr.message);
+                    } else {
+                        deletedCount = delIds.length;
+                    }
+                }
 
-                    let insertBatch = batch;
-                    let inserted = false;
+                // FASE 4: Actualizar existentes
+                const updateResults = [];
+                for (const u of toUpdate) {
+                    const { error: updErr } = await supabase
+                        .from('marcaciones_ac')
+                        .update({ consecutivo: u.consecutivo, estado: u.estado, observacion: u.observacion, nci: u.nci })
+                        .eq('id', u.id);
+                    if (updErr) {
+                        console.error('[create_marcaciones_batch] Error updating id=' + u.id + ':', updErr.message);
+                    } else {
+                        updateResults.push(u.id);
+                    }
+                }
+
+                // FASE 5: Insertar nuevos
+                const insertResults = [];
+                const BATCH_SIZE = 50;
+                for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
+                    let batch = toInsert.slice(i, i + BATCH_SIZE);
 
                     for (let attempt = 0; attempt < 3; attempt++) {
                         const { data, error } = await supabase
                             .from('marcaciones_ac')
-                            .insert(insertBatch)
+                            .insert(batch)
                             .select();
 
                         if (!error) {
-                            results.push(...(Array.isArray(data) ? data : [data]));
-                            inserted = true;
+                            insertResults.push(...(Array.isArray(data) ? data : [data]));
                             break;
                         }
 
-                        console.error('Error insertando marcaciones_ac (attempt ' + (attempt + 1) + '):', error.message);
-
+                        console.error('[create_marcaciones_batch] Error insert (attempt ' + (attempt + 1) + '):', error.message);
                         const msg = String(error.message || '').toLowerCase();
                         const missingCols = [];
                         const m1 = msg.match(/could not find the '([^']+)' column/);
@@ -1223,34 +1271,17 @@ exports.handler = async (event) => {
                         const m2 = msg.match(/column\s+"?([^"\s]+)"?\s+does not exist/);
                         if (m2) missingCols.push(m2[1]);
 
-                        if (missingCols.length === 0) {
-                            hasError = true;
-                            if (!firstError) firstError = error;
-                            break;
-                        }
+                        if (missingCols.length === 0) break;
 
-                        insertBatch = insertBatch.map(item => {
+                        batch = batch.map(item => {
                             const clean = { ...item };
                             missingCols.forEach(col => { delete clean[col]; });
                             return clean;
                         });
                     }
-
-                    if (!inserted && insertBatch.length > 0 && !hasError) {
-                        hasError = true;
-                        if (!firstError) firstError = { message: 'Columnas faltantes en marcaciones_ac' };
-                    }
                 }
 
-                if (hasError && results.length === 0) {
-                    return jsonResponse(500, {
-                        ok: false,
-                        error: 'Error al crear marcaciones',
-                        detail: firstError?.message || 'Verificar tabla marcaciones_ac'
-                    });
-                }
-
-                return jsonResponse(200, { ok: true, updated: results });
+                return jsonResponse(200, { ok: true, updated: updateResults, inserted: insertResults, deleted: deletedCount });
             }
 
             // =============================================
@@ -1304,12 +1335,8 @@ exports.handler = async (event) => {
             // MARCACIONES - Resumen por todos los procesos
             // =============================================
             if (payload.action === 'get_marcaciones_resumen') {
-                console.log('[RESUMEN-RPC] calling get_marcaciones_resumen_rpc');
                 const { data: rpcData, error: rpcError } = await supabase
                     .rpc('get_marcaciones_resumen_rpc');
-                console.log('[RESUMEN-RPC] error:', rpcError);
-                console.log('[RESUMEN-RPC] data length:', rpcData?.length);
-                console.log('[RESUMEN-RPC] first 3 rows:', JSON.stringify((rpcData || []).slice(0, 3)));
 
                 if (rpcError) {
                     return jsonResponse(500, { ok: false, error: 'Error al consultar resumen de marcaciones', detail: rpcError.message });
@@ -1377,7 +1404,6 @@ exports.handler = async (event) => {
                     console.error('[get_marcaciones_resumen] Error enriching:', e.message);
                 }
 
-                console.log('[RESUMEN-RPC] resumen["535"]:', JSON.stringify(resumen['535']));
                 return jsonResponse(200, { ok: true, resumen });
             }
 
@@ -1886,9 +1912,6 @@ exports.handler = async (event) => {
                     try { signedUrl = decodeURI(signedUrl); } catch (e) {}
                 }
 
-                console.log('[DOWNLOAD] file_name recibido:', fileName);
-                console.log('[DOWNLOAD] signedUrl (corregida):', signedUrl);
-
                 if (error) return jsonResponse(500, { ok: false, error: error.message });
                 return jsonResponse(200, { ok: true, signedUrl });
             }
@@ -2379,6 +2402,12 @@ exports.handler = async (event) => {
             // =============================================
             if (payload.action === 'get_dashboard_stats') {
                 try {
+                    const dashFechaDesde = payload.fecha_desde || '';
+                    const dashFechaHasta = payload.fecha_hasta || '';
+                    const dashCliente = payload.cliente || '';
+                    const dashEstado = payload.estado || '';
+                    const dashMes = payload.mes || '';
+
                     const [clientesRes, procesosRes, cotizacionesRes, informesRes, ensayosRes, detalleElementosRes, marcacionesRes] = await Promise.all([
                         supabase.from('clientes').select('id, created_at').range(0, 9999),
                         supabase.from('procesos_acreditados').select('*').range(0, 9999),
@@ -2390,12 +2419,42 @@ exports.handler = async (event) => {
                     ]);
 
                     const clientes = clientesRes.data || [];
-                    const procesos = procesosRes.data || [];
+                    let procesos = procesosRes.data || [];
                     const cotizaciones = cotizacionesRes.data || [];
                     const informes = informesRes.data || [];
                     const ensayos = ensayosRes.data || [];
                     const detalleElementosAll = detalleElementosRes.data || [];
                     const marcaciones = marcacionesRes.data || [];
+
+                    // ── Aplicar filtros del dashboard ──
+                    if (dashFechaDesde) {
+                        procesos = procesos.filter(p => {
+                            const f = (p.fecha_recepcion || '').substring(0, 10);
+                            return f >= dashFechaDesde;
+                        });
+                    }
+                    if (dashFechaHasta) {
+                        procesos = procesos.filter(p => {
+                            const f = (p.fecha_recepcion || '').substring(0, 10);
+                            return f <= dashFechaHasta;
+                        });
+                    }
+                    if (dashMes) {
+                        procesos = procesos.filter(p => {
+                            const f = (p.fecha_recepcion || '').substring(0, 7);
+                            return f === dashMes;
+                        });
+                    }
+                    if (dashCliente) {
+                        procesos = procesos.filter(p => (p.cliente || '').trim().toLowerCase() === dashCliente.toLowerCase());
+                    }
+                    if (dashEstado) {
+                        procesos = procesos.filter(p => normalizeStatusKey(p.estado || '') === normalizeStatusKey(dashEstado));
+                    }
+
+                    // Set de IDs de procesos filtrados (para filtrar Top 10, Categorías, etc.)
+                    const filteredProcesoIds = new Set(procesos.map(p => p.id));
+                    const hasActiveFilters = dashFechaDesde || dashFechaHasta || dashMes || dashCliente || dashEstado;
 
                     // Último cliente creado
                     let ultimoCliente = null;
@@ -2492,13 +2551,24 @@ exports.handler = async (event) => {
                     const valorTotalCotizado = cotizaciones.reduce((sum, c) => sum + (parseFloat(c.total_valor) || 0), 0);
 
                     // ── Top 10 elementos más recibidos (desde detalle_procesos_ac) ──
-                    const { data: detalleElementos } = await supabase
-                        .from('detalle_procesos_ac')
-                        .select('cantidad, proceso_id, ensayos_acreditados(nombre)')
-                        .range(0, 9999);
+                    let detalleElementos;
+                    if (hasActiveFilters) {
+                        const { data: filteredDetalle } = await supabase
+                            .from('detalle_procesos_ac')
+                            .select('cantidad, proceso_id, ensayos_acreditados(nombre)')
+                            .in('proceso_id', [...filteredProcesoIds])
+                            .range(0, 9999);
+                        detalleElementos = filteredDetalle || [];
+                    } else {
+                        const { data: allDetalle } = await supabase
+                            .from('detalle_procesos_ac')
+                            .select('cantidad, proceso_id, ensayos_acreditados(nombre)')
+                            .range(0, 9999);
+                        detalleElementos = allDetalle || [];
+                    }
                     const elementosPorCantidad = {};
                     const elementoRecepciones = {};
-                    (detalleElementos || []).forEach(d => {
+                    detalleElementos.forEach(d => {
                         const nombre = (d.ensayos_acreditados?.nombre || '').trim();
                         if (!nombre || nombre === '-') return;
                         const cant = parseInt(d.cantidad) || 0;
@@ -2512,10 +2582,21 @@ exports.handler = async (event) => {
                         .slice(0, 10);
 
                     // ── Elementos por Categoría ──
-                    const { data: detalleConEnsayo } = await supabase
-                        .from('detalle_procesos_ac')
-                        .select('cantidad, ensayos_acreditados(categoria)')
-                        .range(0, 9999);
+                    let detalleConEnsayo;
+                    if (hasActiveFilters) {
+                        const { data: filteredCat } = await supabase
+                            .from('detalle_procesos_ac')
+                            .select('cantidad, ensayos_acreditados(categoria)')
+                            .in('proceso_id', [...filteredProcesoIds])
+                            .range(0, 9999);
+                        detalleConEnsayo = filteredCat || [];
+                    } else {
+                        const { data: allCat } = await supabase
+                            .from('detalle_procesos_ac')
+                            .select('cantidad, ensayos_acreditados(categoria)')
+                            .range(0, 9999);
+                        detalleConEnsayo = allCat || [];
+                    }
                     const categoriaUnidades = {};
                     (detalleConEnsayo || []).forEach(d => {
                         const cat = d.ensayos_acreditados?.categoria || 'Otros';
@@ -2528,10 +2609,21 @@ exports.handler = async (event) => {
                         .sort((a, b) => b.unidades - a.unidades);
 
                     // ── Top 5 Clientes por Unidades Recibidas ──
-                    const { data: detalleConProceso } = await supabase
-                        .from('detalle_procesos_ac')
-                        .select('cantidad, proceso_id, procesos_acreditados(cliente)')
-                        .range(0, 9999);
+                    let detalleConProceso;
+                    if (hasActiveFilters) {
+                        const { data: filteredCP } = await supabase
+                            .from('detalle_procesos_ac')
+                            .select('cantidad, proceso_id, procesos_acreditados(cliente)')
+                            .in('proceso_id', [...filteredProcesoIds])
+                            .range(0, 9999);
+                        detalleConProceso = filteredCP || [];
+                    } else {
+                        const { data: allCP } = await supabase
+                            .from('detalle_procesos_ac')
+                            .select('cantidad, proceso_id, procesos_acreditados(cliente)')
+                            .range(0, 9999);
+                        detalleConProceso = allCP || [];
+                    }
                     const clienteUnidades = {};
                     (detalleConProceso || []).forEach(d => {
                         const cliente = (d.procesos_acreditados?.cliente || '').trim();
@@ -2668,6 +2760,22 @@ exports.handler = async (event) => {
                     const informesActivos = informes.filter(i => i.activo).length;
                     const informesVigentes = new Set(informes.map(i => i.proceso_id)).size;
 
+                    // ── Listas para filtros del dashboard (usando TODOS los procesos, sin filtro) ──
+                    const allClientesForFilter = [...new Set((procesosRes.data || []).map(p => (p.cliente || '').trim()).filter(c => c && c !== '-' && c !== '—'))].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+                    const allEstadosForFilter = [...new Set((procesosRes.data || []).map(p => (p.estado || '').trim()))].filter(Boolean).sort();
+                    const allMesesMap = {};
+                    (procesosRes.data || []).forEach(p => {
+                        const f = (p.fecha_recepcion || '').substring(0, 7);
+                        if (f && /^\d{4}-\d{2}$/.test(f) && !allMesesMap[f]) {
+                            allMesesMap[f] = true;
+                        }
+                    });
+                    const allMesesForFilter = Object.keys(allMesesMap).sort().reverse().map(m => {
+                        const [y, mo] = m.split('-');
+                        const monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+                        return { value: m, label: `${monthNames[parseInt(mo)-1]} ${y}` };
+                    });
+
                     return jsonResponse(200, {
                         ok: true,
                         stats: {
@@ -2708,7 +2816,10 @@ exports.handler = async (event) => {
                             marcacionesResumen,
                             informesActivos,
                             informesVigentes,
-                            ultimoCliente
+                            ultimoCliente,
+                            allClientesForFilter,
+                            allEstadosForFilter,
+                            allMesesForFilter
                         }
                     });
                 } catch (err) {

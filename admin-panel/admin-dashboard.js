@@ -11,21 +11,105 @@ if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
 const DashboardModule = {
     stats: null,
     charts: {},
+    filters: {
+        mes: '',
+        cliente: '',
+        estado: ''
+    },
 
     async init() {
+        this.bindDashboardFilters();
         await this.loadStats();
+    },
+
+    bindDashboardFilters() {
+        const monthSelect = document.getElementById('dashMonthFilter');
+        const clientSelect = document.getElementById('dashClientFilter');
+        const statusSelect = document.getElementById('dashStatusFilter');
+
+        if (monthSelect) {
+            monthSelect.addEventListener('change', () => {
+                this.filters.mes = monthSelect.value;
+                this.loadStats();
+            });
+        }
+        if (clientSelect) {
+            clientSelect.addEventListener('change', () => {
+                this.filters.cliente = clientSelect.value === 'Todos los clientes' ? '' : clientSelect.value;
+                this.loadStats();
+            });
+        }
+        if (statusSelect) {
+            statusSelect.addEventListener('change', () => {
+                this.filters.estado = statusSelect.value === 'Todos los estados' ? '' : statusSelect.value;
+                this.loadStats();
+            });
+        }
+    },
+
+    populateFilters() {
+        if (!this.stats) return;
+
+        const monthSelect = document.getElementById('dashMonthFilter');
+        const clientSelect = document.getElementById('dashClientFilter');
+        const statusSelect = document.getElementById('dashStatusFilter');
+
+        if (monthSelect) {
+            const prev = monthSelect.value;
+            const months = this.stats.allMesesForFilter || [];
+            monthSelect.innerHTML = '<option value="">Todos los meses</option>';
+            months.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.value;
+                opt.textContent = m.label;
+                monthSelect.appendChild(opt);
+            });
+            if (prev && months.some(m => m.value === prev)) monthSelect.value = prev;
+        }
+
+        if (clientSelect) {
+            const prev = clientSelect.value;
+            const clients = this.stats.allClientesForFilter || [];
+            clientSelect.innerHTML = '<option>Todos los clientes</option>';
+            clients.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                clientSelect.appendChild(opt);
+            });
+            if (prev && clients.includes(prev)) clientSelect.value = prev;
+        }
+
+        if (statusSelect) {
+            const prev = statusSelect.value;
+            const statuses = this.stats.allEstadosForFilter || [];
+            statusSelect.innerHTML = '<option>Todos los estados</option>';
+            statuses.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s;
+                statusSelect.appendChild(opt);
+            });
+            if (prev && statuses.includes(prev)) statusSelect.value = prev;
+        }
     },
 
     async loadStats() {
         try {
+            const body = { action: 'get_dashboard_stats' };
+            if (this.filters.mes) body.mes = this.filters.mes;
+            if (this.filters.cliente) body.cliente = this.filters.cliente;
+            if (this.filters.estado) body.estado = this.filters.estado;
+
             const res = await fetch('/.netlify/functions/conectar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'get_dashboard_stats' })
+                body: JSON.stringify(body)
             });
             const data = await res.json();
             if (data.ok) {
                 this.stats = data.stats;
+                this.populateFilters();
                 this.renderAll();
             } else {
                 console.error('Error cargando stats:', data.error);
