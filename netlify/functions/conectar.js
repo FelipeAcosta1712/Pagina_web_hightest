@@ -439,32 +439,13 @@ exports.handler = async (event) => {
                 const ids = procesos.map(p => p.id).filter(Boolean);
                 let conteosMap = {};
                 if (ids.length > 0) {
-                    const [marcRes, detalleRes] = await Promise.all([
-                        supabase.from('marcaciones_ac').select('proceso_id, detalle_id, elemento'),
-                        supabase.from('detalle_procesos_ac').select('id, proceso_id')
-                    ]);
-                    const marcData = marcRes.data || [];
-                    const detalles = detalleRes.data || [];
-
-                    // Build bridge: detalle_procesos_ac.id → proceso_id
-                    const detalleToPid = {};
-                    detalles.forEach(d => {
-                        const did = String(d.id || '').trim();
-                        const pid = String(d.proceso_id || '').trim();
-                        if (did && pid) detalleToPid[did] = pid;
-                    });
-
-                    // Count elements per resolved process
-                    marcData.forEach(m => {
-                        const rawPid = String(m.proceso_id || '').trim();
-                        const detalleId = String(m.detalle_id || '').trim();
-                        // Resolve to correct proceso_id
-                        let resolvedPid = rawPid;
-                        if (!ids.includes(rawPid) && detalleId && detalleToPid[detalleId]) {
-                            resolvedPid = detalleToPid[detalleId];
-                        }
-                        if (!conteosMap[resolvedPid]) conteosMap[resolvedPid] = new Set();
-                        if (m.elemento) conteosMap[resolvedPid].add(m.elemento.trim());
+                    const { data: marcData } = await supabase
+                        .from('marcaciones_ac')
+                        .select('proceso_id, elemento');
+                    (marcData || []).forEach(m => {
+                        const pid = String(m.proceso_id).trim();
+                        if (!conteosMap[pid]) conteosMap[pid] = new Set();
+                        if (m.elemento) conteosMap[pid].add(m.elemento.trim());
                     });
                 }
                 procesos.forEach(p => {
@@ -999,6 +980,61 @@ exports.handler = async (event) => {
                 return jsonResponse(200, { ok: true });
             }
 
+            // Guardar unidades ensayables por grupo de elemento
+            if (payload.action === 'update_unidades_ensayables') {
+                const { proceso_id, ensayo_id, unidades } = payload;
+                if (!proceso_id || !ensayo_id) {
+                    return jsonResponse(400, { ok: false, error: 'proceso_id y ensayo_id requeridos' });
+                }
+                const numUnidades = parseInt(unidades, 10) || 0;
+                const { error } = await supabase
+                    .from('detalle_procesos_ac')
+                    .update({ unidades_ensayables: numUnidades })
+                    .eq('proceso_id', proceso_id)
+                    .eq('ensayo_id', ensayo_id);
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error guardando ensayables', detail: error.message });
+                }
+                return jsonResponse(200, { ok: true });
+            }
+
+            // ── sync_detalle_proceso: UPSERT atómico via stored procedure ──
+            // Delega toda la lógica a sync_detalle_proceso() en PostgreSQL:
+            //   FASE 1: FOR UPDATE (bloqueo de filas)
+            //   FASE 2: Consolidar duplicados existentes
+            //   FASE 3: DELETE huérfanos
+            //   FASE 4: INSERT ON CONFLICT DO UPDATE (upsert)
+            //   FASE 5: Retornar estado final
+            if (payload.action === 'sync_detalle_proceso') {
+                const procesoId = payload.proceso_id;
+                const newDetalle = payload.detalle || [];
+                if (!procesoId) {
+                    return jsonResponse(400, { ok: false, error: 'proceso_id requerido' });
+                }
+                if (!Array.isArray(newDetalle)) {
+                    return jsonResponse(400, { ok: false, error: 'detalle debe ser un array' });
+                }
+
+                const { data, error } = await supabase.rpc('sync_detalle_proceso', {
+                    p_proceso_id: procesoId,
+                    p_detalle: newDetalle
+                });
+
+                console.log('[sync_detalle_proceso] RPC response:', JSON.stringify({ data, error }, null, 2));
+                console.log('[sync_detalle_proceso] data type:', typeof data, 'isArray:', Array.isArray(data));
+                if (Array.isArray(data)) {
+                    console.log('[sync_detalle_proceso] data length:', data.length);
+                    data.forEach((row, i) => console.log(`[sync_detalle_proceso] row[${i}]:`, JSON.stringify(row)));
+                }
+
+                if (error) {
+                    console.error('[sync_detalle_proceso] RPC error:', error.message);
+                    return jsonResponse(500, { ok: false, error: 'Error en sync', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true, detalle: data || [], ops: { source: 'rpc' } });
+            }
+
             // Obtener conteo de items por todos los procesos (para modal PDFs)
             if (payload.action === 'get_all_detalle_procesos') {
                 // Contar desde ambas tablas y usar el mayor
@@ -1126,7 +1162,6 @@ exports.handler = async (event) => {
                 }
 
                 // FASE 1: Eliminar marcaciones existentes para este proceso
-                // Also clean up orphaned marcaciones through detalle_id bridge
                 const { error: deleteError } = await supabase
                     .from('marcaciones_ac')
                     .delete()
@@ -1139,24 +1174,6 @@ exports.handler = async (event) => {
                         error: 'Error al eliminar marcaciones existentes',
                         detail: deleteError.message
                     });
-                }
-
-                // Also delete orphaned marcaciones that reference this process through detalle_id
-                try {
-                    const { data: detalleIds } = await supabase
-                        .from('detalle_procesos_ac')
-                        .select('id')
-                        .eq('proceso_id', procesoId);
-                    if (detalleIds && detalleIds.length > 0) {
-                        const ids = detalleIds.map(d => d.id);
-                        await supabase
-                            .from('marcaciones_ac')
-                            .delete()
-                            .in('detalle_id', ids)
-                            .neq('proceso_id', procesoId);
-                    }
-                } catch (cleanupErr) {
-                    console.warn('[create_marcaciones_batch] Cleanup warning:', cleanupErr.message);
                 }
 
                 // FASE 2: Insertar todas las marcaciones nuevas
@@ -1270,8 +1287,7 @@ exports.handler = async (event) => {
                     return jsonResponse(400, { ok: false, error: 'proceso_id requerido' });
                 }
 
-                // First try direct match by proceso_id
-                let { data, error } = await supabase
+                const { data, error } = await supabase
                     .from('marcaciones_ac')
                     .select('*')
                     .eq('proceso_id', procesoId)
@@ -1281,60 +1297,6 @@ exports.handler = async (event) => {
                     return jsonResponse(500, { ok: false, error: 'Error al consultar marcaciones', detail: error.message });
                 }
 
-                // If no results, try multiple bridge strategies
-                if (!data || data.length === 0) {
-                    const allMarcaciones = [];
-
-                    // Strategy 1: Bridge through detalle_procesos_ac (detalle_id → proceso_id)
-                    if (String(procesoId).match(/^\d+$/)) {
-                        const { data: detalleIds } = await supabase
-                            .from('detalle_procesos_ac')
-                            .select('id')
-                            .eq('proceso_id', procesoId);
-
-                        if (detalleIds && detalleIds.length > 0) {
-                            const ids = detalleIds.map(d => d.id);
-                            const { data: marcByDetalle } = await supabase
-                                .from('marcaciones_ac')
-                                .select('*')
-                                .in('detalle_id', ids)
-                                .order('consecutivo', { ascending: true });
-                            if (marcByDetalle && marcByDetalle.length > 0) allMarcaciones.push(...marcByDetalle);
-                        }
-                    }
-
-                    // Strategy 2: proceso_id stored in marcaciones_ac might actually be detalle_procesos_ac.id
-                    if (allMarcaciones.length === 0 && String(procesoId).match(/^\d+$/)) {
-                        const { data: parentRes } = await supabase
-                            .from('detalle_procesos_ac')
-                            .select('proceso_id')
-                            .eq('id', procesoId);
-                        if (parentRes && parentRes.length > 0) {
-                            const parentPid = parentRes[0].proceso_id;
-                            const { data: marcByParent } = await supabase
-                                .from('marcaciones_ac')
-                                .select('*')
-                                .eq('proceso_id', parentPid)
-                                .order('consecutivo', { ascending: true });
-                            if (marcByParent && marcByParent.length > 0) allMarcaciones.push(...marcByParent);
-                        }
-                    }
-
-                    // Strategy 3: Try matching numero_proceso string
-                    if (allMarcaciones.length === 0 && procesoId) {
-                        const { data: marcByNum } = await supabase
-                            .from('marcaciones_ac')
-                            .select('*')
-                            .eq('proceso_id', procesoId)
-                            .order('consecutivo', { ascending: true });
-                        if (marcByNum && marcByNum.length > 0) allMarcaciones.push(...marcByNum);
-                    }
-
-                    if (allMarcaciones.length > 0) {
-                        data = allMarcaciones;
-                    }
-                }
-
                 return jsonResponse(200, { ok: true, marcaciones: data || [] });
             }
 
@@ -1342,96 +1304,80 @@ exports.handler = async (event) => {
             // MARCACIONES - Resumen por todos los procesos
             // =============================================
             if (payload.action === 'get_marcaciones_resumen') {
-                // Fetch marcaciones with detalle_id for proper bridging
-                const { data: marcData, error: marcErr } = await supabase
-                    .from('marcaciones_ac')
-                    .select('proceso_id, detalle_id, estado')
-                    .limit(10000);
+                console.log('[RESUMEN-RPC] calling get_marcaciones_resumen_rpc');
+                const { data: rpcData, error: rpcError } = await supabase
+                    .rpc('get_marcaciones_resumen_rpc');
+                console.log('[RESUMEN-RPC] error:', rpcError);
+                console.log('[RESUMEN-RPC] data length:', rpcData?.length);
+                console.log('[RESUMEN-RPC] first 3 rows:', JSON.stringify((rpcData || []).slice(0, 3)));
 
-                if (marcErr) {
-                    return jsonResponse(500, { ok: false, error: 'Error al consultar resumen de marcaciones', detail: marcErr.message });
+                if (rpcError) {
+                    return jsonResponse(500, { ok: false, error: 'Error al consultar resumen de marcaciones', detail: rpcError.message });
                 }
 
-                // Fetch lookup tables in parallel
-                const [procesosRes, detalleRes] = await Promise.all([
-                    supabase.from('procesos_acreditados').select('id, numero_proceso').limit(10000),
-                    supabase.from('detalle_procesos_ac').select('id, proceso_id').limit(10000)
-                ]);
-
-                const procesos = procesosRes.data || [];
-                const detalles = detalleRes.data || [];
-
-                // Build lookup: procesos_acreditados.id → numero_proceso
-                const idToNum = {};
-                procesos.forEach(p => {
-                    const pid = String(p.id || '').trim();
-                    const num = (p.numero_proceso || '').trim();
-                    if (pid && num) idToNum[pid] = num;
-                });
-
-                // Build lookup: detalle_procesos_ac.id → procesos_acreditados.id (parent)
-                const detalleIdToParentId = {};
-                detalles.forEach(d => {
-                    const did = String(d.id || '').trim();
-                    const parentPid = String(d.proceso_id || '').trim();
-                    if (did && parentPid) detalleIdToParentId[did] = parentPid;
-                });
-
-                // Build lookup: procesos_acreditados.numero_proceso → id (for old proceso_id values that might be numero_proceso)
-                const numToId = {};
-                procesos.forEach(p => {
-                    const pid = String(p.id || '').trim();
-                    const num = (p.numero_proceso || '').trim();
-                    if (pid && num) numToId[num] = pid;
-                });
-
-                // Resolve each marcacion to its real procesos_acreditados.id
                 const resumen = {};
-                (marcData || []).forEach(m => {
-                    const rawPid = String(m.proceso_id || '').trim();
-                    const detalleId = String(m.detalle_id || '').trim();
-                    if (!rawPid && !detalleId) return;
-
-                    // Try to resolve to a valid procesos_acreditados.id
-                    let realPid = null;
-
-                    // 1. Direct match: proceso_id IS a procesos_acreditados.id
-                    if (rawPid && idToNum[rawPid]) {
-                        realPid = rawPid;
-                    }
-                    // 2. Bridge: detalle_id → detalle_procesos_ac.proceso_id → procesos_acreditados.id
-                    else if (detalleId && detalleIdToParentId[detalleId]) {
-                        realPid = detalleIdToParentId[detalleId];
-                    }
-                    // 3. Bridge: proceso_id → detalle_procesos_ac.id → detalle_procesos_ac.proceso_id
-                    else if (rawPid && detalleIdToParentId[rawPid]) {
-                        realPid = detalleIdToParentId[rawPid];
-                    }
-                    // 4. proceso_id might be a numero_proceso string
-                    else if (rawPid && numToId[rawPid]) {
-                        realPid = numToId[rawPid];
-                    }
-
-                    // If we still can't resolve, use rawPid as fallback (preserves old behavior)
-                    const key = realPid || rawPid;
-                    if (!key) return;
-
-                    if (!resumen[key]) {
-                        resumen[key] = { total: 0, marcados: 0, pendientes: 0, otros: 0 };
-                    }
-                    resumen[key].total++;
-                    const est = String(m.estado || '').toLowerCase();
-                    if (est === 'marcado' || est === 'revisado') resumen[key].marcados++;
-                    else if (est === 'pendiente') resumen[key].pendientes++;
-                    else resumen[key].otros++;
+                (rpcData || []).forEach(row => {
+                    const pid = String(row.proceso_id || '').trim();
+                    if (!pid) return;
+                    resumen[pid] = {
+                        total: Number(row.total) || 0,
+                        marcados: Number(row.marcados) || 0,
+                        pendientes: Number(row.pendientes) || 0,
+                        otros: Number(row.otros) || 0
+                    };
                 });
 
-                // Duplicate entries under numero_proceso key for frontend lookup
-                Object.keys(resumen).forEach(pid => {
-                    const num = idToNum[pid];
-                    if (num && !resumen[num]) resumen[num] = resumen[pid];
-                });
+                try {
+                    const [procesosRes, detalleRes] = await Promise.all([
+                        supabase.from('procesos_acreditados').select('id, numero_proceso'),
+                        supabase.from('detalle_procesos_ac').select('id, proceso_id')
+                    ]);
+                    const procesos = procesosRes.data || [];
+                    const detalles = detalleRes.data || [];
 
+                    const idToNum = {};
+                    procesos.forEach(p => {
+                        const pid = String(p.id || '').trim();
+                        const num = (p.numero_proceso || '').trim();
+                        if (pid && num) idToNum[pid] = num;
+                    });
+
+                    const detalleToNum = {};
+                    detalles.forEach(d => {
+                        const did = String(d.id || '').trim();
+                        const parentPid = String(d.proceso_id || '').trim();
+                        if (did && idToNum[parentPid]) detalleToNum[did] = idToNum[parentPid];
+                    });
+
+                    const numToId = {};
+                    procesos.forEach(p => {
+                        const num = (p.numero_proceso || '').trim();
+                        const pid = String(p.id || '').trim();
+                        if (num && pid) numToId[num] = pid;
+                    });
+
+                    const resumenPids = Object.keys(resumen);
+                    resumenPids.forEach(pid => {
+                        let num = idToNum[pid];
+                        if (!num) num = detalleToNum[pid];
+                        if (!num) return;
+                        if (!resumen[num]) resumen[num] = resumen[pid];
+                        const realId = numToId[num];
+                        if (realId && !resumen[realId]) resumen[realId] = resumen[pid];
+                    });
+
+                    procesos.forEach(p => {
+                        const num = (p.numero_proceso || '').trim();
+                        const pid = String(p.id || '').trim();
+                        if (num && resumen[num] && pid && !resumen[pid]) {
+                            resumen[pid] = resumen[num];
+                        }
+                    });
+                } catch (e) {
+                    console.error('[get_marcaciones_resumen] Error enriching:', e.message);
+                }
+
+                console.log('[RESUMEN-RPC] resumen["535"]:', JSON.stringify(resumen['535']));
                 return jsonResponse(200, { ok: true, resumen });
             }
 
