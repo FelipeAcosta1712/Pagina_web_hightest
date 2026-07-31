@@ -2826,7 +2826,7 @@
             </div>
             <div class="marcacion-process-bar" id="marcacionViewProcessBar"></div>
             <div class="marcacion-table-wrapper" style="margin-top:12px;">
-                <table class="marcacion-table">
+                <table class="marcacion-table" style="border-collapse:separate;border-spacing:0;">
                     <thead>
                         <tr>
                             <th style="width:70px;">CONSEC.</th>
@@ -9080,6 +9080,15 @@
                 150: { resistencia: 0.0367 }
             },
 
+            parseDecimal(str) {
+                if (str == null || str === '') return null;
+                return Number(String(str).replace(',', '.'));
+            },
+            formatDecimal(num, dec = 3) {
+                if (num == null) return '-';
+                return Number(num).toFixed(dec).replace('.', ',');
+            },
+
             _rmExpandedCards: new Set(),
 
             isPuenteTemporal(elemento) {
@@ -9130,7 +9139,7 @@
                         </div>
                         <div>
                             <label style="display:block;font-size:0.7rem;font-weight:600;color:#475569;margin-bottom:3px;">Longitud (m)</label>
-                            <input type="number" id="rmLongitud_${consecutivo}" min="0" step="0.01" placeholder="0.00" onchange="MarcacionPanel.onLongitudChange('${consecutivo}')" oninput="MarcacionPanel.onLongitudChange('${consecutivo}')" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.78rem;">
+                            <input type="text" id="rmLongitud_${consecutivo}" min="0" inputmode="decimal" placeholder="0,00" onchange="MarcacionPanel.onLongitudChange('${consecutivo}')" oninput="MarcacionPanel.onLongitudChange('${consecutivo}')" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.78rem;">
                         </div>
                         <div>
                             <label style="display:block;font-size:0.7rem;font-weight:600;color:#475569;margin-bottom:3px;">RM Máxima (mΩ)</label>
@@ -9138,7 +9147,7 @@
                         </div>
                         <div>
                             <label style="display:block;font-size:0.7rem;font-weight:600;color:#475569;margin-bottom:3px;">RM Medida (mΩ)</label>
-                            <input type="number" id="rmMedida_${consecutivo}" min="0" step="0.001" placeholder="0.000" onchange="MarcacionPanel.onRMMedidaChange('${consecutivo}')" oninput="MarcacionPanel.onRMMedidaChange('${consecutivo}')" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.78rem;">
+                            <input type="text" id="rmMedida_${consecutivo}" min="0" inputmode="decimal" placeholder="0,000" onchange="MarcacionPanel.onRMMedidaChange('${consecutivo}')" oninput="MarcacionPanel.onRMMedidaChange('${consecutivo}')" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.78rem;">
                         </div>
                     </div>
                 </div>`;
@@ -9166,16 +9175,16 @@
                 const rmMedidaEl = document.getElementById('rmMedida_' + consecutivo);
 
                 if (calibreEl && c.calibre_mm2 != null) calibreEl.value = c.calibre_mm2;
-                if (longitudEl && c.longitud_m != null) longitudEl.value = c.longitud_m;
-                if (rmMedidaEl && c.rm_medida != null) rmMedidaEl.value = c.rm_medida;
+                if (longitudEl && c.longitud_m != null) longitudEl.value = this.formatDecimal(c.longitud_m, 2);
+                if (rmMedidaEl && c.rm_medida != null) rmMedidaEl.value = this.formatDecimal(c.rm_medida, 3);
 
                 const calibre = calibreEl ? calibreEl.value : '';
                 const longitud = longitudEl ? longitudEl.value : '';
 
                 if (calibre && longitud) {
-                    const result = this.calcularRM(Number(calibre), Number(longitud));
+                    const result = this.calcularRM(this.parseDecimal(calibre), this.parseDecimal(longitud));
                     const rmMaximaEl = document.getElementById('rmMaxima_' + consecutivo);
-                    if (rmMaximaEl) rmMaximaEl.value = result.rm != null ? result.rm.toFixed(3) : '';
+                    if (rmMaximaEl) rmMaximaEl.value = result.rm != null ? this.formatDecimal(result.rm, 3) : '';
                     c.rm_maxima = result.rm;
                 }
 
@@ -9191,7 +9200,7 @@
                 const calibre = calibreEl ? calibreEl.value : '';
                 const longitud = longitudEl ? longitudEl.value : '';
 
-                if (c) c.calibre_mm2 = calibre ? Number(calibre) : null;
+                if (c) c.calibre_mm2 = calibre ? this.parseDecimal(calibre) : null;
 
                 if (!calibre || !longitud) {
                     if (rmMaximaEl) rmMaximaEl.value = '';
@@ -9200,8 +9209,8 @@
                     return;
                 }
 
-                const result = this.calcularRM(Number(calibre), Number(longitud));
-                if (rmMaximaEl) rmMaximaEl.value = result.rm != null ? result.rm.toFixed(3) : '';
+                const result = this.calcularRM(this.parseDecimal(calibre), this.parseDecimal(longitud));
+                if (rmMaximaEl) rmMaximaEl.value = result.rm != null ? this.formatDecimal(result.rm, 3) : '';
                 if (c) c.rm_maxima = result.rm;
                 this.actualizarResultadoRM(consecutivo);
             },
@@ -9215,7 +9224,7 @@
                 const calibre = calibreEl ? calibreEl.value : '';
                 const longitud = longitudEl ? longitudEl.value : '';
 
-                if (c) c.longitud_m = longitud ? Number(longitud) : null;
+                if (c) c.longitud_m = longitud ? this.parseDecimal(longitud) : null;
 
                 if (!calibre || !longitud) {
                     if (rmMaximaEl) rmMaximaEl.value = '';
@@ -9224,8 +9233,8 @@
                     return;
                 }
 
-                const result = this.calcularRM(Number(calibre), Number(longitud));
-                if (rmMaximaEl) rmMaximaEl.value = result.rm != null ? result.rm.toFixed(3) : '';
+                const result = this.calcularRM(this.parseDecimal(calibre), this.parseDecimal(longitud));
+                if (rmMaximaEl) rmMaximaEl.value = result.rm != null ? this.formatDecimal(result.rm, 3) : '';
                 if (c) c.rm_maxima = result.rm;
                 this.actualizarResultadoRM(consecutivo);
             },
@@ -9233,7 +9242,7 @@
             onRMMedidaChange(consecutivo) {
                 const c = this.currentMarcaciones.find(x => x.consecutivo === consecutivo);
                 const rmMedidaEl = document.getElementById('rmMedida_' + consecutivo);
-                if (c) c.rm_medida = rmMedidaEl && rmMedidaEl.value ? Number(rmMedidaEl.value) : null;
+                if (c) c.rm_medida = rmMedidaEl && rmMedidaEl.value ? this.parseDecimal(rmMedidaEl.value) : null;
                 this.actualizarResultadoRM(consecutivo);
             },
 
@@ -9251,8 +9260,8 @@
                     return;
                 }
 
-                const medida = Number(rmMedida);
-                const maxima = Number(rmMaxima);
+                const medida = this.parseDecimal(rmMedida);
+                const maxima = this.parseDecimal(rmMaxima);
 
                 if (medida <= maxima) {
                     rmMedidaEl.style.border = '2px solid #16a34a';
@@ -9639,16 +9648,54 @@
                             else if (estLower.includes('revisado')) estadoClass = 'revisado';
                             else if (estLower.includes('no conform')) estadoClass = 'no-conforme';
                             const fechaMod = (m.updated_at || '').substring(0, 10) || '-';
-                            return `<tr>
-                                <td style="text-align:center;font-weight:700;font-family:monospace;color:#022859;">${this.escapeHtml(m.consecutivo || '')}</td>
-                                <td style="font-weight:600;">${this.escapeHtml(m.elemento || '')}</td>
-                                <td><span style="background:#fef3c7;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;color:#92400e;">${this.escapeHtml(m.descripcion || '')}</span></td>
-                                <td style="text-align:center;"><span style="background:#e0f2fe;padding:2px 6px;border-radius:8px;font-size:11px;font-weight:600;color:#0369a1;">U-${unidadNum}</span></td>
-                                <td style="text-align:center;">${this.escapeHtml(m.nci || '-')}</td>
-                                <td style="font-size:12px;color:#475569;">${this.escapeHtml(m.observacion || '')}</td>
-                                <td><span class="marcacion-estado-badge ${estadoClass}">${this.escapeHtml(estado)}</span></td>
-                                <td style="font-size:11px;color:#64748b;">${fechaMod}</td>
+                            const esPT = this.isPuenteTemporal(m.elemento);
+                            const nciVal = (m.nci || '').trim().toUpperCase();
+                            const esNCINCE = nciVal === 'NCI' || nciVal === 'NCE';
+                            const rowBg = esNCINCE ? 'background:#fef2f2;' : '';
+                            let rmColor = '';
+                            let rmValColor = '#94a3b8';
+                            let rmValBorder = '#94a3b8';
+                            if (esPT) {
+                                rmColor = '#93c5fd';
+                                if (m.rm_medida != null && m.rm_maxima != null) {
+                                    const med = Number(m.rm_medida);
+                                    const max = Number(m.rm_maxima);
+                                    if (med <= max) { rmValColor = '#16a34a'; rmValBorder = '#16a34a'; }
+                                    else if (med <= max + 5) { rmValColor = '#f59e0b'; rmValBorder = '#f59e0b'; }
+                                    else { rmValColor = '#dc2626'; rmValBorder = '#dc2626'; }
+                                }
+                            }
+                            const bT = esPT ? `border-top:2px solid ${rmColor};` : '';
+                            const bL = esPT ? `border-left:2px solid ${rmColor};` : '';
+                            const bR = esPT ? `border-right:2px solid ${rmColor};` : '';
+                            let mainRow = `<tr style="${rowBg}">
+                                <td style="text-align:center;font-weight:700;font-family:monospace;color:#022859;${bT}${bL}">${this.escapeHtml(m.consecutivo || '')}</td>
+                                <td style="font-weight:600;${bT}">${this.escapeHtml(m.elemento || '')}</td>
+                                <td style="${bT}"><span style="background:#fef3c7;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;color:#92400e;">${this.escapeHtml(m.descripcion || '')}</span></td>
+                                <td style="text-align:center;${bT}"><span style="background:#e0f2fe;padding:2px 6px;border-radius:8px;font-size:11px;font-weight:600;color:#0369a1;">U-${unidadNum}</span></td>
+                                <td style="text-align:center;${bT}">${this.escapeHtml(m.nci || '-')}</td>
+                                <td style="font-size:12px;color:#475569;${bT}">${this.escapeHtml(m.observacion || '')}</td>
+                                <td style="${bT}"><span class="marcacion-estado-badge ${estadoClass}">${this.escapeHtml(estado)}</span></td>
+                                <td style="font-size:11px;color:#64748b;${bT}${bR}">${fechaMod}</td>
                             </tr>`;
+                            if (esPT) {
+                                const cal = m.calibre_mm2 || '-';
+                                const lon = m.longitud_m != null ? this.formatDecimal(m.longitud_m, 2) : '-';
+                                const rMax = m.rm_maxima != null ? this.formatDecimal(m.rm_maxima, 4) : '-';
+                                const rMed = m.rm_medida != null ? String(m.rm_medida).replace('.', ',') : '-';
+                                mainRow += `<tr style="${rowBg}">
+                                    <td colspan="8" style="padding:6px 12px;border-left:2px solid ${rmColor};border-right:2px solid ${rmColor};border-bottom:2px solid ${rmColor};">
+                                        <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+                                            <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Resistencia del puente</span>
+                                            <span style="font-size:12px;color:#334155;"><b>Calibre:</b> ${cal} mm²</span>
+                                            <span style="font-size:12px;color:#334155;"><b>Longitud:</b> ${lon} m</span>
+                                            <span style="font-size:12px;color:#334155;"><b>RM Máx.:</b> ${rMax} mΩ</span>
+                                            <span style="font-size:13px;font-weight:700;color:${rmValColor};border:1.5px solid ${rmValBorder};border-radius:6px;padding:2px 10px;">RM Med.: ${rMed} mΩ</span>
+                                        </div>
+                                    </td>
+                                </tr>`;
+                            }
+                            return mainRow;
                         }).join('');
                     } else {
                         if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="marcacion-empty"><i class="fas fa-clipboard-list"></i>Este proceso no tiene marcaciones registradas.</td></tr>';
@@ -10217,9 +10264,12 @@
                     const hasObs = (m.observacion || '').trim().length > 0;
                     const isChecked = this.selectedIds.has(String(m.id));
                     const esPT = this.isPuenteTemporal(m.elemento);
+                    const nciVal = (m.nci || '').trim().toUpperCase();
+                    const esNCINCE = nciVal === 'NCI' || nciVal === 'NCE';
+                    const nciBg = esNCINCE ? 'background:#fef2f2 !important;' : '';
                     const rmExpanded = this._rmExpandedCards.has(String(m.consecutivo));
 
-                    html += `<tr class="${rowClass}" draggable="true" data-id="${m.id}" data-idx="${idx}"
+                    html += `<tr class="${rowClass}" style="${nciBg}" draggable="true" data-id="${m.id}" data-idx="${idx}"
                         ondragstart="MarcacionPanel.onDragStart(event)" ondragover="MarcacionPanel.onDragOver(event)"
                         ondragenter="MarcacionPanel.onDragEnter(event)" ondragleave="MarcacionPanel.onDragLeave(event)"
                         ondrop="MarcacionPanel.onDrop(event)" ondragend="MarcacionPanel.onDragEnd(event)">
