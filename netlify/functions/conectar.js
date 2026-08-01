@@ -2058,11 +2058,12 @@ exports.handler = async (event) => {
 
                     const procesoIds = procesosRows.map(p => p.id);
 
-                    // 2. Traer informes de esos procesos
+                    // 2. Traer informes activos de esos procesos (solo la version actual)
                     const { data: informes, error: errInf } = await supabase
                         .from('informes_ensayo_ac')
                         .select('*')
                         .in('proceso_id', procesoIds)
+                        .eq('activo', true)
                         .order('created_at', { ascending: false });
 
                     if (errInf) return jsonResponse(500, { ok: false, error: 'Error informes: ' + errInf.message });
