@@ -434,23 +434,34 @@ exports.handler = async (event) => {
                     return jsonResponse(500, { ok: false, error: 'Error al consultar procesos_acreditados', detail: error.message });
                 }
 
-                // Obtener conteo de elementos distintos por proceso_id
+                // Obtener conteo de items por proceso desde detalle_procesos_ac y marcaciones_ac
                 const procesos = data || [];
                 const ids = procesos.map(p => p.id).filter(Boolean);
-                let conteosMap = {};
+                let conteosDetalle = {};
+                let conteosMarc = {};
                 if (ids.length > 0) {
-                    const { data: marcData } = await supabase
-                        .from('marcaciones_ac')
-                        .select('proceso_id, elemento');
-                    (marcData || []).forEach(m => {
+                    const [resDetalle, resMarc] = await Promise.all([
+                        supabase.from('detalle_procesos_ac').select('proceso_id, id'),
+                        supabase.from('marcaciones_ac').select('proceso_id, elemento')
+                    ]);
+                    // Contar filas desde detalle_procesos_ac (items reales)
+                    (resDetalle.data || []).forEach(d => {
+                        const pid = String(d.proceso_id).trim();
+                        if (!conteosDetalle[pid]) conteosDetalle[pid] = 0;
+                        conteosDetalle[pid]++;
+                    });
+                    // Contar elementos distintos desde marcaciones_ac
+                    (resMarc.data || []).forEach(m => {
                         const pid = String(m.proceso_id).trim();
-                        if (!conteosMap[pid]) conteosMap[pid] = new Set();
-                        if (m.elemento) conteosMap[pid].add(m.elemento.trim());
+                        if (!conteosMarc[pid]) conteosMarc[pid] = new Set();
+                        if (m.elemento) conteosMarc[pid].add(m.elemento.trim());
                     });
                 }
                 procesos.forEach(p => {
-                    const set = conteosMap[String(p.id).trim()];
-                    p.total_items = set ? set.size : 0;
+                    const pid = String(p.id).trim();
+                    const desdeDetalle = conteosDetalle[pid] || 0;
+                    const desdeMarc = conteosMarc[pid] ? conteosMarc[pid].size : 0;
+                    p.total_items = Math.max(desdeDetalle, desdeMarc);
                 });
 
                 return jsonResponse(200, { ok: true, procesos });
@@ -954,12 +965,29 @@ exports.handler = async (event) => {
                     return jsonResponse(500, { ok: false, error: 'Error al consultar detalle del proceso', detail: error.message });
                 }
 
-                const detalle = Array.isArray(data) ? data.map(d => ({
-                    ...d,
-                    ensayo_nombre: d.ensayos_acreditados?.nombre || d.ensayo_nombre || '',
-                    ensayo_categoria: d.ensayos_acreditados?.categoria || ''
-                })) : [];
+                // Agrupar por ensayo_id (una fila por ensayo, no por marca)
+                const ensayoMap = {};
+                (data || []).forEach(d => {
+                    const eid = d.ensayo_id || d.id;
+                    if (!ensayoMap[eid]) {
+                        ensayoMap[eid] = {
+                            ensayo_id: eid,
+                            ensayo_nombre: d.ensayos_acreditados?.nombre || d.ensayo_nombre || '',
+                            ensayo_categoria: d.ensayos_acreditados?.categoria || d.ensayo_categoria || '',
+                            cantidad: 0,
+                            cantidad_entregada: d.cantidad_entregada || 0,
+                            marcas: [],
+                            observaciones: ''
+                        };
+                    }
+                    const entry = ensayoMap[eid];
+                    entry.cantidad += d.cantidad || 0;
+                    entry.cantidad_entregada = d.cantidad_entregada || entry.cantidad_entregada || 0;
+                    if (d.marca) entry.marcas.push({ count: d.cantidad || 0, brand: d.marca });
+                    if (d.observaciones && !entry.observaciones) entry.observaciones = d.observaciones;
+                });
 
+                const detalle = Object.values(ensayoMap);
                 return jsonResponse(200, { ok: true, detalle });
             }
 
@@ -1031,18 +1059,44 @@ exports.handler = async (event) => {
             if (payload.action === 'get_all_detalle_procesos') {
                 // Contar desde ambas tablas y usar el mayor
                 const [resDetalle, resMarc] = await Promise.all([
-                    supabase.from('detalle_procesos_ac').select('proceso_id, id'),
+                    supabase.from('detalle_procesos_ac').select('proceso_id, id, ensayo_id, cantidad, cantidad_entregada, marca, observaciones, ensayos_acreditados(nombre, categoria)'),
                     supabase.from('marcaciones_ac').select('proceso_id, elemento')
                 ]);
 
                 const conteos = {};
+                const detalleCompleto = {};
 
-                // Contar desde detalle_procesos_ac
+                // Agrupar por proceso_id → ensayo_id (una fila por ensayo, sumando cantidades de marcas)
                 (resDetalle.data || []).forEach(d => {
                     const pid = String(d.proceso_id).trim();
+                    const eid = d.ensayo_id || d.id;
                     if (!conteos[pid]) conteos[pid] = 0;
                     conteos[pid]++;
+
+                    if (!detalleCompleto[pid]) detalleCompleto[pid] = {};
+                    if (!detalleCompleto[pid][eid]) {
+                        detalleCompleto[pid][eid] = {
+                            ensayo_id: eid,
+                            ensayo_nombre: d.ensayos_acreditados?.nombre || '',
+                            ensayo_categoria: d.ensayos_acreditados?.categoria || '',
+                            cantidad: 0,
+                            cantidad_entregada: d.cantidad_entregada || 0,
+                            marcas: [],
+                            observaciones: ''
+                        };
+                    }
+                    const entry = detalleCompleto[pid][eid];
+                    entry.cantidad += d.cantidad || 0;
+                    entry.cantidad_entregada = d.cantidad_entregada || entry.cantidad_entregada || 0;
+                    if (d.marca) entry.marcas.push({ count: d.cantidad || 0, brand: d.marca });
+                    if (d.observaciones && !entry.observaciones) entry.observaciones = d.observaciones;
                 });
+
+                // Convertir a arrays para enviar al cliente
+                const detalleArrays = {};
+                for (const pid in detalleCompleto) {
+                    detalleArrays[pid] = Object.values(detalleCompleto[pid]);
+                }
 
                 // Contar elementos distintos desde marcaciones_ac
                 const marcPorProceso = {};
@@ -1060,7 +1114,7 @@ exports.handler = async (event) => {
                     }
                 }
 
-                return jsonResponse(200, { ok: true, conteos });
+                return jsonResponse(200, { ok: true, conteos, detalleCompleto: detalleArrays });
             }
 
             // Actualizar marcación de un item del detalle

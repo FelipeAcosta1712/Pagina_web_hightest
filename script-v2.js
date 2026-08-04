@@ -794,6 +794,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Escuchar cambios en localStorage desde otras pestañas (recepción → admin)
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'admin_panel_refresh' && e.newValue) {
+            try {
+                const data = JSON.parse(e.newValue);
+                if (data && data.timestamp) {
+                    console.log('[Admin Panel] Recepción actualizada, recargando procesos...', data.numero);
+                    cargarProcesos();
+                    if (typeof DashboardModule !== 'undefined' && DashboardModule.loadStats) {
+                        DashboardModule.loadStats();
+                    }
+                }
+            } catch (err) { /* ignorar parse error */ }
+        }
+    });
     
 });
 
@@ -8201,17 +8216,41 @@ const AnalisisProcesosModule = {
                 }
             } catch (e) { /* continuar sin NIT */ }
 
-            // Intentar traer borradores para obtener items, lavados, firmas, etc.
-            let borradorData = null;
+            // Intentar traer detalle desde BD (fuente única de verdad cuando el proceso existe)
+            let detalleFromDB = null;
             try {
-                const borrResult = await fetchFromDatabase('get_borradores', {});
-                if (borrResult?.ok && Array.isArray(borrResult.data)) {
-                    borradorData = borrResult.data.find(d => (d.numero_proceso || d.cotizacion || d.quoteNumber || '') === numProceso);
+                const detResult = await fetchFromDatabase('get_detalle_proceso', { proceso_id: p.id });
+                if (detResult?.ok && Array.isArray(detResult.detalle) && detResult.detalle.length > 0) {
+                    detalleFromDB = detResult.detalle;
                 }
-            } catch (e) { /* no hay borradores, continuar sin ellos */ }
+            } catch (e) { /* continuar sin detalle de BD */ }
 
-            const items = borradorData?.items || borradorData?.savedRowsData?.ensayos_acreditados || [];
-            const itemsNoAc = borradorData?.savedRowsData?.ensayos_no_acreditados || [];
+            // Construir items desde la BD (sin consultar borradores)
+            let items = [];
+            let itemsNoAc = [];
+            if (detalleFromDB && detalleFromDB.length > 0) {
+                items = detalleFromDB.map(d => ({
+                    name: d.ensayo_nombre || d.ensayo_id || '-',
+                    quantity: d.cantidad || 0,
+                    quantity2: d.cantidad_entregada || 0,
+                    quantity3: 0,
+                    quantity4: 0,
+                    status: 0,
+                    brandSummary: d.marcas && d.marcas.length > 0 ? d.marcas : '-',
+                    observaciones: d.observaciones || ''
+                }));
+            } else {
+                // Fallback SOLO cuando no hay detalle en BD: usar borrador
+                let borradorData = null;
+                try {
+                    const borrResult = await fetchFromDatabase('get_borradores', {});
+                    if (borrResult?.ok && Array.isArray(borrResult.data)) {
+                        borradorData = borrResult.data.find(d => (d.numero_proceso || d.cotizacion || d.quoteNumber || '') === numProceso);
+                    }
+                } catch (e) { /* no hay borradores */ }
+                items = borradorData?.items || borradorData?.savedRowsData?.ensayos_acreditados || [];
+                itemsNoAc = borradorData?.savedRowsData?.ensayos_no_acreditados || [];
+            }
             const allItems = Array.isArray(items) ? items : Object.values(items);
             const allItemsNoAc = Array.isArray(itemsNoAc) ? itemsNoAc : Object.values(itemsNoAc);
             const totalItems = [...allItems, ...allItemsNoAc];
@@ -8235,10 +8274,12 @@ const AnalisisProcesosModule = {
             const fechaRec = p.fecha_recepcion ? p.fecha_recepcion.substring(0, 10) : '-';
             const fechaEnt = p.fecha_entrega_cliente ? p.fecha_entrega_cliente.substring(0, 10) : '-';
             const nInforme = p.n_informe || '-';
-            const lavado = borradorData?.lavado || '-';
-            const responsableLavado = borradorData?.responsableLavado || '-';
-            const observaciones = borradorData?.observaciones || p.observaciones || '';
-            const signatureData = borradorData?.signatureData || {};
+            // Metadata: preferir BD sobre borradores
+            // Cuando el proceso existe en BD, NO se consultan borradores
+            const lavado = p.lavado || '-';
+            const responsableLavado = p.responsable_lavado || '-';
+            const observaciones = p.observaciones || '';
+            const signatureData = {};
 
             // Calcular totales de items
             const totalRecibidos = totalItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
@@ -8331,14 +8372,16 @@ const AnalisisProcesosModule = {
                             <div style="text-align:center;">
                                 <h5>Firma Recepción</h5>
                                 ${sigRec ? `<img src="${sigRec}" style="max-width:100%; max-height:150px; border:1px solid #ccc; border-radius:8px;">` : '<em>Sin firma</em>'}
-                                <div><strong>Nombre:</strong> ${escapeHtml(borradorData?.clienteRecepcionNombre || '-')}</div>
-                                <div><strong>Cédula:</strong> ${escapeHtml(borradorData?.clienteRecepcionCedula || '-')}</div>
+                                <div><strong>Nombre:</strong> ${escapeHtml(p.cliente_recepcion_nombre || '-')}</div>
+                                <div><strong>Cédula:</strong> ${escapeHtml(p.cliente_recepcion_cedula || '-')}</div>
+                                <div><strong>Cargo:</strong> ${escapeHtml(p.cliente_recepcion_cargo || '-')}</div>
                             </div>
                             <div style="text-align:center;">
                                 <h5>Firma Entrega</h5>
                                 ${sigEnt ? `<img src="${sigEnt}" style="max-width:100%; max-height:150px; border:1px solid #ccc; border-radius:8px;">` : '<em>Sin firma</em>'}
-                                <div><strong>Nombre:</strong> ${escapeHtml(borradorData?.clienteEntregaNombre || '-')}</div>
-                                <div><strong>Cédula:</strong> ${escapeHtml(borradorData?.clienteEntregaCedula || '-')}</div>
+                                <div><strong>Nombre:</strong> ${escapeHtml(p.cliente_entrega_nombre || '-')}</div>
+                                <div><strong>Cédula:</strong> ${escapeHtml(p.cliente_entrega_cedula || '-')}</div>
+                                <div><strong>Cargo:</strong> ${escapeHtml(p.cliente_entrega_cargo || '-')}</div>
                             </div>
                         </div>
                     </div>
@@ -8347,12 +8390,12 @@ const AnalisisProcesosModule = {
                         <h4>🏢 Representante HIGH TEST</h4>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
                             <div>
-                                <div><strong>Nombre (Recepción):</strong> ${escapeHtml(borradorData?.highTestRecepcionNombre || '-')}</div>
-                                <div><strong>Cargo:</strong> ${escapeHtml(borradorData?.highTestRecepcionCargo || '-')}</div>
+                                <div><strong>Nombre (Recepción):</strong> ${escapeHtml(p.high_test_recepcion_nombre || '-')}</div>
+                                <div><strong>Cargo:</strong> ${escapeHtml(p.high_test_recepcion_cargo || '-')}</div>
                             </div>
                             <div>
-                                <div><strong>Nombre (Entrega):</strong> ${escapeHtml(borradorData?.highTestEntregaNombre || '-')}</div>
-                                <div><strong>Cargo:</strong> ${escapeHtml(borradorData?.highTestEntregaCargo || '-')}</div>
+                                <div><strong>Nombre (Entrega):</strong> ${escapeHtml(p.high_test_entrega_nombre || '-')}</div>
+                                <div><strong>Cargo:</strong> ${escapeHtml(p.high_test_entrega_cargo || '-')}</div>
                             </div>
                         </div>
                     </div>

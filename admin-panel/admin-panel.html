@@ -11317,7 +11317,7 @@
                         html += '<td style="padding:8px 10px;border:1px solid #ddd;">' + (c.fechaRecepcion || '-') + '</td>';
                         html += '<td style="padding:8px 10px;border:1px solid #ddd;text-align:center;">' + items + '</td>';
                         html += '<td style="padding:8px 10px;border:1px solid #ddd;text-align:center;"><span style="background:' + color + ';color:white;padding:3px 8px;border-radius:4px;font-size:11px;">' + (c.estado || '-') + '</span></td>';
-                        html += '<td style="padding:8px 10px;border:1px solid #ddd;text-align:center;"><button type="button" onclick="document.getElementById(\'modalSinEntregar\').style.display=\'none\';mostrarVistaPrevia(\'' + c.cotizacion + '\')" style="background:#f1f5f9;color:#475569;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #d1d5db;cursor:pointer;">👁️ Ver</button></td>';
+                        html += '<td style="padding:8px 10px;border:1px solid #ddd;text-align:center;"><button type="button" onclick="document.getElementById(\'modalSinEntregar\').style.display=\'none\';AnalisisProcesosModule.verVistaPrevia(\'' + c.cotizacion + '\')" style="background:#f1f5f9;color:#475569;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #d1d5db;cursor:pointer;">👁️ Ver</button></td>';
                         html += '</tr>';
                     });
                     html += '</tbody></table>';
@@ -11346,7 +11346,7 @@
 
             async cargarCasos() {
                 try {
-                    const [resProcesos, resBorradores] = await Promise.all([
+                    const [resProcesos, resBorradores, resConteos] = await Promise.all([
                         fetch('/.netlify/functions/conectar', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -11356,10 +11356,20 @@
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ action: 'get_borradores' })
+                        }),
+                        fetch('/.netlify/functions/conectar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'get_all_detalle_procesos' })
                         })
                     ]);
                     const dataProcesos = await resProcesos.json();
                     const dataBorradores = await resBorradores.json();
+                    const dataConteos = await resConteos.json();
+
+                    // Mapa de conteos correctos desde detalle_procesos_ac
+                    const conteosDetalle = (dataConteos.ok && dataConteos.conteos) ? dataConteos.conteos : {};
+                    const detalleCompleto = (dataConteos.ok && dataConteos.detalleCompleto) ? dataConteos.detalleCompleto : {};
 
                     // Construir mapa de borradores (tienen items completos)
                     const borradoresMap = new Map();
@@ -11378,7 +11388,10 @@
                     const procesosSupabase = [];
                     if (dataProcesos.ok && Array.isArray(dataProcesos.procesos)) {
                         dataProcesos.procesos.forEach(p => {
-                            const totalItemsFromMarc = parseInt(p.total_items) || 0;
+                            const procesoId = String(p.id || '').trim();
+                            const totalFromDetalle = conteosDetalle[procesoId] || 0;
+                            const totalFromMarc = parseInt(p.total_items) || 0;
+                            const totalItems = Math.max(totalFromDetalle, totalFromMarc);
                             procesosSupabase.push({
                                 id: p.id,
                                 cotizacion: p.numero_proceso || '',
@@ -11394,22 +11407,50 @@
                                 timestamp: p.updated_at || p.created_at || '',
                                 _source: 'supabase',
                                 items: [],
-                                total_items: totalItemsFromMarc
+                                total_items: totalItems
                             });
                         });
                     }
 
-                    // Merge: borradores primero (tienen items), luego procesos supabase
+                    // Merge: procesos supabase primero, enriquecer con detalle de BD, luego borradores
                     const merged = new Map();
                     procesosSupabase.forEach(c => {
                         const key = c.cotizacion;
-                        if (key) merged.set(key, c);
+                        if (key) {
+                            // Enriquecer con items desde detalle_procesos_ac (BD)
+                            const pid = String(c.id || '').trim();
+                            if (pid && detalleCompleto[pid] && detalleCompleto[pid].length > 0) {
+                                // Buscar borrador para complementar quantity2, quantity3, etc.
+                                const borrador = borradoresMap.get(key);
+                                const borradorItems = borrador?.items || [];
+                                const borradorByName = {};
+                                borradorItems.forEach(b => { borradorByName[b.name || b.elemento] = b; });
+
+                                // detalleCompleto ya viene agrupado por ensayo_id desde el servidor
+                                c.items = detalleCompleto[pid].map(d => {
+                                    const nombre = d.ensayo_nombre || d.ensayo_id || '-';
+                                    const b = borradorByName[nombre] || {};
+                                    const brandSummary = (d.marcas && d.marcas.length > 0) ? d.marcas : (b.brandSummary || '-');
+                                    return {
+                                        name: nombre,
+                                        quantity: d.cantidad || 0,
+                                        quantity2: b.quantity2 || 0,
+                                        quantity3: b.quantity3 || 0,
+                                        quantity4: b.quantity4 || 0,
+                                        status: b.status || 0,
+                                        brandSummary: brandSummary,
+                                        observaciones: d.observaciones || b.observaciones || ''
+                                    };
+                                });
+                            }
+                            merged.set(key, c);
+                        }
                     });
                     borradoresMap.forEach((borrador, key) => {
                         const existing = merged.get(key);
                         if (existing) {
-                            // Si el borrador tiene items, usarlos
-                            if (borrador.items && borrador.items.length > 0) {
+                            // Solo usar items del borrador si el proceso NO tiene items de BD
+                            if ((!existing.items || existing.items.length === 0) && borrador.items && borrador.items.length > 0) {
                                 existing.items = borrador.items;
                             }
                             // Copiar campos adicionales del borrador
@@ -11447,10 +11488,136 @@
                         return String(b.cotizacion).localeCompare(String(a.cotizacion));
                     });
 
+                    // Cargar items reales desde detalle_procesos_ac para procesos sin items del borrador
+                    await this._cargarDetalleItems();
+
                     this.actualizarCardsResumen();
 
                 } catch (e) {
                     console.error('Error cargando casos de recepción:', e);
+                }
+            },
+
+            async _cargarDetalleItems() {
+                const procesosSinItems = this.casos.filter(c =>
+                    (!c.items || c.items.length === 0) && c.cotizacion
+                );
+                if (procesosSinItems.length === 0) return;
+
+                console.log(`[Recepcion] _cargarDetalleItems: ${procesosSinItems.length} procesos sin items`);
+
+                // Cargar borradores para usar como fallback
+                let borradoresMap = new Map();
+                try {
+                    const resBorr = await fetch('/.netlify/functions/conectar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'get_borradores' })
+                    });
+                    const dataBorr = await resBorr.json();
+                    if (dataBorr.ok && Array.isArray(dataBorr.data)) {
+                        dataBorr.data.forEach(d => {
+                            if (d && typeof d === 'object') {
+                                const key = d.cotizacion || d.quoteNumber || d.numero_proceso || '';
+                                if (key && !borradoresMap.has(key)) {
+                                    borradoresMap.set(key, d);
+                                }
+                            }
+                        });
+                    }
+                    console.log(`[Recepcion] Borradores cargados: ${borradoresMap.size}`);
+                } catch (e) { /* continuar sin borradores */ }
+
+                const fetches = procesosSinItems.map(c => {
+                    const cotizacion = c.cotizacion || '';
+
+                    // Si tiene ID de Supabase, intentar desde detalle_procesos_ac
+                    if (c.id) {
+                        return fetch('/.netlify/functions/conectar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'get_detalle_proceso', proceso_id: c.id })
+                        }).then(r => r.json()).then(data => {
+                            if (data.ok && Array.isArray(data.detalle) && data.detalle.length > 0) {
+                                // Mapear usando los nombres reales de columnas: cantidad, marca, observaciones
+                                const itemsMap = {};
+                                data.detalle.forEach(d => {
+                                    const key = d.ensayo_id || d.id;
+                                    const nombre = d.ensayo_nombre || d.nombre || `Item ${key}`;
+                                    if (!itemsMap[key]) {
+                                        itemsMap[key] = {
+                                            id: key,
+                                            name: nombre,
+                                            category: d.ensayo_categoria || d.categoria || '',
+                                            quantity: 0,
+                                            quantity2: 0,
+                                            brandSummary: [],
+                                            washed: false,
+                                            unused: 0,
+                                            used: 0,
+                                            observations: []
+                                        };
+                                    }
+                                    const cantidad = parseInt(d.cantidad) || 0;
+                                    itemsMap[key].quantity += cantidad;
+                                    if (d.marca) {
+                                        itemsMap[key].brandSummary.push({ count: cantidad, brand: d.marca });
+                                    }
+                                    if (d.observaciones) {
+                                        itemsMap[key].observations.push(d.observaciones);
+                                    }
+                                });
+                                c.items = Object.values(itemsMap);
+                                c.total_items = c.items.length;
+                                console.log(`[Recepcion] ${cotizacion}: ${c.items.length} items desde detalle_procesos_ac`);
+                            } else if (cotizacion) {
+                                this._cargarDesdeBorrador(c, borradoresMap);
+                            }
+                        }).catch(() => { this._cargarDesdeBorrador(c, borradoresMap); });
+                    } else {
+                        // Sin ID de Supabase: solo buscar en borradores
+                        this._cargarDesdeBorrador(c, borradoresMap);
+                        return Promise.resolve();
+                    }
+                });
+
+                await Promise.all(fetches);
+            },
+
+            _cargarDesdeBorrador(c, borradoresMap) {
+                const cotizacion = c.cotizacion || '';
+                if (!cotizacion) return;
+                const borrador = borradoresMap.get(cotizacion);
+                if (!borrador) {
+                    console.log(`[Recepcion] ${cotizacion}: sin borrador encontrado`);
+                    return;
+                }
+
+                let borradorItems = [];
+                if (Array.isArray(borrador.items) && borrador.items.length > 0) {
+                    borradorItems = borrador.items;
+                } else if (borrador.savedRowsData) {
+                    const srd = borrador.savedRowsData;
+                    if (srd.ensayos_acreditados && typeof srd.ensayos_acreditados === 'object') {
+                        borradorItems = Object.values(srd.ensayos_acreditados);
+                    }
+                }
+                if (borradorItems.length > 0) {
+                    c.items = borradorItems.map(item => ({
+                        id: item.id || item.ensayoId || '',
+                        name: item.name || item.elemento || item.nombre || '',
+                        category: item.category || item.categoria || '',
+                        quantity: parseInt(item.quantity) || parseInt(item.cantRecibida) || 0,
+                        quantity2: parseInt(item.quantity2) || parseInt(item.cantEntregada) || 0,
+                        washed: item.washed || false,
+                        unused: parseInt(item.quantity3) || parseInt(item.sin_uso) || 0,
+                        used: parseInt(item.quantity4) || parseInt(item.usado) || 0,
+                        observations: item.observations || item.observaciones || ''
+                    }));
+                    c.total_items = c.items.length;
+                    console.log(`[Recepcion] ${cotizacion}: ${c.items.length} items desde borrador`);
+                } else {
+                    console.log(`[Recepcion] ${cotizacion}: borrador encontrado pero sin items`);
                 }
             },
 
@@ -11501,7 +11668,7 @@
                         else if (e === 'informe-de-ensayo') color = '#9c27b0';
                         const items = (c.items && c.items.length > 0) ? c.items.length : (c.total_items || 0);
                         const esEntrega = e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente';
-                        let accionBtns = '<button type="button" onclick="mostrarVistaPrevia(\'' + c.cotizacion + '\')" style="background:#f1f5f9;color:#475569;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #d1d5db;cursor:pointer;">👁️ Ver</button>';
+                        let accionBtns = '<button type="button" onclick="AnalisisProcesosModule.verVistaPrevia(\'' + c.cotizacion + '\')" style="background:#f1f5f9;color:#475569;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #d1d5db;cursor:pointer;">👁️ Ver</button>';
                         accionBtns += ' <button type="button" onclick="RecepcionAnalyticsModule.eliminarCaso(\'' + c.cotizacion + '\')" style="background:#fef2f2;color:#dc2626;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #fecaca;cursor:pointer;">🗑️</button>';
                         return `<tr style="border-bottom:1px solid #ddd;">
                             <td style="padding:10px;border:1px solid #ddd;">${c.cotizacion}</td>
@@ -11550,7 +11717,15 @@
                     };
                     totalRecibidos += recibidos;
                     totalEntregados += entregados;
-                    if (recibidos !== entregados) discrepancias++;
+                    if (recibidos !== entregados) {
+                        // Solo marcar discrepancia si hay datos de entrega registrados (entregados > 0)
+                        // o si el estado indica que ya se entregó
+                        const estadoCaso = (c.estado || '').toLowerCase();
+                        const yaEntregado = estadoCaso === 'entrega' || estadoCaso === 'finalizado' || estadoCaso === 'entrega-cliente';
+                        if (entregados > 0 || yaEntregado) {
+                            discrepancias++;
+                        }
+                    }
                 });
 
                 const completados = this.casos.filter(c => {
@@ -11579,7 +11754,12 @@
 
                 let entries = Object.values(casoStats);
                 if (this._filtroDiscrepancias) {
-                    entries = entries.filter(c => c.totalRecibidos !== c.totalEntregados);
+                    entries = entries.filter(c => {
+                        if (c.totalRecibidos === c.totalEntregados) return false;
+                        const e = (c.estado || '').toLowerCase();
+                        const yaEntregado = e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente';
+                        return c.totalEntregados > 0 || yaEntregado;
+                    });
                 }
                 entries.sort((a, b) => String(b.cotizacion).localeCompare(String(a.cotizacion)));
 
@@ -11605,7 +11785,7 @@
                             <td style="padding:10px;border:1px solid #ddd;text-align:center;">${c.totalEntregados}</td>
                             <td style="padding:10px;border:1px solid #ddd;text-align:center;${diffStyle}">${diff > 0 ? '+' : ''}${diff}</td>
                             <td style="padding:10px;border:1px solid #ddd;text-align:center;">
-                                <button type="button" onclick="mostrarDetallesEstadisticas('${c.cotizacion}')" style="background:#f1f5f9;color:#475569;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #d1d5db;cursor:pointer;">👁️ Ver</button>
+                                <button type="button" onclick="AnalisisProcesosModule.verVistaPrevia('${c.cotizacion}')" style="background:#f1f5f9;color:#475569;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #d1d5db;cursor:pointer;">👁️ Ver</button>
                             </td>
                         </tr>`;
                     }).join('');
@@ -11674,7 +11854,7 @@
                             <td style="padding:10px;border:1px solid #ddd;width:140px;">${c.fechaEntrega || '-'}</td>
                             <td style="padding:10px;border:1px solid #ddd;text-align:center;"><strong>${items}</strong></td>
                             <td style="padding:10px;border:1px solid #ddd;text-align:center;"><span style="background:${color};color:white;padding:4px 8px;border-radius:4px;font-size:12px;">${c.estado}</span></td>
-                            <td style="padding:10px;border:1px solid #ddd;text-align:center;width:80px;min-width:80px;"><button type="button" onclick="mostrarVistaPrevia('${c.cotizacion}')" style="background:#f1f5f9;color:#475569;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #d1d5db;cursor:pointer;">👁️ Ver</button></td>
+                            <td style="padding:10px;border:1px solid #ddd;text-align:center;width:80px;min-width:80px;"><button type="button" onclick="AnalisisProcesosModule.verVistaPrevia('${c.cotizacion}')" style="background:#f1f5f9;color:#475569;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #d1d5db;cursor:pointer;">👁️ Ver</button></td>
                         </tr>`;
                     }).join('');
                 }

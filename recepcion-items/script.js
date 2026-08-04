@@ -4758,6 +4758,7 @@ function resetForm() {
         savedRowsData.ensayos_acreditados = {};
         savedRowsData.ensayos_no_acreditados = {};
     }
+    localStorage.removeItem('savedRowsData');
     const savedContainer = document.getElementById('savedItemsContainer');
     if (savedContainer) savedContainer.innerHTML = '';
     const savedCount = document.getElementById('savedItemsCount');
@@ -4824,10 +4825,24 @@ function resetForm() {
 
     // Limpiar firmas y PDF generado
     if (typeof signaturePads !== 'undefined') {
-        Object.keys(signaturePads).forEach(k => signaturePads[k]?.clear?.());
+        Object.keys(signaturePads).forEach(k => {
+            if (signaturePads[k]) {
+                signaturePads[k].clear();
+                // Forzar limpieza visual del canvas
+                const cvs = signaturePads[k].canvas;
+                if (cvs) {
+                    const ctx2 = cvs.getContext('2d');
+                    ctx2.clearRect(0, 0, cvs.width, cvs.height);
+                }
+            }
+        });
     }
     if (typeof signatureData !== 'undefined') {
         Object.keys(signatureData).forEach(k => signatureData[k] = null);
+    }
+    if (typeof _fullscreenSignaturePad !== 'undefined' && _fullscreenSignaturePad) {
+        _fullscreenSignaturePad.clear();
+        _fullscreenSignaturePad = null;
     }
     if (typeof generatedPDF !== 'undefined') {
         generatedPDF = null;
@@ -4877,6 +4892,21 @@ function resetForm() {
     // Limpiar paginación
     const itemsListPagination = document.getElementById('itemsListPagination');
     if (itemsListPagination) itemsListPagination.innerHTML = '';
+
+    // Limpiar estructuras de memoria del formulario
+    if (typeof itemImagesMap !== 'undefined') {
+        Object.keys(itemImagesMap).forEach(k => { delete itemImagesMap[k]; });
+    }
+    if (typeof currentUnitEditor !== 'undefined') {
+        currentUnitEditor.tableType = '';
+        currentUnitEditor.rowIndex = null;
+    }
+    if (typeof currentImageList !== 'undefined') {
+        currentImageList = [];
+    }
+    if (typeof currentImageIndex !== 'undefined') {
+        currentImageIndex = 0;
+    }
 
     showNotification('🔄 Formulario reiniciado', 'info');
 }
@@ -6314,7 +6344,7 @@ function deleteAllCases() {
 // -----------------------------------------------------
 // Cargar casos terminados (solo director/admin)
 // -----------------------------------------------------
-function loadCompletedCases() {
+async function loadCompletedCases() {
     // comprueba rol via hasRole o session
     let permitted = false;
     if (typeof hasRole === 'function') {
@@ -6328,8 +6358,48 @@ function loadCompletedCases() {
         try { showNotification('❌ No tiene permiso para ver casos terminados','error'); } catch(e){}
         return;
     }
+
     const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
-    const finished = drafts.filter(d => d.status === 'entrega');
+    const supabaseCasos = [];
+
+    try {
+        const resp = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_borradores' })
+        });
+        const result = await resp.json();
+        if (result.ok && Array.isArray(result.data)) {
+            result.data.forEach(d => {
+                if (d && typeof d === 'object') { d._source = 'supabase_borrador'; supabaseCasos.push(d); }
+            });
+        }
+    } catch (e) { console.warn('Error cargando borradores para casos terminados:', e); }
+
+    try {
+        const resp = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_procesos_acreditados', limit: 1000 })
+        });
+        const result = await resp.json();
+        if (result.ok && Array.isArray(result.procesos)) {
+            result.procesos.forEach(p => {
+                const caso = procesoACaso(p);
+                if (caso) supabaseCasos.push(caso);
+            });
+        }
+    } catch (e) { console.warn('Error cargando procesos para casos terminados:', e); }
+
+    const merged = _mergeCasos(drafts, supabaseCasos);
+    const finished = merged.filter(d => {
+        const s = (d.status || '').toLowerCase();
+        const e = (d.estado || '').toLowerCase();
+        const tieneFechaEntrega = !!(d.fecha_entrega_cliente || d.fechaEntrega);
+        return s === 'entrega' || s === 'entrega-cliente' || s === 'finalizado'
+            || e === 'entrega' || e === 'entrega-cliente' || e === 'finalizado'
+            || tieneFechaEntrega;
+    });
     showCompletedModal(finished);
 }
 
@@ -6371,12 +6441,17 @@ function renderCompletedCasesRows(cases) {
         const cliente = c.cliente || c.clienteRecepcionNombre || 'N/A';
         const empresa = c.informeNombre || c.empresa || 'N/A';
         const fecha = c.fechaEntrega || c.fechaRecepcion || '-';
+        const statusLabel = {
+            'entrega': 'Entregado',
+            'entrega-cliente': 'Entrega a Cliente',
+            'finalizado': 'Finalizado'
+        }[(c.status || '').toLowerCase()] || 'Finalizado';
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${num}</td>
             <td>${cliente}</td>
             <td>${empresa}</td>
-            <td>Finalizado</td>
+            <td>${statusLabel}</td>
             <td>${fecha}</td>
             <td style="text-align:center;">${(c.items && c.items.some(it=>it.images && it.images.length)) ? `<button class='btn btn-mini' onclick='viewCaseImages(${JSON.stringify(c)})'>📷</button>` : '-'}</td>
             <td style="white-space:nowrap;">
@@ -7513,7 +7588,8 @@ async function crearProcesoEnPanelAdmin() {
                 informe_a_nombre_de: (document.getElementById('informeNombre')?.value || clienteNombre).toUpperCase(),
                 facturar_a_nombre_de: (document.getElementById('facturarNombre')?.value || clienteNombre).toUpperCase(),
                 n_remision: document.getElementById('facturar')?.value || '',
-                fecha_recepcion: fechaRecepcion
+                fecha_recepcion: fechaRecepcion,
+                estado: 'recepcion'
             };
             try {
                 await fetch('/.netlify/functions/conectar', {
@@ -7652,6 +7728,7 @@ async function guardarDetalleProceso(procesoId) {
             const units = getRowUnits('ensayos_acreditados', index);
             const obs = String(row.observaciones || '').trim();
             const cantRecibida = parseInt(row.cantRecibida) || 0;
+            const cantEntregada = parseInt(row.cantEntregada) || 0;
 
             // Detectar si units[] está desactualizado respecto a cantRecibida
             const unitsStale = units.length > 0 && cantRecibida > 0 && units.length !== cantRecibida;
@@ -7693,11 +7770,13 @@ async function guardarDetalleProceso(procesoId) {
                             proceso_id: procesoId,
                             ensayo_id: ensayoId,
                             cantidad: 0,
+                            cantidad_entregada: 0,
                             marca: marca || '',
                             observaciones: obs || ''
                         };
                     }
                     aggMap[aggKey].cantidad++;
+                    aggMap[aggKey].cantidad_entregada = cantEntregada;
                 }
             } else {
                 const cantidad = parseInt(row.cantRecibida) || 0;
@@ -7708,11 +7787,13 @@ async function guardarDetalleProceso(procesoId) {
                             proceso_id: procesoId,
                             ensayo_id: ensayoId,
                             cantidad: 0,
+                            cantidad_entregada: 0,
                             marca: '',
                             observaciones: obs || ''
                         };
                     }
                     aggMap[aggKey].cantidad += cantidad;
+                    aggMap[aggKey].cantidad_entregada = cantEntregada;
                 }
             }
         }
@@ -7771,10 +7852,20 @@ async function pdfRecepcionAction() {
     // Guardar borrador completo en servidor (items, cantidades, firmas, etc.)
     await saveAsDraft();
 
+    // Sincronizar DOM → savedRowsData para que guardarDetalleProceso tenga los datos actuales
+    saveCurrentTableData('ensayos_acreditados');
+    saveCurrentTableData('ensayos_no_acreditados');
+
     // Guardar detalle de cada elemento recibido en detalle_procesos_ac
     if (proceso && proceso.id) {
         await guardarDetalleProceso(proceso.id);
     }
+
+    // Notificar al admin panel que hay datos nuevos para recargar
+    try {
+        const numProc = document.getElementById('quoteNumber')?.value || '';
+        localStorage.setItem('admin_panel_refresh', JSON.stringify({ timestamp: Date.now(), numero: numProc }));
+    } catch (e) { /* no bloquear por error de notificación */ }
 }
 
 // Abre cliente de correo tras generar PDF completo si hay email del cliente
@@ -10174,11 +10265,13 @@ function saveRowData(tableType, rowIndex) {
         }
         
         // Guardar en la variable global (usar clave consistente 'row_X')
+        // Fusionar con datos existentes para preservar units, distribución, etc.
         if (!savedRowsData[tableType]) {
             savedRowsData[tableType] = {};
         }
         const saveKey = `row_${rowIndex}`;
-        savedRowsData[tableType][saveKey] = rowData;
+        const existing = savedRowsData[tableType][saveKey] || {};
+        savedRowsData[tableType][saveKey] = { ...existing, ...rowData };
         
         // Guardar en localStorage para persistencia
         localStorage.setItem('savedRowsData', JSON.stringify(savedRowsData));
@@ -10886,7 +10979,14 @@ function saveCurrentTableData(tableType) {
                 savedRowsData[tableType][`row_${index}`].cantNoUsado = parseInt(qty3Input?.value) || 0;
                 savedRowsData[tableType][`row_${index}`].cantUsado = parseInt(qty4Input?.value) || 0;
                 savedRowsData[tableType][`row_${index}`].cantLavados = parseInt(statusInput?.value) || 0;
-                savedRowsData[tableType][`row_${index}`].observaciones = obsInput?.value || '';
+                // Solo sobrescribir observaciones si el input de la tabla principal tiene valor;
+                // preservar las observaciones de unidades editadas en el modal.
+                const mainObs = obsInput?.value || '';
+                if (mainObs) {
+                    savedRowsData[tableType][`row_${index}`].observaciones = mainObs;
+                } else if (!savedRowsData[tableType][`row_${index}`].observaciones) {
+                    savedRowsData[tableType][`row_${index}`].observaciones = '';
+                }
                 
                 // Detectar si está en modo edición (botón de guardar visible) o guardado (botón de editar visible)
                 const editBtn = row.querySelector('.editar-fila-btn');
@@ -11002,7 +11102,9 @@ function showSaveMessage(message, type) {
  * Configura event listeners y carga datos guardados
  */
 function initializeSaveSystem() {
-    // Cargar datos guardados al inicializar
+    // Limpiar datos guardados de sesiones anteriores para iniciar limpio
+    localStorage.removeItem('savedRowsData');
+    // Cargar datos guardados al inicializar (inicia vacío tras limpiar)
     loadAllSavedData();
     
     // Configurar event listeners para botones usando delegación de eventos
