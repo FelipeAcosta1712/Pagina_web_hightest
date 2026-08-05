@@ -3,10 +3,10 @@
 -- =============================================
 -- Parámetros:
 --   p_proceso_id  BIGINT   — ID del proceso
---   p_detalle     JSONB    — Array JSON con [{ensayo_id, cantidad, marca, observaciones}]
+--   p_detalle     JSONB    — Array JSON con [{ensayo_id, cantidad, cantidad_entregada, marca, observaciones}]
 --
 -- Retorna:
---   Table (id, proceso_id, ensayo_id, cantidad, marca, observaciones)
+--   Table (id, proceso_id, ensayo_id, cantidad, cantidad_entregada, marca, observaciones)
 --
 -- IMPORTANTE: RETURNS TABLE crea variables implícitas con los mismos nombres
 -- que las columnas de la tabla. TODAS las referencias a columnas deben llevar
@@ -25,6 +25,7 @@ RETURNS TABLE (
     proceso_id BIGINT,
     ensayo_id BIGINT,
     cantidad INTEGER,
+    cantidad_entregada INTEGER,
     marca VARCHAR,
     observaciones TEXT
 )
@@ -95,6 +96,7 @@ BEGIN
         SELECT
             (j->>'ensayo_id')::BIGINT AS j_ensayo_id,
             (j->>'cantidad')::INTEGER AS j_cantidad,
+            COALESCE((j->>'cantidad_entregada')::INTEGER, 0) AS j_cantidad_entregada,
             COALESCE(NULLIF(j->>'marca', ''), '') AS j_marca,
             COALESCE(j->>'observaciones', '') AS j_observaciones
         FROM jsonb_array_elements(p_detalle) AS j
@@ -103,6 +105,7 @@ BEGIN
         SELECT
             s.j_ensayo_id,
             MAX(s.j_cantidad) AS s_cantidad,
+            MAX(s.j_cantidad_entregada) AS s_cantidad_entregada,
             s.j_marca,
             (ARRAY_AGG(s.j_observaciones ORDER BY s.j_ensayo_id)
                 FILTER (WHERE s.j_observaciones <> '')
@@ -111,24 +114,26 @@ BEGIN
         GROUP BY s.j_ensayo_id, s.j_marca
     )
     INSERT INTO detalle_procesos_ac
-        (proceso_id, ensayo_id, cantidad, marca, observaciones)
+        (proceso_id, ensayo_id, cantidad, cantidad_entregada, marca, observaciones)
     SELECT
         p_proceso_id,
         ci.j_ensayo_id,
         ci.s_cantidad,
+        ci.s_cantidad_entregada,
         ci.j_marca,
         ci.s_observaciones
     FROM consolidated_input ci
     ON CONFLICT ON CONSTRAINT uq_proceso_ensayo_marca
     DO UPDATE SET
         cantidad = EXCLUDED.cantidad,
+        cantidad_entregada = EXCLUDED.cantidad_entregada,
         observaciones = EXCLUDED.observaciones;
 
     -- ═══════════════════════════════════════════════════════
     -- FASE 5: Retornar estado final
     -- ═══════════════════════════════════════════════════════
     RETURN QUERY
-    SELECT d.id, d.proceso_id, d.ensayo_id, d.cantidad, d.marca::VARCHAR, d.observaciones
+    SELECT d.id, d.proceso_id, d.ensayo_id, d.cantidad, d.cantidad_entregada, d.marca::VARCHAR, d.observaciones
     FROM detalle_procesos_ac d
     WHERE d.proceso_id = p_proceso_id
     ORDER BY d.id ASC;

@@ -975,14 +975,14 @@ exports.handler = async (event) => {
                             ensayo_nombre: d.ensayos_acreditados?.nombre || d.ensayo_nombre || '',
                             ensayo_categoria: d.ensayos_acreditados?.categoria || d.ensayo_categoria || '',
                             cantidad: 0,
-                            cantidad_entregada: d.cantidad_entregada || 0,
+                            cantidad_entregada: 0,
                             marcas: [],
                             observaciones: ''
                         };
                     }
                     const entry = ensayoMap[eid];
                     entry.cantidad += d.cantidad || 0;
-                    entry.cantidad_entregada = d.cantidad_entregada || entry.cantidad_entregada || 0;
+                    entry.cantidad_entregada += d.cantidad_entregada || 0;
                     if (d.marca) entry.marcas.push({ count: d.cantidad || 0, brand: d.marca });
                     if (d.observaciones && !entry.observaciones) entry.observaciones = d.observaciones;
                 });
@@ -1055,6 +1055,61 @@ exports.handler = async (event) => {
                 return jsonResponse(200, { ok: true, detalle: data || [], ops: { source: 'rpc' } });
             }
 
+            // ── migrar_cantidad_entregada: Migración temporal ──
+            // Actualiza cantidad_entregada en detalle_procesos_ac solo si actualmente es 0.
+            if (payload.action === 'migrar_cantidad_entregada') {
+                const { numero_proceso, ensayo_id, cantidad_entregada } = payload;
+
+                if (!numero_proceso) {
+                    return jsonResponse(400, { ok: false, error: 'numero_proceso requerido' });
+                }
+                if (!ensayo_id) {
+                    return jsonResponse(400, { ok: false, error: 'ensayo_id requerido' });
+                }
+                const cantEnt = parseInt(cantidad_entregada) || 0;
+                if (cantEnt < 0) {
+                    return jsonResponse(400, { ok: false, error: 'cantidad_entregada debe ser >= 0' });
+                }
+
+                // Buscar proceso por numero_proceso
+                const { data: procesoData, error: procErr } = await supabase
+                    .from('procesos_acreditados')
+                    .select('id')
+                    .eq('numero_proceso', numero_proceso)
+                    .limit(1);
+
+                if (procErr) {
+                    return jsonResponse(500, { ok: false, error: 'Error buscando proceso', detail: procErr.message });
+                }
+                const proceso = Array.isArray(procesoData) ? procesoData[0] : procesoData;
+                if (!proceso) {
+                    return jsonResponse(200, { ok: true, updated: false, reason: 'proceso_no_encontrado' });
+                }
+
+                // Actualizar solo si cantidad_entregada es 0 (no sobrescribir valores existentes)
+                const { data: updateData, error: updateErr } = await supabase
+                    .from('detalle_procesos_ac')
+                    .update({ cantidad_entregada: cantEnt })
+                    .eq('proceso_id', proceso.id)
+                    .eq('ensayo_id', ensayo_id)
+                    .eq('cantidad_entregada', 0)
+                    .select('id');
+
+                if (updateErr) {
+                    return jsonResponse(500, { ok: false, error: 'Error actualizando', detail: updateErr.message });
+                }
+
+                const updatedCount = Array.isArray(updateData) ? updateData.length : 0;
+                return jsonResponse(200, {
+                    ok: true,
+                    updated: updatedCount > 0,
+                    updatedCount,
+                    proceso_id: proceso.id,
+                    ensayo_id,
+                    cantidad_entregada: cantEnt
+                });
+            }
+
             // Obtener conteo de items por todos los procesos (para modal PDFs)
             if (payload.action === 'get_all_detalle_procesos') {
                 // Contar desde ambas tablas y usar el mayor
@@ -1080,14 +1135,14 @@ exports.handler = async (event) => {
                             ensayo_nombre: d.ensayos_acreditados?.nombre || '',
                             ensayo_categoria: d.ensayos_acreditados?.categoria || '',
                             cantidad: 0,
-                            cantidad_entregada: d.cantidad_entregada || 0,
+                            cantidad_entregada: 0,
                             marcas: [],
                             observaciones: ''
                         };
                     }
                     const entry = detalleCompleto[pid][eid];
                     entry.cantidad += d.cantidad || 0;
-                    entry.cantidad_entregada = d.cantidad_entregada || entry.cantidad_entregada || 0;
+                    entry.cantidad_entregada += d.cantidad_entregada || 0;
                     if (d.marca) entry.marcas.push({ count: d.cantidad || 0, brand: d.marca });
                     if (d.observaciones && !entry.observaciones) entry.observaciones = d.observaciones;
                 });

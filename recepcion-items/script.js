@@ -754,6 +754,34 @@ function commitUnitEditorChanges() {
     };
 
     persistSavedRowsData();
+
+    // Sincronizar valores del modal a los inputs de la tabla principal
+    if (tableType === 'ensayos_acreditados') {
+        const syncMap = {
+            [`qty_${rowIndex}`]: metrics.cantRecibida,
+            [`qty_2_${rowIndex}`]: metrics.cantEntregada,
+            [`qty_3_${rowIndex}`]: metrics.cantNoUsado,
+            [`qty_4_${rowIndex}`]: metrics.cantUsado,
+            [`status_${rowIndex}`]: metrics.cantLavados
+        };
+        Object.entries(syncMap).forEach(([id, val]) => {
+            const el = document.getElementById(id);
+            if (el) el.value = String(parseInt(val || 0, 10) || 0);
+        });
+    } else if (tableType === 'ensayos_no_acreditados') {
+        const syncMap = {
+            [`qty2_${rowIndex}`]: metrics.cantRecibida,
+            [`qty2_2_${rowIndex}`]: metrics.cantEntregada,
+            [`qty2_3_${rowIndex}`]: metrics.cantNoUsado,
+            [`qty2_4_${rowIndex}`]: metrics.cantUsado,
+            [`status2_${rowIndex}`]: metrics.cantLavados
+        };
+        Object.entries(syncMap).forEach(([id, val]) => {
+            const el = document.getElementById(id);
+            if (el) el.value = String(parseInt(val || 0, 10) || 0);
+        });
+    }
+
     updateVisibleItemRowSummary(tableType, rowIndex);
     updateSavedItemsPreview();
     updateTotals();
@@ -7717,6 +7745,19 @@ async function guardarDetalleProceso(procesoId) {
     // Agregar por ensayo_id + marca para evitar filas duplicadas
     const aggMap = {};
 
+    // DEBUG 2: Imprimir cada fila ANTES de construir aggMap
+    console.log('=== DEBUG 2: Cada fila en guardarDetalleProceso ANTES de aggMap ===');
+    if (savedRowsData?.ensayos_acreditados) {
+        for (const [key, row] of Object.entries(savedRowsData.ensayos_acreditados)) {
+            console.log({ rowKey: key, cantRecibida: row?.cantRecibida, cantEntregada: row?.cantEntregada, row });
+        }
+    }
+    if (savedRowsData?.ensayos_no_acreditados) {
+        for (const [key, row] of Object.entries(savedRowsData.ensayos_no_acreditados)) {
+            console.log({ rowKey: key, cantRecibida: row?.cantRecibida, cantEntregada: row?.cantEntregada, row });
+        }
+    }
+
     if (savedRowsData?.ensayos_acreditados) {
         for (const [key, row] of Object.entries(savedRowsData.ensayos_acreditados)) {
             if (!row) continue;
@@ -7799,7 +7840,82 @@ async function guardarDetalleProceso(procesoId) {
         }
     }
 
+    if (savedRowsData?.ensayos_no_acreditados) {
+        for (const [key, row] of Object.entries(savedRowsData.ensayos_no_acreditados)) {
+            if (!row) continue;
+            const index = parseInt(key.replace(/^row_/, ''));
+            const ensayo = Array.isArray(predefinedItemsDataNoAcreditados) ? predefinedItemsDataNoAcreditados[index] : null;
+            const ensayoId = ensayo?.id;
+            if (!ensayoId) continue;
+
+            const units = getRowUnits('ensayos_no_acreditados', index);
+            const obs = String(row.observaciones || '').trim();
+            const cantRecibida = parseInt(row.cantRecibida) || 0;
+            const cantEntregada = parseInt(row.cantEntregada) || 0;
+
+            const unitsStale = units.length > 0 && cantRecibida > 0 && units.length !== cantRecibida;
+            let effectiveUnits = units;
+
+            if (unitsStale) {
+                if (cantRecibida > units.length) {
+                    const brandCounts = {};
+                    for (const u of units) {
+                        const b = u.brand || 'Sin marca';
+                        brandCounts[b] = (brandCounts[b] || 0) + 1;
+                    }
+                    const predominantBrand = Object.entries(brandCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Sin marca';
+                    effectiveUnits = [...units];
+                    for (let i = units.length; i < cantRecibida; i++) {
+                        effectiveUnits.push({ sequence: i + 1, brand: predominantBrand, observations: '', code: '' });
+                    }
+                } else {
+                    effectiveUnits = units.slice(0, cantRecibida);
+                }
+            }
+
+            if (effectiveUnits && effectiveUnits.length > 0) {
+                for (const unit of effectiveUnits) {
+                    const marca = unit.brand || '';
+                    const aggKey = ensayoId + '||' + marca;
+                    if (!aggMap[aggKey]) {
+                        aggMap[aggKey] = {
+                            proceso_id: procesoId,
+                            ensayo_id: ensayoId,
+                            cantidad: 0,
+                            cantidad_entregada: 0,
+                            marca: marca || '',
+                            observaciones: obs || ''
+                        };
+                    }
+                    aggMap[aggKey].cantidad++;
+                    aggMap[aggKey].cantidad_entregada = cantEntregada;
+                }
+            } else {
+                const cantidad = parseInt(row.cantRecibida) || 0;
+                const aggKey = ensayoId + '||';
+                if (cantidad > 0) {
+                    if (!aggMap[aggKey]) {
+                        aggMap[aggKey] = {
+                            proceso_id: procesoId,
+                            ensayo_id: ensayoId,
+                            cantidad: 0,
+                            cantidad_entregada: 0,
+                            marca: '',
+                            observaciones: obs || ''
+                        };
+                    }
+                    aggMap[aggKey].cantidad += cantidad;
+                    aggMap[aggKey].cantidad_entregada = cantEntregada;
+                }
+            }
+        }
+    }
+
     const detalle = Object.values(aggMap);
+
+    // DEBUG 3: JSON exacto que se envía a sync_detalle_proceso
+    console.log('=== DEBUG 3: JSON que se envía a sync_detalle_proceso ===');
+    console.log(JSON.stringify(detalle, null, 2));
 
     if (detalle.length === 0) {
         console.error('[guardarDetalleProceso] No se generó detalle para insertar:', {
@@ -7856,6 +7972,10 @@ async function pdfRecepcionAction() {
     saveCurrentTableData('ensayos_acreditados');
     saveCurrentTableData('ensayos_no_acreditados');
 
+    // DEBUG 1: savedRowsData completo antes de guardarDetalleProceso
+    console.log('=== DEBUG 1: savedRowsData.ensayos_acreditados ANTES de guardarDetalleProceso ===');
+    console.log(JSON.stringify(savedRowsData.ensayos_acreditados, null, 2));
+
     // Guardar detalle de cada elemento recibido en detalle_procesos_ac
     if (proceso && proceso.id) {
         await guardarDetalleProceso(proceso.id);
@@ -7901,8 +8021,31 @@ async function pdfCompletoAction() {
     // Actualizar proceso existente a ENTREGA CLIENTE en BD
     await actualizarProcesoAEntrega();
 
-    // Marcar borrador como completado (guarda formulario + status 'entrega' en servidor)
+    // Sincronizar DOM → savedRowsData para que guardarDetalleProceso tenga los datos actuales
+    saveCurrentTableData('ensayos_acreditados');
+    saveCurrentTableData('ensayos_no_acreditados');
+
+    // DEBUG 1: savedRowsData completo antes de guardarDetalleProceso (entrega)
+    console.log('=== DEBUG 1 (entrega): savedRowsData.ensayos_acreditados ANTES de guardarDetalleProceso ===');
+    console.log(JSON.stringify(savedRowsData.ensayos_acreditados, null, 2));
+
+    // Actualizar cantidad_entregada en detalle_procesos_ac
     const cot2 = document.getElementById('quoteNumber')?.value;
+    if (cot2) {
+        try {
+            const procRes = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_proceso', numero_proceso: cot2 })
+            });
+            const procResult = await procRes.json();
+            if (procResult.ok && procResult.proceso && procResult.proceso.id) {
+                await guardarDetalleProceso(procResult.proceso.id);
+            }
+        } catch(e) { console.error('Error sincronizando detalle en entrega:', e); }
+    }
+
+    // Marcar borrador como completado (guarda formulario + status 'entrega' en servidor)
     if (cot2) {
         try { await updateDraftStatus(cot2, 'entrega'); } catch(e) {}
     }
@@ -10947,7 +11090,7 @@ function saveCurrentTableData(tableType) {
         if (saveBtn) {
             const index = parseInt(saveBtn.getAttribute('data-index'));
             
-            // Obtener los inputs según el tipo de tabla
+            // Obtener los inputs según el tipo de tabla (pueden no existir si la fila solo tiene chips)
             let qtyInput, qty2Input, qty3Input, qty4Input, statusInput, obsInput;
             if (tableType === 'ensayos_acreditados') {
                 qtyInput = row.querySelector(`#qty_${index}`);
@@ -10965,33 +11108,46 @@ function saveCurrentTableData(tableType) {
                 obsInput = row.querySelector(`#observaciones2_${index}`);
             }
             
-            // Si hay valores en los inputs, guardarlos
-            const hasValues = (qtyInput?.value) || (qty2Input?.value) || (qty3Input?.value) || (qty4Input?.value) || (obsInput?.value);
-            if (hasValues) {
+            // Procesar si hay valores en inputs DOM O si ya existen datos guardados para esta fila
+            // (la tabla principal muestra chips de solo lectura, no inputs; los inputs del modal
+            // de unidades se guardan en savedRowsData por commitUnitEditorChanges pero no existen en DOM)
+            const hasDomValues = (qtyInput?.value) || (qty2Input?.value) || (qty3Input?.value) || (qty4Input?.value) || (obsInput?.value);
+            const hasExistingSaved = !!savedRowsData[tableType][`row_${index}`];
+            if (hasDomValues || hasExistingSaved) {
                 // Inicializar el objeto si no existe
                 if (!savedRowsData[tableType][`row_${index}`]) {
                     savedRowsData[tableType][`row_${index}`] = {};
                 }
                 
-                // Actualizar con los valores actuales
-                savedRowsData[tableType][`row_${index}`].cantRecibida = parseInt(qtyInput?.value) || 0;
-                savedRowsData[tableType][`row_${index}`].cantEntregada = parseInt(qty2Input?.value) || 0;
-                savedRowsData[tableType][`row_${index}`].cantNoUsado = parseInt(qty3Input?.value) || 0;
-                savedRowsData[tableType][`row_${index}`].cantUsado = parseInt(qty4Input?.value) || 0;
-                savedRowsData[tableType][`row_${index}`].cantLavados = parseInt(statusInput?.value) || 0;
-                // Solo sobrescribir observaciones si el input de la tabla principal tiene valor;
-                // preservar las observaciones de unidades editadas en el modal.
+                const currentSaved = savedRowsData[tableType][`row_${index}`];
+                
+                // Actualizar cantRecibida: usar input DOM si existe, si no preservar guardado
+                const mainRecibida = parseInt(qtyInput?.value);
+                currentSaved.cantRecibida = (qtyInput?.value != null && !isNaN(mainRecibida)) ? mainRecibida : (currentSaved.cantRecibida || 0);
+                // cantEntregada: NUNCA sobrescribir desde input DOM (ese input no existe en tabla principal;
+                // el valor real viene del modal de unidades guardado por commitUnitEditorChanges)
+                // Solo usar input DOM si existe y tiene valor explícito distinto de vacío
+                const mainEntregada = parseInt(qty2Input?.value);
+                const existingEntregada = currentSaved.cantEntregada;
+                if (qty2Input && qty2Input.value !== '' && !isNaN(mainEntregada)) {
+                    currentSaved.cantEntregada = mainEntregada;
+                }
+                // Si qty2Input no existe (tabla principal) o está vacío, preservar el existente
+                currentSaved.cantNoUsado = (qty3Input?.value != null) ? (parseInt(qty3Input.value) || 0) : (currentSaved.cantNoUsado || 0);
+                currentSaved.cantUsado = (qty4Input?.value != null) ? (parseInt(qty4Input.value) || 0) : (currentSaved.cantUsado || 0);
+                currentSaved.cantLavados = (statusInput?.value != null) ? (parseInt(statusInput.value) || 0) : (currentSaved.cantLavados || 0);
+                // Observaciones: preservar si el input DOM no tiene valor
                 const mainObs = obsInput?.value || '';
                 if (mainObs) {
-                    savedRowsData[tableType][`row_${index}`].observaciones = mainObs;
-                } else if (!savedRowsData[tableType][`row_${index}`].observaciones) {
-                    savedRowsData[tableType][`row_${index}`].observaciones = '';
+                    currentSaved.observaciones = mainObs;
+                } else if (!currentSaved.observaciones) {
+                    currentSaved.observaciones = '';
                 }
                 
                 // Detectar si está en modo edición (botón de guardar visible) o guardado (botón de editar visible)
                 const editBtn = row.querySelector('.editar-fila-btn');
                 const isSaved = editBtn && editBtn.style.display !== 'none';
-                savedRowsData[tableType][`row_${index}`].saved = isSaved;
+                currentSaved.saved = isSaved;
             }
         }
     });

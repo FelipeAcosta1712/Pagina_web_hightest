@@ -1251,9 +1251,6 @@
                             <p class="admin-section__subtitle" id="statsPeriodLabel">Mostrando totales generales</p>
                         </div>
                         <div class="admin-stats__filters" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                            <button type="button" class="btn btn--secondary" id="btnAnalisisProcesos" title="Ver análisis detallado de procesos" style="font-size:12px; padding:6px 12px;">
-                                📈 Análisis de Procesos
-                            </button>
                             <label for="statsMonthFilter" class="admin-stats__filters-label">Ver por mes</label>
                             <div class="admin-stats__filters-row">
                                 <input type="month" id="statsMonthFilter" class="control__input control__input--month" aria-label="Filtrar resumen por mes">
@@ -8484,9 +8481,6 @@
             }
             if (section === 'ensayos-acreditados' && window.AdminPanelManager) {
                 window.AdminPanelManager.applyAdminTabState?.('acreditados', false);
-                if (window.AnalisisProcesosModule) {
-                    window.AnalisisProcesosModule.init?.();
-                }
             }
             if (section === 'ensayos-no-acreditados' && window.AdminPanelManager) {
                 window.AdminPanelManager.applyAdminTabState?.('no-acreditados', false);
@@ -11434,7 +11428,7 @@
                                     return {
                                         name: nombre,
                                         quantity: d.cantidad || 0,
-                                        quantity2: b.quantity2 || 0,
+                                        quantity2: d.cantidad_entregada ?? b.quantity2 ?? 0,
                                         quantity3: b.quantity3 || 0,
                                         quantity4: b.quantity4 || 0,
                                         status: b.status || 0,
@@ -11550,7 +11544,7 @@
                                             name: nombre,
                                             category: d.ensayo_categoria || d.categoria || '',
                                             quantity: 0,
-                                            quantity2: 0,
+                                            quantity2: d.cantidad_entregada || 0,
                                             brandSummary: [],
                                             washed: false,
                                             unused: 0,
@@ -11560,6 +11554,7 @@
                                     }
                                     const cantidad = parseInt(d.cantidad) || 0;
                                     itemsMap[key].quantity += cantidad;
+                                    itemsMap[key].quantity2 = d.cantidad_entregada || itemsMap[key].quantity2;
                                     if (d.marca) {
                                         itemsMap[key].brandSummary.push({ count: cantidad, brand: d.marca });
                                     }
@@ -11668,7 +11663,7 @@
                         else if (e === 'informe-de-ensayo') color = '#9c27b0';
                         const items = (c.items && c.items.length > 0) ? c.items.length : (c.total_items || 0);
                         const esEntrega = e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente';
-                        let accionBtns = '<button type="button" onclick="AnalisisProcesosModule.verVistaPrevia(\'' + c.cotizacion + '\')" style="background:#f1f5f9;color:#475569;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #d1d5db;cursor:pointer;">👁️ Ver</button>';
+                        let accionBtns = '<button type="button" onclick="AnalisisProcesosModule.verVistaPrevia(\'' + c.cotizacion + '\', \'full\')" style="background:#f1f5f9;color:#475569;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #d1d5db;cursor:pointer;">👁️ Ver</button>';
                         accionBtns += ' <button type="button" onclick="RecepcionAnalyticsModule.eliminarCaso(\'' + c.cotizacion + '\')" style="background:#fef2f2;color:#dc2626;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #fecaca;cursor:pointer;">🗑️</button>';
                         return `<tr style="border-bottom:1px solid #ddd;">
                             <td style="padding:10px;border:1px solid #ddd;">${c.cotizacion}</td>

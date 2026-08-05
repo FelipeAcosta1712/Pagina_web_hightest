@@ -8186,7 +8186,7 @@ const AnalisisProcesosModule = {
         tableContainer.innerHTML = html;
     },
 
-    async verVistaPrevia(numProceso) {
+    async verVistaPrevia(numProceso, mode) {
         const content = document.getElementById('vistaPreviaProcesoContent');
         const modal = document.getElementById('vistaPreviaProcesoModal');
         if (!content || !modal) return;
@@ -8216,7 +8216,16 @@ const AnalisisProcesosModule = {
                 }
             } catch (e) { /* continuar sin NIT */ }
 
-            // Intentar traer detalle desde BD (fuente única de verdad cuando el proceso existe)
+            // Intentar traer borradores para obtener items, lavados, firmas, etc.
+            let borradorData = null;
+            try {
+                const borrResult = await fetchFromDatabase('get_borradores', {});
+                if (borrResult?.ok && Array.isArray(borrResult.data)) {
+                    borradorData = borrResult.data.find(d => (d.numero_proceso || d.cotizacion || d.quoteNumber || '') === numProceso);
+                }
+            } catch (e) { /* no hay borradores, continuar sin ellos */ }
+
+            // Intentar traer detalle desde BD (fuente más actualizada que el borrador)
             let detalleFromDB = null;
             try {
                 const detResult = await fetchFromDatabase('get_detalle_proceso', { proceso_id: p.id });
@@ -8225,29 +8234,34 @@ const AnalisisProcesosModule = {
                 }
             } catch (e) { /* continuar sin detalle de BD */ }
 
-            // Construir items desde la BD (sin consultar borradores)
+            // Preferir detalle de BD sobre borrador para cantidades y marcas
             let items = [];
             let itemsNoAc = [];
             if (detalleFromDB && detalleFromDB.length > 0) {
-                items = detalleFromDB.map(d => ({
-                    name: d.ensayo_nombre || d.ensayo_id || '-',
-                    quantity: d.cantidad || 0,
-                    quantity2: d.cantidad_entregada || 0,
-                    quantity3: 0,
-                    quantity4: 0,
-                    status: 0,
-                    brandSummary: d.marcas && d.marcas.length > 0 ? d.marcas : '-',
-                    observaciones: d.observaciones || ''
-                }));
+                // Convertir detalle de BD al formato que espera la vista previa
+                // BD tiene: ensayo_nombre, cantidad, marca, observaciones
+                // Complementar con borrador si existe para campos no guardados en BD
+                const borradorItems = borradorData?.items || borradorData?.savedRowsData?.ensayos_acreditados || [];
+                const borradorArr = Array.isArray(borradorItems) ? borradorItems : Object.values(borradorItems);
+                const borradorMap = {};
+                borradorArr.forEach(b => { borradorMap[b.name || b.elemento] = b; });
+
+                items = detalleFromDB.map(d => {
+                    const nombre = d.ensayo_nombre || d.ensayo_id || '-';
+                    const b = borradorMap[nombre] || {};
+                    return {
+                        name: nombre,
+                        quantity: d.cantidad || 0,
+                        quantity2: d.cantidad_entregada ?? b.quantity2 ?? 0,
+                        quantity3: b.quantity3 || 0,
+                        quantity4: b.quantity4 || 0,
+                        status: b.status || 0,
+                        brandSummary: (d.marcas && d.marcas.length > 0) ? d.marcas : (b.brandSummary || '-'),
+                        observaciones: d.observaciones || b.observaciones || ''
+                    };
+                });
             } else {
-                // Fallback SOLO cuando no hay detalle en BD: usar borrador
-                let borradorData = null;
-                try {
-                    const borrResult = await fetchFromDatabase('get_borradores', {});
-                    if (borrResult?.ok && Array.isArray(borrResult.data)) {
-                        borradorData = borrResult.data.find(d => (d.numero_proceso || d.cotizacion || d.quoteNumber || '') === numProceso);
-                    }
-                } catch (e) { /* no hay borradores */ }
+                // Fallback: usar borrador
                 items = borradorData?.items || borradorData?.savedRowsData?.ensayos_acreditados || [];
                 itemsNoAc = borradorData?.savedRowsData?.ensayos_no_acreditados || [];
             }
@@ -8274,12 +8288,10 @@ const AnalisisProcesosModule = {
             const fechaRec = p.fecha_recepcion ? p.fecha_recepcion.substring(0, 10) : '-';
             const fechaEnt = p.fecha_entrega_cliente ? p.fecha_entrega_cliente.substring(0, 10) : '-';
             const nInforme = p.n_informe || '-';
-            // Metadata: preferir BD sobre borradores
-            // Cuando el proceso existe en BD, NO se consultan borradores
-            const lavado = p.lavado || '-';
-            const responsableLavado = p.responsable_lavado || '-';
-            const observaciones = p.observaciones || '';
-            const signatureData = {};
+            const lavado = borradorData?.lavado || '-';
+            const responsableLavado = borradorData?.responsableLavado || '-';
+            const observaciones = borradorData?.observaciones || p.observaciones || '';
+            const signatureData = borradorData?.signatureData || {};
 
             // Calcular totales de items
             const totalRecibidos = totalItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
@@ -8296,6 +8308,7 @@ const AnalisisProcesosModule = {
             // Generar tabla de items
             let itemsHTML = '';
             if (totalItems.length > 0) {
+                const isFull = mode === 'full';
                 itemsHTML = `<table style="width:100%; border-collapse:collapse; font-size:12px; margin-top:8px;">
                     <thead style="background:#f5f5f5; border-bottom:2px solid #022859;">
                         <tr>
@@ -8303,10 +8316,7 @@ const AnalisisProcesosModule = {
                             <th style="padding:6px 8px; border:1px solid #ddd; text-align:center;">Recibidos</th>
                             <th style="padding:6px 8px; border:1px solid #ddd; text-align:center;">Entregados</th>
                             <th style="padding:6px 8px; border:1px solid #ddd; text-align:left;">Marcas</th>
-                            <th style="padding:6px 8px; border:1px solid #ddd; text-align:center;">No Usado</th>
-                            <th style="padding:6px 8px; border:1px solid #ddd; text-align:center;">Usado</th>
-                            <th style="padding:6px 8px; border:1px solid #ddd; text-align:center;">Lavados</th>
-                            <th style="padding:6px 8px; border:1px solid #ddd; text-align:left;">Observaciones</th>
+                            ${isFull ? '<th style="padding:6px 8px; border:1px solid #ddd; text-align:center;">No Usado</th><th style="padding:6px 8px; border:1px solid #ddd; text-align:center;">Usado</th><th style="padding:6px 8px; border:1px solid #ddd; text-align:center;">Lavados</th><th style="padding:6px 8px; border:1px solid #ddd; text-align:left;">Observaciones</th>' : ''}
                         </tr>
                     </thead><tbody>`;
                 totalItems.forEach(item => {
@@ -8315,10 +8325,7 @@ const AnalisisProcesosModule = {
                         <td style="padding:5px 8px; border:1px solid #ddd; text-align:center;">${item.quantity || 0}</td>
                         <td style="padding:5px 8px; border:1px solid #ddd; text-align:center;">${item.quantity2 || 0}</td>
                         <td style="padding:5px 8px; border:1px solid #ddd;">${escapeHtml(getBrandText(item.brandSummary))}</td>
-                        <td style="padding:5px 8px; border:1px solid #ddd; text-align:center;">${item.quantity3 || '-'}</td>
-                        <td style="padding:5px 8px; border:1px solid #ddd; text-align:center;">${item.quantity4 || '-'}</td>
-                        <td style="padding:5px 8px; border:1px solid #ddd; text-align:center;">${item.status || 0}</td>
-                        <td style="padding:5px 8px; border:1px solid #ddd; text-align:left;">${escapeHtml(item.observaciones || '-')}</td>
+                        ${isFull ? `<td style="padding:5px 8px; border:1px solid #ddd; text-align:center;">${item.quantity3 || '-'}</td><td style="padding:5px 8px; border:1px solid #ddd; text-align:center;">${item.quantity4 || '-'}</td><td style="padding:5px 8px; border:1px solid #ddd; text-align:center;">${item.status || 0}</td><td style="padding:5px 8px; border:1px solid #ddd; text-align:left;">${escapeHtml(item.observaciones || '-')}</td>` : ''}
                     </tr>`;
                 });
                 itemsHTML += '</tbody></table>';
@@ -8331,6 +8338,7 @@ const AnalisisProcesosModule = {
             const html = `
                 <div style="border:1px solid #ddd; padding:20px; background:white; border-radius:8px;">
                     <h2 style="color:#022859; text-align:center; margin:0 0 20px 0;">FORMATO DE RECEPCIÓN Y ENTREGA DE ITEMS</h2>
+                    ${mode === 'full' ? `
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
                         <div>
                             <p><strong>N° de Recepción:</strong> ${escapeHtml(num)}</p>
@@ -8347,6 +8355,12 @@ const AnalisisProcesosModule = {
                             <p><strong>Estado:</strong> <span style="background:${estadoColor}; color:#fff; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:600;">${escapeHtml(estadoLabel)}</span></p>
                         </div>
                     </div>
+                    ` : `
+                    <div style="margin-bottom:20px;">
+                        <p><strong>N° de Recepción:</strong> ${escapeHtml(num)}</p>
+                        <p><strong>Cliente:</strong> ${escapeHtml(cliente)}</p>
+                    </div>
+                    `}
 
                     <h3 style="color:#022859;">📦 Elementos de Ensayo:</h3>
                     ${itemsHTML || '<p style="text-align:center; color:#666;">No hay elementos registrados.</p>'}
@@ -8356,6 +8370,7 @@ const AnalisisProcesosModule = {
                         <div><strong>Total Entregados:</strong> ${totalEntregados}</div>
                     </div>
 
+                    ${mode === 'full' ? `
                     <div style="margin-top:14px;">
                         <div><strong>🧽 LAVADO:</strong> ${escapeHtml(lavado)}</div>
                         <div style="margin-top:4px; display:grid; grid-template-columns:1fr 1fr; gap:16px;">
@@ -8372,16 +8387,16 @@ const AnalisisProcesosModule = {
                             <div style="text-align:center;">
                                 <h5>Firma Recepción</h5>
                                 ${sigRec ? `<img src="${sigRec}" style="max-width:100%; max-height:150px; border:1px solid #ccc; border-radius:8px;">` : '<em>Sin firma</em>'}
-                                <div><strong>Nombre:</strong> ${escapeHtml(p.cliente_recepcion_nombre || '-')}</div>
-                                <div><strong>Cédula:</strong> ${escapeHtml(p.cliente_recepcion_cedula || '-')}</div>
-                                <div><strong>Cargo:</strong> ${escapeHtml(p.cliente_recepcion_cargo || '-')}</div>
+                                <div><strong>Nombre:</strong> ${escapeHtml(borradorData?.clienteRecepcionNombre || '-')}</div>
+                                <div><strong>Cédula:</strong> ${escapeHtml(borradorData?.clienteRecepcionCedula || '-')}</div>
+                                <div><strong>Cargo:</strong> ${escapeHtml(borradorData?.clienteRecepcionCargo || '-')}</div>
                             </div>
                             <div style="text-align:center;">
                                 <h5>Firma Entrega</h5>
                                 ${sigEnt ? `<img src="${sigEnt}" style="max-width:100%; max-height:150px; border:1px solid #ccc; border-radius:8px;">` : '<em>Sin firma</em>'}
-                                <div><strong>Nombre:</strong> ${escapeHtml(p.cliente_entrega_nombre || '-')}</div>
-                                <div><strong>Cédula:</strong> ${escapeHtml(p.cliente_entrega_cedula || '-')}</div>
-                                <div><strong>Cargo:</strong> ${escapeHtml(p.cliente_entrega_cargo || '-')}</div>
+                                <div><strong>Nombre:</strong> ${escapeHtml(borradorData?.clienteEntregaNombre || '-')}</div>
+                                <div><strong>Cédula:</strong> ${escapeHtml(borradorData?.clienteEntregaCedula || '-')}</div>
+                                <div><strong>Cargo:</strong> ${escapeHtml(borradorData?.clienteEntregaCargo || '-')}</div>
                             </div>
                         </div>
                     </div>
@@ -8390,15 +8405,16 @@ const AnalisisProcesosModule = {
                         <h4>🏢 Representante HIGH TEST</h4>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
                             <div>
-                                <div><strong>Nombre (Recepción):</strong> ${escapeHtml(p.high_test_recepcion_nombre || '-')}</div>
-                                <div><strong>Cargo:</strong> ${escapeHtml(p.high_test_recepcion_cargo || '-')}</div>
+                                <div><strong>Nombre (Recepción):</strong> ${escapeHtml(borradorData?.highTestRecepcionNombre || '-')}</div>
+                                <div><strong>Cargo:</strong> ${escapeHtml(borradorData?.highTestRecepcionCargo || '-')}</div>
                             </div>
                             <div>
-                                <div><strong>Nombre (Entrega):</strong> ${escapeHtml(p.high_test_entrega_nombre || '-')}</div>
-                                <div><strong>Cargo:</strong> ${escapeHtml(p.high_test_entrega_cargo || '-')}</div>
+                                <div><strong>Nombre (Entrega):</strong> ${escapeHtml(borradorData?.highTestEntregaNombre || '-')}</div>
+                                <div><strong>Cargo:</strong> ${escapeHtml(borradorData?.highTestEntregaCargo || '-')}</div>
                             </div>
                         </div>
                     </div>
+                    ` : ''}
                 </div>`;
 
             content.innerHTML = html;
