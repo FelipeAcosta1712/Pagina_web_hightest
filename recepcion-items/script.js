@@ -5313,20 +5313,32 @@ function loadFormData(data, skipDates = false, isFromCompleted = false) {
 
     // Carga las firmas múltiples si existen
     if (data.signatureData && typeof data.signatureData === 'object') {
-        signatureData = data.signatureData; // Almacena las múltiples firmas
-        Object.keys(data.signatureData).forEach(canvasId => {
-            if (data.signatureData[canvasId] && signaturePads[canvasId]) {
-                signaturePads[canvasId].fromDataURL(data.signatureData[canvasId]);
+        signatureData = data.signatureData;
+        function restoreSignatures(attempt) {
+            let allRestored = true;
+            Object.keys(data.signatureData).forEach(canvasId => {
+                if (data.signatureData[canvasId]) {
+                    if (signaturePads[canvasId]) {
+                        try {
+                            signaturePads[canvasId].fromDataURL(data.signatureData[canvasId]);
+                        } catch(e) { allRestored = false; }
+                    } else {
+                        allRestored = false;
+                    }
+                }
+            });
+            if (!allRestored && attempt < 5) {
+                setTimeout(() => restoreSignatures(attempt + 1), 300);
             }
-        });
+        }
+        restoreSignatures(0);
     } else if (data.signatureData) {
-        // Compatibilidad con formato antiguo de una sola firma
         signatureData['signatureCanvas'] = data.signatureData;
         if (signaturePads['signatureCanvas']) {
-            signaturePads['signatureCanvas'].fromDataURL(data.signatureData);
+            try { signaturePads['signatureCanvas'].fromDataURL(data.signatureData); } catch(e) {}
         }
     } else {
-        clearAllSignatures(); // Limpia todas las firmas si no hay datos presentes
+        clearAllSignatures();
     }
 
     // Recalcular totales/indicadores y lavado (ejecutar siempre al final)
@@ -6223,7 +6235,7 @@ function refreshCasesSelect() {
         sel.appendChild(opt);
     });
 }
-function continueSelectedCase() {
+async function continueSelectedCase() {
     const sel = document.getElementById('openCasesSelect');
     if (!sel || !sel.value) return;
     const idx = parseInt(sel.value, 10);
@@ -6245,14 +6257,49 @@ function continueSelectedCase() {
             const savedContainer = document.getElementById('savedItemsContainer');
             if (savedContainer) savedContainer.innerHTML = '';
         } catch (e) {}
-        // Cargar el caso
-        loadFormData(drafts[idx]);
-        showNotification('Caso cargado: ' + (drafts[idx].cotizacion || ''), 'success');
+        // Cargar el caso inmediatamente desde localStorage
+        const draftToLoad = drafts[idx];
+        loadFormData(draftToLoad);
+        showNotification('Caso cargado: ' + (draftToLoad.cotizacion || ''), 'success');
+        // Cargar firmas en background si faltan
+        if (!draftToLoad.signatureData && draftToLoad.cotizacion) {
+            (async () => {
+                try {
+                    const userEmail = getCurrentUserEmail() || 'shared';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const resp = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_borradores', usuario_email: userEmail }),
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    if (resp.ok) {
+                        const result = await resp.json();
+                        if (result && result.ok && Array.isArray(result.data)) {
+                            const serverDraft = result.data.find(d => d.cotizacion === draftToLoad.cotizacion);
+                            if (serverDraft && serverDraft.signatureData) {
+                                draftToLoad.signatureData = serverDraft.signatureData;
+                                signatureData = serverDraft.signatureData;
+                                Object.keys(serverDraft.signatureData).forEach(canvasId => {
+                                    if (serverDraft.signatureData[canvasId] && signaturePads[canvasId]) {
+                                        try { signaturePads[canvasId].fromDataURL(serverDraft.signatureData[canvasId]); } catch(e) {}
+                                    }
+                                });
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('⚠️ No se pudieron cargar firmas desde servidor:', e.message || e);
+                }
+            })();
+        }
     }
 }
 
 // Eliminar el borrador seleccionado en el selector (usa el índice real almacenado en value)
-function deleteSelectedCase() {
+async function deleteSelectedCase() {
     // Permisos: sólo administrador y director técnico pueden eliminar
     let allowed = false;
     if (typeof hasRole === 'function') {
@@ -6277,8 +6324,9 @@ function deleteSelectedCase() {
     drafts.splice(idx, 1);
     localStorage.setItem('cmr_drafts', JSON.stringify(drafts));
     showNotification('Borrador eliminado', 'success');
-    // Sincronizar con servidor
-    try { saveDraftsToServer(drafts); } catch(e) {}
+    // Sincronizar con servidor (esperar a que termine)
+    try { await saveDraftsToServer(drafts); } catch(e) {}
+    try { await deleteBorradorFromServer(target.cotizacion); } catch(e) {}
     // Si el caso eliminado era el que estaba en vista, limpiar indicador
     try { const loadedEl = document.getElementById('loadedReceptionNumber'); if (loadedEl && loadedEl.textContent === (target.cotizacion || '')) loadedEl.textContent = '-'; } catch(e){}
     refreshCasesSelect();
@@ -6721,21 +6769,23 @@ function nextImage() {
 }
 
 async function loadDraftsFromServer() {
+    let serverResult = null;
     try {
         const userEmail = getCurrentUserEmail() || 'shared';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
         const resp = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'get_borradores', usuario_email: userEmail })
+            body: JSON.stringify({ action: 'get_borradores', usuario_email: userEmail }),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
         if (!resp.ok) throw new Error('Error al conectar con servidor');
         const result = await resp.json();
         if (result && result.ok && Array.isArray(result.data)) {
-            // Fusionar: server drafts + locales que no están en server
             const localDrafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
             const merged = [];
-
-            // Agregar borradores del servidor (preservando status 'entrega' local)
             result.data.forEach(serverDraft => {
                 const localDraft = localDrafts.find(d => d.cotizacion && d.cotizacion === serverDraft.cotizacion);
                 if (localDraft && localDraft.status === 'entrega' && serverDraft.status !== 'entrega') {
@@ -6744,21 +6794,34 @@ async function loadDraftsFromServer() {
                     merged.push(serverDraft);
                 }
             });
-
-            // Agregar borradores locales que NO están en el servidor
-            localDrafts.forEach(localDraft => {
-                if (!merged.find(d => d.cotizacion && d.cotizacion === localDraft.cotizacion)) {
-                    merged.push(localDraft);
+            try {
+                localStorage.setItem('cmr_drafts', JSON.stringify(merged));
+            } catch(e) {
+                if (e.name === 'QuotaExceededError') {
+                    console.warn('⚠️ localStorage lleno al cargar desde servidor. Guardando sin firmas...');
+                    const draftsSinFirmas = merged.map(d => {
+                        const copy = { ...d };
+                        delete copy.signatureData;
+                        return copy;
+                    });
+                    try {
+                        localStorage.setItem('cmr_drafts', JSON.stringify(draftsSinFirmas));
+                    } catch(e2) {
+                        console.error('❌ localStorage lleno incluso sin firmas:', e2);
+                    }
+                } else {
+                    console.error('❌ Error al guardar borradores en localStorage:', e);
                 }
-            });
-
-            localStorage.setItem('cmr_drafts', JSON.stringify(merged));
-            try { refreshCasesSelect(); } catch(e){}
-            try { showNotification('🔄 Borradores cargados desde servidor', 'info'); } catch(e){}
-            return merged;
+            }
+            serverResult = merged;
         }
     } catch (error) {
         console.warn('⚠️ No se pudo cargar borradores desde servidor:', error.message || error);
+    }
+    try { refreshCasesSelect(); } catch(e){}
+    if (serverResult) {
+        try { showNotification('🔄 Borradores cargados desde servidor', 'info'); } catch(e){}
+        return serverResult;
     }
     return JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
 }
@@ -6766,11 +6829,15 @@ async function loadDraftsFromServer() {
 async function saveDraftsToServer(drafts) {
     try {
         const userEmail = getCurrentUserEmail() || 'shared';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
         const resp = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'save_borradores', usuario_email: userEmail, drafts })
+            body: JSON.stringify({ action: 'save_borradores', usuario_email: userEmail, drafts }),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
         if (!resp.ok) throw new Error('Error al guardar en servidor');
         const res = await resp.json();
         if (res && res.ok) {
@@ -6813,11 +6880,15 @@ let lastDraftsSyncHash = '';
 async function autoSyncDrafts() {
     try {
         const userEmail = getCurrentUserEmail() || 'shared';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
         const resp = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'get_borradores', usuario_email: userEmail })
+            body: JSON.stringify({ action: 'get_borradores', usuario_email: userEmail }),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
         if (!resp.ok) return;
         const result = await resp.json();
         if (result && result.ok && Array.isArray(result.data)) {
@@ -7862,9 +7933,28 @@ async function saveAsDraft() {
         allDrafts.push(formData);
     }
 
-    localStorage.setItem('cmr_drafts', JSON.stringify(allDrafts)); // Guarda el array actualizado en el almacenamiento local
+    try {
+        localStorage.setItem('cmr_drafts', JSON.stringify(allDrafts));
+    } catch(e) {
+        if (e.name === 'QuotaExceededError') {
+            console.warn('⚠️ localStorage lleno. Intentando guardar sin firmas...');
+            const draftsSinFirmas = allDrafts.map(d => {
+                const copy = { ...d };
+                delete copy.signatureData;
+                return copy;
+            });
+            try {
+                localStorage.setItem('cmr_drafts', JSON.stringify(draftsSinFirmas));
+                showNotification('⚠️ Borrador guardado sin firmas (espacio agotado). Las firmas se guardan al sincronizar con servidor.', 'warning');
+            } catch(e2) {
+                showNotification('❌ Error: localStorage lleno. Elimine casos antiguos.', 'error');
+                return;
+            }
+        } else {
+            throw e;
+        }
+    }
 
-    // Sincronizar con servidor (con await para asegurar que se guarde)
     try { await saveDraftsToServer(allDrafts); } catch(e) { console.log('Sync server error', e); }
 
     // Sincronizar n_remision con la BD si el proceso ya existe

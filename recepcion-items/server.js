@@ -212,6 +212,94 @@ app.post('/api/proxy-upload', upload.array('files'), async (req, res) => {
   }
 });
 
+// ============================================
+// BORRADORES (Casos en Progreso) - Almacenamiento local en archivo
+// ============================================
+const BORRADORES_FILE = path.join(__dirname, 'borradores.json');
+
+async function readBorradores() {
+  try {
+    const txt = await fsp.readFile(BORRADORES_FILE, 'utf8');
+    const data = JSON.parse(txt);
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+async function writeBorradores(borradores) {
+  const tmpFile = BORRADORES_FILE + '.tmp';
+  await fsp.writeFile(tmpFile, JSON.stringify(borradores, null, 2), 'utf8');
+  await fsp.rename(tmpFile, BORRADORES_FILE);
+}
+
+// Proxy: simular Netlify function para borradores
+app.post('/.netlify/functions/conectar', async (req, res) => {
+  try {
+    const payload = req.body || {};
+
+    // GET borradores
+    if (payload.action === 'get_borradores') {
+      const allRows = await readBorradores();
+      const allDrafts = [];
+      allRows.forEach(row => {
+        if (Array.isArray(row.datos)) {
+          row.datos.forEach(d => {
+            if (!allDrafts.some(x => JSON.stringify(x) === JSON.stringify(d))) {
+              allDrafts.push(d);
+            }
+          });
+        }
+      });
+      return res.json({ ok: true, data: allDrafts });
+    }
+
+    // SAVE borradores
+    if (payload.action === 'save_borradores') {
+      const usuarioEmail = (payload.usuario_email || 'shared').toLowerCase();
+      const drafts = payload.drafts;
+      if (!Array.isArray(drafts)) {
+        return res.status(400).json({ ok: false, error: 'drafts debe ser un array' });
+      }
+      const allRows = await readBorradores();
+      const existingIdx = allRows.findIndex(r => r.usuario_email === usuarioEmail);
+      if (existingIdx !== -1) {
+        allRows[existingIdx].datos = drafts;
+        allRows[existingIdx].updated_at = new Date().toISOString();
+      } else {
+        allRows.push({ usuario_email: usuarioEmail, datos: drafts, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+      }
+      await writeBorradores(allRows);
+      return res.json({ ok: true, message: 'Borradores guardados' });
+    }
+
+    // DELETE borrador por cotización
+    if (payload.action === 'delete_borrador') {
+      const cotizacion = (payload.cotizacion || '').trim();
+      if (!cotizacion) {
+        return res.status(400).json({ ok: false, error: 'Se requiere cotizacion' });
+      }
+      const allRows = await readBorradores();
+      for (const row of allRows) {
+        if (!Array.isArray(row.datos)) continue;
+        const filtered = row.datos.filter(d => String(d.cotizacion || d.quoteNumber || '') !== cotizacion);
+        if (filtered.length !== row.datos.length) {
+          row.datos = filtered;
+          row.updated_at = new Date().toISOString();
+        }
+      }
+      await writeBorradores(allRows);
+      return res.json({ ok: true, message: 'Borrador eliminado' });
+    }
+
+    // Para otras acciones, devolver error (no soportado en server local)
+    return res.status(404).json({ ok: false, error: `Acción no soportada en servidor local: ${payload.action}` });
+  } catch (e) {
+    console.error('Error en /api/borradores:', e);
+    return res.status(500).json({ ok: false, error: 'Error interno del servidor', detail: String(e) });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Servidor iniciado en http://localhost:${PORT}`);
 });
