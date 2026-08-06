@@ -9819,7 +9819,14 @@
                         body: JSON.stringify({ action: 'get_detalle_proceso', proceso_id: proceso.id })
                     });
                     const detalleResult = await detalleRes.json();
-                    this.currentDetalle = (detalleResult.ok && Array.isArray(detalleResult.detalle)) ? detalleResult.detalle : [];
+                    this.currentDetalle = (detalleResult.ok && Array.isArray(detalleResult.detalle))
+                        ? detalleResult.detalle.map(d => ({
+                            ...d,
+                            marca: (d.marcas && d.marcas.length > 0)
+                                ? d.marcas.map(m => `${m.count || 0} ${m.brand || ''}`).join(', ')
+                                : (d.marca || '')
+                        }))
+                        : [];
 
                     // Fallback con numero_proceso
                     if (this.currentDetalle.length === 0 && proceso.numero_proceso) {
@@ -9830,7 +9837,12 @@
                         });
                         const retryResult = await retryRes.json();
                         if (retryResult.ok && Array.isArray(retryResult.detalle)) {
-                            this.currentDetalle = retryResult.detalle;
+                            this.currentDetalle = retryResult.detalle.map(d => ({
+                                ...d,
+                                marca: (d.marcas && d.marcas.length > 0)
+                                    ? d.marcas.map(m => `${m.count || 0} ${m.brand || ''}`).join(', ')
+                                    : (d.marca || '')
+                            }));
                         }
                     }
                 } catch (e) {
