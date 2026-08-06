@@ -6971,21 +6971,33 @@ async function loadDraftsFromServer() {
             } catch(e) {
                 if (e.name === 'QuotaExceededError') {
                     console.warn('⚠️ localStorage lleno. Limpiando borradores antiguos...');
-                    const STRIP_FIELDS = ['signatureData', 'firma_url', 'imagen_url', ' foto_url', 'evidencia_url', 'observaciones_foto', 'fotos', 'evidencias', 'imagenes'];
+                    const HEAVY_FIELDS = ['firma_url', 'imagen_url', 'foto_url', 'evidencia_url', 'observaciones_foto', 'fotos', 'evidencias', 'imagenes', 'items', 'savedRowsData'];
+                    const SIG_FIELD = 'signatureData';
+                    // Nivel 1: quitar campos pesados, MANTENER firmas
                     const draftsLigeros = merged.map(d => {
                         const copy = { ...d };
-                        STRIP_FIELDS.forEach(f => delete copy[f]);
+                        HEAVY_FIELDS.forEach(f => delete copy[f]);
                         return copy;
                     });
                     try {
                         localStorage.setItem('cmr_drafts', JSON.stringify(draftsLigeros));
                     } catch(e2) {
-                        const draftsMinimos = draftsLigeros.slice(-5);
+                        // Nivel 2: quitar firmas también
+                        const draftsSinSigs = draftsLigeros.map(d => {
+                            const copy = { ...d };
+                            delete copy[SIG_FIELD];
+                            return copy;
+                        });
                         try {
-                            localStorage.setItem('cmr_drafts', JSON.stringify(draftsMinimos));
+                            localStorage.setItem('cmr_drafts', JSON.stringify(draftsSinSigs));
                         } catch(e3) {
-                            localStorage.removeItem('cmr_drafts');
-                            console.error('❌ localStorage lleno. Borradores locales eliminados.');
+                            const draftsMinimos = draftsSinSigs.slice(-5);
+                            try {
+                                localStorage.setItem('cmr_drafts', JSON.stringify(draftsMinimos));
+                            } catch(e4) {
+                                localStorage.removeItem('cmr_drafts');
+                                console.error('❌ localStorage lleno. Borradores locales eliminados.');
+                            }
                         }
                     }
                 } else {
@@ -7109,10 +7121,13 @@ async function autoSyncDrafts() {
                 try {
                     localStorage.setItem('cmr_drafts', JSON.stringify(result.data));
                 } catch(e) {
-                    const STRIP_FIELDS = ['signatureData', 'firma_url', 'imagen_url', 'foto_url', 'evidencia_url', 'observaciones_foto', 'fotos', 'evidencias', 'imagenes'];
-                    const ligeros = result.data.map(d => { const c = {...d}; STRIP_FIELDS.forEach(f => delete c[f]); return c; });
+                    const HEAVY_FIELDS = ['firma_url', 'imagen_url', 'foto_url', 'evidencia_url', 'observaciones_foto', 'fotos', 'evidencias', 'imagenes', 'items', 'savedRowsData'];
+                    const ligeros = result.data.map(d => { const c = {...d}; HEAVY_FIELDS.forEach(f => delete c[f]); return c; });
                     try { localStorage.setItem('cmr_drafts', JSON.stringify(ligeros)); } catch(e2) {
-                        try { localStorage.setItem('cmr_drafts', JSON.stringify(ligeros.slice(-5))); } catch(e3) { localStorage.removeItem('cmr_drafts'); }
+                        const sinSigs = ligeros.map(d => { const c = {...d}; delete c.signatureData; return c; });
+                        try { localStorage.setItem('cmr_drafts', JSON.stringify(sinSigs)); } catch(e3) {
+                            try { localStorage.setItem('cmr_drafts', JSON.stringify(sinSigs.slice(-5))); } catch(e4) { localStorage.removeItem('cmr_drafts'); }
+                        }
                     }
                 }
                 lastDraftsSyncHash = serverHash;
@@ -8288,18 +8303,28 @@ async function saveAsDraft() {
         localStorage.setItem('cmr_drafts', JSON.stringify(allDrafts));
     } catch(e) {
         if (e.name === 'QuotaExceededError') {
-            console.warn('⚠️ localStorage lleno. Intentando guardar sin firmas...');
-            const draftsSinFirmas = allDrafts.map(d => {
+            console.warn('⚠️ localStorage lleno. Guardando borrador sin campos pesados...');
+            const HEAVY = ['firma_url', 'imagen_url', 'foto_url', 'evidencia_url', 'observaciones_foto', 'fotos', 'evidencias', 'imagenes', 'items', 'savedRowsData'];
+            const draftsLigeros = allDrafts.map(d => {
                 const copy = { ...d };
-                delete copy.signatureData;
+                HEAVY.forEach(f => delete copy[f]);
                 return copy;
             });
             try {
-                localStorage.setItem('cmr_drafts', JSON.stringify(draftsSinFirmas));
-                showNotification('⚠️ Borrador guardado sin firmas (espacio agotado). Las firmas se guardan al sincronizar con servidor.', 'warning');
+                localStorage.setItem('cmr_drafts', JSON.stringify(draftsLigeros));
             } catch(e2) {
-                showNotification('❌ Error: localStorage lleno. Elimine casos antiguos.', 'error');
-                return;
+                const draftsSinSigs = draftsLigeros.map(d => {
+                    const copy = { ...d };
+                    delete copy.signatureData;
+                    return copy;
+                });
+                try {
+                    localStorage.setItem('cmr_drafts', JSON.stringify(draftsSinSigs));
+                    showNotification('⚠️ Borrador guardado sin firmas (espacio agotado).', 'warning');
+                } catch(e3) {
+                    showNotification('❌ Error: localStorage lleno. Elimine casos antiguos.', 'error');
+                    return;
+                }
             }
         } else {
             throw e;
