@@ -8358,9 +8358,35 @@ function findDraftIndexByCotizacion(cotizacion) {
 // Helper: actualizar estado de un borrador (p.ej. 'recepcion' o 'entrega')
 async function updateDraftStatus(cotizacion, status) {
     if (!cotizacion) return false;
-    const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
-    const idx = drafts.findIndex(d => d.cotizacion && d.cotizacion === cotizacion);
-    if (idx === -1) return false;
+    let drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
+    let idx = drafts.findIndex(d => d.cotizacion && d.cotizacion === cotizacion);
+    
+    // Si no está en localStorage, intentar traer del servidor
+    if (idx === -1) {
+        try {
+            const userEmail = getCurrentUserEmail() || 'shared';
+            const resp = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_borradores', usuario_email: userEmail })
+            });
+            const result = await resp.json();
+            if (result?.ok && Array.isArray(result.data)) {
+                const serverDraft = result.data.find(d => d.cotizacion === cotizacion);
+                if (serverDraft) {
+                    drafts.push(serverDraft);
+                    idx = drafts.length - 1;
+                    localStorage.setItem('cmr_drafts', JSON.stringify(drafts));
+                }
+            }
+        } catch(e) { console.warn('Error trayendo borrador del servidor:', e.message); }
+    }
+    
+    if (idx === -1) {
+        // No existe en ningún lado, crear uno mínimo
+        drafts.push({ cotizacion, status, timestamp: new Date().toISOString() });
+        idx = drafts.length - 1;
+    }
     
     // Actualizar status y timestamp
     drafts[idx].status = status;
