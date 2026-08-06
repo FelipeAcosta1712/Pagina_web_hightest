@@ -6905,12 +6905,43 @@ async function loadDraftsFromServer() {
 async function saveDraftsToServer(drafts) {
     try {
         const userEmail = getCurrentUserEmail() || 'shared';
+        // Preservar signatureData del servidor: obtener borradores actuales del servidor
+        // y mergear las firmas que pudieron haberse perdido por quota de localStorage
+        let serverDrafts = [];
+        try {
+            const controllerPrefetch = new AbortController();
+            const timeoutPrefetch = setTimeout(() => controllerPrefetch.abort(), 15000);
+            const respPrefetch = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_borradores', usuario_email: userEmail }),
+                signal: controllerPrefetch.signal
+            });
+            clearTimeout(timeoutPrefetch);
+            if (respPrefetch.ok) {
+                const resultPrefetch = await respPrefetch.json();
+                if (resultPrefetch?.ok && Array.isArray(resultPrefetch.data)) {
+                    serverDrafts = resultPrefetch.data;
+                }
+            }
+        } catch(e) {}
+        // Restaurar signatureData del servidor si el borrador local no lo tiene
+        const draftsWithSigs = drafts.map(d => {
+            if (!d.signatureData && d.cotizacion) {
+                const serverDraft = serverDrafts.find(sd => sd.cotizacion === d.cotizacion);
+                if (serverDraft && serverDraft.signatureData) {
+                    return { ...d, signatureData: serverDraft.signatureData };
+                }
+            }
+            return d;
+        });
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
         const resp = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'save_borradores', usuario_email: userEmail, drafts }),
+            body: JSON.stringify({ action: 'save_borradores', usuario_email: userEmail, drafts: draftsWithSigs }),
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -11766,6 +11797,8 @@ function _renderVistaPrevia(caso) {
                     <p><strong>Nº de Remisión:</strong> ${caso.facturar || '-'}</p>
                     <p><strong>Fecha Recepción:</strong> ${caso.fechaRecepcion || '-'}</p>
                     <p><strong>Fecha Entrega:</strong> ${caso.fechaEntrega || '-'}</p>
+                    <p><strong>N° Informe:</strong> ${caso.nInforme || '-'}</p>
+                    <p><strong>Estado:</strong> <span style="background:${caso.status === 'entrega' ? '#28a745' : caso.status === 'recepcion' ? '#007bff' : '#ff9800'}; color:#fff; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:600;">${caso.status || 'borrador'}</span></p>
                 </div>
             </div>
 
@@ -11866,63 +11899,28 @@ function generarHTMLItems(items, status) {
         return String(brandSummary || '-');
     };
 
-    // Mostrar columnas diferentes según el estado
-    if (status === 'entrega') {
-        // Completado: mostrar todas las cantidades como en el PDF
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Cant. Recibida</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Cant. Entregada</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Marcas</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">No Usado</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Usado</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Lavados</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Observaciones</th>';
-    } else if (status === 'recepcion') {
-        // Recepción: mostrar recibidos y entregados
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Recibidos</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Entregados</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Marcas</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Observaciones</th>';
-    } else {
-        // Borrador: mostrar todas las columnas como en completado
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Recibidos</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Entregados</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Marcas</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">No Usado</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Usado</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Lavados</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Observaciones</th>';
-    }
+    // Mostrar columnas: siempre incluir No Usado, Usado, Lavados
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Recibidos</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Entregados</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Marcas</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">No Usado</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Usado</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Lavados</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Observaciones</th>';
     html += '</tr></thead><tbody>';
     
     items.forEach(item => {
         html += '<tr style="border-bottom: 1px solid #ddd;">';
         html += `<td style="padding: 8px; border: 1px solid #ddd;">${item.name || '-'}</td>`;
         
-        if (status === 'entrega') {
-            // Mostrar quantity (recibidos), quantity2 (entregados), marcas, quantity3 (no usados), quantity4 (usados), status (lavados)
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity || 0}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity2 || 0}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${escapeHtml(getBrandText(item.brandSummary))}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity3 || '-'}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity4 || '-'}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.status || 0}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${item.observaciones || '-'}</td>`;
-        } else if (status === 'recepcion') {
-            // Mostrar quantity (recibidos) y quantity2 (entregados) y marcas
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity || 0}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity2 || 0}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${escapeHtml(getBrandText(item.brandSummary))}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${item.observaciones || '-'}</td>`;
-        } else {
-            // Borrador: mostrar todas las columnas
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity || 0}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity2 || 0}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${escapeHtml(getBrandText(item.brandSummary))}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity3 || '-'}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity4 || '-'}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.status || 0}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${item.observaciones || '-'}</td>`;
-        }
+        // Siempre mostrar todas las columnas
+        html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity || 0}</td>`;
+        html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity2 || 0}</td>`;
+        html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${escapeHtml(getBrandText(item.brandSummary))}</td>`;
+        html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity3 || '-'}</td>`;
+        html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity4 || '-'}</td>`;
+        html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.status || 0}</td>`;
+        html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${item.observaciones || '-'}</td>`;
         html += '</tr>';
     });
     
