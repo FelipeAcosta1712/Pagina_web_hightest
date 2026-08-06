@@ -866,7 +866,7 @@ exports.handler = async (event) => {
             }
 
             if (payload.action === 'save_borradores') {
-                const usuarioEmail = normalizeText(payload.usuario_email).toLowerCase() || 'shared';
+                const usuarioEmail = 'shared';
                 const drafts = payload.drafts;
                 if (!Array.isArray(drafts)) {
                     return jsonResponse(400, { ok: false, error: 'drafts debe ser un array' });
