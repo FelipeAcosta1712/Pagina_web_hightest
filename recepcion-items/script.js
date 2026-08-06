@@ -1778,6 +1778,20 @@ function syncLocalStorageWithDB(dbNumbers) {
         if (filteredRestricted.length !== restricted.length) {
             setRestrictedReceptionNumbers(filteredRestricted);
         }
+
+        // Limpiar borradores: eliminar los que ya no tienen proceso en la DB
+        try {
+            const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
+            const filteredDrafts = drafts.filter(d => {
+                const code = normalizeReceptionNumber(d.cotizacion || '');
+                return !code || dbNumbers.has(code);
+            });
+            if (filteredDrafts.length !== drafts.length) {
+                localStorage.setItem('cmr_drafts', JSON.stringify(filteredDrafts));
+                console.log('🧹 Borradores limpiados:', drafts.length - filteredDrafts.length, 'eliminados');
+                try { refreshCasesSelect(); } catch(e) {}
+            }
+        } catch(e) { console.warn('Error limpiando borradores:', e); }
     } catch (e) {
         console.warn('syncLocalStorageWithDB error', e);
     }
@@ -6205,9 +6219,17 @@ function generatePDFRecepcion() {
 function listOpenCases() {
     // Usamos los borradores existentes como "casos en progreso"
     const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
-    // Mantener índice original para poder cargar/actualizar correctamente
-    const pending = drafts.map((d, i) => ({ d, originalIndex: i })).filter(obj => !(obj.d.status && obj.d.status === 'entrega'));
-    // Mapear a opciones legibles mostrando estado y fecha de recepción
+    // Deduplicar por cotizacion, quedándose con el último (más reciente)
+    const seen = new Map();
+    drafts.forEach((d, i) => {
+        const key = d.cotizacion || `__idx_${i}`;
+        if (!seen.has(key)) {
+            seen.set(key, { d, originalIndex: i });
+        } else {
+            seen.set(key, { d, originalIndex: i });
+        }
+    });
+    const pending = Array.from(seen.values()).filter(obj => !(obj.d.status && obj.d.status === 'entrega'));
     return pending.map((obj, i) => ({
         idx: i + 1,
         originalIndex: obj.originalIndex,
@@ -6785,15 +6807,62 @@ async function loadDraftsFromServer() {
         const result = await resp.json();
         if (result && result.ok && Array.isArray(result.data)) {
             const localDrafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
-            const merged = [];
+            const mergedMap = new Map();
+            localDrafts.forEach(d => {
+                const key = d.cotizacion || null;
+                if (key) mergedMap.set(key, d);
+            });
             result.data.forEach(serverDraft => {
-                const localDraft = localDrafts.find(d => d.cotizacion && d.cotizacion === serverDraft.cotizacion);
-                if (localDraft && localDraft.status === 'entrega' && serverDraft.status !== 'entrega') {
-                    merged.push({ ...serverDraft, status: 'entrega' });
-                } else {
-                    merged.push(serverDraft);
+                const key = serverDraft.cotizacion || null;
+                if (key) {
+                    const localDraft = mergedMap.get(key);
+                    if (localDraft && localDraft.status === 'entrega' && serverDraft.status !== 'entrega') {
+                        mergedMap.set(key, { ...serverDraft, status: 'entrega' });
+                    } else {
+                        mergedMap.set(key, serverDraft);
+                    }
                 }
             });
+            const merged = Array.from(mergedMap.values());
+
+            // Filtrar borradores huérfanos (procesos que ya no existen en procesos_acreditados)
+            try {
+                const dbProcesses = window.dbProcessesCache || [];
+                if (dbProcesses.length > 0) {
+                    const validNumbers = new Set();
+                    dbProcesses.forEach(p => {
+                        const code = normalizeReceptionNumber(String(p.numero_proceso || p.numero || p.cotizacion || p.id || '').trim());
+                        if (code) validNumbers.add(code);
+                    });
+                    const orphaned = merged.filter(d => {
+                        const code = normalizeReceptionNumber(d.cotizacion || '');
+                        return code && !validNumbers.has(code);
+                    });
+                    if (orphaned.length > 0) {
+                        console.log('🧹 Borradores huérfanos detectados:', orphaned.map(d => d.cotizacion));
+                        // Eliminar huérfanos del servidor
+                        for (const d of orphaned) {
+                            try {
+                                await fetch('/.netlify/functions/conectar', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ action: 'delete_borrador', usuario_email: userEmail, cotizacion: d.cotizacion })
+                                });
+                            } catch(e) {}
+                        }
+                    }
+                    // Solo mantener borradores válidos
+                    const filtered = merged.filter(d => {
+                        const code = normalizeReceptionNumber(d.cotizacion || '');
+                        return !code || validNumbers.has(code);
+                    });
+                    if (filtered.length !== merged.length) {
+                        merged.length = 0;
+                        merged.push(...filtered);
+                    }
+                }
+            } catch(e) { console.warn('Error filtrando borradores huérfanos:', e); }
+
             try {
                 localStorage.setItem('cmr_drafts', JSON.stringify(merged));
             } catch(e) {
@@ -6958,6 +7027,8 @@ function newForm() {
 // Poblar el selector al cargar
 // también habilitar botón "Casos Terminados" según rol
 document.addEventListener('DOMContentLoaded', async () => {
+    // Primero cargar cache de procesos acreditados (necesario para filtrar borradores huérfanos)
+    try { await refreshDbUnavailableReceptionNumbers(); } catch(e) { console.log('Error refreshing db processes', e); }
     // Cargar borradores desde servidor al iniciar (esperar antes de refrescar select)
     try { await loadDraftsFromServer(); } catch(e) { console.log('Error loading drafts from server', e); }
     setTimeout(refreshCasesSelect, 100);
