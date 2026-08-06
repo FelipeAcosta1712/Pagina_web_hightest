@@ -1806,6 +1806,20 @@ function syncLocalStorageWithDB(dbNumbers) {
         if (filteredRestricted.length !== restricted.length) {
             setRestrictedReceptionNumbers(filteredRestricted);
         }
+
+        // Limpiar borradores: eliminar los que ya no tienen proceso en la DB
+        try {
+            const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
+            const filteredDrafts = drafts.filter(d => {
+                const code = normalizeReceptionNumber(d.cotizacion || '');
+                return !code || dbNumbers.has(code);
+            });
+            if (filteredDrafts.length !== drafts.length) {
+                localStorage.setItem('cmr_drafts', JSON.stringify(filteredDrafts));
+                console.log('🧹 Borradores limpiados:', drafts.length - filteredDrafts.length, 'eliminados');
+                try { refreshCasesSelect(); } catch(e) {}
+            }
+        } catch(e) { console.warn('Error limpiando borradores:', e); }
     } catch (e) {
         console.warn('syncLocalStorageWithDB error', e);
     }
@@ -5371,20 +5385,32 @@ function loadFormData(data, skipDates = false, isFromCompleted = false) {
 
     // Carga las firmas múltiples si existen
     if (data.signatureData && typeof data.signatureData === 'object') {
-        signatureData = data.signatureData; // Almacena las múltiples firmas
-        Object.keys(data.signatureData).forEach(canvasId => {
-            if (data.signatureData[canvasId] && signaturePads[canvasId]) {
-                signaturePads[canvasId].fromDataURL(data.signatureData[canvasId]);
+        signatureData = data.signatureData;
+        function restoreSignatures(attempt) {
+            let allRestored = true;
+            Object.keys(data.signatureData).forEach(canvasId => {
+                if (data.signatureData[canvasId]) {
+                    if (signaturePads[canvasId]) {
+                        try {
+                            signaturePads[canvasId].fromDataURL(data.signatureData[canvasId]);
+                        } catch(e) { allRestored = false; }
+                    } else {
+                        allRestored = false;
+                    }
+                }
+            });
+            if (!allRestored && attempt < 5) {
+                setTimeout(() => restoreSignatures(attempt + 1), 300);
             }
-        });
+        }
+        restoreSignatures(0);
     } else if (data.signatureData) {
-        // Compatibilidad con formato antiguo de una sola firma
         signatureData['signatureCanvas'] = data.signatureData;
         if (signaturePads['signatureCanvas']) {
-            signaturePads['signatureCanvas'].fromDataURL(data.signatureData);
+            try { signaturePads['signatureCanvas'].fromDataURL(data.signatureData); } catch(e) {}
         }
     } else {
-        clearAllSignatures(); // Limpia todas las firmas si no hay datos presentes
+        clearAllSignatures();
     }
 
     // Recalcular totales/indicadores y lavado (ejecutar siempre al final)
@@ -6251,9 +6277,17 @@ function generatePDFRecepcion() {
 function listOpenCases() {
     // Usamos los borradores existentes como "casos en progreso"
     const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
-    // Mantener índice original para poder cargar/actualizar correctamente
-    const pending = drafts.map((d, i) => ({ d, originalIndex: i })).filter(obj => !(obj.d.status && obj.d.status === 'entrega'));
-    // Mapear a opciones legibles mostrando estado y fecha de recepción
+    // Deduplicar por cotizacion, quedándose con el último (más reciente)
+    const seen = new Map();
+    drafts.forEach((d, i) => {
+        const key = d.cotizacion || `__idx_${i}`;
+        if (!seen.has(key)) {
+            seen.set(key, { d, originalIndex: i });
+        } else {
+            seen.set(key, { d, originalIndex: i });
+        }
+    });
+    const pending = Array.from(seen.values()).filter(obj => !(obj.d.status && obj.d.status === 'entrega'));
     return pending.map((obj, i) => ({
         idx: i + 1,
         originalIndex: obj.originalIndex,
@@ -6281,7 +6315,7 @@ function refreshCasesSelect() {
         sel.appendChild(opt);
     });
 }
-function continueSelectedCase() {
+async function continueSelectedCase() {
     const sel = document.getElementById('openCasesSelect');
     if (!sel || !sel.value) return;
     const idx = parseInt(sel.value, 10);
@@ -6303,14 +6337,49 @@ function continueSelectedCase() {
             const savedContainer = document.getElementById('savedItemsContainer');
             if (savedContainer) savedContainer.innerHTML = '';
         } catch (e) {}
-        // Cargar el caso
-        loadFormData(drafts[idx]);
-        showNotification('Caso cargado: ' + (drafts[idx].cotizacion || ''), 'success');
+        // Cargar el caso inmediatamente desde localStorage
+        const draftToLoad = drafts[idx];
+        loadFormData(draftToLoad);
+        showNotification('Caso cargado: ' + (draftToLoad.cotizacion || ''), 'success');
+        // Cargar firmas en background si faltan
+        if (!draftToLoad.signatureData && draftToLoad.cotizacion) {
+            (async () => {
+                try {
+                    const userEmail = getCurrentUserEmail() || 'shared';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const resp = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_borradores', usuario_email: userEmail }),
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    if (resp.ok) {
+                        const result = await resp.json();
+                        if (result && result.ok && Array.isArray(result.data)) {
+                            const serverDraft = result.data.find(d => d.cotizacion === draftToLoad.cotizacion);
+                            if (serverDraft && serverDraft.signatureData) {
+                                draftToLoad.signatureData = serverDraft.signatureData;
+                                signatureData = serverDraft.signatureData;
+                                Object.keys(serverDraft.signatureData).forEach(canvasId => {
+                                    if (serverDraft.signatureData[canvasId] && signaturePads[canvasId]) {
+                                        try { signaturePads[canvasId].fromDataURL(serverDraft.signatureData[canvasId]); } catch(e) {}
+                                    }
+                                });
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('⚠️ No se pudieron cargar firmas desde servidor:', e.message || e);
+                }
+            })();
+        }
     }
 }
 
 // Eliminar el borrador seleccionado en el selector (usa el índice real almacenado en value)
-function deleteSelectedCase() {
+async function deleteSelectedCase() {
     // Permisos: sólo administrador y director técnico pueden eliminar
     let allowed = false;
     if (typeof hasRole === 'function') {
@@ -6335,8 +6404,9 @@ function deleteSelectedCase() {
     drafts.splice(idx, 1);
     localStorage.setItem('cmr_drafts', JSON.stringify(drafts));
     showNotification('Borrador eliminado', 'success');
-    // Sincronizar con servidor
-    try { saveDraftsToServer(drafts); } catch(e) {}
+    // Sincronizar con servidor (esperar a que termine)
+    try { await saveDraftsToServer(drafts); } catch(e) {}
+    try { await deleteBorradorFromServer(target.cotizacion); } catch(e) {}
     // Si el caso eliminado era el que estaba en vista, limpiar indicador
     try { const loadedEl = document.getElementById('loadedReceptionNumber'); if (loadedEl && loadedEl.textContent === (target.cotizacion || '')) loadedEl.textContent = '-'; } catch(e){}
     refreshCasesSelect();
@@ -6824,44 +6894,113 @@ function nextImage() {
 }
 
 async function loadDraftsFromServer() {
+    let serverResult = null;
     try {
         const userEmail = getCurrentUserEmail() || 'shared';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
         const resp = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'get_borradores', usuario_email: userEmail })
+            body: JSON.stringify({ action: 'get_borradores', usuario_email: userEmail }),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
         if (!resp.ok) throw new Error('Error al conectar con servidor');
         const result = await resp.json();
         if (result && result.ok && Array.isArray(result.data)) {
-            // Fusionar: server drafts + locales que no están en server
             const localDrafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
-            const merged = [];
-
-            // Agregar borradores del servidor (preservando status 'entrega' local)
+            const mergedMap = new Map();
+            localDrafts.forEach(d => {
+                const key = d.cotizacion || null;
+                if (key) mergedMap.set(key, d);
+            });
             result.data.forEach(serverDraft => {
-                const localDraft = localDrafts.find(d => d.cotizacion && d.cotizacion === serverDraft.cotizacion);
-                if (localDraft && localDraft.status === 'entrega' && serverDraft.status !== 'entrega') {
-                    merged.push({ ...serverDraft, status: 'entrega' });
+                const key = serverDraft.cotizacion || null;
+                if (key) {
+                    const localDraft = mergedMap.get(key);
+                    if (localDraft && localDraft.status === 'entrega' && serverDraft.status !== 'entrega') {
+                        mergedMap.set(key, { ...serverDraft, status: 'entrega' });
+                    } else {
+                        mergedMap.set(key, serverDraft);
+                    }
+                }
+            });
+            const merged = Array.from(mergedMap.values());
+
+            // Filtrar borradores huérfanos (procesos que ya no existen en procesos_acreditados)
+            try {
+                const dbProcesses = window.dbProcessesCache || [];
+                if (dbProcesses.length > 0) {
+                    const validNumbers = new Set();
+                    dbProcesses.forEach(p => {
+                        const code = normalizeReceptionNumber(String(p.numero_proceso || p.numero || p.cotizacion || p.id || '').trim());
+                        if (code) validNumbers.add(code);
+                    });
+                    const orphaned = merged.filter(d => {
+                        const code = normalizeReceptionNumber(d.cotizacion || '');
+                        return code && !validNumbers.has(code);
+                    });
+                    if (orphaned.length > 0) {
+                        console.log('🧹 Borradores huérfanos detectados:', orphaned.map(d => d.cotizacion));
+                        // Eliminar huérfanos del servidor
+                        for (const d of orphaned) {
+                            try {
+                                await fetch('/.netlify/functions/conectar', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ action: 'delete_borrador', usuario_email: userEmail, cotizacion: d.cotizacion })
+                                });
+                            } catch(e) {}
+                        }
+                    }
+                    // Solo mantener borradores válidos
+                    const filtered = merged.filter(d => {
+                        const code = normalizeReceptionNumber(d.cotizacion || '');
+                        return !code || validNumbers.has(code);
+                    });
+                    if (filtered.length !== merged.length) {
+                        merged.length = 0;
+                        merged.push(...filtered);
+                    }
+                }
+            } catch(e) { console.warn('Error filtrando borradores huérfanos:', e); }
+
+            try {
+                localStorage.setItem('cmr_drafts', JSON.stringify(merged));
+            } catch(e) {
+                if (e.name === 'QuotaExceededError') {
+                    console.warn('⚠️ localStorage lleno. Limpiando borradores antiguos...');
+                    const STRIP_FIELDS = ['signatureData', 'firma_url', 'imagen_url', ' foto_url', 'evidencia_url', 'observaciones_foto', 'fotos', 'evidencias', 'imagenes'];
+                    const draftsLigeros = merged.map(d => {
+                        const copy = { ...d };
+                        STRIP_FIELDS.forEach(f => delete copy[f]);
+                        return copy;
+                    });
+                    try {
+                        localStorage.setItem('cmr_drafts', JSON.stringify(draftsLigeros));
+                    } catch(e2) {
+                        const draftsMinimos = draftsLigeros.slice(-5);
+                        try {
+                            localStorage.setItem('cmr_drafts', JSON.stringify(draftsMinimos));
+                        } catch(e3) {
+                            localStorage.removeItem('cmr_drafts');
+                            console.error('❌ localStorage lleno. Borradores locales eliminados.');
+                        }
+                    }
                 } else {
-                    merged.push(serverDraft);
+                    console.error('❌ Error al guardar borradores en localStorage:', e);
                 }
-            });
-
-            // Agregar borradores locales que NO están en el servidor
-            localDrafts.forEach(localDraft => {
-                if (!merged.find(d => d.cotizacion && d.cotizacion === localDraft.cotizacion)) {
-                    merged.push(localDraft);
-                }
-            });
-
-            localStorage.setItem('cmr_drafts', JSON.stringify(merged));
-            try { refreshCasesSelect(); } catch(e){}
-            try { showNotification('🔄 Borradores cargados desde servidor', 'info'); } catch(e){}
-            return merged;
+            }
+            serverResult = merged;
         }
     } catch (error) {
         console.warn('⚠️ No se pudo cargar borradores desde servidor:', error.message || error);
+    }
+    try { refreshCasesSelect(); } catch(e){}
+    if (serverResult) {
+        try { showNotification('🔄 Borradores cargados desde servidor', 'info'); } catch(e){}
+        return serverResult;
     }
     return JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
 }
@@ -6869,11 +7008,46 @@ async function loadDraftsFromServer() {
 async function saveDraftsToServer(drafts) {
     try {
         const userEmail = getCurrentUserEmail() || 'shared';
+        // Preservar signatureData del servidor: obtener borradores actuales del servidor
+        // y mergear las firmas que pudieron haberse perdido por quota de localStorage
+        let serverDrafts = [];
+        try {
+            const controllerPrefetch = new AbortController();
+            const timeoutPrefetch = setTimeout(() => controllerPrefetch.abort(), 15000);
+            const respPrefetch = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_borradores', usuario_email: userEmail }),
+                signal: controllerPrefetch.signal
+            });
+            clearTimeout(timeoutPrefetch);
+            if (respPrefetch.ok) {
+                const resultPrefetch = await respPrefetch.json();
+                if (resultPrefetch?.ok && Array.isArray(resultPrefetch.data)) {
+                    serverDrafts = resultPrefetch.data;
+                }
+            }
+        } catch(e) {}
+        // Restaurar signatureData del servidor si el borrador local no lo tiene
+        const draftsWithSigs = drafts.map(d => {
+            if (!d.signatureData && d.cotizacion) {
+                const serverDraft = serverDrafts.find(sd => sd.cotizacion === d.cotizacion);
+                if (serverDraft && serverDraft.signatureData) {
+                    return { ...d, signatureData: serverDraft.signatureData };
+                }
+            }
+            return d;
+        });
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
         const resp = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'save_borradores', usuario_email: userEmail, drafts })
+            body: JSON.stringify({ action: 'save_borradores', usuario_email: userEmail, drafts: draftsWithSigs }),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
         if (!resp.ok) throw new Error('Error al guardar en servidor');
         const res = await resp.json();
         if (res && res.ok) {
@@ -6916,11 +7090,15 @@ let lastDraftsSyncHash = '';
 async function autoSyncDrafts() {
     try {
         const userEmail = getCurrentUserEmail() || 'shared';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
         const resp = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'get_borradores', usuario_email: userEmail })
+            body: JSON.stringify({ action: 'get_borradores', usuario_email: userEmail }),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
         if (!resp.ok) return;
         const result = await resp.json();
         if (result && result.ok && Array.isArray(result.data)) {
@@ -6928,7 +7106,15 @@ async function autoSyncDrafts() {
             const local = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
             const localHash = JSON.stringify(local.sort());
             if (serverHash !== localHash && serverHash !== lastDraftsSyncHash) {
-                localStorage.setItem('cmr_drafts', JSON.stringify(result.data));
+                try {
+                    localStorage.setItem('cmr_drafts', JSON.stringify(result.data));
+                } catch(e) {
+                    const STRIP_FIELDS = ['signatureData', 'firma_url', 'imagen_url', 'foto_url', 'evidencia_url', 'observaciones_foto', 'fotos', 'evidencias', 'imagenes'];
+                    const ligeros = result.data.map(d => { const c = {...d}; STRIP_FIELDS.forEach(f => delete c[f]); return c; });
+                    try { localStorage.setItem('cmr_drafts', JSON.stringify(ligeros)); } catch(e2) {
+                        try { localStorage.setItem('cmr_drafts', JSON.stringify(ligeros.slice(-5))); } catch(e3) { localStorage.removeItem('cmr_drafts'); }
+                    }
+                }
                 lastDraftsSyncHash = serverHash;
                 try { refreshCasesSelect(); } catch(e){}
                 try { showNotification('🔄 Casos en progreso actualizados desde servidor', 'info'); } catch(e){}
@@ -6975,6 +7161,8 @@ function newForm() {
 // Poblar el selector al cargar
 // también habilitar botón "Casos Terminados" según rol
 document.addEventListener('DOMContentLoaded', async () => {
+    // Primero cargar cache de procesos acreditados (necesario para filtrar borradores huérfanos)
+    try { await refreshDbUnavailableReceptionNumbers(); } catch(e) { console.log('Error refreshing db processes', e); }
     // Cargar borradores desde servidor al iniciar (esperar antes de refrescar select)
     try { await loadDraftsFromServer(); } catch(e) { console.log('Error loading drafts from server', e); }
     setTimeout(refreshCasesSelect, 100);
@@ -8096,9 +8284,28 @@ async function saveAsDraft() {
         allDrafts.push(formData);
     }
 
-    localStorage.setItem('cmr_drafts', JSON.stringify(allDrafts)); // Guarda el array actualizado en el almacenamiento local
+    try {
+        localStorage.setItem('cmr_drafts', JSON.stringify(allDrafts));
+    } catch(e) {
+        if (e.name === 'QuotaExceededError') {
+            console.warn('⚠️ localStorage lleno. Intentando guardar sin firmas...');
+            const draftsSinFirmas = allDrafts.map(d => {
+                const copy = { ...d };
+                delete copy.signatureData;
+                return copy;
+            });
+            try {
+                localStorage.setItem('cmr_drafts', JSON.stringify(draftsSinFirmas));
+                showNotification('⚠️ Borrador guardado sin firmas (espacio agotado). Las firmas se guardan al sincronizar con servidor.', 'warning');
+            } catch(e2) {
+                showNotification('❌ Error: localStorage lleno. Elimine casos antiguos.', 'error');
+                return;
+            }
+        } else {
+            throw e;
+        }
+    }
 
-    // Sincronizar con servidor (con await para asegurar que se guarde)
     try { await saveDraftsToServer(allDrafts); } catch(e) { console.log('Sync server error', e); }
 
     // Sincronizar n_remision con la BD si el proceso ya existe
@@ -11848,6 +12055,8 @@ function _renderVistaPrevia(caso) {
                     <p><strong>Nº de Remisión:</strong> ${caso.facturar || '-'}</p>
                     <p><strong>Fecha Recepción:</strong> ${caso.fechaRecepcion || '-'}</p>
                     <p><strong>Fecha Entrega:</strong> ${caso.fechaEntrega || '-'}</p>
+                    <p><strong>N° Informe:</strong> ${caso.nInforme || '-'}</p>
+                    <p><strong>Estado:</strong> <span style="background:${caso.status === 'entrega' ? '#28a745' : caso.status === 'recepcion' ? '#007bff' : '#ff9800'}; color:#fff; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:600;">${caso.status || 'borrador'}</span></p>
                 </div>
             </div>
 
@@ -11948,63 +12157,28 @@ function generarHTMLItems(items, status) {
         return String(brandSummary || '-');
     };
 
-    // Mostrar columnas diferentes según el estado
-    if (status === 'entrega') {
-        // Completado: mostrar todas las cantidades como en el PDF
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Cant. Recibida</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Cant. Entregada</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Marcas</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">No Usado</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Usado</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Lavados</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Observaciones</th>';
-    } else if (status === 'recepcion') {
-        // Recepción: mostrar recibidos y entregados
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Recibidos</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Entregados</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Marcas</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Observaciones</th>';
-    } else {
-        // Borrador: mostrar todas las columnas como en completado
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Recibidos</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Entregados</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Marcas</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">No Usado</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Usado</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Lavados</th>';
-        html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Observaciones</th>';
-    }
+    // Mostrar columnas: siempre incluir No Usado, Usado, Lavados
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Recibidos</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Entregados</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Marcas</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">No Usado</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Usado</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Lavados</th>';
+    html += '<th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Observaciones</th>';
     html += '</tr></thead><tbody>';
     
     items.forEach(item => {
         html += '<tr style="border-bottom: 1px solid #ddd;">';
         html += `<td style="padding: 8px; border: 1px solid #ddd;">${item.name || '-'}</td>`;
         
-        if (status === 'entrega') {
-            // Mostrar quantity (recibidos), quantity2 (entregados), marcas, quantity3 (no usados), quantity4 (usados), status (lavados)
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity || 0}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity2 || 0}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${escapeHtml(getBrandText(item.brandSummary))}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity3 || '-'}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity4 || '-'}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.status || 0}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${item.observaciones || '-'}</td>`;
-        } else if (status === 'recepcion') {
-            // Mostrar quantity (recibidos) y quantity2 (entregados) y marcas
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity || 0}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity2 || 0}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${escapeHtml(getBrandText(item.brandSummary))}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${item.observaciones || '-'}</td>`;
-        } else {
-            // Borrador: mostrar todas las columnas
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity || 0}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity2 || 0}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${escapeHtml(getBrandText(item.brandSummary))}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity3 || '-'}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity4 || '-'}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.status || 0}</td>`;
-            html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${item.observaciones || '-'}</td>`;
-        }
+        // Siempre mostrar todas las columnas
+        html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity || 0}</td>`;
+        html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity2 || 0}</td>`;
+        html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${escapeHtml(getBrandText(item.brandSummary))}</td>`;
+        html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity3 || '-'}</td>`;
+        html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.quantity4 || '-'}</td>`;
+        html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.status || 0}</td>`;
+        html += `<td style="padding: 8px; border: 1px solid #ddd; text-align: left;">${item.observaciones || '-'}</td>`;
         html += '</tr>';
     });
     
