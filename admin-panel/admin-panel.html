@@ -8640,6 +8640,16 @@
             }
 
             // Dashboard charts are now managed by admin-dashboard.js (DashboardModule)
+
+            // Precargar recepción de elementos en segundo plano al cargar la página
+            function precargarRecepcion() {
+                if (typeof RecepcionAnalyticsModule !== 'undefined' && RecepcionAnalyticsModule.init) {
+                    RecepcionAnalyticsModule.init();
+                } else {
+                    setTimeout(precargarRecepcion, 200);
+                }
+            }
+            setTimeout(precargarRecepcion, 500);
         });
     </script>
 
@@ -9858,15 +9868,12 @@
                         const borradoresRes = await fetch('/.netlify/functions/conectar', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ action: 'get_borradores' })
+                            body: JSON.stringify({ action: 'get_borrador_completo', cotizacion: proceso.numero_proceso || '' })
                         });
                         const borradoresResult = await borradoresRes.json();
-                        if (borradoresResult.ok && Array.isArray(borradoresResult.data)) {
-                            const serverDraft = borradoresResult.data.find(d => {
-                                const key = d.cotizacion || d.quoteNumber || d.numero_proceso || '';
-                                return key.toUpperCase() === (proceso.numero_proceso || '').toUpperCase();
-                            });
-                            if (serverDraft && Array.isArray(serverDraft.items)) {
+                        if (borradoresResult.ok && borradoresResult.data) {
+                            const serverDraft = borradoresResult.data;
+                            if (Array.isArray(serverDraft.items)) {
                                 draftItems = serverDraft.items;
                             }
                         }
@@ -11361,7 +11368,7 @@
                         fetch('/.netlify/functions/conectar', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ action: 'get_borradores' })
+                            body: JSON.stringify({ action: 'get_borradores_resumen' })
                         }),
                         fetch('/.netlify/functions/conectar', {
                             method: 'POST',
@@ -11518,7 +11525,7 @@
                     const resBorr = await fetch('/.netlify/functions/conectar', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'get_borradores' })
+                        body: JSON.stringify({ action: 'get_borradores_resumen' })
                     });
                     const dataBorr = await resBorr.json();
                     if (dataBorr.ok && Array.isArray(dataBorr.data)) {

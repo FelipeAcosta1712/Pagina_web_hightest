@@ -528,6 +528,7 @@ exports.handler = async (event) => {
                     } else if (estadoCandidate === 'finalizado') {
                         updateData.caso_activo = false;
                     }
+                    if (payload.firma_cliente_entrega) updateData.firma_cliente_entrega = payload.firma_cliente_entrega;
                     const { data, error } = await supabase
                         .from('procesos_acreditados')
                         .update(updateData)
@@ -574,7 +575,7 @@ exports.handler = async (event) => {
                 if (!numero) return jsonResponse(400, { ok: false, error: 'numero_proceso requerido' });
 
                 // Permitir actualizar solo campos autorizados
-                const allowed = ['numero_proceso','cliente','cliente_id','tipo','estado','fecha_recepcion','fecha_entrega_cliente','fecha_finalizado','valor','caso_activo','informe_a_nombre_de','facturar_a_nombre_de','fecha_ejecucion','n_remision','responsable_marcacion'];
+                const allowed = ['numero_proceso','cliente','cliente_id','tipo','estado','fecha_recepcion','fecha_entrega_cliente','fecha_finalizado','valor','caso_activo','informe_a_nombre_de','facturar_a_nombre_de','fecha_ejecucion','n_remision','responsable_marcacion','firma_cliente_recepcion','firma_cliente_entrega'];
                 const updateData = {};
                 for (const key of allowed) {
                     if (payload[key] !== undefined) updateData[key] = payload[key];
@@ -661,6 +662,9 @@ exports.handler = async (event) => {
 
                 const baseInsert = { ...insert };
                 if (baseInsert.caso_activo === undefined) baseInsert.caso_activo = true;
+                // Incluir firmas si se envían en el payload
+                if (payload.firma_cliente_recepcion) baseInsert.firma_cliente_recepcion = payload.firma_cliente_recepcion;
+                if (payload.firma_cliente_entrega) baseInsert.firma_cliente_entrega = payload.firma_cliente_entrega;
 
                 // Función para intentar insertar, quitando columnas faltantes y reintentando
                 async function attemptInsertWithRetry(data) {
@@ -865,6 +869,50 @@ exports.handler = async (event) => {
                 return jsonResponse(200, { ok: true, data: allDrafts });
             }
 
+            // Consulta ligera: obtener solo el timestamp del último borrador actualizado
+            // Usado por autoSyncDrafts() para detectar cambios sin descargar datos completos
+            if (payload.action === 'get_borradores_timestamp') {
+                const { data, error } = await supabase
+                    .from('borradores')
+                    .select('updated_at')
+                    .order('updated_at', { ascending: false })
+                    .limit(1);
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al obtener timestamp', detail: error.message });
+                }
+                const lastUpdated = (data && data[0] && data[0].updated_at) ? data[0].updated_at : null;
+                return jsonResponse(200, { ok: true, last_updated: lastUpdated });
+            }
+
+            // ============================================================
+            // BORRADORES — RESUMEN LIGERO (sin campos pesados)
+            // ============================================================
+
+            if (payload.action === 'get_borradores_resumen') {
+                const { data, error } = await supabase.rpc('get_borradores_resumen');
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al obtener resumen de borradores', detail: error.message });
+                }
+                return jsonResponse(200, { ok: true, data: data || [] });
+            }
+
+            // ============================================================
+            // BORRADOR COMPLETO — por cotizacion
+            // ============================================================
+
+            if (payload.action === 'get_borrador_completo') {
+                const cotizacion = payload.cotizacion;
+                if (!cotizacion) {
+                    return jsonResponse(400, { ok: false, error: 'cotizacion requerido' });
+                }
+                const { data, error } = await supabase.rpc('get_borrador_completo', { p_cotizacion: cotizacion });
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al obtener borrador', detail: error.message });
+                }
+                // data es el objeto JSONB directamente (no un array)
+                return jsonResponse(200, { ok: true, data: data });
+            }
+
             if (payload.action === 'save_borradores') {
                 const usuarioEmail = 'shared';
                 const drafts = payload.drafts;
@@ -894,7 +942,91 @@ exports.handler = async (event) => {
                 if (result.error) {
                     return jsonResponse(500, { ok: false, error: 'Error al guardar borradores', detail: result.error.message });
                 }
+
+                // Guardar firmas del borrador activo en columnas dedicadas
+                try {
+                    if (Array.isArray(drafts) && drafts.length > 0) {
+                        const currentDraft = drafts.find(d => d.status !== 'entrega') || drafts[drafts.length - 1];
+                        const firmaRec = currentDraft?.signatureData?.signatureCanvasRecepcion || null;
+                        const firmaEnt = currentDraft?.signatureData?.signatureCanvasEntrega || null;
+                        const firmaUpdate = {};
+                        if (firmaRec) firmaUpdate.firma_cliente_recepcion = firmaRec;
+                        if (firmaEnt) firmaUpdate.firma_cliente_entrega = firmaEnt;
+                        if (Object.keys(firmaUpdate).length > 0 && row) {
+                            await supabase.from('borradores').update(firmaUpdate).eq('id', row.id);
+                        }
+                    }
+                } catch (e) { /* no bloquear por error de firma */ }
+
                 return jsonResponse(200, { ok: true, message: 'Borradores guardados' });
+            }
+
+            // Guardar firmas de un borrador específico en columnas dedicadas
+            if (payload.action === 'save_firma_borrador') {
+                const numero = normalizeText(payload.numero_proceso || payload.numero || '');
+                if (!numero) return jsonResponse(400, { ok: false, error: 'numero_proceso requerido' });
+
+                const firmaRec = payload.firma_cliente_recepcion || null;
+                const firmaEnt = payload.firma_cliente_entrega || null;
+
+                const { data: rows } = await supabase
+                    .from('borradores')
+                    .select('id, datos')
+                    .eq('usuario_email', 'shared')
+                    .limit(1);
+
+                const row = Array.isArray(rows) ? rows[0] : null;
+                if (!row) return jsonResponse(404, { ok: false, error: 'No hay borradores' });
+
+                // Actualizar columnas dedicadas
+                const firmaUpdate = {};
+                if (firmaRec) firmaUpdate.firma_cliente_recepcion = firmaRec;
+                if (firmaEnt) firmaUpdate.firma_cliente_entrega = firmaEnt;
+                if (Object.keys(firmaUpdate).length > 0) {
+                    await supabase.from('borradores').update(firmaUpdate).eq('id', row.id);
+                }
+
+                // Actualizar también signatureData dentro del JSON datos
+                if (Array.isArray(row.datos)) {
+                    const drafts = [...row.datos];
+                    const idx = drafts.findIndex(d => d.cotizacion === numero || d.quoteNumber === numero);
+                    if (idx !== -1) {
+                        if (!drafts[idx].signatureData) drafts[idx].signatureData = {};
+                        if (firmaRec) drafts[idx].signatureData.signatureCanvasRecepcion = firmaRec;
+                        if (firmaEnt) drafts[idx].signatureData.signatureCanvasEntrega = firmaEnt;
+                        await supabase.from('borradores').update({ datos: drafts, updated_at: new Date().toISOString() }).eq('id', row.id);
+                    }
+                }
+
+                return jsonResponse(200, { ok: true });
+            }
+
+            // Obtener firmas de un borrador específico desde columnas dedicadas
+            if (payload.action === 'get_firma_borrador') {
+                const numero = normalizeText(payload.numero_proceso || payload.numero || '');
+                if (!numero) return jsonResponse(400, { ok: false, error: 'numero_proceso requerido' });
+
+                const { data: rows } = await supabase
+                    .from('borradores')
+                    .select('datos, firma_cliente_recepcion, firma_cliente_entrega')
+                    .eq('usuario_email', 'shared')
+                    .limit(1);
+
+                const row = Array.isArray(rows) ? rows[0] : null;
+                if (!row) return jsonResponse(200, { ok: true, firmaRecepcion: null, firmaEntrega: null });
+
+                const drafts = Array.isArray(row.datos) ? row.datos : [];
+                const draft = drafts.find(d => (d.cotizacion || d.quoteNumber || '') === numero);
+
+                // Prioridad: columnas dedicadas > signatureData del JSON
+                const firmaRecepcion = row.firma_cliente_recepcion
+                    || draft?.signatureData?.signatureCanvasRecepcion
+                    || null;
+                const firmaEntrega = row.firma_cliente_entrega
+                    || draft?.signatureData?.signatureCanvasEntrega
+                    || null;
+
+                return jsonResponse(200, { ok: true, firmaRecepcion, firmaEntrega });
             }
 
             if (payload.action === 'delete_borrador') {
@@ -982,7 +1114,7 @@ exports.handler = async (event) => {
                     }
                     const entry = ensayoMap[eid];
                     entry.cantidad += d.cantidad || 0;
-                    entry.cantidad_entregada += d.cantidad_entregada || 0;
+                    entry.cantidad_entregada = Math.max(entry.cantidad_entregada || 0, d.cantidad_entregada || 0);
                     if (d.marca) entry.marcas.push({ count: d.cantidad || 0, brand: d.marca });
                     if (d.observaciones && !entry.observaciones) entry.observaciones = d.observaciones;
                 });
@@ -1142,7 +1274,7 @@ exports.handler = async (event) => {
                     }
                     const entry = detalleCompleto[pid][eid];
                     entry.cantidad += d.cantidad || 0;
-                    entry.cantidad_entregada += d.cantidad_entregada || 0;
+                    entry.cantidad_entregada = Math.max(entry.cantidad_entregada || 0, d.cantidad_entregada || 0);
                     if (d.marca) entry.marcas.push({ count: d.cantidad || 0, brand: d.marca });
                     if (d.observaciones && !entry.observaciones) entry.observaciones = d.observaciones;
                 });

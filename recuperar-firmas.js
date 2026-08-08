@@ -61,7 +61,7 @@
         const resp = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'get_borradores', usuario_email: userEmail })
+            body: JSON.stringify({ action: 'get_borradores_resumen' })
         });
         const result = await resp.json();
         if (result?.ok && Array.isArray(result.data)) {

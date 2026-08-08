@@ -18,7 +18,7 @@
 
 CREATE OR REPLACE FUNCTION sync_detalle_proceso(
     p_proceso_id BIGINT,
-    p_detalle JSONB
+    p_detalle JSONB 
 )
 RETURNS TABLE (
     id BIGINT,

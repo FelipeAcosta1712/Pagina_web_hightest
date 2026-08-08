@@ -234,16 +234,18 @@ function setShareMethod(method) {
     const activeBtn = document.getElementById(`btn-${method}`);
     if (activeBtn) activeBtn.style.opacity = '1';
     
-    // Guardar selección
+    // Guardar selección (siempre funciona aunque el modal no exista)
     localStorage.setItem('EMAIL_SHARE_METHOD', method);
     
-    // Actualizar info
+    // Actualizar info SOLO si el modal está abierto
+    if (!info) return;
+    
     switch(method) {
         case 'local':
             info.innerHTML = '🏠 <strong>Servidor Local:</strong> Los archivos se suben a tu servidor. Solo funcionan en tu red local.';
             break;
         case 'proxy':
-            info.innerHTML = '� <strong>Proxy Sin CORS:</strong> Tu servidor sube por ti a 0x0.st. Enlaces públicos válidos 365 días.';
+            info.innerHTML = '🔗 <strong>Proxy Sin CORS:</strong> Tu servidor sube por ti a 0x0.st. Enlaces públicos válidos 365 días.';
             break;
     }
 }
