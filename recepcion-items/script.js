@@ -7027,8 +7027,23 @@ async function loadDraftsFromServer() {
                     });
                     continue;
                 }
-                // Existe localmente: conservar versión local
-                // (el servidor se sincroniza vía autoSyncDrafts cuando es necesario)
+                // Existe localmente: comparar timestamps
+                const serverTs = _parseTs(serverSummary.borrador_timestamp);
+                const localTs = _parseTs(localDraft.timestamp);
+                if (serverTs > localTs) {
+                    // Servidor más nuevo: invalidar borrador local completo
+                    // Reemplazar con resumen ligero (se descargará completo al abrir)
+                    localMap.set(cotizacion, {
+                        cotizacion: cotizacion,
+                        cliente: serverSummary.cliente || '',
+                        fechaRecepcion: serverSummary.fecha_recepcion || '',
+                        fechaEntrega: serverSummary.fecha_entrega || '',
+                        status: serverSummary.status || 'recepcion',
+                        timestamp: serverSummary.borrador_timestamp || '',
+                        _isSummaryOnly: true
+                    });
+                }
+                // localTs >= serverTs: conservar versión local completa
             }
 
             // Eliminar borradores que ya no existen en servidor
