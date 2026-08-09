@@ -1231,10 +1231,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             try { refreshNextReceptionNumberInfo(); } catch (error) { console.warn(error); }
         });
-        // Enfocar el campo de número de recepción como primer paso
-        setTimeout(() => {
-            quoteNumberSelect.focus();
-        }, 0);
+        // focus automático eliminado: el refresh de Supabase ahora solo ocurre
+        // en interacción REAL del usuario con el campo (click/touch/tab).
     }
 
     const lock20Btn = document.getElementById('btnLockReception20Min');
@@ -1256,10 +1254,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         refreshLockRemainingInfo();
     }, 1000);
 
-    setInterval(() => {
-        cleanupHeldReceptionNumbers();
-        refreshNextReceptionNumberInfo();
-    }, 60000);
+    // setInterval de números de recepción eliminado: refreshNextReceptionNumberInfo()
+    // solo actualiza un label y no requiere ejecución periódica automática.
     
     // Iniciar sincronización automática de números restringidos
     // Sincronización remota desactivada; no se usa en este flujo.
@@ -1583,8 +1579,10 @@ function actualizarResumen() {
     });
 
     // Actualizamos los contadores en pantalla
-    document.getElementById("totalRecepcion").textContent = totalRecepcion;
-    document.getElementById("totalEntrega").textContent = totalEntrega;
+    const elRecep = document.getElementById("totalRecepcion");
+    const elEntrega = document.getElementById("totalEntrega");
+    if (elRecep) elRecep.textContent = totalRecepcion;
+    if (elEntrega) elEntrega.textContent = totalEntrega;
 }
 
 // Escuchamos todos los cambios que ocurran sobre inputs/selects relevantes
@@ -2089,7 +2087,8 @@ async function lockReceptionNumberForMinutes(minutes = 20) {
     held[code] = { expiresAt, minutes: Number(minutes) || 20 };
     setHeldReceptionNumbers(held);
 
-    try { await refreshDbUnavailableReceptionNumbers(); } catch (e) { console.warn(e); }
+    // refreshDbUnavailableReceptionNumbers() post-lock eliminado: los datos ya están
+    // frescos desde la consulta al inicio de lockReceptionNumberForMinutes().
     try {
         if (select) {
             if (!Array.from(select.options).some(opt => opt.value === code)) {
@@ -6939,6 +6938,10 @@ function nextImage() {
     document.getElementById('imageViewerImg').src = currentImageList[currentImageIndex];
 }
 
+function _parseTs(ts) {
+    return new Date(ts || 0).getTime() || 0;
+}
+
 async function loadDraftsFromServer() {
     let serverResult = null;
     try {
@@ -6973,16 +6976,11 @@ async function loadDraftsFromServer() {
                 if (key) serverMap.set(key, s);
             });
 
-            // Fusionar: mantener borradores completos existentes, solo agregar/actualizar metadata
-            serverMap.forEach((serverSummary, cotizacion) => {
+            // Fusionar: comparar timestamps y descargar completos solo cuando servidor es más nuevo
+            const toReplaceFromServer = [];
+            for (const [cotizacion, serverSummary] of serverMap) {
                 const localDraft = localMap.get(cotizacion);
-                if (localDraft) {
-                    // Existe localmente: conservar objeto completo, actualizar metadata ligera
-                    localDraft.status = serverSummary.status || localDraft.status;
-                    localDraft.fechaRecepcion = serverSummary.fecha_recepcion || localDraft.fechaRecepcion;
-                    localDraft.fechaEntrega = serverSummary.fecha_entrega || localDraft.fechaEntrega;
-                    localDraft.cliente = serverSummary.cliente || localDraft.cliente;
-                } else {
+                if (!localDraft) {
                     // Nuevo en servidor: guardar como resumen ligero (se descargará completo al abrir)
                     localMap.set(cotizacion, {
                         cotizacion: cotizacion,
@@ -6992,8 +6990,40 @@ async function loadDraftsFromServer() {
                         status: serverSummary.status || 'recepcion',
                         _isSummaryOnly: true
                     });
+                    continue;
                 }
-            });
+                // Existe localmente: comparar timestamps
+                const serverTs = _parseTs(serverSummary.borrador_timestamp);
+                const localTs = _parseTs(localDraft.timestamp);
+                if (serverTs > localTs) {
+                    // Servidor más nuevo: descargar borrador completo
+                    toReplaceFromServer.push(cotizacion);
+                }
+                // localTs >= serverTs: conservar local (no sobrescribir)
+            }
+
+            // Descargar SOLO los borradores donde servidor es más nuevo
+            for (const cotizacion of toReplaceFromServer) {
+                try {
+                    const draftController = new AbortController();
+                    const draftTimeout = setTimeout(() => draftController.abort(), 15000);
+                    const draftResp = await fetch('/.netlify/functions/conectar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'get_borrador_completo', cotizacion: cotizacion }),
+                        signal: draftController.signal
+                    });
+                    clearTimeout(draftTimeout);
+                    if (draftResp.ok) {
+                        const draftResult = await draftResp.json();
+                        if (draftResult && draftResult.ok && draftResult.data) {
+                            localMap.set(cotizacion, draftResult.data);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Error descargando borrador completo:', cotizacion, e);
+                }
+            }
 
             // Eliminar borradores que ya no existen en servidor
             const toRemove = [];
@@ -7093,53 +7123,149 @@ async function loadDraftsFromServer() {
     return JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
 }
 
-async function saveDraftsToServer(drafts) {
+/**
+ * Guarda borradores en el servidor.
+ * Soporta dos modos:
+ *   - saveDraftsToServer(arrayCompleto) → modo legacy (save_borradores)
+ *     Usado por: deleteSelectedCase, deleteAllCases, importDrafts, syncDraftsNow
+ *   - saveDraftsToServer(borradorIndividual) → modo atómico (save_borrador_individual)
+ *     Usado por: saveAsDraft, updateDraftStatus
+ *     Compara timestamps para evitar que una versión antigua sobrescriba una nueva.
+ *
+ * @param {Array|Object} draftOrArray - Array completo de borradores O un borrador individual
+ * @returns {boolean} true si se guardó, false si no (incluyendo server_newer)
+ */
+async function saveDraftsToServer(draftOrArray) {
     try {
         const userEmail = getCurrentUserEmail() || 'shared';
 
-        // Las firmas ya están en drafts[].signatureData (guardado local)
-        // y se preservan en columnas dedicadas via save_firma_borrador.
-        // NO se necesita descargar todos los borradores del servidor.
+        // ============================================================
+        // MODO LEGACY: enviar array completo (save_borradores)
+        // Para operaciones masivas: delete, import, sync manual
+        // ============================================================
+        if (Array.isArray(draftOrArray)) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            const resp = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'save_borradores', usuario_email: userEmail, drafts: draftOrArray }),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (!resp.ok) throw new Error('Error al guardar en servidor');
+            const res = await resp.json();
+            if (res && res.ok) {
+                console.log('✅ Borradores guardados en servidor (legacy array)');
+                // Guardar firmas del borrador activo en columnas dedicadas
+                try {
+                    if (draftOrArray.length > 0) {
+                        const activeDraft = draftOrArray.find(d => d.status !== 'entrega') || draftOrArray[draftOrArray.length - 1];
+                        if (activeDraft && activeDraft.cotizacion) {
+                            const firmaRec = activeDraft.signatureData?.signatureCanvasRecepcion || null;
+                            const firmaEnt = activeDraft.signatureData?.signatureCanvasEntrega || null;
+                            if (firmaRec || firmaEnt) {
+                                await fetch('/.netlify/functions/conectar', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        action: 'save_firma_borrador',
+                                        numero_proceso: activeDraft.cotizacion,
+                                        firma_cliente_recepcion: firmaRec,
+                                        firma_cliente_entrega: firmaEnt
+                                    })
+                                });
+                            }
+                        }
+                    }
+                } catch (e) { console.warn('⚠️ Error guardando firmas en columnas dedicadas:', e); }
+                return true;
+            }
+            return false;
+        }
+
+        // ============================================================
+        // MODO INDIVIDUAL: guardar un solo borrador (save_borrador_individual)
+        // Operación atómica con comparación de timestamps.
+        // Usado por saveAsDraft y updateDraftStatus.
+        // ============================================================
+        const draft = draftOrArray;
+        if (!draft || !draft.cotizacion) {
+            console.warn('saveDraftsToServer: borrador sin cotizacion, omitiendo');
+            return false;
+        }
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
         const resp = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'save_borradores', usuario_email: userEmail, drafts: drafts }),
+            body: JSON.stringify({
+                action: 'save_borrador_individual',
+                cotizacion: draft.cotizacion,
+                borrador: draft
+            }),
             signal: controller.signal
         });
         clearTimeout(timeoutId);
-        if (!resp.ok) throw new Error('Error al guardar en servidor');
+        if (!resp.ok) throw new Error('Error al guardar borrador en servidor');
         const res = await resp.json();
-        if (res && res.ok) {
-            console.log('✅ Borradores guardados en servidor');
-            // Guardar firmas del borrador activo en columnas dedicadas
-            try {
-                if (Array.isArray(drafts) && drafts.length > 0) {
-                    const activeDraft = drafts.find(d => d.status !== 'entrega') || drafts[drafts.length - 1];
-                    if (activeDraft && activeDraft.cotizacion) {
-                        const firmaRec = activeDraft.signatureData?.signatureCanvasRecepcion || null;
-                        const firmaEnt = activeDraft.signatureData?.signatureCanvasEntrega || null;
-                        if (firmaRec || firmaEnt) {
-                            await fetch('/.netlify/functions/conectar', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    action: 'save_firma_borrador',
-                                    numero_proceso: activeDraft.cotizacion,
-                                    firma_cliente_recepcion: firmaRec,
-                                    firma_cliente_entrega: firmaEnt
-                                })
-                            });
-                        }
-                    }
-                }
-            } catch (e) { console.warn('⚠️ Error guardando firmas en columnas dedicadas:', e); }
-            return true;
+
+        if (!res || !res.ok) {
+            console.warn('⚠️ No se pudo guardar borrador:', res);
+            return false;
         }
+
+        // server_newer: el servidor tiene una versión más reciente
+        if (res.saved === false && res.reason === 'server_newer') {
+            console.log(`⚠️ Servidor tiene versión más nueva de ${draft.cotizacion} (${res.server_timestamp})`);
+            // Descargar la versión completa del servidor y actualizar localStorage
+            try {
+                const fullResp = await fetch('/.netlify/functions/conectar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'get_borrador_completo', cotizacion: draft.cotizacion })
+                });
+                const fullRes = await fullResp.json();
+                if (fullRes && fullRes.ok && fullRes.data) {
+                    const localDrafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
+                    const idx = localDrafts.findIndex(d => d.cotizacion === draft.cotizacion);
+                    if (idx !== -1) {
+                        localDrafts[idx] = fullRes.data;
+                    } else {
+                        localDrafts.push(fullRes.data);
+                    }
+                    localStorage.setItem('cmr_drafts', JSON.stringify(localDrafts));
+                    console.log(`🔄 localStorage actualizado con versión del servidor: ${draft.cotizacion}`);
+                }
+            } catch (e) {
+                console.warn('No se pudo descargar versión del servidor:', e);
+            }
+            return false;
+        }
+
+        // Guardado exitoso
+        console.log(`✅ Borrador ${draft.cotizacion} guardado en servidor (${res.reason})`);
+        // Guardar firmas en columnas dedicadas
+        try {
+            const firmaRec = draft.signatureData?.signatureCanvasRecepcion || null;
+            const firmaEnt = draft.signatureData?.signatureCanvasEntrega || null;
+            if (firmaRec || firmaEnt) {
+                await fetch('/.netlify/functions/conectar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'save_firma_borrador',
+                        numero_proceso: draft.cotizacion,
+                        firma_cliente_recepcion: firmaRec,
+                        firma_cliente_entrega: firmaEnt
+                    })
+                });
+            }
+        } catch (e) { console.warn('⚠️ Error guardando firmas:', e); }
+        return true;
     } catch (err) {
-        console.warn('⚠️ No se pudo guardar borradores en servidor:', err.message || err);
+        console.warn('⚠️ No se pudo guardar borrador:', err.message || err);
     }
     return false;
 }
@@ -7225,15 +7351,23 @@ async function autoSyncDrafts() {
             }
         });
 
-        // Detectar borradores nuevos o modificados
+        // Detectar borradores nuevos o modificados (solo cuando servidor es más nuevo)
         const toFetch = [];
         summary.forEach(s => {
             if (!s || !s.cotizacion) return;
             const localTs = localMap[s.cotizacion];
             const serverTs = s.borrador_timestamp || '';
-            // Nuevo o modificado: no existe localmente o timestamp cambió
-            if (localTs === undefined || localTs !== serverTs) {
+            if (localTs === undefined) {
+                // Nuevo en servidor: descargar
                 toFetch.push(s.cotizacion);
+            } else {
+                // Existe localmente: comparar timestamps normalizados
+                const serverEpoch = _parseTs(serverTs);
+                const localEpoch = _parseTs(localTs);
+                if (serverEpoch > localEpoch) {
+                    toFetch.push(s.cotizacion);
+                }
+                // localEpoch >= serverEpoch: NO sobrescribir
             }
         });
 
@@ -7348,8 +7482,8 @@ function newForm() {
 // Poblar el selector al cargar
 // también habilitar botón "Casos Terminados" según rol
 document.addEventListener('DOMContentLoaded', async () => {
-    // Primero cargar cache de procesos acreditados (necesario para filtrar borradores huérfanos)
-    try { await refreshDbUnavailableReceptionNumbers(); } catch(e) { console.log('Error refreshing db processes', e); }
+    // refreshDbUnavailableReceptionNumbers() ya se ejecutó en el DOMContentLoaded
+    // principal (línea 1210). No duplicar la consulta aquí.
     // Cargar borradores desde servidor al iniciar (esperar antes de refrescar select)
     try { await loadDraftsFromServer(); } catch(e) { console.log('Error loading drafts from server', e); }
     setTimeout(refreshCasesSelect, 100);
@@ -8508,7 +8642,7 @@ async function saveAsDraft() {
         }
     }
 
-    try { await saveDraftsToServer(allDrafts); } catch(e) { console.log('Sync server error', e); }
+    try { await saveDraftsToServer(formData); } catch(e) { console.log('Sync server error', e); }
 
     // Sincronizar n_remision con la BD si el proceso ya existe
     if (formData.cotizacion && formData.facturar) {
@@ -8556,7 +8690,7 @@ async function updateDraftStatus(cotizacion, status) {
     }
     
     localStorage.setItem('cmr_drafts', JSON.stringify(drafts));
-    try { await saveDraftsToServer(drafts); } catch(e) {}
+    try { await saveDraftsToServer(drafts[idx]); } catch(e) {}
     setTimeout(refreshCasesSelect, 100);
     return true;
 }

@@ -961,6 +961,29 @@ exports.handler = async (event) => {
                 return jsonResponse(200, { ok: true, message: 'Borradores guardados' });
             }
 
+            // ============================================================
+            // Guardar un solo borrador de forma atómica (RPC transaccional)
+            // Compara timestamps para evitar que una versión antigua
+            // sobrescriba una más nueva en el servidor.
+            // ============================================================
+            if (payload.action === 'save_borrador_individual') {
+                const cotizacion = normalizeText(payload.cotizacion);
+                const borrador = payload.borrador;
+                if (!cotizacion || !borrador || typeof borrador !== 'object') {
+                    return jsonResponse(400, { ok: false, error: 'cotizacion y borrador requeridos' });
+                }
+                const { data: rpcResult, error: rpcError } = await supabase
+                    .rpc('save_borrador_individual', {
+                        p_cotizacion: cotizacion,
+                        p_borrador: borrador
+                    });
+                if (rpcError) {
+                    return jsonResponse(500, { ok: false, error: 'Error guardando borrador individual', detail: rpcError.message });
+                }
+                const result = typeof rpcResult === 'string' ? JSON.parse(rpcResult) : rpcResult;
+                return jsonResponse(200, result);
+            }
+
             // Guardar firmas de un borrador específico en columnas dedicadas
             if (payload.action === 'save_firma_borrador') {
                 const numero = normalizeText(payload.numero_proceso || payload.numero || '');
