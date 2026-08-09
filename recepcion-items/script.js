@@ -6359,8 +6359,43 @@ async function continueSelectedCase() {
             const savedContainer = document.getElementById('savedItemsContainer');
             if (savedContainer) savedContainer.innerHTML = '';
         } catch (e) {}
-        // Cargar el caso inmediatamente desde localStorage
-        const draftToLoad = drafts[idx];
+        // Cargar el caso desde localStorage (descargar completo si es solo resumen)
+        let draftToLoad = drafts[idx];
+
+        if (draftToLoad._isSummaryOnly && draftToLoad.cotizacion) {
+            showNotification('Descargando borrador completo...', 'info');
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000);
+                const resp = await fetch('/.netlify/functions/conectar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'get_borrador_completo', cotizacion: draftToLoad.cotizacion }),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                if (resp.ok) {
+                    const result = await resp.json();
+                    if (result && result.ok && result.data) {
+                        draftToLoad = result.data;
+                        // Actualizar localStorage con el borrador completo
+                        const allDrafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
+                        const updIdx = allDrafts.findIndex(d => d.cotizacion === draftToLoad.cotizacion);
+                        if (updIdx !== -1) {
+                            allDrafts[updIdx] = draftToLoad;
+                        } else {
+                            allDrafts.push(draftToLoad);
+                        }
+                        localStorage.setItem('cmr_drafts', JSON.stringify(allDrafts));
+                        console.log('✅ Borrador completo descargado y guardado:', draftToLoad.cotizacion);
+                    }
+                }
+            } catch (e) {
+                console.warn('⚠️ Error descargando borrador completo:', e.message || e);
+                showNotification('⚠️ Error descargando borrador. Se cargará con datos disponibles.', 'warning');
+            }
+        }
+
         loadFormData(draftToLoad);
         showNotification('Caso cargado: ' + (draftToLoad.cotizacion || ''), 'success');
         // Cargar firmas en background si faltan
@@ -6976,8 +7011,7 @@ async function loadDraftsFromServer() {
                 if (key) serverMap.set(key, s);
             });
 
-            // Fusionar: comparar timestamps y descargar completos solo cuando servidor es más nuevo
-            const toReplaceFromServer = [];
+            // Fusionar: guardar resúmenes, descargar completos solo al abrir caso
             for (const [cotizacion, serverSummary] of serverMap) {
                 const localDraft = localMap.get(cotizacion);
                 if (!localDraft) {
@@ -6988,41 +7022,13 @@ async function loadDraftsFromServer() {
                         fechaRecepcion: serverSummary.fecha_recepcion || '',
                         fechaEntrega: serverSummary.fecha_entrega || '',
                         status: serverSummary.status || 'recepcion',
+                        timestamp: serverSummary.borrador_timestamp || '',
                         _isSummaryOnly: true
                     });
                     continue;
                 }
-                // Existe localmente: comparar timestamps
-                const serverTs = _parseTs(serverSummary.borrador_timestamp);
-                const localTs = _parseTs(localDraft.timestamp);
-                if (serverTs > localTs) {
-                    // Servidor más nuevo: descargar borrador completo
-                    toReplaceFromServer.push(cotizacion);
-                }
-                // localTs >= serverTs: conservar local (no sobrescribir)
-            }
-
-            // Descargar SOLO los borradores donde servidor es más nuevo
-            for (const cotizacion of toReplaceFromServer) {
-                try {
-                    const draftController = new AbortController();
-                    const draftTimeout = setTimeout(() => draftController.abort(), 15000);
-                    const draftResp = await fetch('/.netlify/functions/conectar', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'get_borrador_completo', cotizacion: cotizacion }),
-                        signal: draftController.signal
-                    });
-                    clearTimeout(draftTimeout);
-                    if (draftResp.ok) {
-                        const draftResult = await draftResp.json();
-                        if (draftResult && draftResult.ok && draftResult.data) {
-                            localMap.set(cotizacion, draftResult.data);
-                        }
-                    }
-                } catch (e) {
-                    console.warn('Error descargando borrador completo:', cotizacion, e);
-                }
+                // Existe localmente: conservar versión local
+                // (el servidor se sincroniza vía autoSyncDrafts cuando es necesario)
             }
 
             // Eliminar borradores que ya no existen en servidor
