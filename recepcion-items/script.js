@@ -5411,7 +5411,8 @@ function loadFormData(data, skipDates = false, isFromCompleted = false) {
     }
 
     // Si se está cargando desde casos terminados, intentar restaurar firmas desde las columnas del proceso
-    if (isFromCompleted && data.cotizacion) {
+    // Solo si el borrador NO ya trae signatureData (evitar sobrescribir firma vigente de Supabase)
+    if (isFromCompleted && data.cotizacion && !data.signatureData) {
         (async () => {
             try {
                 const resp = await fetch('/.netlify/functions/conectar', {
@@ -6633,7 +6634,7 @@ function renderCompletedCasesRows(cases) {
             <td>${fecha}</td>
             <td style="text-align:center;">${(c.items && c.items.some(it=>it.images && it.images.length)) ? `<button class='btn btn-mini' onclick='viewCaseImages(${JSON.stringify(c)})'>📷</button>` : '-'}</td>
             <td style="white-space:nowrap;">
-                <button class="btn btn-small" onclick='loadFormData(${JSON.stringify(c)}, false, true)'>👁️ Ver</button>
+                <button class="btn btn-small" onclick="openCompletedCase('${num}')">👁️ Ver</button>
                 <button class="btn btn-small" onclick="deleteCaseByReception('${num}')" style="margin-left:4px;">🗑️ Eliminar</button>
             </td>
         `;
@@ -6834,27 +6835,139 @@ async function importFromPDF(file) {
     }
 })();
 
+// Abrir caso desde el listado de Casos Terminados
+async function openCompletedCase(cotizacion) {
+    if (!cotizacion) return;
+    const norm = normalizeReceptionNumber(cotizacion);
+    showNotification('Cargando caso ' + norm + '...', 'info');
+
+    // 1. Buscar en localStorage
+    const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
+    let draft = drafts.find(d => normalizeReceptionNumber(d.cotizacion || '') === norm);
+
+    // 2. Si no existe o es resumen, descargar completo
+    if (!draft || draft._isSummaryOnly) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            const resp = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_borrador_completo', cotizacion: norm }),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (resp.ok) {
+                const result = await resp.json();
+                if (result && result.ok && result.data) {
+                    draft = result.data;
+                    // Guardar completo en localStorage
+                    const allDrafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
+                    const idx = allDrafts.findIndex(d => normalizeReceptionNumber(d.cotizacion || '') === norm);
+                    if (idx !== -1) {
+                        allDrafts[idx] = draft;
+                    } else {
+                        allDrafts.push(draft);
+                    }
+                    localStorage.setItem('cmr_drafts', JSON.stringify(allDrafts));
+                }
+            }
+        } catch (e) {
+            console.warn('⚠️ Error descargando borrador completo:', e.message || e);
+        }
+    }
+
+    if (!draft) {
+        showNotification('No se encontró el caso ' + norm, 'error');
+        return;
+    }
+
+    // 3. Cargar formulario completo
+    loadFormData(draft, false, true);
+    showNotification('Caso cargado: ' + norm, 'success');
+}
+
 async function recuperarCaso(numeroProceso) {
     if (!numeroProceso || !numeroProceso.trim()) {
         alert('Ingrese un número de proceso válido (ej: R26 0012)');
         return;
     }
-    const num = numeroProceso.trim().toUpperCase();
+    const num = normalizeReceptionNumber(numeroProceso);
+    showNotification('Buscando caso ' + num + '...', 'info');
 
-    // 1. Buscar en drafts (localStorage)
+    // 1. Buscar en localStorage por cotizacion normalizada
     const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
-    const caso = drafts.find(d =>
-        (d.cotizacion || '').toUpperCase() === num ||
-        (d.numero_proceso || '').toUpperCase() === num
-    );
+    let caso = drafts.find(d => normalizeReceptionNumber(d.cotizacion || '') === num);
 
-    if (caso) {
+    // 2. Si existe pero es resumen, descargar completo
+    if (caso && caso._isSummaryOnly) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            const resp = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_borrador_completo', cotizacion: num }),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (resp.ok) {
+                const result = await resp.json();
+                if (result && result.ok && result.data) {
+                    caso = result.data;
+                    // Guardar completo en localStorage
+                    const idx = drafts.findIndex(d => normalizeReceptionNumber(d.cotizacion || '') === num);
+                    if (idx !== -1) {
+                        drafts[idx] = caso;
+                    } else {
+                        drafts.push(caso);
+                    }
+                    localStorage.setItem('cmr_drafts', JSON.stringify(drafts));
+                    console.log('✅ Borrador completo descargado y guardado:', caso.cotizacion);
+                }
+            }
+        } catch (e) {
+            console.warn('⚠️ Error descargando borrador completo:', e.message || e);
+            showNotification('⚠️ Error descargando borrador. Se cargará con datos disponibles.', 'warning');
+        }
+    }
+
+    // 3. Si existe localmente como completo, cargarlo
+    if (caso && !caso._isSummaryOnly) {
         console.log('Caso encontrado en drafts');
         loadFormData(caso, false);
         return;
     }
 
-    // 2. Buscar en base de datos (procesos_acreditados)
+    // 4. No existe localmente: intentar descargar de Supabase
+    if (!caso) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            const resp = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_borrador_completo', cotizacion: num }),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (resp.ok) {
+                const result = await resp.json();
+                if (result && result.ok && result.data) {
+                    caso = result.data;
+                    // Guardar en localStorage
+                    drafts.push(caso);
+                    localStorage.setItem('cmr_drafts', JSON.stringify(drafts));
+                    loadFormData(caso, false);
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn('⚠️ get_borrador_completo falló, intentando fallback:', e.message || e);
+        }
+    }
+
+    // 5. Fallback: buscar en procesos_acreditados (casos antiguos sin borrador en Supabase)
     try {
         const res = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
@@ -6870,7 +6983,7 @@ async function recuperarCaso(numeroProceso) {
 
         const proceso = data.proceso;
 
-        // 3. Buscar detalle del proceso
+        // Buscar detalle del proceso
         let detalle = [];
         if (proceso.id) {
             const resDet = await fetch('/.netlify/functions/conectar', {
@@ -6882,7 +6995,7 @@ async function recuperarCaso(numeroProceso) {
             if (detData.ok) detalle = detData.detalle || [];
         }
 
-        // 4. Reconstruir objeto de formulario
+        // Reconstruir objeto de formulario
         const form = {
             cotizacion: proceso.numero_proceso || num,
             cliente: proceso.cliente || '',
@@ -6900,7 +7013,6 @@ async function recuperarCaso(numeroProceso) {
             }))
         };
 
-        // 5. Cargar formulario
         loadFormData(form, false);
 
     } catch (error) {

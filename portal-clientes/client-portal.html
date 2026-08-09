@@ -1169,7 +1169,7 @@
         let filterStatus = 'all';
         // Filtros informes
         let informesData = [];
-        let informesFilter = { search: '', dateFrom: '', dateTo: '', month: '', proceso: '', status: 'all', orderBy: 'recent' };
+        let informesFilter = { search: '', dateFrom: '', dateTo: '', month: '', proceso: '', status: 'all', orderBy: 'name' };
         let informesPage = 1;
         const informesPerPage = 12;
         // Filtros historial
@@ -1407,7 +1407,7 @@
             // Ordenar
             if (f.orderBy === 'recent') filtered.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
             else if (f.orderBy === 'oldest') filtered.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
-            else if (f.orderBy === 'name') filtered.sort((a, b) => (a.numero_proceso || '').localeCompare(b.numero_proceso || ''));
+            else if (f.orderBy === 'name') filtered.sort((a, b) => (b.numero_proceso || '').localeCompare(a.numero_proceso || ''));
 
             // Procesos únicos para el filtro
             const procesoSet = new Map();
@@ -1510,7 +1510,7 @@
                             <select class="dm-input" onchange="handleInformeFilter('orderBy', this.value)" style="width:100%;padding:8px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;">
                                 <option value="recent" ${f.orderBy === 'recent' ? 'selected' : ''}>Más recientes</option>
                                 <option value="oldest" ${f.orderBy === 'oldest' ? 'selected' : ''}>Más antiguos</option>
-                                <option value="name" ${f.orderBy === 'name' ? 'selected' : ''}>Por número de proceso</option>
+                                <option value="name" ${f.orderBy === 'name' ? 'selected' : ''}>Mayor a menor</option>
                             </select>
                         </div>
                     </div>
@@ -1552,7 +1552,7 @@
         };
 
         window.limpiarFiltrosInformes = function() {
-            informesFilter = { search: '', dateFrom: '', dateTo: '', month: '', proceso: '', status: 'all', orderBy: 'recent' };
+            informesFilter = { search: '', dateFrom: '', dateTo: '', month: '', proceso: '', status: 'all', orderBy: 'name' };
             informesPage = 1;
             const c = document.getElementById('dynamic-content');
             c.innerHTML = renderReports();
@@ -1648,6 +1648,9 @@
                     });
                 }
             }
+
+            // Ordenar de mayor a menor por número de proceso
+            filtered.sort((a, b) => (b.id || '').localeCompare(a.id || ''));
 
             const totalCount = allItems.length;
             const finalizadasCount = allItems.filter(r => {
