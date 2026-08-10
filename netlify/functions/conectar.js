@@ -551,11 +551,37 @@ exports.handler = async (event) => {
                 const numero = normalizeText(payload.numero_proceso || payload.numero || payload.id || payload.search);
                 if (!numero) return jsonResponse(400, { ok: false, error: 'numero_proceso requerido' });
 
-                const { data, error } = await supabase
+                // Buscar exacto primero
+                let { data, error } = await supabase
                     .from('procesos_acreditados')
                     .select('*')
                     .eq('numero_proceso', numero)
                     .limit(1);
+
+                // Si no encontró, intentar variantes comunes de formato
+                if ((!data || data.length === 0) && !error) {
+                    const sinEspacios = numero.replace(/\s+/g, '');
+                    const variants = new Set();
+                    // R260173 → R26 0173 (espacio después de los 2 primeros dígitos del año)
+                    const m = sinEspacios.match(/^(R\d{2})(\d+)$/);
+                    if (m) {
+                        variants.add(m[1] + ' ' + m[2]);
+                        variants.add(m[1] + m[2]);
+                    }
+                    // Buscar cada variante
+                    for (const v of variants) {
+                        if (v === numero) continue;
+                        const { data: d2, error: e2 } = await supabase
+                            .from('procesos_acreditados')
+                            .select('*')
+                            .eq('numero_proceso', v)
+                            .limit(1);
+                        if (!e2 && d2 && d2.length > 0) {
+                            data = d2;
+                            break;
+                        }
+                    }
+                }
 
                 if (error) {
                     return jsonResponse(500, { ok: false, error: 'Error al consultar proceso', detail: error.message });
@@ -1425,116 +1451,48 @@ exports.handler = async (event) => {
                     return jsonResponse(200, { ok: true, updated: [], inserted: [], deleted: 'all' });
                 }
 
-                // FASE 1: Fetch existentes
-                const { data: existingRows, error: fetchError } = await supabase
+                // FASE 1: Delete ALL existing rows for this proceso
+                const { error: delErr } = await supabase
                     .from('marcaciones_ac')
-                    .select('*')
-                    .eq('proceso_id', procesoId)
-                    .order('consecutivo', { ascending: true });
-
-                if (fetchError) {
-                    console.error('[create_marcaciones_batch] Error fetching existentes:', fetchError.message);
-                    return jsonResponse(500, { ok: false, error: 'Error consultando marcaciones existentes', detail: fetchError.message });
+                    .delete()
+                    .eq('proceso_id', procesoId);
+                if (delErr) {
+                    console.error('[create_marcaciones_batch] Error deleting:', delErr.message);
+                    return jsonResponse(500, { ok: false, error: 'Error eliminando marcaciones', detail: delErr.message });
                 }
 
-                const existing = existingRows || [];
+                // FASE 2: Insert ALL rows fresh with correct consecutivo order
+                const toInsert = marcaciones.map(item => ({
+                    proceso_id: procesoId,
+                    detalle_id: item.detalle_id || null,
+                    ensayo_id: item.ensayo_id || null,
+                    consecutivo: item.consecutivo,
+                    elemento: item.elemento || '',
+                    descripcion: item.descripcion || '',
+                    unidad: item.unidad || '',
+                    estado: item.estado || 'Pendiente',
+                    observacion: item.observacion || '',
+                    nci: item.nci || '',
+                    calibre_mm2: item.calibre_mm2 ?? null,
+                    longitud_m: item.longitud_m ?? null,
+                    rm_maxima: item.rm_maxima ?? null,
+                    rm_medida: item.rm_medida ?? null,
+                    fecha_modificacion: item.fecha_modificacion || new Date().toISOString()
+                }));
 
-                // FASE 2: Build cola de existentes por identidad (elemento + descripcion)
-                const existingByElement = {};
-                existing.forEach(row => {
-                    const key = ((row.elemento || '').trim() + '||' + (row.descripcion || '').trim()).toLowerCase();
-                    if (!existingByElement[key]) existingByElement[key] = [];
-                    existingByElement[key].push(row);
-                });
-
-                const toUpdate = [];
-                const toInsert = [];
-                const matchedExistingIds = new Set();
-
-                for (const item of marcaciones) {
-                    const elemKey = ((item.elemento || '').trim() + '||' + (item.descripcion || '').trim()).toLowerCase();
-                    const queue = existingByElement[elemKey];
-                    const match = queue && queue.length > 0 ? queue.shift() : null;
-
-                    if (match) {
-                        matchedExistingIds.add(match.id);
-                        toUpdate.push({
-                            id: match.id,
-                            consecutivo: item.consecutivo,
-                            estado: item.estado !== undefined ? item.estado : (match.estado || 'Pendiente'),
-                            observacion: item.observacion !== undefined ? item.observacion : (match.observacion || ''),
-                            nci: item.nci !== undefined ? item.nci : (match.nci || ''),
-                            calibre_mm2: item.calibre_mm2 ?? match.calibre_mm2 ?? null,
-                            longitud_m: item.longitud_m ?? match.longitud_m ?? null,
-                            rm_maxima: item.rm_maxima ?? match.rm_maxima ?? null,
-                            rm_medida: item.rm_medida ?? match.rm_medida ?? null
-                        });
-                    } else {
-                        toInsert.push({
-                            proceso_id: procesoId,
-                            detalle_id: item.detalle_id || null,
-                            ensayo_id: item.ensayo_id || null,
-                            consecutivo: item.consecutivo,
-                            elemento: item.elemento || '',
-                            descripcion: item.descripcion || '',
-                            estado: item.estado || 'Pendiente',
-                            observacion: item.observacion || '',
-                            nci: item.nci || '',
-                            calibre_mm2: item.calibre_mm2 ?? null,
-                            longitud_m: item.longitud_m ?? null,
-                            rm_maxima: item.rm_maxima ?? null,
-                            rm_medida: item.rm_medida ?? null
-                        });
-                    }
-                }
-
-                // FASE 3: Eliminar sobrantes
-                const toDelete = existing.filter(r => !matchedExistingIds.has(r.id));
-                let deletedCount = 0;
-                if (toDelete.length > 0) {
-                    const delIds = toDelete.map(r => r.id);
-                    const { error: delErr } = await supabase
-                        .from('marcaciones_ac')
-                        .delete()
-                        .in('id', delIds);
-                    if (delErr) {
-                        console.error('[create_marcaciones_batch] Error deleting orphans:', delErr.message);
-                    } else {
-                        deletedCount = delIds.length;
-                    }
-                }
-
-                // FASE 4: Actualizar existentes
-                const updateResults = [];
-                for (const u of toUpdate) {
-                    const { error: updErr } = await supabase
-                        .from('marcaciones_ac')
-                        .update({ consecutivo: u.consecutivo, estado: u.estado, observacion: u.observacion, nci: u.nci, calibre_mm2: u.calibre_mm2, longitud_m: u.longitud_m, rm_maxima: u.rm_maxima, rm_medida: u.rm_medida })
-                        .eq('id', u.id);
-                    if (updErr) {
-                        console.error('[create_marcaciones_batch] Error updating id=' + u.id + ':', updErr.message);
-                    } else {
-                        updateResults.push(u.id);
-                    }
-                }
-
-                // FASE 5: Insertar nuevos
                 const insertResults = [];
                 const BATCH_SIZE = 50;
                 for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
                     let batch = toInsert.slice(i, i + BATCH_SIZE);
-
                     for (let attempt = 0; attempt < 3; attempt++) {
                         const { data, error } = await supabase
                             .from('marcaciones_ac')
                             .insert(batch)
                             .select();
-
                         if (!error) {
                             insertResults.push(...(Array.isArray(data) ? data : [data]));
                             break;
                         }
-
                         console.error('[create_marcaciones_batch] Error insert (attempt ' + (attempt + 1) + '):', error.message);
                         const msg = String(error.message || '').toLowerCase();
                         const missingCols = [];
@@ -1542,9 +1500,7 @@ exports.handler = async (event) => {
                         if (m1) missingCols.push(m1[1]);
                         const m2 = msg.match(/column\s+"?([^"\s]+)"?\s+does not exist/);
                         if (m2) missingCols.push(m2[1]);
-
                         if (missingCols.length === 0) break;
-
                         batch = batch.map(item => {
                             const clean = { ...item };
                             missingCols.forEach(col => { delete clean[col]; });
@@ -1553,7 +1509,7 @@ exports.handler = async (event) => {
                     }
                 }
 
-                return jsonResponse(200, { ok: true, updated: updateResults, inserted: insertResults, deleted: deletedCount });
+                return jsonResponse(200, { ok: true, updated: [], inserted: insertResults, deleted: toInsert.length });
             }
 
             // =============================================

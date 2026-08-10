@@ -10597,6 +10597,7 @@
 
                 try {
                     const consecutivosPayload = this.currentMarcaciones.map(mc => ({
+                        id: mc.id || null,
                         proceso_id: this.currentProcess.id,
                         consecutivo: mc.consecutivo || '',
                         elemento: mc.elemento || '',
@@ -10604,7 +10605,11 @@
                         unidad: mc.unidad || '',
                         estado: mc.estado || 'Pendiente',
                         observacion: mc.observacion || '',
-                        nci: mc.nci || ''
+                        nci: mc.nci || '',
+                        calibre_mm2: mc.calibre_mm2 ?? null,
+                        longitud_m: mc.longitud_m ?? null,
+                        rm_maxima: mc.rm_maxima ?? null,
+                        rm_medida: mc.rm_medida ?? null
                     }));
 
                     const res = await fetch('/.netlify/functions/conectar', {
@@ -10665,7 +10670,8 @@
                         calibre_mm2: m.calibre_mm2 ?? null,
                         longitud_m: m.longitud_m ?? null,
                         rm_maxima: m.rm_maxima ?? null,
-                        rm_medida: m.rm_medida ?? null
+                        rm_medida: m.rm_medida ?? null,
+                        fecha_modificacion: m.fecha_modificacion || new Date().toISOString()
                     }));
 
                     const res = await fetch('/.netlify/functions/conectar', {

@@ -5228,7 +5228,9 @@ function loadFormData(data, skipDates = false, isFromCompleted = false) {
                                         cantLavados: item.status || 0,
                                         observaciones: item.observaciones || '',
                                         images: item.images || [],
-                                        saved: true
+                                        saved: true,
+                                        ensayo_id: predefinedItemsData[foundIdx]?.id || item.id || null,
+                                        ensayo_nombre: item.name || predefinedItemsData[foundIdx]?.nombre || ''
                                     };
                                     console.log(`✅ savedRowsData restaurado para ${item.name}`);
                                 }
@@ -5248,7 +5250,9 @@ function loadFormData(data, skipDates = false, isFromCompleted = false) {
                                         cantLavados: item.status || 0,
                                         observaciones: item.observaciones || '',
                                         images: item.images || [],
-                                        saved: true
+                                        saved: true,
+                                        ensayo_id: (predefinedItemsDataNoAcreditados[foundIdx]?.id) || item.id || null,
+                                        ensayo_nombre: item.name || (predefinedItemsDataNoAcreditados[foundIdx]?.nombre) || ''
                                     };
                                 }
                             }
@@ -6877,14 +6881,88 @@ async function openCompletedCase(cotizacion) {
         }
     }
 
-    if (!draft) {
-        showNotification('No se encontró el caso ' + norm, 'error');
+    // 3. Si hay borrador completo, cargarlo y salir
+    if (draft && !draft._isSummaryOnly) {
+        loadFormData(draft, false, true);
+        showNotification('Caso cargado: ' + norm, 'success');
         return;
     }
 
-    // 3. Cargar formulario completo
-    loadFormData(draft, false, true);
-    showNotification('Caso cargado: ' + norm, 'success');
+    // 4. Fallback: reconstruir desde procesos_acreditados (casos sin borrador completo)
+    try {
+        const res = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_proceso', numero_proceso: norm })
+        });
+        const data = await res.json();
+
+        if (!data.ok || !data.proceso) {
+            showNotification('No se encontró el caso ' + norm, 'error');
+            return;
+        }
+
+        const proceso = data.proceso;
+
+        // Buscar detalle del proceso (elementos/ensayos)
+        let detalle = [];
+        if (proceso.id) {
+            const resDet = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_detalle_proceso', proceso_id: proceso.id })
+            });
+            const detData = await resDet.json();
+            if (detData.ok) detalle = detData.detalle || [];
+        }
+
+        // Reconstruir objeto de formulario con la misma estructura que recuperarCaso()
+        const form = {
+            cotizacion: proceso.numero_proceso || norm,
+            cliente: proceso.cliente || '',
+            status: (proceso.estado || 'recepcion').toLowerCase(),
+            fechaRecepcion: proceso.fecha_recepcion || '',
+            fechaEntrega: proceso.fecha_entrega_cliente || '',
+            informeNombre: proceso.informe_a_nombre_de || '',
+            facturarNombre: proceso.facturar_a_nombre_de || '',
+            facturar: proceso.n_remision || '',
+            nitEmpresa: proceso.nit_empresa || proceso.empresa || '',
+            items: (detalle || []).map(d => ({
+                id: d.ensayo_id,
+                name: d.ensayo_nombre || d.ensayo_id || '',
+                quantity: d.cantidad || 0,
+                brand: d.marca || '',
+                observations: d.observaciones || '',
+                quantity2: d.cantidad_entregada || 0
+            }))
+        };
+
+        // Restaurar firmas desde procesos_acreditados si existen
+        if (proceso.firma_cliente_recepcion || proceso.firma_cliente_entrega) {
+            form.signatureData = {
+                signatureCanvasRecepcion: proceso.firma_cliente_recepcion || null,
+                signatureCanvasEntrega: proceso.firma_cliente_entrega || null
+            };
+        }
+
+        // Guardar en localStorage para futuras aperturas
+        const allDrafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
+        const idx = allDrafts.findIndex(d => normalizeReceptionNumber(d.cotizacion || '') === norm);
+        const draftToSave = { ...form, _isSummaryOnly: false, _reconstructedFromDB: true, timestamp: new Date().toISOString() };
+        if (idx !== -1) {
+            allDrafts[idx] = draftToSave;
+        } else {
+            allDrafts.push(draftToSave);
+        }
+        localStorage.setItem('cmr_drafts', JSON.stringify(allDrafts));
+
+        loadFormData(form, false, true);
+        showNotification('Caso reconstruido desde base de datos: ' + norm, 'success');
+
+    } catch (error) {
+        console.error('Error reconstruyendo caso desde BD:', error);
+        showNotification('Error al cargar el caso ' + norm, 'error');
+    }
 }
 
 async function recuperarCaso(numeroProceso) {
@@ -8410,8 +8488,12 @@ async function guardarDetalleProceso(procesoId) {
             if (!row) continue;
             const index = parseInt(key.replace(/^row_/, ''));
             const ensayo = Array.isArray(predefinedItemsData) ? predefinedItemsData[index] : null;
-            const ensayoId = ensayo?.id;
-            if (!ensayoId) continue;
+            let ensayoId = ensayo?.id || null;
+            if (!ensayoId) ensayoId = row.ensayo_id || row.id || row.ensayoId || null;
+            if (!ensayoId) {
+                console.warn('[guardarDetalleProceso] Omitiendo fila sin ensayoId:', key, row);
+                continue;
+            }
 
             const units = getRowUnits('ensayos_acreditados', index);
             const obs = String(row.observaciones || '').trim();
@@ -8492,8 +8574,12 @@ async function guardarDetalleProceso(procesoId) {
             if (!row) continue;
             const index = parseInt(key.replace(/^row_/, ''));
             const ensayo = Array.isArray(predefinedItemsDataNoAcreditados) ? predefinedItemsDataNoAcreditados[index] : null;
-            const ensayoId = ensayo?.id;
-            if (!ensayoId) continue;
+            let ensayoId = ensayo?.id || null;
+            if (!ensayoId) ensayoId = row.ensayo_id || row.id || row.ensayoId || null;
+            if (!ensayoId) {
+                console.warn('[guardarDetalleProceso] Omitiendo fila no acreditada sin ensayoId:', key, row);
+                continue;
+            }
 
             const units = getRowUnits('ensayos_no_acreditados', index);
             const obs = String(row.observaciones || '').trim();
@@ -11797,6 +11883,11 @@ function saveCurrentTableData(tableType) {
                 // Inicializar el objeto si no existe
                 if (!savedRowsData[tableType][`row_${index}`]) {
                     savedRowsData[tableType][`row_${index}`] = {};
+                    const refData = tableType === 'ensayos_acreditados' ? predefinedItemsData : predefinedItemsDataNoAcreditados;
+                    if (Array.isArray(refData) && refData[index]) {
+                        savedRowsData[tableType][`row_${index}`].ensayo_id = refData[index].id || null;
+                        savedRowsData[tableType][`row_${index}`].ensayo_nombre = refData[index].nombre || refData[index].name || '';
+                    }
                 }
                 
                 const currentSaved = savedRowsData[tableType][`row_${index}`];
