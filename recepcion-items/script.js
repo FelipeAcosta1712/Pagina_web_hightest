@@ -1823,11 +1823,15 @@ function syncLocalStorageWithDB(dbNumbers) {
         });
         if (usedChanged) setUsedReceptionNumbers(used);
 
-        // Limpiar held: solo mantener números que existen en la DB
+        // Limpiar held: solo eliminar entradas EXPIRADAS que no existen en la DB
+        // (NO eliminar held activo/no-expirado aunque no esté en DB, porque el bloqueo local sigue vigente)
         const held = getHeldReceptionNumbers();
         let heldChanged = false;
+        const nowMs = Date.now();
         Object.keys(held).forEach((code) => {
-            if (!dbNumbers.has(normalizeReceptionNumber(code))) {
+            const entry = held[code] || {};
+            const isExpired = !entry.expiresAt || Number(entry.expiresAt) <= nowMs;
+            if (isExpired && !dbNumbers.has(normalizeReceptionNumber(code))) {
                 delete held[code];
                 heldChanged = true;
             }
