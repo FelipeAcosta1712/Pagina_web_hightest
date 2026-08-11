@@ -3,8 +3,6 @@
 // OPCIÓN 1: Solo notificar archivos (100% confiable)
 // =============================================================================
 
-console.log('📧 Email Simple v1.0 - Sin problemas de archivos');
-
 // CONFIGURACIÓN EMAILJS
 const EMAIL_SIMPLE_CONFIG = {
     serviceId: 'service_xxiz7yg',
@@ -14,8 +12,6 @@ const EMAIL_SIMPLE_CONFIG = {
 
 // FUNCIÓN: INICIALIZAR EMAIL SIMPLE
 function initEmailSimple() {
-    console.log('🚀 Iniciando Email Simple...');
-    
     try {
         // Verificar EmailJS
         if (typeof emailjs === 'undefined') {
@@ -25,7 +21,6 @@ function initEmailSimple() {
         }
         
         emailjs.init(EMAIL_SIMPLE_CONFIG.publicKey);
-        console.log('✅ EmailJS inicializado correctamente');
         
         // Crear botón flotante
         crearBotonEmailSimple();
@@ -40,8 +35,6 @@ function initEmailSimple() {
 
 // FUNCIÓN: CREAR BOTÓN DE RESPALDO
 function crearBotonRespaldo() {
-    console.log('🔄 Creando botón de respaldo...');
-    
     const boton = document.createElement('button');
     boton.id = 'btn-email-respaldo';
     boton.innerHTML = '📧';
@@ -101,7 +94,6 @@ function crearBotonEmailSimple() {
     boton.onclick = abrirModalEmailSimple;
     
     document.body.appendChild(boton);
-    console.log('✅ Botón de email creado');
 }
 
 // FUNCIÓN: ABRIR MODAL
@@ -414,8 +406,6 @@ async function uploadToFileStack(files) {
 
 // FUNCIÓN: EXTRAER INFORMACIÓN COMPLETA DEL FORMULARIO
 function extraerInformacionCompleta() {
-    console.log('📋 Extrayendo información completa del formulario...');
-    
     const info = {};
     
     // Información básica
@@ -463,7 +453,6 @@ function extraerInformacionCompleta() {
     info.tipoFacturacion = document.querySelector('input[name="tipoFacturacion"]:checked')?.value || 'No especificado';
     info.ordenCompra = document.getElementById('ordenCompra')?.value || 'No especificada';
     
-    console.log('📋 Información extraída:', info);
     return info;
 }
 
@@ -561,8 +550,6 @@ async function enviarEmailSimple() {
     }
     
     try {
-        console.log('📤 Enviando email con información completa del formulario...');
-        
         // Extraer TODA la información del formulario
         const infoCompleta = extraerInformacionCompleta();
         
@@ -603,15 +590,12 @@ reportes.hightest@gmail.com`;
             email: 'reportes.hightest@gmail.com'
         };
         
-        console.log('📋 Enviando información completa:', parametros);
-        
         const resultado = await emailjs.send(
             EMAIL_SIMPLE_CONFIG.serviceId,
             EMAIL_SIMPLE_CONFIG.templateId,
             parametros
         );
         
-        console.log('✅ Email enviado exitosamente con información completa:', resultado);
         alert(`✅ Email enviado exitosamente a ${para}\n\n📋 Se incluyó toda la información del formulario de recepción en el cuerpo del mensaje.\n\n✨ ¡No se requieren archivos adjuntos!`);
         cerrarModalEmailSimple();
         
@@ -628,8 +612,6 @@ function cerrarModalEmailSimple() {
 }
 
 // INICIALIZAR INMEDIATAMENTE
-console.log('📧 Cargando Email Simple...');
-
 // EXPONER FUNCIONES GLOBALES
 window.initEmailSimple = initEmailSimple;
 window.crearBotonRespaldo = crearBotonRespaldo;
@@ -641,7 +623,6 @@ window.setShareMethod = setShareMethod;
 
 // INICIALIZACIÓN MÚLTIPLE (para asegurar que funcione)
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📧 DOM listo, inicializando email...');
     setTimeout(initEmailSimple, 500);
     
     // Inicializar método de compartir por defecto
@@ -655,11 +636,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // También inicializar después de un tiempo como respaldo
 setTimeout(function() {
-    console.log('📧 Respaldo: Verificando botón de email...');
     if (!document.getElementById('btn-email-simple') && !document.getElementById('btn-email-respaldo')) {
-        console.log('📧 No hay botón, creando respaldo...');
         crearBotonRespaldo();
     }
 }, 3000);
 
-console.log('✅ Sistema de Email Simple cargado');

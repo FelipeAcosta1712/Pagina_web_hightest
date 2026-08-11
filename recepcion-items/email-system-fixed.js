@@ -107,8 +107,6 @@ let emailSystem = {
  * Inicializa el sistema de email
  */
 async function initializeEmailSystem(providerName = null) {
-    console.log('📧 Inicializando sistema de email mejorado...');
-    
     const provider = providerName || EMAIL_CONFIG.currentProvider;
     
     try {
@@ -121,8 +119,6 @@ async function initializeEmailSystem(providerName = null) {
         if (result.success) {
             emailSystem.currentProvider = provider;
             emailSystem.initialized = true;
-            
-            console.log(`✅ Sistema de email inicializado con ${provider}`);
             
             // Crear interfaz para administradores
             if (typeof hasRole === 'function' && hasRole('administrador')) {
@@ -570,8 +566,6 @@ async function loadEmailConfiguration() {
             if (config.providers) {
                 Object.assign(EMAIL_PROVIDERS, config.providers);
             }
-            
-            console.log('✅ Configuración de email cargada');
         }
         
         const savedStats = localStorage.getItem('email_statistics');

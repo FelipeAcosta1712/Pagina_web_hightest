@@ -136,7 +136,7 @@ async function enviarEmailPersonalizado() {
             <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #e2e8f0; font-size: 14px;">📎 Adjuntar Archivos:</label>
             <div style="position: relative;">
                 <input type="file" id="email-archivos" multiple style="display: none;" onchange="actualizarListaArchivos()">
-                <button type="button" onclick="console.log('🔍 Debug - Botón clickeado'); const input = document.getElementById('email-archivos'); console.log('🔍 Input encontrado:', !!input, input); input.click();" style="width: 100%; padding: 12px 15px; border: 2px dashed #4a5568; border-radius: 8px; background: #1a202c; color: #a0aec0; font-size: 14px; cursor: pointer; transition: all 0.3s ease; text-align: left;" onmouseover="this.style.borderColor='#4299e1'; this.style.color='#4299e1'" onmouseout="this.style.borderColor='#4a5568'; this.style.color='#a0aec0'">
+                <button type="button" onclick="const input = document.getElementById('email-archivos'); input.click();" style="width: 100%; padding: 12px 15px; border: 2px dashed #4a5568; border-radius: 8px; background: #1a202c; color: #a0aec0; font-size: 14px; cursor: pointer; transition: all 0.3s ease; text-align: left;" onmouseover="this.style.borderColor='#4299e1'; this.style.color='#4299e1'" onmouseout="this.style.borderColor='#4a5568'; this.style.color='#a0aec0'">
                     📁 Seleccionar archivos... (Cualquier tamaño y tipo)
                 </button>
             </div>
@@ -195,15 +195,10 @@ async function procesarEnvioEmail() {
         return;
     }
     
-    console.log('🔍 Debug - EmailJS disponible:', !!window.emailjs);
-    console.log('🔍 Configuración:', EMAILJS_CONFIG);
-    
     const para = document.getElementById('email-para').value.trim();
     const cc = document.getElementById('email-cc').value.trim();
     const nombre = document.getElementById('email-nombre').value.trim();
     const asunto = document.getElementById('email-asunto').value.trim();
-    
-    console.log('🔍 Valores de formulario:', { para, cc, nombre, asunto });
     
     // Validaciones
     if (!para || !validarEmail(para)) {
@@ -374,27 +369,11 @@ HIGH TEST S.A.S`;
             });
         }
         
-        console.log('📋 Enviando email con archivos:', {
-            para: parametros.to_email,
-            cc: parametros.cc_email,
-            nombre: parametros.to_name,
-            asunto,
-            template: EMAILJS_CONFIG.templateId,
-            service: EMAILJS_CONFIG.serviceId,
-            adjuntos: archivosData.adjuntos.length,
-            links: archivosData.links.length,
-            archivos_detalle: parametros.archivos_detalle
-        });
-        
-        console.log('🔧 Parámetros completos:', parametros);
-        
         const resultado = await emailjs.send(
             EMAILJS_CONFIG.serviceId,
             EMAILJS_CONFIG.templateId,
             parametros
         );
-        
-        console.log('✅ Email enviado:', resultado);
         
         let mensajeExito = `✅ Email enviado exitosamente`;
         if (archivosData.adjuntos.length > 0) {
@@ -455,28 +434,16 @@ function actualizarListaArchivos() {
     const input = document.getElementById('email-archivos');
     const lista = document.getElementById('lista-archivos');
     
-    console.log('🔍 Debug - actualizarListaArchivos llamado');
-    console.log('🔍 Input encontrado:', !!input);
-    console.log('🔍 Lista encontrada:', !!lista);
-    
     if (!input || !lista) {
-        console.log('❌ No se encontró input o lista');
         return;
     }
     
     const archivos = Array.from(input.files);
-    console.log('🔍 Archivos seleccionados:', archivos.length);
     
     if (archivos.length === 0) {
-        console.log('🔍 No hay archivos, limpiando lista');
         lista.innerHTML = '';
         return;
     }
-    
-    console.log('📁 Archivos detectados:');
-    archivos.forEach((archivo, index) => {
-        console.log(`${index + 1}. ${archivo.name} - ${archivo.size} bytes (${(archivo.size/1024).toFixed(2)} KB)`);
-    });
     
     let totalSize = 0;
     let html = '<div style="background: #2d3748; border-radius: 8px; padding: 12px; margin-top: 8px;">';
@@ -546,7 +513,6 @@ function actualizarListaArchivos() {
     </div>`;
     
     lista.innerHTML = html;
-    console.log('✅ Lista actualizada con', archivos.length, 'archivos');
 }
 
 // FUNCIÓN: REMOVER ARCHIVO DE LA LISTA
@@ -588,14 +554,9 @@ async function procesarArchivosParaEmail() {
     const archivosLinks = [];
     
     try {
-        console.log(`📁 Procesando ${archivos.length} archivo(s)...`);
-        
         for (let archivo of archivos) {
             const sizeKB = archivo.size / 1024;
-            console.log(`� Analizando: ${archivo.name} (${sizeKB.toFixed(1)} KB)`);
-            
             if (archivo.size <= 25 * 1024) { // <= 25KB - Adjunto Base64 directo
-                console.log(`📎 Procesando como adjunto directo: ${archivo.name}`);
                 const base64 = await archivoABase64(archivo);
                 const mimeType = archivo.type || 'application/octet-stream';
                 const dataUrl = `data:${mimeType};base64,${base64}`;
@@ -609,7 +570,6 @@ async function procesarArchivosParaEmail() {
                 });
                 
             } else { // > 25KB - Crear enlace de descarga con instrucciones
-                console.log(`🔗 Procesando archivo grande: ${archivo.name}`);
                 
                 // Crear blob URL para descarga local
                 const blobUrl = URL.createObjectURL(archivo);
@@ -632,7 +592,6 @@ async function procesarArchivosParaEmail() {
             }
         }
         
-        console.log(`✅ Procesados: ${archivosAdjuntos.length} adjuntos directos, ${archivosLinks.length} links`);
         return { adjuntos: archivosAdjuntos, links: archivosLinks };
         
     } catch (error) {
@@ -644,8 +603,6 @@ async function procesarArchivosParaEmail() {
 // FUNCIÓN: SUBIR ARCHIVO A SERVICIO REAL
 async function subirArchivoReal(archivo) {
     try {
-        console.log(`📤 Procesando archivo: ${archivo.name} (${(archivo.size/1024/1024).toFixed(2)} MB)`);
-        
         // Intentar con transfersh primero (más confiable)
         return await subirArchivoTransferSH(archivo);
         
@@ -661,7 +618,6 @@ async function subirArchivoReal(archivo) {
 // FUNCIÓN: SUBIR A TRANSFER.SH
 async function subirArchivoTransferSH(archivo) {
     try {
-        console.log(`📤 Intentando subir a transfer.sh: ${archivo.name}`);
         mostrarNotificacion(`📤 Subiendo ${archivo.name}...`, 'info');
         
         const url = `https://transfer.sh/${encodeURIComponent(archivo.name)}`;
@@ -676,7 +632,6 @@ async function subirArchivoTransferSH(archivo) {
         
         if (response.ok) {
             const downloadUrl = await response.text();
-            console.log(`✅ Archivo subido exitosamente: ${downloadUrl.trim()}`);
             mostrarNotificacion(`✅ ${archivo.name} subido exitosamente`, 'success');
             
             return {
@@ -700,8 +655,6 @@ async function subirArchivoTransferSH(archivo) {
 // FUNCIÓN: SERVICIO ALTERNATIVO CON TMPFILES
 async function subirArchivoAlternativo(archivo) {
     try {
-        console.log(`📤 Intentando método alternativo: ${archivo.name}`);
-        
         // Usar tmpfiles.org
         const formData = new FormData();
         formData.append('file', archivo);
@@ -714,8 +667,6 @@ async function subirArchivoAlternativo(archivo) {
         if (response.ok) {
             const result = await response.json();
             if (result.status === 'success') {
-                console.log(`✅ Archivo subido a tmpfiles.org: ${result.data.url}`);
-                
                 return {
                     name: archivo.name,
                     size: archivo.size,
@@ -737,8 +688,6 @@ async function subirArchivoAlternativo(archivo) {
 
 // FUNCIÓN: GENERAR BLOB TEMPORAL (FALLBACK CONFIABLE)
 function generarBlobTemporal(archivo) {
-    console.log(`🔄 Generando enlace temporal para ${archivo.name}`);
-    
     // Crear URL temporal del blob
     const url = URL.createObjectURL(archivo);
     
@@ -1034,17 +983,11 @@ function agregarBotonPDF() {
     
     contenedorBoton.appendChild(botonPDF);
     tabla.parentNode.insertBefore(contenedorBoton, tabla.nextSibling);
-    
-    console.log('📄 Botón de PDF agregado');
 }
 
 // FUNCIÓN: INICIALIZAR EMAILJS
 function inicializarEmailJS() {
     try {
-        console.log('🔍 Verificando EmailJS...');
-        console.log('🔍 window.emailjs disponible:', typeof window.emailjs !== 'undefined');
-        console.log('🔍 emailjs global disponible:', typeof emailjs !== 'undefined');
-        
         if (typeof emailjs === 'undefined' && typeof window.emailjs === 'undefined') {
             console.error('❌ EmailJS no cargado - script faltante');
             mostrarNotificacion('❌ Error: EmailJS no está cargado', 'error');
@@ -1054,15 +997,11 @@ function inicializarEmailJS() {
         // Usar window.emailjs si emailjs global no está disponible
         if (typeof emailjs === 'undefined' && typeof window.emailjs !== 'undefined') {
             window.emailjs = window.emailjs;
-            console.log('✅ Usando window.emailjs');
         }
         
-        console.log('🔧 Inicializando con PublicKey:', EMAILJS_CONFIG.publicKey);
         emailjs.init(EMAILJS_CONFIG.publicKey);
         
         EMAIL_SYSTEM_READY = true;
-        console.log('✅ EmailJS inicializado correctamente');
-        console.log('🔧 Config actual:', EMAILJS_CONFIG);
         
         return true;
     } catch (error) {
@@ -1091,11 +1030,6 @@ async function enviarPrueba() {
             mostrarNotificacion('❌ Email de destino inválido', 'error');
             return;
         }
-        
-        console.log('📤 Enviando email con parámetros:', {
-            destinatario: emailPrueba,
-            administrador: ADMIN_EMAIL
-        });
         
         // PARÁMETROS BÁSICOS - USANDO DATOS REALES DE LA APLICACIÓN
         const datos = obtenerDatosAplicacion();
@@ -1142,15 +1076,12 @@ HIGH TEST S.A.S`,
             reply_to: ADMIN_EMAIL
         };
         
-        console.log('📋 Parámetros finales enviados a EmailJS:', parametros);
-        
         const resultado = await emailjs.send(
             EMAILJS_CONFIG.serviceId,
             EMAILJS_CONFIG.templateId,
             parametros
         );
         
-        console.log('✅ Email enviado exitosamente:', resultado);
         mostrarNotificacion('✅ Email de prueba enviado exitosamente', 'success');
         
         // INSTRUCCIONES PARA EL USUARIO
@@ -1179,12 +1110,6 @@ HIGH TEST S.A.S`,
         }
         
         mostrarNotificacion('❌ Error: ' + mensajeError, 'error');
-        
-        // Sugerencias de solución
-        console.log('💡 Posibles soluciones:');
-        console.log('  1. Verificar credenciales EmailJS');
-        console.log('  2. Revisar plantilla en EmailJS');
-        console.log('  3. Verificar conexión a internet');
     }
 }
 
@@ -1265,13 +1190,10 @@ function crearBotonFlotante() {
     };
     
     document.body.appendChild(boton);
-    console.log('📧 Botón flotante creado');
 }
 
 // FUNCIÓN: INICIALIZAR SISTEMA
 function inicializarSistema() {
-    console.log('🚀 Inicializando sistema definitivo...');
-    
     setTimeout(() => {
         inicializarEmailJS();
         crearBotonFlotante();
@@ -1307,8 +1229,6 @@ function configurarCredencialesEmailJS() {
 
 // FUNCIÓN: TEST RÁPIDO DE EMAILJS
 async function testEmailJS() {
-    console.log('🧪 Iniciando test de EmailJS...');
-    
     if (!window.emailjs && !window.emailjs) {
         console.error('❌ EmailJS no disponible');
         mostrarNotificacion('❌ EmailJS no está cargado', 'error');
@@ -1324,16 +1244,12 @@ async function testEmailJS() {
             from_name: 'HIGH TEST S.A.S'
         };
         
-        console.log('🧪 Enviando test con:', testParams);
-        console.log('🧪 Config:', EMAILJS_CONFIG);
-        
         const result = await emailjs.send(
             EMAILJS_CONFIG.serviceId,
             EMAILJS_CONFIG.templateId,
             testParams
         );
         
-        console.log('✅ Test exitoso:', result);
         mostrarNotificacion('✅ Test de EmailJS exitoso', 'success');
         return true;
         
@@ -1374,5 +1290,3 @@ window.initializeEmailSystem = inicializarEmailJS;
 window.testEmailSystem = enviarPrueba;
 window.createEmailFloatingButton = crearBotonFlotante;
 window.initEmailOnLoad = inicializarSistema;
-
-console.log('✅ Sistema Email Definitivo cargado');

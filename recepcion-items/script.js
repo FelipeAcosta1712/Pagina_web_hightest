@@ -2,6 +2,53 @@
 // VARIABLES GLOBALES Y CONFIGURACIÓN
 // =======================================================
 
+// Caché compartida de get_procesos_acreditados
+window.__procesosAcreditadosCache = {
+    data: null,
+    promise: null
+};
+
+window.__getProcesosAcreditadosCached = async function() {
+    const cache = window.__procesosAcreditadosCache;
+
+    if (cache.data !== null) {
+        return cache.data;
+    }
+
+    if (cache.promise) {
+        return cache.promise;
+    }
+
+    cache.promise = (async () => {
+        try {
+            const res = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_procesos_acreditados' })
+            });
+
+            const json = await res.json();
+
+            if (!res.ok || !json.ok || !Array.isArray(json.procesos)) {
+                throw new Error(json.error || 'Error obteniendo procesos acreditados');
+            }
+
+            cache.data = json.procesos;
+            return cache.data;
+        } catch (error) {
+            cache.promise = null;
+            throw error;
+        }
+    })();
+
+    return cache.promise;
+};
+
+window.__invalidarCacheProcesosAcreditados = function() {
+    window.__procesosAcreditadosCache.data = null;
+    window.__procesosAcreditadosCache.promise = null;
+};
+
 // Lista de artículos predefinidos - se carga desde JSON
 let predefinedItems = [];
 let predefinedItemsData = []; // Array completo con objetos del JSON
@@ -35,27 +82,20 @@ const FALLBACK_DATA = {
 
 // Función para cargar automáticamente los ensayos alcance
 function cargarEnsayosAcreditados() {
-    console.log('Ejecutando cargarEnsayosAcreditados()');
-    
     // Mostrar la tabla de ensayos alcance
     const menu1 = document.getElementById('menu1');
     if (menu1) {
         menu1.style.display = 'block';
-        console.log('Tabla de Ensayos Alcance mostrada');
     }
     
     // Limpiar la tabla antes de cargar nueva información
     const itemsList = document.getElementById('itemsList');
     if (itemsList) {
         itemsList.innerHTML = '';
-        console.log('Tabla limpiada');
     }
     
     // Cargar elementos para ensayos alcance
-    console.log('Iniciando carga de elementos alcance...');
     loadPredefinedItemsFromJSON().then(() => {
-        console.log('Datos cargados para ensayos alcance:', predefinedItemsData);
-        console.log('Cantidad de elementos cargados:', predefinedItemsData.length);
         
         // Limpiar barra de búsqueda
         const searchInput1 = document.getElementById('searchInput1');
@@ -66,11 +106,9 @@ function cargarEnsayosAcreditados() {
         const todosBtn = document.querySelector('#menu1 #todos-btn-1');
         if (todosBtn) {
             todosBtn.classList.add('active');
-            console.log('Filtro "Todos" activado');
         }
         
         // Carga la tabla con los ítems predefinidos con paginación
-        console.log('Llamando a loadPredefinedItems...');
         loadPredefinedItems('', 'Todos', 1);
 
         // Inicializar filtros y event listeners
@@ -78,8 +116,6 @@ function cargarEnsayosAcreditados() {
             initializeFilters();
             initializeFilterEventListeners();
         }, 200);
-        
-        console.log('✅ Ensayos Alcance cargados correctamente - Los filtros navegan por esta tabla');
         
         // Actualizar totales después de cargar
         setTimeout(() => {
@@ -1825,16 +1861,7 @@ function syncLocalStorageWithDB(dbNumbers) {
 
 async function loadAcreditadosProcessesInUse() {
     try {
-        const response = await fetch('/.netlify/functions/conectar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'get_procesos_acreditados' })
-        });
-
-        const result = await response.json();
-        if (response.ok && result?.ok && Array.isArray(result.procesos)) {
-            return result.procesos;
-        }
+        return await window.__getProcesosAcreditadosCached();
     } catch (error) {
         console.warn('No se pudieron cargar procesos acreditados:', error?.message || error);
     }
@@ -6927,14 +6954,33 @@ async function openCompletedCase(cotizacion) {
             facturarNombre: proceso.facturar_a_nombre_de || '',
             facturar: proceso.n_remision || '',
             nitEmpresa: proceso.nit_empresa || proceso.empresa || '',
-            items: (detalle || []).map(d => ({
-                id: d.ensayo_id,
-                name: d.ensayo_nombre || d.ensayo_id || '',
-                quantity: d.cantidad || 0,
-                brand: d.marca || '',
-                observations: d.observaciones || '',
-                quantity2: d.cantidad_entregada || 0
-            }))
+            items: (detalle || []).map(d => {
+                const units = [];
+                let seq = 1;
+                for (const m of (d.marcas || [])) {
+                    for (let i = 0; i < (m.count || 0); i++) {
+                        units.push({ sequence: seq++, brand: m.brand || '', observations: d.observaciones || '', code: '' });
+                    }
+                }
+                if (units.length === 0 && d.cantidad > 0) {
+                    for (let i = 0; i < d.cantidad; i++) {
+                        units.push({ sequence: seq++, brand: '', observations: d.observaciones || '', code: '' });
+                    }
+                }
+                return {
+                    type: 'Ensayos Alcance',
+                    name: d.ensayo_nombre || '',
+                    id: d.ensayo_id,
+                    quantity: d.cantidad || 0,
+                    quantity2: d.cantidad_entregada || 0,
+                    quantity3: 0,
+                    quantity4: 0,
+                    status: 0,
+                    units: units,
+                    observaciones: d.observaciones || '',
+                    images: []
+                };
+            })
         };
 
         // Restaurar firmas desde procesos_acreditados si existen

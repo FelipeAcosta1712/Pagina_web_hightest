@@ -9290,12 +9290,8 @@
                 this.initDragHandles();
                 try {
                     // Cargar procesos, resumen de marcaciones y usuarios en paralelo
-                    const [procesosRes, marcacionesRes, usuariosRes] = await Promise.all([
-                        fetch('/.netlify/functions/conectar', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ action: 'get_procesos_acreditados' })
-                        }),
+                    const [procesosCache, marcacionesRes, usuariosRes] = await Promise.all([
+                        window.__getProcesosAcreditadosCached(),
                         fetch('/.netlify/functions/conectar', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -9308,12 +9304,7 @@
                         })
                     ]);
 
-                    const procesosResult = await procesosRes.json();
-                    if (procesosResult.ok && Array.isArray(procesosResult.procesos)) {
-                        this.processes = procesosResult.procesos;
-                    } else {
-                        this.processes = [];
-                    }
+                    this.processes = Array.isArray(procesosCache) ? procesosCache : [];
 
                     const marcacionesResult = await marcacionesRes.json();
                     if (marcacionesResult.ok && marcacionesResult.resumen) {
@@ -11273,9 +11264,19 @@
             paginaEstadisticas: 1,
             paginaBusqueda: 1,
             resultadosBusqueda: [],
+            casosCargados: false,
+            ultimaCarga: null,
 
-            async init() {
+            async init(forceReload = false) {
+                if (!forceReload && this.casosCargados && this.casos.length > 0) {
+                    this.actualizarCardsResumen();
+                    this.poblarFiltrosDesplegables();
+                    this.refrescarHistorial();
+                    return;
+                }
+
                 await this.cargarCasos();
+
                 this.actualizarCardsResumen();
                 this.poblarFiltrosDesplegables();
                 this.refrescarHistorial();
@@ -11365,12 +11366,8 @@
 
             async cargarCasos() {
                 try {
-                    const [resProcesos, resBorradores, resConteos] = await Promise.all([
-                        fetch('/.netlify/functions/conectar', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ action: 'get_procesos_acreditados', limit: 1000 })
-                        }),
+                    const [procesosCache, resBorradores, resConteos] = await Promise.all([
+                        window.__getProcesosAcreditadosCached(),
                         fetch('/.netlify/functions/conectar', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -11382,7 +11379,7 @@
                             body: JSON.stringify({ action: 'get_all_detalle_procesos' })
                         })
                     ]);
-                    const dataProcesos = await resProcesos.json();
+                    const procesos = Array.isArray(procesosCache) ? procesosCache : [];
                     const dataBorradores = await resBorradores.json();
                     const dataConteos = await resConteos.json();
 
@@ -11405,31 +11402,29 @@
 
                     // Procesos de Supabase
                     const procesosSupabase = [];
-                    if (dataProcesos.ok && Array.isArray(dataProcesos.procesos)) {
-                        dataProcesos.procesos.forEach(p => {
-                            const procesoId = String(p.id || '').trim();
-                            const totalFromDetalle = conteosDetalle[procesoId] || 0;
-                            const totalFromMarc = parseInt(p.total_items) || 0;
-                            const totalItems = Math.max(totalFromDetalle, totalFromMarc);
-                            procesosSupabase.push({
-                                id: p.id,
-                                cotizacion: p.numero_proceso || '',
-                                cliente: p.cliente || '',
-                                empresa: p.empresa || '',
-                                fechaRecepcion: p.fecha_recepcion || '',
-                                fechaEntrega: p.fecha_entrega_cliente || '',
-                                estado: p.estado || 'recepcion',
-                                informeNombre: p.informe_a_nombre_de || '',
-                                facturarNombre: p.facturar_a_nombre_de || '',
-                                n_informe: p.n_informe || '',
-                                nitEmpresa: p.nit_empresa || p.empresa || '',
-                                timestamp: p.updated_at || p.created_at || '',
-                                _source: 'supabase',
-                                items: [],
-                                total_items: totalItems
-                            });
+                    procesos.forEach(p => {
+                        const procesoId = String(p.id || '').trim();
+                        const totalFromDetalle = conteosDetalle[procesoId] || 0;
+                        const totalFromMarc = parseInt(p.total_items) || 0;
+                        const totalItems = Math.max(totalFromDetalle, totalFromMarc);
+                        procesosSupabase.push({
+                            id: p.id,
+                            cotizacion: p.numero_proceso || '',
+                            cliente: p.cliente || '',
+                            empresa: p.empresa || '',
+                            fechaRecepcion: p.fecha_recepcion || '',
+                            fechaEntrega: p.fecha_entrega_cliente || '',
+                            estado: p.estado || 'recepcion',
+                            informeNombre: p.informe_a_nombre_de || '',
+                            facturarNombre: p.facturar_a_nombre_de || '',
+                            n_informe: p.n_informe || '',
+                            nitEmpresa: p.nit_empresa || p.empresa || '',
+                            timestamp: p.updated_at || p.created_at || '',
+                            _source: 'supabase',
+                            items: [],
+                            total_items: totalItems
                         });
-                    }
+                    });
 
                     // Merge: procesos supabase primero, enriquecer con detalle de BD, luego borradores
                     const merged = new Map();
@@ -11511,6 +11506,9 @@
                     await this._cargarDetalleItems();
 
                     this.actualizarCardsResumen();
+
+                    this.casosCargados = true;
+                    this.ultimaCarga = new Date();
 
                 } catch (e) {
                     console.error('Error cargando casos de recepción:', e);
@@ -11913,8 +11911,10 @@
                     });
                     const data = await res.json();
                     if (data.ok) {
-                        await this.cargarCasos();
-                        this.actualizarCardsResumen();
+                        if (typeof window.__invalidarCacheProcesosAcreditados === 'function') {
+                            window.__invalidarCacheProcesosAcreditados();
+                        }
+                        await this.init(true);
                         this.refrescarHistorial();
                         alert('Caso ' + numero + ' eliminado');
                     } else {
@@ -11973,7 +11973,7 @@
             _casosSeleccionados = {};
             document.getElementById('modalDescargaPDFs').style.display = 'block';
             document.body.style.overflow = 'hidden';
-            await RecepcionAnalyticsModule.cargarCasos();
+            await RecepcionAnalyticsModule.init(true);
             renderizarListaPDFs();
         }
 

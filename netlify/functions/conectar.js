@@ -931,12 +931,24 @@ exports.handler = async (event) => {
                 if (!cotizacion) {
                     return jsonResponse(400, { ok: false, error: 'cotizacion requerido' });
                 }
-                const { data, error } = await supabase.rpc('get_borrador_completo', { p_cotizacion: cotizacion });
+                const norm = (s) => String(s || '').replace(/\s+/g, '').toUpperCase();
+                const inputNorm = norm(cotizacion);
+
+                const { data: rows, error } = await supabase
+                    .from('borradores')
+                    .select('datos')
+                    .eq('usuario_email', 'shared')
+                    .limit(1);
+
                 if (error) {
                     return jsonResponse(500, { ok: false, error: 'Error al obtener borrador', detail: error.message });
                 }
-                // data es el objeto JSONB directamente (no un array)
-                return jsonResponse(200, { ok: true, data: data });
+
+                const row = Array.isArray(rows) ? rows[0] : null;
+                const drafts = row && Array.isArray(row.datos) ? row.datos : [];
+                const draft = drafts.find(d => norm(d.cotizacion || d.quoteNumber) === inputNorm) || null;
+
+                return jsonResponse(200, { ok: true, data: draft });
             }
 
             if (payload.action === 'save_borradores') {

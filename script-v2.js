@@ -171,8 +171,6 @@ async function downloadPdfFile(archivoUrl, nombre) {
             file_path: filePath,
             file_name: `${nombre || 'informe'}.pdf`
         });
-        console.log('[DOWNLOAD] file_name enviado:', `${nombre || 'informe'}.pdf`);
-        console.log('[DOWNLOAD] signedUrl recibida:', result?.signedUrl || '(vacía)');
         const downloadUrl = result?.signedUrl || '';
         if (downloadUrl) {
             const a = document.createElement('a');
@@ -191,8 +189,12 @@ async function downloadPdfFile(archivoUrl, nombre) {
 /**
  * Obtener procesos acreditados desde la función `conectar`.
  * filters: { limit, offset, estado, fecha_inicio, fecha_fin, cliente }
+ * Si filters está vacío, reutiliza la caché compartida.
  */
 async function getProcesosAcreditados(filters = {}) {
+    if (Object.keys(filters).length === 0 && typeof window.__getProcesosAcreditadosCached === 'function') {
+        return await window.__getProcesosAcreditadosCached();
+    }
     const payload = await fetchFromDatabase('get_procesos_acreditados', filters);
     if (!payload.ok) {
         throw new Error(payload.error || 'Error al obtener procesos_acreditados');
@@ -720,9 +722,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             const res = await fetchFromDatabase('delete_proceso', { numero_proceso: id });
                             if (res.ok) {
                                 Toast.show({ title: 'Eliminado', message: `Proceso ${id} eliminado`, variant: 'success' });
+                                if (typeof window.__invalidarCacheProcesosAcreditados === 'function') {
+                                    window.__invalidarCacheProcesosAcreditados();
+                                }
                                 cargarProcesos();
                                 if (typeof RecepcionAnalyticsModule !== 'undefined') {
-                                    RecepcionAnalyticsModule.init();
+                                    RecepcionAnalyticsModule.init(true);
                                 }
                             } else {
                                 throw new Error(res.error || 'No se pudo eliminar');
@@ -927,7 +932,6 @@ const MobileMenu = {
         // Cerrar al hacer click en el overlay
         this.menu.addEventListener('click', (e) => {
             if (e.target === this.menu) {
-                console.log('🌑 Click en overlay, cerrando menú');
                 this.close();
             }
         });
@@ -1232,7 +1236,6 @@ const FormValidator = {
         });
 
         if (!isValid) {
-            console.warn('Formulario inválido');
             return;
         }
 
@@ -1240,7 +1243,6 @@ const FormValidator = {
         this.showSuccess();
 
         // Aquí se enviaría a servidor
-        console.log('Formulario válido, enviando datos...');
         
         // Resetear formulario después de 2 segundos
         setTimeout(() => {
@@ -1928,8 +1930,6 @@ const App = {
      * Configuración principal
      */
     setup() {
-        console.log('🚀 HIGH TEST SAS - Inicializando aplicación...');
-
         // Inicializar módulos (cada llamada protegida para evitar que un fallo detenga toda la inicialización)
         try {
             MobileMenu.init();
@@ -1958,8 +1958,6 @@ const App = {
         } catch (err) {
             console.error('❌ Error inicializando HeroCarousel:', err);
         }
-
-        console.log('✅ Aplicación inicializada correctamente (módulos protegidos)');
 
         // Disparar evento personalizado
         window.dispatchEvent(new CustomEvent('appReady'));
@@ -2193,15 +2191,12 @@ const AuthManager = {
      */
     init() {
         if (this._initialized) {
-            console.log('🔐 AuthManager: Ya estaba inicializado, omitiendo.');
             return;
         }
         this._initialized = true;
-        console.log('🔐 AuthManager: Inicializando...');
         this.loadUserFromStorage();
         this.setupEventListeners();
         this.updateUIBasedOnAuthStatus();
-        console.log('✅ AuthManager: Inicialización completada');
     },
 
     /**
@@ -2227,16 +2222,12 @@ const AuthManager = {
      * Configurar event listeners
      */
     setupEventListeners() {
-        console.log('🔐 AuthManager: Configurando event listeners...');
         // Botón de login HIGH TEST en header
         const loginBtn = document.getElementById('loginBtn');
-        console.log('🔐 AuthManager: loginBtn encontrado:', !!loginBtn);
         if (loginBtn) {
             loginBtn.addEventListener('click', () => {
-                console.log('🔐 AuthManager: Click en loginBtn');
                 // Si ya hay sesión HIGH TEST, ir directo al panel
                 if (this.currentUser) {
-                    console.log('🔐 AuthManager: Usuario ya autenticado, redirigiendo a admin-panel');
                     window.location.href = 'admin-panel/admin-panel.html';
                     return;
                 }
@@ -2247,13 +2238,10 @@ const AuthManager = {
 
         // Botón de login HIGH TEST en menú móvil
         const mobileLoginBtn = document.getElementById('mobileLoginBtn');
-        console.log('🔐 AuthManager: mobileLoginBtn encontrado:', !!mobileLoginBtn);
         if (mobileLoginBtn) {
             mobileLoginBtn.addEventListener('click', () => {
-                console.log('🔐 AuthManager: Click en mobileLoginBtn');
                 // Si ya hay sesión HIGH TEST, ir directo al panel
                 if (this.currentUser) {
-                    console.log('🔐 AuthManager: Usuario ya autenticado (móvil), redirigiendo a admin-panel');
                     window.location.href = 'admin-panel/admin-panel.html';
                     MobileMenu.close();
                     return;
@@ -2267,23 +2255,18 @@ const AuthManager = {
 
         // Modal de autenticación
         const authModal = document.getElementById('authModal');
-        console.log('🔐 AuthManager: authModal encontrado:', !!authModal);
         const closeBtn = authModal?.querySelector('.auth-modal__close');
-        console.log('🔐 AuthManager: closeBtn encontrado:', !!closeBtn);
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
-                console.log('🔐 AuthManager: Click en closeBtn');
                 this.closeAuthModal();
             });
         }
 
         // Tabs del modal (solo login ahora)
         const tabButtons = authModal?.querySelectorAll('.auth-modal__tab');
-        console.log('🔐 AuthManager: tabButtons encontrados:', tabButtons?.length || 0);
         tabButtons?.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const tabName = e.target.dataset.tab;
-                console.log('🔐 AuthManager: Click en tab:', tabName);
                 this.switchTab(tabName);
             });
         });
@@ -2310,16 +2293,12 @@ const AuthManager = {
      * Abrir modal de autenticación
      */
     openAuthModal() {
-        console.log('🔐 AuthManager: Abriendo modal...');
         const authModal = document.getElementById('authModal');
-        console.log('🔐 AuthManager: Modal encontrado:', !!authModal);
         if (authModal) {
             authModal.classList.add('active');
-            console.log('🔐 AuthManager: Clase "active" agregada al modal');
             document.body.style.overflow = 'hidden';
             // Ir al tab de login
             this.switchTab('login');
-            console.log('🔐 AuthManager: Modal abierto exitosamente');
         } else {
             console.error('🔐 AuthManager: Modal no encontrado en el DOM');
         }
@@ -2665,7 +2644,6 @@ const CertificatesAuthManager = {
 
         certificatesBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            console.log('📌 Click en botón de certificados (fallback)');
 
             const storedClient = localStorage.getItem('hightest_client');
             if (storedClient) {
@@ -2689,7 +2667,6 @@ const CertificatesAuthManager = {
         if (mobileCertificatesBtn) {
             mobileCertificatesBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                console.log('📌 Click en botón de certificados móvil');
 
                 const storedClient = localStorage.getItem('hightest_client');
                 if (storedClient) {
@@ -2716,7 +2693,6 @@ const CertificatesAuthManager = {
         });
 
         if (certificatesForm) {
-            console.log('📌 CertificatesAuthManager: enlazando submit del formulario de certificados', certificatesForm.id || certificatesForm.className);
             certificatesForm.addEventListener('submit', (e) => this.handleCertificatesAuth(e));
         } else {
             console.warn('⚠️ CertificatesAuthManager: no se encontró formulario de certificados para enlazar submit');
@@ -2727,14 +2703,11 @@ const CertificatesAuthManager = {
      * Abrir modal de certificados
      */
     openCertificatesModal() {
-        console.log('🔍 Abriendo modal de certificados');
         const certificatesModal = document.getElementById('certificatesModal');
-        console.log('🔍 Elemento modal encontrado:', certificatesModal);
 
         if (certificatesModal) {
             certificatesModal.classList.add('active');
             document.body.style.overflow = 'hidden';
-            console.log('✅ Modal abierto correctamente');
         } else {
             console.error('❌ No se encontró el elemento certificatesModal');
         }
@@ -2963,7 +2936,6 @@ const CertificatesAuthManager = {
 
 const CertificatesManager = {
     init() {
-        console.log('🚀 Inicializando CertificatesManager');
         this.setupSearchAndFilters();
         this.setupDownloadButtons();
     },
@@ -3095,10 +3067,6 @@ const CertificatesManager = {
 
 // Función de verificación
 function verifyDOMElements() {
-    console.log('╔══════════════════════════════════════════════╗');
-    console.log('║  VERIFICACIÓN DEL DOM - HIGH TEST          ║');
-    console.log('╚══════════════════════════════════════════════╝');
-    
     const loginBtn = document.getElementById('loginBtn');
     const authModal = document.getElementById('authModal');
     const loginForm = document.getElementById('loginForm');
@@ -3106,18 +3074,9 @@ function verifyDOMElements() {
     const certificatesBtn = document.getElementById('certificatesBtn');
     const certificatesModal = document.getElementById('certificatesModal');
     
-    console.log('✅ loginBtn:', !!loginBtn, loginBtn?.textContent);
-    console.log('✅ authModal:', !!authModal);
-    console.log('✅ loginForm:', !!loginForm);
-    console.log('✅ registerForm:', !!registerForm);
-    console.log('✅ certificatesBtn:', !!certificatesBtn, certificatesBtn?.textContent);
-    console.log('✅ certificatesModal:', !!certificatesModal);
-    
     const allFound = loginBtn && authModal && loginForm && registerForm && certificatesBtn;
 
-    if (allFound) {
-        console.log('✅ TODOS LOS ELEMENTOS PRINCIPALES ENCONTRADOS - Sistema listo');
-    } else {
+    if (!allFound) {
         console.error('❌ ELEMENTOS FALTANTES - Revisar HTML');
     }
 }
@@ -3134,12 +3093,10 @@ function bindCertificatesBtnFallback() {
     certificatesBtn.dataset.bound = 'true';
 
     certificatesBtn.addEventListener('click', (e) => {
-        console.log('🛡️ Fallback hit: certificado botón click');
         e.preventDefault();
 
         const storedClient = localStorage.getItem('hightest_client');
         if (storedClient) {
-            console.log('➡️ Fallback: cliente logueado, redirigiendo');
             window.location.href = 'portal-clientes/client-portal.html';
             return;
         }
@@ -3168,7 +3125,6 @@ const ClientAuth = {
         const form = document.getElementById(this.formId);
         if (!form) return;
         form.addEventListener('submit', (e) => this.handleLogin(e));
-        console.log('🔑 ClientAuth: escuchando submit en #' + this.formId);
     },
 
     async handleLogin(e) {
