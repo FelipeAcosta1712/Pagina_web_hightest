@@ -467,6 +467,28 @@ exports.handler = async (event) => {
                 return jsonResponse(200, { ok: true, procesos });
             }
 
+            // Obtener SOLO los números de proceso ocupados (~2.5 KB vs ~1 MB de get_procesos_acreditados)
+            // Se usa en refreshDbUnavailableReceptionNumbers() para calcular números disponibles.
+            if (payload.action === 'get_numeros_recepcion_ocupados') {
+                try {
+                    const { data: rpcResult, error: rpcError } = await supabase
+                        .rpc('get_numeros_recepcion_ocupados');
+                    if (rpcError) {
+                        // Fallback: si la RPC no existe, hacer select ligero
+                        const { data: rows, error: fallbackErr } = await supabase
+                            .from('procesos_acreditados')
+                            .select('numero_proceso');
+                        if (fallbackErr) return jsonResponse(500, { ok: false, error: 'Error obteniendo números ocupados', detail: fallbackErr.message });
+                        const nums = (rows || []).map(r => String(r.numero_proceso || '').trim()).filter(Boolean);
+                        return jsonResponse(200, { ok: true, numeros: nums });
+                    }
+                    const nums = (rpcResult || []).map(r => String(r.numero_proceso || r || '').trim()).filter(Boolean);
+                    return jsonResponse(200, { ok: true, numeros: nums });
+                } catch (e) {
+                    return jsonResponse(500, { ok: false, error: 'Error obteniendo números ocupados', detail: e.message });
+                }
+            }
+
             // Eliminar proceso por numero_proceso
             if (payload.action === 'delete_proceso') {
                 const numero = normalizeText(payload.numero_proceso || payload.numero || payload.id);
@@ -610,6 +632,14 @@ exports.handler = async (event) => {
                 // Si el frontend envía el nuevo número por separado, usarlo como valor a actualizar
                 if (payload.numero_proceso_nuevo !== undefined && payload.numero_proceso_nuevo !== null && String(payload.numero_proceso_nuevo).trim() !== '') {
                     updateData.numero_proceso = normalizeText(payload.numero_proceso_nuevo);
+                }
+
+                // Convertir cadenas vacías a null en columnas de tipo fecha
+                const dateFields = ['fecha_recepcion','fecha_entrega_cliente','fecha_finalizado','fecha_ejecucion'];
+                for (const df of dateFields) {
+                    if (df in updateData && updateData[df] === '') {
+                        updateData[df] = null;
+                    }
                 }
 
                 // n_informe no se actualiza en edición porque la columna solo admite DEFAULT

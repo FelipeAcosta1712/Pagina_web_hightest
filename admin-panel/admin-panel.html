@@ -9772,18 +9772,6 @@
                     const marcacionesResult = await marcacionesRes.json();
                     this.currentMarcaciones = (marcacionesResult.ok && Array.isArray(marcacionesResult.marcaciones)) ? marcacionesResult.marcaciones : [];
 
-                    // Si no encontró con id numérico, intentar con numero_proceso como string
-                    if (this.currentMarcaciones.length === 0 && proceso.numero_proceso) {
-                        const retryRes = await fetch('/.netlify/functions/conectar', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ action: 'get_marcaciones_by_proceso', proceso_id: proceso.numero_proceso })
-                        });
-                        const retryResult = await retryRes.json();
-                        if (retryResult.ok && Array.isArray(retryResult.marcaciones) && retryResult.marcaciones.length > 0) {
-                            this.currentMarcaciones = retryResult.marcaciones;
-                        }
-                    }
                 } catch (e) {
                     console.error('Error cargando marcaciones:', e);
                 }
@@ -9829,23 +9817,7 @@
                         }))
                         : [];
 
-                    // Fallback con numero_proceso
-                    if (this.currentDetalle.length === 0 && proceso.numero_proceso) {
-                        const retryRes = await fetch('/.netlify/functions/conectar', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ action: 'get_detalle_proceso', proceso_id: proceso.numero_proceso })
-                        });
-                        const retryResult = await retryRes.json();
-                        if (retryResult.ok && Array.isArray(retryResult.detalle)) {
-                            this.currentDetalle = retryResult.detalle.map(d => ({
-                                ...d,
-                                marca: (d.marcas && d.marcas.length > 0)
-                                    ? d.marcas.map(m => `${m.count || 0} ${m.brand || ''}`).join(', ')
-                                    : (d.marca || '')
-                            }));
-                        }
-                    }
+
                 } catch (e) {
                     console.error('Error cargando detalle:', e);
                 }
@@ -10678,7 +10650,7 @@
 
                     if (result.ok) {
                         if (btn) { btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3" width="14" height="14" style="display:inline;vertical-align:middle;"><polyline points="20 6 9 17 4 12"/></svg> Guardado'; setTimeout(() => { btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="display:inline;vertical-align:middle;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Guardar Todo'; btn.disabled = false; }, 2000); }
-                        alert('Marcación guardada correctamente (' + consecutivosPayload.length + ' registros)');
+                        showAlertModal('Guardado', 'Marcación guardada correctamente (' + consecutivosPayload.length + ' registros)', 'success');
                         // Actualizar resumen localmente para reflejo inmediato de colores
                         const pid = String(this.currentProcess.id || '').trim();
                         const num = (this.currentProcess.numero_proceso || '').trim();
@@ -11021,20 +10993,21 @@
 
             guardarCampoProceso(campo, valor) {
                 if (!this.currentProcess) return;
+                const valorFinal = (campo === 'fecha_ejecucion' && valor === '') ? null : valor;
                 fetch('/.netlify/functions/conectar', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         action: 'update_proceso',
                         numero_proceso: this.currentProcess.numero_proceso,
-                        [campo]: valor
+                        [campo]: valorFinal
                     })
                 }).then(r => r.json()).then(r => {
                     if (r.ok) {
-                        this.currentProcess[campo] = valor;
+                        this.currentProcess[campo] = valorFinal;
                         // Sincronizar this.processes para que la lista quede consistente
                         const idx = this.processes.findIndex(p => p.numero_proceso === this.currentProcess.numero_proceso);
-                        if (idx !== -1) this.processes[idx][campo] = valor;
+                        if (idx !== -1) this.processes[idx][campo] = valorFinal;
                     } else {
                         alert('Error al guardar: ' + (r.error || 'Desconocido'));
                     }
@@ -11366,13 +11339,9 @@
 
             async cargarCasos() {
                 try {
-                    const [procesosCache, resBorradores, resConteos] = await Promise.all([
+                    const [procesosCache, dataBorradores, resConteos] = await Promise.all([
                         window.__getProcesosAcreditadosCached(),
-                        fetch('/.netlify/functions/conectar', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ action: 'get_borradores_resumen' })
-                        }),
+                        window.__getBorradoresResumenCached(),
                         fetch('/.netlify/functions/conectar', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -11380,7 +11349,6 @@
                         })
                     ]);
                     const procesos = Array.isArray(procesosCache) ? procesosCache : [];
-                    const dataBorradores = await resBorradores.json();
                     const dataConteos = await resConteos.json();
 
                     // Mapa de conteos correctos desde detalle_procesos_ac
@@ -11389,8 +11357,8 @@
 
                     // Construir mapa de borradores (tienen items completos)
                     const borradoresMap = new Map();
-                    if (dataBorradores.ok && Array.isArray(dataBorradores.data)) {
-                        dataBorradores.data.forEach(d => {
+                    if (Array.isArray(dataBorradores)) {
+                        dataBorradores.forEach(d => {
                             if (d && typeof d === 'object') {
                                 const key = d.cotizacion || d.quoteNumber || d.numero_proceso || '';
                                 if (key && !borradoresMap.has(key)) {
@@ -11526,14 +11494,9 @@
                 // Cargar borradores para usar como fallback
                 let borradoresMap = new Map();
                 try {
-                    const resBorr = await fetch('/.netlify/functions/conectar', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'get_borradores_resumen' })
-                    });
-                    const dataBorr = await resBorr.json();
-                    if (dataBorr.ok && Array.isArray(dataBorr.data)) {
-                        dataBorr.data.forEach(d => {
+                    const data = await window.__getBorradoresResumenCached();
+                    if (Array.isArray(data)) {
+                        data.forEach(d => {
                             if (d && typeof d === 'object') {
                                 const key = d.cotizacion || d.quoteNumber || d.numero_proceso || '';
                                 if (key && !borradoresMap.has(key)) {

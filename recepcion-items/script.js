@@ -49,6 +49,129 @@ window.__invalidarCacheProcesosAcreditados = function() {
     window.__procesosAcreditadosCache.promise = null;
 };
 
+window.__actualizarProcesoEnCache = function(procesoActualizado) {
+    const cache = window.__procesosAcreditadosCache;
+    if (!cache.data || !procesoActualizado) return;
+    const numero = String(procesoActualizado.numero_proceso || '').trim();
+    if (!numero) return;
+    const idx = cache.data.findIndex(p =>
+        String(p.numero_proceso || p.proceso_numero || p.numero || p.id || '').trim() === numero
+    );
+    if (idx !== -1) {
+        Object.assign(cache.data[idx], procesoActualizado);
+    } else {
+        cache.data.push(procesoActualizado);
+    }
+};
+
+// Caché compartida de get_borradores_resumen
+window.__borradoresResumenCache = {
+    data: null,
+    promise: null
+};
+
+window.__getBorradoresResumenCached = async function(forceRefresh = false) {
+    const cache = window.__borradoresResumenCache;
+
+    if (forceRefresh) {
+        cache.data = null;
+    }
+
+    if (cache.data !== null) {
+        return cache.data;
+    }
+
+    if (cache.promise) {
+        return cache.promise;
+    }
+
+    cache.promise = (async () => {
+        try {
+            const res = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_borradores_resumen' })
+            });
+
+            const json = await res.json();
+
+            if (!res.ok || !json.ok || !Array.isArray(json.data)) {
+                throw new Error(json.error || 'Error obteniendo resumen de borradores');
+            }
+
+            cache.data = json.data;
+            return cache.data;
+        } catch (error) {
+            cache.promise = null;
+            throw error;
+        }
+    })();
+
+    return cache.promise;
+};
+
+window.__invalidarCacheBorradoresResumen = function() {
+    window.__borradoresResumenCache.data = null;
+    window.__borradoresResumenCache.promise = null;
+};
+
+// ============================================================
+// Caché ligera de números de recepción ocupados (~2.5 KB)
+// Se usa SOLO para calcular números disponibles en el selector.
+// NO reemplaza __procesosAcreditadosCache (que trae procesos completos).
+// Soporta forceRefresh para sincronización cross-browser.
+// ============================================================
+window.__numerosRecepcionCache = {
+    data: null,
+    promise: null
+};
+
+/**
+ * Obtiene los números de recepción ocupados desde la DB.
+ * @param {boolean} forceRefresh - Si true, ignora caché y consulta la DB.
+ * @returns {Promise<string[]>} Array de strings normalizados (ej: "R26 0190")
+ */
+window.__getNumerosRecepcionOcupadosCached = async function(forceRefresh = false) {
+    const cache = window.__numerosRecepcionCache;
+
+    if (!forceRefresh && cache.data !== null) {
+        return cache.data;
+    }
+
+    if (!forceRefresh && cache.promise) {
+        return cache.promise;
+    }
+
+    cache.promise = (async () => {
+        try {
+            const res = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_numeros_recepcion_ocupados' })
+            });
+
+            const json = await res.json();
+
+            if (!res.ok || !json.ok || !Array.isArray(json.numeros)) {
+                throw new Error(json.error || 'Error obteniendo números ocupados');
+            }
+
+            cache.data = json.numeros;
+            return cache.data;
+        } catch (error) {
+            cache.promise = null;
+            throw error;
+        }
+    })();
+
+    return cache.promise;
+};
+
+window.__invalidarCacheNumerosRecepcion = function() {
+    window.__numerosRecepcionCache.data = null;
+    window.__numerosRecepcionCache.promise = null;
+};
+
 // Lista de artículos predefinidos - se carga desde JSON
 let predefinedItems = [];
 let predefinedItemsData = []; // Array completo con objetos del JSON
@@ -1776,17 +1899,17 @@ window.dbProcessesCache = window.dbProcessesCache || [];
 window.dbUnavailableReceptionNumbers = window.dbUnavailableReceptionNumbers || new Set();
 
 /**
- * Refresca la cache de procesos acreditados y los números reservados en DB.
- * También limpia localStorage de números que ya no existen en la DB.
+ * Refresca los números de recepción ocupados desde la DB (RPC ligero ~2.5 KB).
+ * @param {boolean} forceRefresh - Si true, consulta la DB ignorando caché (para cross-browser sync).
  * Devuelve un Set normalizado.
  */
-async function refreshDbUnavailableReceptionNumbers() {
+async function refreshDbUnavailableReceptionNumbers(forceRefresh = true) {
     try {
-        const processes = await loadAcreditadosProcessesInUse();
-        window.dbProcessesCache = Array.isArray(processes) ? processes : [];
+        // RPC ligero: solo números ocupados (~2.5 KB)
+        const numeros = await window.__getNumerosRecepcionOcupadosCached(forceRefresh);
         const s = new Set();
-        window.dbProcessesCache.forEach(p => {
-            const code = String(p.numero_proceso || p.numero || p.cotizacion || p.id || '').trim();
+        (Array.isArray(numeros) ? numeros : []).forEach(raw => {
+            const code = String(raw || '').trim();
             if (code) s.add(normalizeReceptionNumber(code));
         });
         window.dbUnavailableReceptionNumbers = s;
@@ -2118,8 +2241,11 @@ async function lockReceptionNumberForMinutes(minutes = 20) {
     held[code] = { expiresAt, minutes: Number(minutes) || 20 };
     setHeldReceptionNumbers(held);
 
-    // refreshDbUnavailableReceptionNumbers() post-lock eliminado: los datos ya están
-    // frescos desde la consulta al inicio de lockReceptionNumberForMinutes().
+    // Actualizar dbUnavailableReceptionNumbers post-lock para que
+    // getNextReceptionNumber() proponga el siguiente número correctamente.
+    // Usa RPC ligero (~2.5 KB) con forceRefresh para incluir la RESERVA_TEMP recién creada.
+    try { await refreshDbUnavailableReceptionNumbers(true); } catch (e) { console.warn(e); }
+
     try {
         if (select) {
             if (!Array.from(select.options).some(opt => opt.value === code)) {
@@ -4811,9 +4937,14 @@ function validateForm() {
 }
 
 function resetForm() {
-    if (!confirm('¿Estás seguro de que quieres reiniciar todo el formulario? Se perderán todos los datos.')) return;
+    showConfirmModal(
+        'Reiniciar formulario',
+        '¿Estás seguro de que quieres reiniciar todo el formulario?<br><br><span style="font-size:13px;color:#9ca3af;">Si no ha generado el PDF de Recepción o Entrega, se perderán todos los datos del formulario.</span>',
+        'Reiniciar'
+    ).then(confirmed => {
+        if (!confirmed) return;
 
-    const quoteEl = document.getElementById('quoteNumber');
+        const quoteEl = document.getElementById('quoteNumber');
     const selectedCode = quoteEl?.value?.trim() || '';
     const held = cleanupHeldReceptionNumbers();
     const selectedHeldEntry = selectedCode ? held[selectedCode] : null;
@@ -4986,6 +5117,7 @@ function resetForm() {
     }
 
     showNotification('🔄 Formulario reiniciado', 'info');
+    });
 }
 
 function printDocument() {
@@ -5068,6 +5200,97 @@ function showNotification(message, type = 'info') {
             document.body.removeChild(notification);
         }, 300);
     }, 3000);
+}
+
+function showConfirmModal(title, message, confirmText = 'Aceptar', cancelText = 'Cancelar') {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:99999;backdrop-filter:blur(4px);';
+
+        overlay.innerHTML = `
+            <style>@keyframes confirmModalIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}</style>
+            <div style="background:#fff;border-radius:16px;padding:28px 30px;width:420px;max-width:92%;box-shadow:0 20px 60px rgba(0,0,0,0.25);animation:confirmModalIn .25s ease;">
+                <div style="text-align:center;margin-bottom:18px;">
+                    <div style="width:56px;height:56px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                            <line x1="12" y1="9" x2="12" y2="13"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                    </div>
+                    <h3 style="margin:0 0 8px;font-size:18px;color:#111827;font-weight:700;">${title}</h3>
+                    <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.55;">${message}</p>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:22px;">
+                    <button id="confirm-cancel" style="flex:1;padding:10px 0;border:none;border-radius:8px;background:#f3f4f6;color:#374151;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">${cancelText}</button>
+                    <button id="confirm-ok" style="flex:1;padding:10px 0;border:none;border-radius:8px;background:#dc2626;color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .2s;" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">${confirmText}</button>
+                </div>
+            </div>`;
+
+        document.body.appendChild(overlay);
+
+        const close = (result) => {
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity .2s';
+            setTimeout(() => overlay.remove(), 200);
+            resolve(result);
+        };
+
+        document.getElementById('confirm-ok').onclick = () => close(true);
+        document.getElementById('confirm-cancel').onclick = () => close(false);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
+    });
+}
+
+function showAlertModal(title, message, type = 'warning') {
+    const isSuccess = type === 'success';
+    const iconBg = isSuccess ? '#ecfdf5' : '#fef3c7';
+    const iconColor = isSuccess ? '#16a34a' : '#f59e0b';
+    const iconSvg = isSuccess
+        ? `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+               <polyline points="22 4 12 14.01 9 11.01"/>
+           </svg>`
+        : `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+               <line x1="12" y1="9" x2="12" y2="13"/>
+               <line x1="12" y1="17" x2="12.01" y2="17"/>
+           </svg>`;
+    const btnColor = isSuccess ? '#16a34a' : '#2563eb';
+
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:99999;backdrop-filter:blur(4px);';
+
+        overlay.innerHTML = `
+            <style>@keyframes alertModalIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}</style>
+            <div style="background:#fff;border-radius:16px;padding:28px 30px;width:460px;max-width:92%;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.25);animation:alertModalIn .25s ease;">
+                <div style="text-align:center;margin-bottom:16px;">
+                    <div style="width:56px;height:56px;border-radius:50%;background:${iconBg};display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+                        ${iconSvg}
+                    </div>
+                    <h3 style="margin:0 0 6px;font-size:18px;color:#111827;font-weight:700;">${title}</h3>
+                </div>
+                <div style="flex:1;overflow-y:auto;margin-bottom:18px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;">
+                    <p style="margin:0 0 10px;font-size:14px;color:#6b7280;line-height:1.5;">${message}</p>
+                </div>
+                <div style="display:flex;justify-content:center;">
+                    <button id="alert-ok" style="min-width:140px;padding:10px 0;border:none;border-radius:8px;background:${btnColor};color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .2s;" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">Aceptar</button>
+                </div>
+            </div>`;
+
+        document.body.appendChild(overlay);
+
+        const close = () => {
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity .2s';
+            setTimeout(() => overlay.remove(), 200);
+            resolve();
+        };
+
+        document.getElementById('alert-ok').onclick = close;
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    });
 }
 
 /**
@@ -6577,14 +6800,9 @@ async function loadCompletedCases() {
     const supabaseCasos = [];
 
     try {
-        const resp = await fetch('/.netlify/functions/conectar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'get_borradores_resumen' })
-        });
-        const result = await resp.json();
-        if (result.ok && Array.isArray(result.data)) {
-            result.data.forEach(d => {
+        const data = await window.__getBorradoresResumenCached();
+        if (Array.isArray(data)) {
+            data.forEach(d => {
                 if (d && typeof d === 'object') { d._source = 'supabase_borrador'; supabaseCasos.push(d); }
             });
         }
@@ -7223,18 +7441,9 @@ async function loadDraftsFromServer() {
         const userEmail = getCurrentUserEmail() || 'shared';
 
         // FASE 1: Obtener resumen ligero (~1-5KB en vez de ~5MB)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
-        const resp = await fetch('/.netlify/functions/conectar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'get_borradores_resumen' }),
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        if (!resp.ok) throw new Error('Error al conectar con servidor');
-        const result = await resp.json();
-        if (result && result.ok && Array.isArray(result.data)) {
+        const data = await window.__getBorradoresResumenCached();
+        if (Array.isArray(data)) {
+            serverResult = { ok: true, data };
             const localDrafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
 
             // Mapa local: cotizacion → borrador completo
@@ -7246,7 +7455,7 @@ async function loadDraftsFromServer() {
 
             // Mapa del resumen: cotizacion → resumen ligero
             const serverMap = new Map();
-            result.data.forEach(s => {
+            data.forEach(s => {
                 const key = s.cotizacion || null;
                 if (key) serverMap.set(key, s);
             });
@@ -7298,40 +7507,39 @@ async function loadDraftsFromServer() {
             const merged = Array.from(localMap.values());
 
             // Filtrar borradores huérfanos (procesos que ya no existen en procesos_acreditados)
+            // Usa RPC ligero (~2.5 KB) en vez de dbProcessesCache (~1 MB) para el filtro.
             try {
-                const dbProcesses = window.dbProcessesCache || [];
-                if (dbProcesses.length > 0) {
-                    const validNumbers = new Set();
-                    dbProcesses.forEach(p => {
-                        const code = normalizeReceptionNumber(String(p.numero_proceso || p.numero || p.cotizacion || p.id || '').trim());
-                        if (code) validNumbers.add(code);
-                    });
-                    const orphaned = merged.filter(d => {
-                        const code = normalizeReceptionNumber(d.cotizacion || '');
-                        return code && !validNumbers.has(code);
-                    });
-                    if (orphaned.length > 0) {
-                        console.log('🧹 Borradores huérfanos detectados:', orphaned.map(d => d.cotizacion));
-                        // Eliminar huérfanos del servidor
-                        for (const d of orphaned) {
-                            try {
-                                await fetch('/.netlify/functions/conectar', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ action: 'delete_borrador', usuario_email: userEmail, cotizacion: d.cotizacion })
-                                });
-                            } catch(e) {}
-                        }
+                const numerosOcupados = await window.__getNumerosRecepcionOcupadosCached(false);
+                const validNumbers = new Set();
+                (Array.isArray(numerosOcupados) ? numerosOcupados : []).forEach(raw => {
+                    const code = normalizeReceptionNumber(String(raw || '').trim());
+                    if (code) validNumbers.add(code);
+                });
+                const orphaned = merged.filter(d => {
+                    const code = normalizeReceptionNumber(d.cotizacion || '');
+                    return code && !validNumbers.has(code);
+                });
+                if (orphaned.length > 0) {
+                    console.log('🧹 Borradores huérfanos detectados:', orphaned.map(d => d.cotizacion));
+                    // Eliminar huérfanos del servidor
+                    for (const d of orphaned) {
+                        try {
+                            await fetch('/.netlify/functions/conectar', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'delete_borrador', usuario_email: userEmail, cotizacion: d.cotizacion })
+                            });
+                        } catch(e) {}
                     }
-                    // Solo mantener borradores válidos
-                    const filtered = merged.filter(d => {
-                        const code = normalizeReceptionNumber(d.cotizacion || '');
-                        return !code || validNumbers.has(code);
-                    });
-                    if (filtered.length !== merged.length) {
-                        merged.length = 0;
-                        merged.push(...filtered);
-                    }
+                }
+                // Solo mantener borradores válidos
+                const filtered = merged.filter(d => {
+                    const code = normalizeReceptionNumber(d.cotizacion || '');
+                    return !code || validNumbers.has(code);
+                });
+                if (filtered.length !== merged.length) {
+                    merged.length = 0;
+                    merged.push(...filtered);
                 }
             } catch(e) { console.warn('Error filtrando borradores huérfanos:', e); }
 
@@ -7571,21 +7779,7 @@ async function autoSyncDrafts() {
         // Esto reduce ~5MB a ~1-5KB
         let summary = null;
         try {
-            const summaryController = new AbortController();
-            const summaryTimeout = setTimeout(() => summaryController.abort(), 15000);
-            const summaryResp = await fetch('/.netlify/functions/conectar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'get_borradores_resumen' }),
-                signal: summaryController.signal
-            });
-            clearTimeout(summaryTimeout);
-            if (summaryResp.ok) {
-                const summaryResult = await summaryResp.json();
-                if (summaryResult && summaryResult.ok && Array.isArray(summaryResult.data)) {
-                    summary = summaryResult.data;
-                }
-            }
+            summary = await window.__getBorradoresResumenCached(true);
         } catch (e) {
             // Si falla el resumen, no hacer nada (próximo poll reintenta)
             return;
@@ -8737,8 +8931,8 @@ async function guardarDetalleProceso(procesoId) {
 async function pdfRecepcionAction() {
     const validation = validatePDFRequirements('recepcion');
     if (!validation.isValid) {
-        const message = '⚠️ No se puede generar el PDF. Campos obligatorios faltantes:\n\n' + validation.missingFields.join('\n');
-        alert(message);
+        const items = validation.missingFields.map(f => f.replace(/^❌\s*/, '')).map(f => `<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #f3f4f6;"><span style="color:#dc2626;font-size:15px;flex-shrink:0;margin-top:1px;">&#10006;</span><span style="font-size:14px;color:#374151;">${f}</span></div>`).join('');
+        showAlertModal('No se puede generar el PDF', items);
         showNotification('⚠️ Complete los campos obligatorios antes de generar el PDF', 'warning');
         return;
     }
@@ -8793,8 +8987,8 @@ async function pdfCompletoAction() {
     }
     const validation = validatePDFRequirements('entrega');
     if (!validation.isValid) {
-        const message = '⚠️ No se puede generar el PDF. Campos obligatorios faltantes:\n\n' + validation.missingFields.join('\n');
-        alert(message);
+        const items = validation.missingFields.map(f => f.replace(/^❌\s*/, '')).map(f => `<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #f3f4f6;"><span style="color:#dc2626;font-size:15px;flex-shrink:0;margin-top:1px;">&#10006;</span><span style="font-size:14px;color:#374151;">${f}</span></div>`).join('');
+        showAlertModal('No se puede generar el PDF', items);
         showNotification('⚠️ Complete los campos obligatorios antes de generar el PDF', 'warning');
         return;
     }
@@ -10032,14 +10226,9 @@ async function _fetchSupabaseEnBackground() {
     const supabaseCasos = [];
 
     try {
-        const resp = await fetch('/.netlify/functions/conectar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'get_borradores_resumen' })
-        });
-        const result = await resp.json();
-        if (result.ok && Array.isArray(result.data)) {
-            result.data.forEach(d => {
+        const data = await window.__getBorradoresResumenCached(true);
+        if (Array.isArray(data)) {
+            data.forEach(d => {
                 if (d && typeof d === 'object') {
                     d._source = 'supabase_borrador';
                     supabaseCasos.push(d);
@@ -10924,12 +11113,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Mostrar la tabla de ensayos alcance solo cuando se seleccione
             if (valorSeleccionado === 'acreditados' && menu1) {
-                try {
-                    await refreshDbUnavailableReceptionNumbers();
-                } catch (error) {
-                    console.warn('No se pudo refrescar la reserva de números antes de abrir Ensayos Alcance:', error);
-                }
-
                 try {
                     restoreHeldReceptionSelection();
                 } catch (error) {

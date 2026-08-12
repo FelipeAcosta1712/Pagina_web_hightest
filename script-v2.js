@@ -4299,8 +4299,9 @@ const AdminPanelManager = {
         if (informeANombreValue) insertData.informe_a_nombre_de = informeANombreValue;
 
         try {
+            let res;
             if (editId && editId.value) {
-                const res = await fetchFromDatabase('update_proceso', {
+                res = await fetchFromDatabase('update_proceso', {
                     numero_proceso: numero,
                     numero_proceso_nuevo: processNumber.value,
                     cliente: client.value,
@@ -4314,12 +4315,15 @@ const AdminPanelManager = {
                 if (!res.ok) throw new Error(res.error || 'Error al actualizar proceso');
                 Toast.show({ title: 'Actualizado', message: `Proceso ${numero} actualizado`, variant: 'success' });
             } else {
-                const res = await fetchFromDatabase('add_proceso', { insert: insertData });
+                res = await fetchFromDatabase('add_proceso', { insert: insertData });
                 if (!res.ok) throw new Error(res.error || 'Error al crear proceso');
                 Toast.show({ title: 'Creado', message: `Proceso ${insertData.numero_proceso} creado`, variant: 'success' });
             }
 
             this.closeCertificateProcessModal();
+            if (res.proceso && typeof window.__actualizarProcesoEnCache === 'function') {
+                window.__actualizarProcesoEnCache(res.proceso);
+            }
             await cargarProcesos();
         } catch (err) {
             console.error('Error guardando proceso en servidor', err);
@@ -4349,6 +4353,9 @@ const AdminPanelManager = {
             });
 
             this.closeCertificateStatusModal();
+            if (response.proceso && typeof window.__actualizarProcesoEnCache === 'function') {
+                window.__actualizarProcesoEnCache(response.proceso);
+            }
             await cargarProcesos();
         } catch (err) {
             console.error('Error actualizando estado desde modal', err);
