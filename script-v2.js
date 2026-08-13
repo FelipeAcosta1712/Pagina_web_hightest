@@ -8179,14 +8179,14 @@ const AnalisisProcesosModule = {
                 }
             } catch (e) { /* continuar sin NIT */ }
 
-            // Intentar traer borradores para obtener items, lavados, firmas, etc.
+            // Intentar traer borrador completo por numero_proceso (ligero, ~150KB en vez de ~6MB)
             let borradorData = null;
             try {
-                const borrResult = await fetchFromDatabase('get_borradores', {});
-                if (borrResult?.ok && Array.isArray(borrResult.data)) {
-                    borradorData = borrResult.data.find(d => (d.numero_proceso || d.cotizacion || d.quoteNumber || '') === numProceso);
+                const borrResult = await fetchFromDatabase('get_borrador_completo', { cotizacion: numProceso });
+                if (borrResult?.ok && borrResult.data) {
+                    borradorData = borrResult.data;
                 }
-            } catch (e) { /* no hay borradores, continuar sin ellos */ }
+            } catch (e) { /* no hay borrador, continuar sin él */ }
 
             // Intentar traer detalle desde BD (fuente más actualizada que el borrador)
             let detalleFromDB = null;
@@ -8295,8 +8295,8 @@ const AnalisisProcesosModule = {
             }
 
             // Firmas
-            const sigRec = (signatureData.signatureCanvasRecepcion || signatureData.signatureCanvas || (signatureData.Recepcion && signatureData.Recepcion.data)) || null;
-            const sigEnt = (signatureData.signatureCanvasEntrega || signatureData.signatureCanvas || (signatureData.Entrega && signatureData.Entrega.data)) || null;
+            const sigRec = (signatureData.signatureCanvasRecepcion || signatureData.signatureCanvas || (signatureData.Recepcion && signatureData.Recepcion.data) || p.firma_cliente_recepcion) || null;
+            const sigEnt = (signatureData.signatureCanvasEntrega || signatureData.signatureCanvas || (signatureData.Entrega && signatureData.Entrega.data) || p.firma_cliente_entrega) || null;
 
             const html = `
                 <div style="border:1px solid #ddd; padding:20px; background:white; border-radius:8px;">
