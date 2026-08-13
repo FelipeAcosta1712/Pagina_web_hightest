@@ -330,12 +330,20 @@ const DashboardModule = {
         if (top.length === 0) { container.innerHTML = '<div style="text-align:center;padding:1rem;color:#9ca3af;font-size:0.75rem;">Sin datos</div>'; return; }
 
         container.innerHTML = `<div class="dash-top10-table__header"><span>#</span><span>Elemento</span><span style="text-align:right">Unidades</span><span style="text-align:right">Recepciones</span></div>`;
+        let totalUnidades = 0;
+        let totalRecepciones = 0;
         top.forEach((el, i) => {
             const row = document.createElement('div');
             row.className = 'dash-top10-table__row';
             row.innerHTML = `<span class="dash-top10-table__rank">${i + 1}</span><span class="dash-top10-table__name" title="${el.nombre}">${el.nombre}</span><span class="dash-top10-table__num">${el.count}</span><span class="dash-top10-table__num">${el.recepciones || 0}</span>`;
             container.appendChild(row);
+            totalUnidades += el.count;
+            totalRecepciones += (el.recepciones || 0);
         });
+        const totalRow = document.createElement('div');
+        totalRow.className = 'dash-top10-table__total';
+        totalRow.innerHTML = `<span></span><span>Total</span><span class="dash-top10-table__num">${totalUnidades.toLocaleString()}</span><span class="dash-top10-table__num">${totalRecepciones.toLocaleString()}</span>`;
+        container.appendChild(totalRow);
     },
 
     // ── Elementos por Categoría (Donut + Legend) ──
