@@ -145,6 +145,7 @@ const DashboardModule = {
         this.renderRecepcionesPorMes();
         this.renderProcesosPorEstado();
         this.renderTop10Elementos();
+        this.renderUnidadesPorMes();
         this.renderElementosPorCategoria();
         this.renderTop5ClientesUnidades();
         this.bindClientesUnidadesModal();
@@ -225,6 +226,68 @@ const DashboardModule = {
             nombreEl.textContent = 'Sin registros';
             if (fechaEl) fechaEl.textContent = 'No hay clientes creados';
         }
+
+        // Cliente anterior
+        const penultimo = s.penultimoCliente;
+        const penSection = document.getElementById('penultimoClienteSection');
+        const penNombreEl = document.getElementById('penultimoClienteNombre');
+        const penFechaEl = document.getElementById('penultimoClienteFecha');
+        if (penultimo && penSection && penNombreEl) {
+            penSection.style.display = 'block';
+            penNombreEl.textContent = penultimo.nombre || '-';
+            if (penFechaEl) {
+                penFechaEl.textContent = penultimo.fecha ? this.getTimeAgo(penultimo.fecha) : 'Sin fecha';
+            }
+        }
+
+        // Total clientes
+        const totalClientesEl = document.getElementById('totalClientesCount');
+        if (totalClientesEl) {
+            totalClientesEl.textContent = this.formatNumber(s.totalClientes || 0);
+        }
+
+        // Gráfico de clientes por mes
+        this.renderClientesPorMes();
+    },
+
+    renderClientesPorMes() {
+        const canvas = document.getElementById('chartClientesPorMes');
+        if (!canvas || typeof Chart === 'undefined') return;
+        if (this.charts.clientesPorMes) this.charts.clientesPorMes.destroy();
+
+        const data = this.stats.clientesPorMes || {};
+        const sortedKeys = Object.keys(data).sort();
+        const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const labels = sortedKeys.map(k => { const [y, m] = k.split('-'); return `${months[parseInt(m) - 1]}`; });
+        const values = sortedKeys.map(k => data[k]);
+
+        this.charts.clientesPorMes = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Clientes',
+                    data: values,
+                    backgroundColor: '#e11d48',
+                    borderRadius: 3,
+                    maxBarThickness: 30
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { top: 15 } },
+                plugins: {
+                    legend: { display: false },
+                    datalabels: { display: true, anchor: 'end', align: 'top', color: '#374151', font: { size: 10, weight: 'bold' }, padding: { top: 2 } }
+                },
+                scales: {
+                    x: { ticks: { font: { size: 10 } } },
+                    y: { beginAtZero: true, ticks: { font: { size: 10 }, stepSize: 1 } }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
     },
 
     // ── Recepciones por Mes (Bar Chart) ──
@@ -330,20 +393,65 @@ const DashboardModule = {
         if (top.length === 0) { container.innerHTML = '<div style="text-align:center;padding:1rem;color:#9ca3af;font-size:0.75rem;">Sin datos</div>'; return; }
 
         container.innerHTML = `<div class="dash-top10-table__header"><span>#</span><span>Elemento</span><span style="text-align:right">Unidades</span><span style="text-align:right">Recepciones</span></div>`;
+        const allElements = this.stats.allElementos || [];
         let totalUnidades = 0;
         let totalRecepciones = 0;
+        allElements.forEach((el) => {
+            totalUnidades += el.count;
+            totalRecepciones += (el.recepciones || 0);
+        });
         top.forEach((el, i) => {
             const row = document.createElement('div');
             row.className = 'dash-top10-table__row';
             row.innerHTML = `<span class="dash-top10-table__rank">${i + 1}</span><span class="dash-top10-table__name" title="${el.nombre}">${el.nombre}</span><span class="dash-top10-table__num">${el.count}</span><span class="dash-top10-table__num">${el.recepciones || 0}</span>`;
             container.appendChild(row);
-            totalUnidades += el.count;
-            totalRecepciones += (el.recepciones || 0);
         });
         const totalRow = document.createElement('div');
         totalRow.className = 'dash-top10-table__total';
         totalRow.innerHTML = `<span></span><span>Total</span><span class="dash-top10-table__num">${totalUnidades.toLocaleString()}</span><span class="dash-top10-table__num">${totalRecepciones.toLocaleString()}</span>`;
         container.appendChild(totalRow);
+    },
+
+    // ── Unidades Recibidas por Mes (Bar Chart) ──
+    renderUnidadesPorMes() {
+        const canvas = document.getElementById('chartUnidadesPorMes');
+        if (!canvas || typeof Chart === 'undefined') return;
+        if (this.charts.unidadesPorMes) this.charts.unidadesPorMes.destroy();
+
+        const data = this.stats.unidadesPorMes || {};
+        const sortedKeys = Object.keys(data).sort();
+        const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const labels = sortedKeys.map(k => { const [y, m] = k.split('-'); return `${months[parseInt(m) - 1]} ${y}`; });
+        const values = sortedKeys.map(k => data[k]);
+        const total = values.reduce((a, b) => a + b, 0);
+
+        const footer = document.getElementById('unidadesPorMesFooter');
+        if (footer) footer.textContent = `Total per\u00edodo: ${total.toLocaleString()} unidades`;
+
+        this.charts.unidadesPorMes = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Unidades',
+                    data: values,
+                    backgroundColor: '#10b981',
+                    borderRadius: 4,
+                    maxBarThickness: 60
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { top: 20 } },
+                plugins: {
+                    legend: { display: false },
+                    datalabels: { display: true, anchor: 'end', align: 'top', color: '#374151', font: { size: 11, weight: 'bold' }, padding: { top: 4 } }
+                },
+                scales: { y: { beginAtZero: true } }
+            },
+            plugins: [ChartDataLabels]
+        });
     },
 
     // ── Elementos por Categoría (Donut + Legend) ──

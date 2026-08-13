@@ -2729,18 +2729,27 @@ exports.handler = async (event) => {
 
                     // Último cliente creado
                     let ultimoCliente = null;
+                    let penultimoCliente = null;
                     try {
-                        const { data: latestClient } = await supabase
+                        const { data: latestClients } = await supabase
                             .from('clientes')
                             .select('*')
                             .order('created_at', { ascending: false })
-                            .limit(1);
-                        if (latestClient && latestClient.length > 0) {
-                            const c = latestClient[0];
+                            .limit(2);
+                        if (latestClients && latestClients.length > 0) {
+                            const c = latestClients[0];
                             const nombre = pickFirstValue(c, ['nombre', 'nombre_completo', 'contacto', 'representante', 'nombre_empresa', 'empresa', 'razon_social']) || c.email || 'Sin nombre';
                             ultimoCliente = {
                                 nombre,
                                 fecha: c.created_at || null
+                            };
+                        }
+                        if (latestClients && latestClients.length > 1) {
+                            const p = latestClients[1];
+                            const nombreP = pickFirstValue(p, ['nombre', 'nombre_completo', 'contacto', 'representante', 'nombre_empresa', 'empresa', 'razon_social']) || p.email || 'Sin nombre';
+                            penultimoCliente = {
+                                nombre: nombreP,
+                                fecha: p.created_at || null
                             };
                         }
                         // Calcular frecuencia promedio entre clientes
@@ -2762,21 +2771,22 @@ exports.handler = async (event) => {
                         }
                     } catch (_) {}
 
+                    // ── Clientes por Mes ──
+                    const clientesPorMes = {};
+                    clientes.forEach(c => {
+                        const fechaStr = (c.created_at || '').substring(0, 10);
+                        if (fechaStr && /^\d{4}-\d{2}-\d{2}$/.test(fechaStr)) {
+                            const key = fechaStr.substring(0, 7);
+                            clientesPorMes[key] = (clientesPorMes[key] || 0) + 1;
+                        }
+                    });
+
                     // ── KPIs principales ──
                     const totalProcesos = procesos.length;
                     const totalClientes = clientes.length;
                     const totalCotizaciones = cotizaciones.length;
                     const totalInformes = informes.length;
                     const totalEnsayos = ensayos.length;
-
-                    // Unidades Recibidas (SUM detalle_procesos_ac.cantidad)
-                    let unidadesRecibidas = 0;
-                    try {
-                        const { data: detalleAll } = await supabase.from('detalle_procesos_ac').select('cantidad').range(0, 9999);
-                        if (Array.isArray(detalleAll)) {
-                            unidadesRecibidas = detalleAll.reduce((sum, d) => sum + (parseInt(d.cantidad) || 0), 0);
-                        }
-                    } catch (_) {}
 
                     // Informes Generados (procesos con n_informe válido)
                     const informesGenerados = procesos.filter(p => {
@@ -2851,6 +2861,32 @@ exports.handler = async (event) => {
                         .map(([nombre, count]) => ({ nombre, count, recepciones: elementoRecepciones[nombre]?.size || 0 }))
                         .sort((a, b) => b.count - a.count)
                         .slice(0, 10);
+
+                    // Unidades Recibidas (from filtered detalleElementos)
+                    const unidadesRecibidas = detalleElementos.reduce((sum, d) => sum + (parseInt(d.cantidad) || 0), 0);
+
+                    // ── Unidades por Mes (total de todos los elementos) ──
+                    const procesoFechaMap = {};
+                    procesos.forEach(p => {
+                        const fechaStr = (p.fecha_recepcion || '').substring(0, 10);
+                        if (fechaStr && /^\d{4}-\d{2}-\d{2}$/.test(fechaStr)) {
+                            procesoFechaMap[p.id] = fechaStr.substring(0, 7);
+                        }
+                    });
+                    const unidadesPorMes = {};
+                    const recepcionesElementosPorMes = {};
+                    detalleElementos.forEach(d => {
+                        const mes = procesoFechaMap[d.proceso_id];
+                        if (!mes) return;
+                        const cant = parseInt(d.cantidad) || 0;
+                        unidadesPorMes[mes] = (unidadesPorMes[mes] || 0) + cant;
+                        if (!recepcionesElementosPorMes[mes]) recepcionesElementosPorMes[mes] = new Set();
+                        recepcionesElementosPorMes[mes].add(d.proceso_id);
+                    });
+                    const recepcionesElementosPorMesCount = {};
+                    Object.entries(recepcionesElementosPorMes).forEach(([mes, set]) => {
+                        recepcionesElementosPorMesCount[mes] = set.size;
+                    });
 
                     // ── Elementos por Categoría ──
                     let detalleConEnsayo;
@@ -3074,6 +3110,8 @@ exports.handler = async (event) => {
                             allElementos: Object.entries(elementosPorCantidad)
                                 .map(([nombre, count]) => ({ nombre, count, recepciones: elementoRecepciones[nombre]?.size || 0 }))
                                 .sort((a, b) => b.count - a.count),
+                            unidadesPorMes,
+                            recepcionesElementosPorMes: recepcionesElementosPorMesCount,
                             elementosPorCategoria,
                             actividadReciente,
                             ultimasRecepciones,
@@ -3088,6 +3126,8 @@ exports.handler = async (event) => {
                             informesActivos,
                             informesVigentes,
                             ultimoCliente,
+                            penultimoCliente,
+                            clientesPorMes,
                             allClientesForFilter,
                             allEstadosForFilter,
                             allMesesForFilter
