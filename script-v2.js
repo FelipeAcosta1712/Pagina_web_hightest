@@ -161,26 +161,40 @@ async function downloadPdfFile(archivoUrl, nombre) {
         alert('URL del informe no disponible');
         return;
     }
+
     try {
         let filePath = archivoUrl;
-        const publicMarker = '/object/public/Informes/';
+
+        const publicMarker = '/storage/v1/object/public/Informes/';
+
         if (archivoUrl.includes(publicMarker)) {
             filePath = archivoUrl.split(publicMarker).pop();
         }
+
+        try {
+            filePath = decodeURIComponent(filePath);
+        } catch (e) {}
+
+       
+
         const result = await fetchFromDatabase('get_informe_download_url', {
             file_path: filePath,
             file_name: `${nombre || 'informe'}.pdf`
         });
+
         const downloadUrl = result?.signedUrl || '';
+
         if (downloadUrl) {
             const a = document.createElement('a');
             a.href = downloadUrl;
             a.download = `${nombre || 'informe'}.pdf`;
             a.target = '_blank';
+
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
         }
+
     } catch (err) {
         console.error('Error descargando PDF:', err);
     }
