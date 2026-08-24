@@ -1950,6 +1950,13 @@
                         <!-- Input oculto para carga individual -->
                         <input type="file" id="informeFileInput" accept=".pdf" style="display:none;">
 
+                        <!-- Campo nombre personalizado solo para CIMA SAS -->
+                        <div id="cimaNombreArchivoWrapper" style="display:none; margin-bottom:12px; padding:10px 14px; background:#e3f2fd; border:1px solid #90caf9; border-radius:6px;">
+                            <label for="cimaNombreArchivo" style="font-weight:600; font-size:12px; display:block; margin-bottom:4px;">📎 Nombre del informe (CIMA SAS)</label>
+                            <input type="text" id="cimaNombreArchivo" class="control__input" placeholder="Ej: Informe Ensayo Guantes v2" style="width:100%; font-size:13px;">
+                            <div style="font-size:11px; color:#666; margin-top:4px;">Si se deja vacío, se usará el nombre del archivo PDF.</div>
+                        </div>
+
                         <!-- Botones de acción -->
                         <div style="margin-bottom:16px; display:flex; gap:8px; flex-wrap:wrap;">
                             <button type="button" class="btn btn--secondary" id="btnImportarInformes" title="Detecta PDFs en el bucket y crea registros faltantes" style="font-size:12px; padding:6px 12px;">

@@ -7208,6 +7208,13 @@ const GestionInformesModule = {
         if (clienteLabel) clienteLabel.value = proc?.cliente || proc?.empresa || '';
         if (btnCargar) btnCargar.disabled = false;
 
+        // Mostrar/ocultar campo nombre personalizado solo para CIMA SAS
+        const cimaWrapper = document.getElementById('cimaNombreArchivoWrapper');
+        const cimaInput = document.getElementById('cimaNombreArchivo');
+        const esCimaSas = (proc?.cliente || '').toUpperCase().includes('CIMA');
+        if (cimaWrapper) cimaWrapper.style.display = esCimaSas ? 'block' : 'none';
+        if (cimaInput && !esCimaSas) cimaInput.value = '';
+
         await this.loadInformes();
     },
 
@@ -7318,6 +7325,8 @@ const GestionInformesModule = {
         const clienteLabel = document.getElementById('informesClienteLabel');
         const container = document.getElementById('informesListContainer');
         const btnCargar = document.getElementById('btnCargarInforme');
+        const cimaWrapper = document.getElementById('cimaNombreArchivoWrapper');
+        const cimaInput = document.getElementById('cimaNombreArchivo');
 
         if (clienteFilter) clienteFilter.value = '';
         if (monthFilter) monthFilter.value = '';
@@ -7327,6 +7336,8 @@ const GestionInformesModule = {
         if (select) select.value = '';
         if (clienteLabel) clienteLabel.value = '';
         if (btnCargar) btnCargar.disabled = true;
+        if (cimaWrapper) cimaWrapper.style.display = 'none';
+        if (cimaInput) cimaInput.value = '';
         this._currentProcesoId = null;
         this._informes = [];
         if (container) container.innerHTML = '<div style="text-align:center; padding:24px; color:#999;">Seleccione un proceso o cliente para ver informes</div>';
@@ -7526,35 +7537,39 @@ const GestionInformesModule = {
             return;
         }
 
-        const activo = this._informes.find(i => i.activo);
+        const activos = this._informes.filter(i => i.activo);
         const proc = (PROCESOS_STORE?.all || []).find(p => String(p.id) === String(this._currentProcesoId));
         const fechaEntrega = proc?.fecha_entrega_cliente || '';
+        const esCimaSas = (proc?.cliente || '').toUpperCase().includes('CIMA');
         let html = '';
 
-        // Informe activo destacado
-        if (activo) {
-            html += `
-                <div style="background:#e8f5e9; border:2px solid #28a745; border-radius:8px; padding:16px; margin-bottom:16px;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-                        <div>
-                            <span style="background:#28a745; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:700;">ACTIVO — v${activo.version}</span>
-                            <strong style="margin-left:8px;">${escapeHtml(activo.nombre_documento || 'Informe')}</strong>
-                            <span style="font-size:10px; color:#999; margin-left:6px;" title="Fecha de carga"><span style="font-size:9px; color:#aaa;">Carga:</span> ${escapeHtml(activo.created_at ? new Date(activo.created_at).toLocaleDateString('es-CO') : '-')}</span>
-                            ${fechaEntrega ? `<span style="font-size:10px; font-weight:600; color:#022859; margin-left:8px;" title="Entrega a cliente"><span style="font-size:9px; color:#aaa;">Entrega:</span> ${fechaEntrega.substring(0, 10)}</span>` : ''}
+        // Informes activos destacados
+        if (activos.length > 0) {
+            activos.forEach((activo, idx) => {
+                const label = esCimaSas && activos.length > 1 ? `ACTIVO ${idx + 1} — v${activo.version}` : `ACTIVO — v${activo.version}`;
+                html += `
+                    <div style="background:#e8f5e9; border:2px solid #28a745; border-radius:8px; padding:16px; margin-bottom:16px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                            <div>
+                                <span style="background:#28a745; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:700;">${label}</span>
+                                <strong style="margin-left:8px;">${escapeHtml(activo.nombre_documento || 'Informe')}</strong>
+                                <span style="font-size:10px; color:#999; margin-left:6px;" title="Fecha de carga"><span style="font-size:9px; color:#aaa;">Carga:</span> ${escapeHtml(activo.created_at ? new Date(activo.created_at).toLocaleDateString('es-CO') : '-')}</span>
+                                ${fechaEntrega ? `<span style="font-size:10px; font-weight:600; color:#022859; margin-left:8px;" title="Entrega a cliente"><span style="font-size:9px; color:#aaa;">Entrega:</span> ${fechaEntrega.substring(0, 10)}</span>` : ''}
+                            </div>
+                            <div style="display:flex; gap:6px;">
+                                <button class="btn btn--small" onclick="GestionInformesModule.downloadPdf('${escapeHtml(activo.archivo_pdf || '')}', '${escapeHtml(activo.nombre_documento || 'informe')}')" style="font-size:12px; padding:4px 12px; background:#28a745; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">📥 Descargar</button>
+                                <button class="btn btn--small btn--secondary" onclick="GestionInformesModule.showHistory()">📜 Historial</button>
+                            </div>
                         </div>
-                        <div style="display:flex; gap:6px;">
-                            <button class="btn btn--small" onclick="GestionInformesModule.downloadPdf('${escapeHtml(activo.archivo_pdf || '')}', '${escapeHtml(activo.nombre_documento || 'informe')}')" style="font-size:12px; padding:4px 12px; background:#28a745; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">📥 Descargar</button>
-                            <button class="btn btn--small btn--secondary" onclick="GestionInformesModule.showHistory()">📜 Historial</button>
-                        </div>
-                    </div>
-                </div>`;
+                    </div>`;
+            });
         }
 
         // Botón para cargar nueva versión
         html += `
             <div style="margin-bottom:16px;">
                 <button class="btn btn--primary" onclick="document.getElementById('informeFileInput').click()">
-                    📄 Cargar Nueva Versión
+                    📄 Cargar Nuevo Informe
                 </button>
             </div>`;
 
@@ -7617,13 +7632,18 @@ const GestionInformesModule = {
             const fileBase64 = await this.readFileAsBase64(file);
             const fileExt = file.name.split('.').pop() || 'pdf';
 
+            // Usar nombre personalizado si se ingresó (CIMA SAS), sino usar nombre del archivo
+            const cimaInput = document.getElementById('cimaNombreArchivo');
+            const customName = cimaInput?.value?.trim() || '';
+            const nombreDocumento = customName || file.name.replace(/\.pdf$/i, '');
+
             if (progressBar) progressBar.style.width = '50%';
             if (progressText) progressText.textContent = 'Subiendo a Storage y registrando...';
 
             // 2. Enviar al backend (Storage upload + DB insert en un solo paso)
             const result = await fetchFromDatabase('upload_informe_file', {
                 proceso_id: this._currentProcesoId,
-                nombre_documento: file.name.replace(/\.pdf$/i, ''),
+                nombre_documento: nombreDocumento,
                 file_base64: fileBase64,
                 file_mime: file.type || 'application/pdf',
                 file_ext: fileExt
@@ -7631,6 +7651,9 @@ const GestionInformesModule = {
 
             if (progressBar) progressBar.style.width = '100%';
             if (progressText) progressText.textContent = '¡Informe cargado exitosamente!';
+
+            // Limpiar campo personalizado después de subir
+            if (cimaInput) cimaInput.value = '';
 
             setTimeout(() => {
                 if (progressDiv) progressDiv.style.display = 'none';

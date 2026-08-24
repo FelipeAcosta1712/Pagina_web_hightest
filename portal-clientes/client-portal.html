@@ -1205,6 +1205,8 @@
                     const infName = i.n_informe || i.nombre_documento || 'Informe';
                     const numProceso = i.numero_proceso || '—';
                     const fecha = i.fecha_entrega || (i.created_at || '').substring(0, 10);
+                    const nombreArchivo = i.nombre_documento || '';
+                    const esCimaSas = (i.cliente || '').toUpperCase().includes('CIMA');
                     return `
                 <div class="dm-activity-item" style="display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid #f1f5f9; transition:background 0.15s; cursor:pointer;" onclick="${pdfUrl ? `downloadPdfFile('${escapeHtml(pdfUrl)}', '${escapeHtml(i.nombre_documento || 'informe')}')` : `setTab('reports')`}">
                     <div class="dm-bg-red" style="width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
@@ -1212,6 +1214,7 @@
                     </div>
                     <div style="flex:1; min-width:0;">
                         <div class="dm-text-primary" style="font-size:14px; font-weight:700; font-family:monospace;">${escapeHtml(infName)}</div>
+                        ${esCimaSas && nombreArchivo ? `<div class="dm-text-secondary" style="font-size:12px;">📎 ${escapeHtml(nombreArchivo)}</div>` : ''}
                         <div class="dm-text-secondary" style="font-size:12px;">Proceso: ${escapeHtml(numProceso)}</div>
                         <div class="dm-text-muted" style="font-size:11px;">📅 ${fecha}</div>
                     </div>
@@ -1420,7 +1423,7 @@
             const startIdx = (informesPage - 1) * informesPerPage;
             const paged = filtered.slice(startIdx, startIdx + informesPerPage);
 
-            const cards = paged.map(r => {
+                const cards = paged.map(r => {
                 const fechaRaw = r.fecha_entrega || r.created_at || '';
                 const fechaParts = String(fechaRaw).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
                 const fecha = fechaParts ? `${fechaParts[3]}/${fechaParts[2]}/${fechaParts[1]}` : '—';
@@ -1432,6 +1435,8 @@
                     ? '<span class="dm-badge-green" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;">✅ Disponible</span>'
                     : '<span class="dm-badge-amber" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;">⏳ Versión anterior</span>';
                 const archivoUrl = r.archivo_pdf || '';
+                const nombreArchivo = r.nombre_documento || '';
+                const esCimaSas = (cliente || '').toUpperCase().includes('CIMA');
 
                 return `<div class="dm-card dm-shadow-hover" style="border-radius:14px;padding:0;overflow:hidden;display:flex;flex-direction:column;">
                     <div style="padding:20px;flex:1;">
@@ -1440,6 +1445,7 @@
                             <div style="flex:1;min-width:0;">
                                 <div class="dm-text-primary" style="font-size:15px;font-weight:800;margin-bottom:2px;font-family:monospace;">${escapeHtml(infName)}</div>
                                 <div class="dm-text-secondary" style="font-size:12px;">Informe a nombre de: <strong class="dm-text-primary">${escapeHtml(aNombreDe)}</strong></div>
+                                ${esCimaSas && nombreArchivo ? `<div class="dm-text-secondary" style="font-size:12px;">📎 Archivo: <strong class="dm-text-primary" style="font-family:monospace;">${escapeHtml(nombreArchivo)}</strong></div>` : ''}
                                 <div class="dm-text-secondary" style="font-size:12px;">Cliente: <strong class="dm-text-primary">${escapeHtml(cliente)}</strong> — Proceso: <strong class="dm-text-primary">${escapeHtml(numProc)}</strong></div>
                                 <div style="margin-top:8px;">${badge}</div>
                             </div>
