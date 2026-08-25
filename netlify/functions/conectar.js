@@ -367,7 +367,7 @@ exports.handler = async (event) => {
 
                 let query = supabase
                     .from('procesos_acreditados')
-                    .select('*');
+                    .select('id, numero_proceso, cliente, cliente_id, tipo, estado, fecha_recepcion, fecha_entrega_cliente, fecha_finalizado, valor, caso_activo, informe_a_nombre_de, facturar_a_nombre_de, fecha_ejecucion, n_remision, responsable_marcacion, n_informe, created_at');
 
                 // filtro por activo (boolean)
                 if (activo !== undefined && activo !== null && activo !== '') {
