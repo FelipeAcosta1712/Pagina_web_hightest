@@ -367,7 +367,7 @@ exports.handler = async (event) => {
 
                 let query = supabase
                     .from('procesos_acreditados')
-                    .select('id, numero_proceso, cliente, cliente_id, tipo, estado, fecha_recepcion, fecha_entrega_cliente, fecha_finalizado, valor, caso_activo, informe_a_nombre_de, facturar_a_nombre_de, fecha_ejecucion, n_remision, responsable_marcacion, n_informe, created_at');
+                    .select('*');
 
                 // filtro por activo (boolean)
                 if (activo !== undefined && activo !== null && activo !== '') {
@@ -462,6 +462,8 @@ exports.handler = async (event) => {
                     const desdeDetalle = conteosDetalle[pid] || 0;
                     const desdeMarc = conteosMarc[pid] ? conteosMarc[pid].size : 0;
                     p.total_items = Math.max(desdeDetalle, desdeMarc);
+                    delete p.firma_cliente_recepcion;
+                    delete p.firma_cliente_entrega;
                 });
 
                 return jsonResponse(200, { ok: true, procesos });
@@ -623,7 +625,7 @@ exports.handler = async (event) => {
                 if (!numero) return jsonResponse(400, { ok: false, error: 'numero_proceso requerido' });
 
                 // Permitir actualizar solo campos autorizados
-                const allowed = ['numero_proceso','cliente','cliente_id','tipo','estado','fecha_recepcion','fecha_entrega_cliente','fecha_finalizado','valor','caso_activo','informe_a_nombre_de','facturar_a_nombre_de','fecha_ejecucion','n_remision','responsable_marcacion','firma_cliente_recepcion','firma_cliente_entrega'];
+                const allowed = ['numero_proceso','cliente','estado','fecha_recepcion','fecha_entrega_cliente','fecha_finalizado','caso_activo','informe_a_nombre_de','facturar_a_nombre_de','fecha_ejecucion','n_remision','responsable_marcacion','firma_cliente_recepcion','firma_cliente_entrega'];
                 const updateData = {};
                 for (const key of allowed) {
                     if (payload[key] !== undefined) updateData[key] = payload[key];
