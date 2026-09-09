@@ -342,6 +342,8 @@
                     </div>
                 </div>
 
+                
+
                 <!-- Row: Último Cliente + Indicadores (2 columns) -->
                 <div class="dash-charts-row dash-charts-row--2col">
                     <div class="dash-chart-card" style="border-left:3px solid #e11d48; padding:0;">
@@ -395,6 +397,43 @@
                         </div>
                         <div class="dash-chart-card__body">
                             <div class="dash-indicadores-grid" id="indicadoresGrid"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row: Promedio de Días de Entrega por Cliente -->
+                <div class="dash-charts-row dash-charts-row--2col">
+                    <div class="dash-chart-card" style="grid-column: 1 / -1;">
+                        <div class="dash-chart-card__header">
+                            <h3 class="dash-chart-card__title">Promedio de Días y Elementos por Cliente</h3>
+                            <select class="dash-chart-card__filter" id="filterClienteEntrega">
+                                <option value="">Todos los clientes</option>
+                            </select>
+                        </div>
+                        <div id="entregaChartsContainer" style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; padding:0 0.5rem;">
+                            <div>
+                                <div class="entrega-label-header" style="font-size:0.72rem; font-weight:600; color:#22c55e; margin-bottom:0.3rem; text-transform:uppercase; letter-spacing:0.03em;">Menos días</div>
+                                <div style="min-height:220px;"><canvas id="chartEntregaMenos"></canvas></div>
+                            </div>
+                            <div>
+                                <div class="entrega-label-header" style="font-size:0.72rem; font-weight:600; color:#ef4444; margin-bottom:0.3rem; text-transform:uppercase; letter-spacing:0.03em;">Más días</div>
+                                <div style="min-height:220px;"><canvas id="chartEntregaMas"></canvas></div>
+                            </div>
+                        </div>
+                        <div class="dash-chart-card__footer"><span id="recibidasEntregadasFooter">Promedio general: 0 días</span> · <a href="#" class="dash-chart-card__link" id="verTodosClientesEntrega">Ver todos los clientes</a></div>
+                    </div>
+
+                    <!-- MODAL: TODOS LOS CLIENTES -->
+                    <div class="modal" id="modalAllEntregaClientes" aria-hidden="true">
+                        <div class="modal__content" role="dialog" aria-modal="true" aria-labelledby="modalAllEntregaTitle" style="max-width:850px;">
+                            <div class="modal__header">
+                                <h3 id="modalAllEntregaTitle">Todos los Clientes — Días y Elementos</h3>
+                                <button type="button" class="modal__close" id="closeModalAllEntrega" aria-label="Cerrar">✕</button>
+                            </div>
+                            <div class="modal__body" id="modalAllEntregaBody" style="max-height:65vh; overflow-y:auto;"></div>
+                            <div class="modal__actions">
+                                <button type="button" class="btn btn--secondary" id="closeModalAllEntregaBtn">Cerrar</button>
+                            </div>
                         </div>
                     </div>
                 </div>

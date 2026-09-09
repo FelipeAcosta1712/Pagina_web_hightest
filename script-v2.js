@@ -7556,7 +7556,11 @@ const GestionInformesModule = {
                                 <span style="font-size:10px; color:#999; margin-left:6px;" title="Fecha de carga"><span style="font-size:9px; color:#aaa;">Carga:</span> ${escapeHtml(activo.created_at ? new Date(activo.created_at).toLocaleDateString('es-CO') : '-')}</span>
                                 ${fechaEntrega ? `<span style="font-size:10px; font-weight:600; color:#022859; margin-left:8px;" title="Entrega a cliente"><span style="font-size:9px; color:#aaa;">Entrega:</span> ${fechaEntrega.substring(0, 10)}</span>` : ''}
                             </div>
-                            <div style="display:flex; gap:6px;">
+                            <div style="display:flex; gap:6px; align-items:center;">
+                                <select id="vis_${escapeHtml(activo.id)}" onchange="GestionInformesModule.updateVisibilidad('${escapeHtml(activo.id)}', this.value)" style="font-size:11px; padding:3px 6px; border:1px solid #ccc; border-radius:4px; cursor:pointer;">
+                                    <option value="1" ${String(activo.visible_cliente || '1') === '1' ? 'selected' : ''}>Visible</option>
+                                    <option value="0" ${String(activo.visible_cliente || '1') === '0' ? 'selected' : ''}>Oculto</option>
+                                </select>
                                 <button class="btn btn--small" onclick="GestionInformesModule.downloadPdf('${escapeHtml(activo.archivo_pdf || '')}', '${escapeHtml(activo.nombre_documento || 'informe')}')" style="font-size:12px; padding:4px 12px; background:#28a745; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">📥 Descargar</button>
                                 <button class="btn btn--small btn--secondary" onclick="GestionInformesModule.showHistory()">📜 Historial</button>
                             </div>
@@ -7686,6 +7690,20 @@ const GestionInformesModule = {
 
     async downloadPdf(archivoUrl, nombre) {
         return downloadPdfFile(archivoUrl, nombre);
+    },
+
+    async updateVisibilidad(informeId, value) {
+        try {
+            const result = await fetchFromDatabase('update_informe_visibilidad', {
+                informe_id: informeId,
+                visible_cliente: value
+            });
+            if (!result?.ok) throw new Error(result?.error || 'Error al actualizar');
+            Toast.show({ title: 'Actualizado', message: value === '1' ? 'Informe visible para cliente' : 'Informe oculto para cliente', variant: 'success' });
+        } catch (err) {
+            console.error('Error actualizando visibilidad:', err);
+            Toast.show({ title: 'Error', message: err.message, variant: 'error' });
+        }
     },
 
     async showHistory() {
@@ -7875,6 +7893,7 @@ const GestionInformesModule = {
                             <th style="padding:8px; text-align:left; border:1px solid #ddd;">N° Proceso</th>
                             <th style="padding:8px; text-align:left; border:1px solid #ddd;">Cliente</th>
                             <th style="padding:8px; text-align:left; border:1px solid #ddd;">Fecha Recepción</th>
+                            <th style="padding:8px; text-align:left; border:1px solid #ddd;">Elementos sin entregar</th>
                             <th style="padding:8px; text-align:left; border:1px solid #ddd;">Fecha Entrega</th>
                             <th style="padding:8px; text-align:center; border:1px solid #ddd;">Acción</th>
                         </tr>
@@ -7885,16 +7904,20 @@ const GestionInformesModule = {
             const num = p.numero_proceso || '-';
             const cliente = p.cliente || p.empresa || '-';
             const fechaRec = p.fecha_recepcion ? new Date(p.fecha_recepcion).toLocaleDateString('es-CO') : '-';
-            const fechaEnt = p.fecha_entrega_cliente ? new Date(p.fecha_entrega_cliente).toLocaleDateString('es-CO') : '-';
-            const dias = p.fecha_entrega_cliente ? Math.ceil((new Date() - new Date(p.fecha_entrega_cliente)) / (1000 * 60 * 60 * 24)) : 0;
+            const tieneFechaEntrega = !!p.fecha_entrega_cliente;
+            const fechaEnt = tieneFechaEntrega ? new Date(p.fecha_entrega_cliente).toLocaleDateString('es-CO') : '-';
+            const dias = tieneFechaEntrega ? Math.ceil((new Date() - new Date(p.fecha_entrega_cliente)) / (1000 * 60 * 60 * 24)) : 0;
             const alerta = dias > 0 ? `color:#c62828; font-weight:600;` : '';
+            const sinEntregar = !tieneFechaEntrega ? `<span style="color:#c62828; font-weight:600;">Sin fecha</span>` : `<span style="color:#2e7d32; font-weight:600;">Ya entregado</span>`;
+            const sinEntregarFecha = !tieneFechaEntrega ? `<span style="color:#f57c00; font-weight:600;">Sin entregar</span>` : '-';
 
             html += `
                 <tr style="border-bottom:1px solid #ddd;">
                     <td style="padding:8px; border:1px solid #ddd; font-weight:600;">${escapeHtml(num)}</td>
                     <td style="padding:8px; border:1px solid #ddd;">${escapeHtml(cliente)}</td>
                     <td style="padding:8px; border:1px solid #ddd;">${fechaRec}</td>
-                    <td style="padding:8px; border:1px solid #ddd; ${alerta}">${fechaEnt}${dias > 0 ? ' (' + dias + ' días)' : ''}</td>
+                    <td style="padding:8px; border:1px solid #ddd;">${sinEntregar}</td>
+                    <td style="padding:8px; border:1px solid #ddd; ${alerta}">${tieneFechaEntrega ? fechaEnt + (dias > 0 ? ' (' + dias + ' días)' : '') : sinEntregarFecha}</td>
                     <td style="padding:8px; border:1px solid #ddd; text-align:center;">
                         <button class="btn btn--small btn--primary" onclick="GestionInformesModule.irACargarInforme('${escapeHtml(p.id)}')" style="font-size:11px; padding:2px 8px;">
                             📄 Cargar

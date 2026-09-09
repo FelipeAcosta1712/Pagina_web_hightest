@@ -150,6 +150,7 @@ const DashboardModule = {
         this.renderTop5ClientesUnidades();
         this.bindClientesUnidadesModal();
         this.renderTop5ClientesProcesos();
+        this.renderRecibidasEntregadasPorDia();
         this.renderActividadReciente();
         this.renderIndicadores();
         this.renderUltimasRecepciones();
@@ -452,6 +453,375 @@ const DashboardModule = {
             },
             plugins: [ChartDataLabels]
         });
+    },
+
+    // ── Promedio de Días y Elementos por Cliente ──
+    renderRecibidasEntregadasPorDia() {
+        const canvasMenos = document.getElementById('chartEntregaMenos');
+        const canvasMas = document.getElementById('chartEntregaMas');
+        const footer = document.getElementById('recibidasEntregadasFooter');
+        const filterSelect = document.getElementById('filterClienteEntrega');
+        const container = document.getElementById('entregaChartsContainer');
+        const headers = container?.querySelectorAll('.entrega-label-header');
+        if (!canvasMenos || !canvasMas || typeof Chart === 'undefined') return;
+        if (this.charts.entregaMenos) this.charts.entregaMenos.destroy();
+        if (this.charts.entregaMas) this.charts.entregaMas.destroy();
+
+        const data = this.stats.promedioDiasEntregaCliente || {};
+        const clientes = (data.clientes || []).filter(c => c.promedio > 0);
+
+        const dataElem = this.stats.promedioElementosPorCliente || {};
+        const clientesElem = dataElem.clientes || [];
+
+        // Mapa de elementos por nombre de cliente
+        const mapElem = {};
+        clientesElem.forEach(c => { mapElem[c.nombre] = c; });
+
+        if (clientes.length === 0) {
+            if (footer) footer.textContent = 'Sin datos disponibles';
+            return;
+        }
+
+        // Llenar filtro de clientes (solo una vez)
+        if (filterSelect && filterSelect.options.length <= 1) {
+            clientes.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.nombre;
+                opt.textContent = c.nombre;
+                filterSelect.appendChild(opt);
+            });
+            filterSelect.addEventListener('change', () => this.renderRecibidasEntregadasPorDia());
+        }
+
+        const clienteFilter = filterSelect?.value || '';
+        const promedioGeneral = data.promedioGeneral || 0;
+        const promedioElemGeneral = dataElem.promedioGeneral || 0;
+
+        const canvasMenosWrap = canvasMenos.parentElement;
+        const canvasMasWrap = canvasMas.parentElement;
+        const headerMenos = headers?.[0];
+        const headerMas = headers?.[1];
+
+        // ── Si se filtró un cliente específico ──
+        if (clienteFilter) {
+            canvasMenosWrap.style.display = 'none';
+            canvasMasWrap.style.display = '';
+            canvasMas.style.display = '';
+            if (container) container.style.gridTemplateColumns = '1fr';
+            if (headerMenos) headerMenos.style.display = 'none';
+            if (headerMas) { headerMas.style.display = ''; headerMas.textContent = clienteFilter; headerMas.style.color = '#374151'; }
+
+            const cliente = clientes.find(c => c.nombre === clienteFilter);
+            const elem = mapElem[clienteFilter];
+
+            if (!cliente) {
+                if (footer) footer.textContent = 'Cliente sin datos de entrega';
+                return;
+            }
+
+            if (footer) {
+                const parts = [`Promedio días: ${Number.isInteger(cliente.promedio) ? cliente.promedio : cliente.promedio.toFixed(1)}`];
+                if (elem) parts.push(`Promedio elementos: ${Number.isInteger(elem.promedio) ? elem.promedio : elem.promedio.toFixed(1)}`);
+                footer.textContent = parts.join(' · ');
+            }
+
+            const diasColor = cliente.promedio <= 3 ? '#22c55e' : cliente.promedio <= 7 ? '#3b82f6' : cliente.promedio <= 15 ? '#f59e0b' : '#ef4444';
+            const elemProm = elem ? (Number.isInteger(elem.promedio) ? elem.promedio : elem.promedio.toFixed(1)) : null;
+
+            // Un solo chart con 2 barras: Días y Elementos
+            const labels = ['Promedio Días'];
+            const valores = [cliente.promedio];
+            const colores = [diasColor];
+            if (elemProm !== null) {
+                labels.push('Promedio Elem.');
+                valores.push(elemProm);
+                colores.push('#8b5cf6');
+            }
+
+            const maxVal = Math.max(...valores);
+
+            this.charts.entregaMas = new Chart(canvasMas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        data: valores,
+                        backgroundColor: colores,
+                        borderRadius: 6,
+                        borderSkipped: false,
+                        barPercentage: 0.5,
+                        categoryPercentage: 0.7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    layout: { padding: { left: 10, right: 60 } },
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: {
+                            display: true,
+                            anchor: 'end',
+                            align: 'right',
+                            offset: 6,
+                            color: '#1f2937',
+                            font: { size: 12, weight: '700' },
+                            formatter: (value) => {
+                                const d = Number.isInteger(value) ? value : value.toFixed(1);
+                                return d + (value === cliente.promedio ? 'd' : 'e');
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#1f2937',
+                            titleFont: { size: 12, weight: 'bold' },
+                            bodyFont: { size: 11 },
+                            padding: 8,
+                            cornerRadius: 6,
+                            displayColors: false,
+                            callbacks: {
+                                title: () => clienteFilter,
+                                label: (ctxItem) => {
+                                    const isDias = ctxItem.dataIndex === 0;
+                                    const lines = [`${isDias ? 'Promedio: ' + ctxItem.raw + ' días' : 'Promedio: ' + ctxItem.raw + ' elementos'}`];
+                                    lines.push(`Procesos: ${cliente.cantidad}`);
+                                    if (elem && isDias) lines.push(`Total unidades: ${elem.totalUnidades}`);
+                                    return lines;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: Math.ceil(maxVal * 1.4) || 5,
+                            border: { display: false },
+                            grid: { color: '#f3f4f6', drawTicks: false },
+                            ticks: { font: { size: 10 }, color: '#9ca3af', padding: 4 }
+                        },
+                        y: {
+                            border: { display: false },
+                            grid: { display: false },
+                            ticks: { font: { size: 12, weight: '600' }, color: '#374151', padding: 6 }
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+            return;
+        }
+
+        // ── Vista normal: 2 columnas ──
+        canvasMenosWrap.style.display = '';
+        canvasMasWrap.style.display = '';
+        canvasMenos.style.display = '';
+        canvasMas.style.display = '';
+        if (container) container.style.gridTemplateColumns = '1fr 1fr';
+        if (headerMenos) { headerMenos.style.display = ''; headerMenos.textContent = 'Menos días'; headerMenos.style.color = '#22c55e'; }
+        if (headerMas) { headerMas.style.display = ''; headerMas.textContent = 'Más días'; headerMas.style.color = '#ef4444'; }
+
+        if (footer) footer.textContent = `Promedio días: ${promedioGeneral} · Promedio elementos: ${promedioElemGeneral}`;
+
+        // Separar: menos días (ascendente, top 6) y más días (descendente, top 6)
+        const ordenados = [...clientes].sort((a, b) => a.promedio - b.promedio);
+        const menosDias = ordenados.slice(0, 6);
+        const masDias = [...ordenados].reverse().slice(0, 6);
+
+        const makeConfig = (items) => {
+            const labels = items.map(c => {
+                return c.nombre.length > 16 ? c.nombre.substring(0, 16) + '…' : c.nombre;
+            });
+            const valores = items.map(c => c.promedio);
+            const cantidades = items.map(c => c.cantidad);
+            const elemPromedios = items.map(c => {
+                const e = mapElem[c.nombre];
+                return e ? (Number.isInteger(e.promedio) ? e.promedio : e.promedio.toFixed(1)) : null;
+            });
+            const colores = valores.map(v => {
+                if (v <= 3) return '#22c55e';
+                if (v <= 7) return '#3b82f6';
+                if (v <= 15) return '#f59e0b';
+                return '#ef4444';
+            });
+            return { labels, valores, cantidades, elemPromedios, colores, items };
+        };
+
+        const cfgMenos = makeConfig(menosDias);
+        const cfgMas = makeConfig(masDias);
+
+        const maxGlobal = Math.max(
+            cfgMenos.valores.length ? Math.max(...cfgMenos.valores) : 0,
+            cfgMas.valores.length ? Math.max(...cfgMas.valores) : 0
+        );
+
+        const baseOptions = (maxVal) => ({
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            layout: { padding: { left: 4, right: 80 } },
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    display: true,
+                    anchor: 'end',
+                    align: 'right',
+                    offset: 4,
+                    color: '#1f2937',
+                    font: { size: 10, weight: '700' },
+                    formatter: (value, ctx) => {
+                        const cant = ctx.dataset._cantidades[ctx.dataIndex];
+                        const elem = ctx.dataset._elemPromedios[ctx.dataIndex];
+                        const d = Number.isInteger(value) ? value : value.toFixed(1);
+                        const eStr = elem !== null ? `${elem}e` : '';
+                        return `${d}d · ${cant}p ${eStr}`;
+                    }
+                },
+                tooltip: {
+                    backgroundColor: '#1f2937',
+                    titleFont: { size: 11, weight: 'bold' },
+                    bodyFont: { size: 10 },
+                    padding: 6,
+                    cornerRadius: 5,
+                    displayColors: false,
+                    callbacks: {
+                        title: (items) => {
+                            const item = items[0];
+                            return item?.dataset?._items?.[item.dataIndex]?.nombre || item?.chart?._srcItems?.[item.dataIndex]?.nombre || '';
+                        },
+                        label: (ctxItem) => {
+                            const cant = ctxItem.dataset._cantidades[ctxItem.dataIndex];
+                            const elem = ctxItem.dataset._elemPromedios[ctxItem.dataIndex];
+                            const d = Number.isInteger(ctxItem.raw) ? ctxItem.raw : ctxItem.raw.toFixed(1);
+                            const lines = [`Promedio: ${d} días · ${cant} proceso(s)`];
+                            if (elem !== null) lines.push(`Promedio elementos: ${elem}`);
+                            return lines;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    max: Math.ceil(maxVal * 1.3) || 5,
+                    border: { display: false },
+                    grid: { color: '#f3f4f6', drawTicks: false },
+                    ticks: { font: { size: 9 }, color: '#9ca3af', padding: 3, callback: (v) => v + 'd' }
+                },
+                y: {
+                    border: { display: false },
+                    grid: { display: false },
+                    ticks: { font: { size: 10, weight: '500' }, color: '#374151', padding: 4 }
+                }
+            }
+        });
+
+        // Chart Menos Días
+        if (cfgMenos.valores.length) {
+            const ds = {
+                data: cfgMenos.valores,
+                backgroundColor: cfgMenos.colores,
+                borderRadius: 4,
+                borderSkipped: false,
+                barPercentage: 0.55,
+                categoryPercentage: 0.85,
+                _cantidades: cfgMenos.cantidades,
+                _elemPromedios: cfgMenos.elemPromedios,
+                _items: cfgMenos.items
+            };
+            this.charts.entregaMenos = new Chart(canvasMenos.getContext('2d'), {
+                type: 'bar',
+                data: { labels: cfgMenos.labels, datasets: [ds] },
+                options: baseOptions(maxGlobal),
+                plugins: [ChartDataLabels]
+            });
+            this.charts.entregaMenos._srcItems = menosDias;
+        }
+
+        // Chart Más Días
+        if (cfgMas.valores.length) {
+            const ds = {
+                data: cfgMas.valores,
+                backgroundColor: cfgMas.colores,
+                borderRadius: 4,
+                borderSkipped: false,
+                barPercentage: 0.55,
+                categoryPercentage: 0.85,
+                _cantidades: cfgMas.cantidades,
+                _elemPromedios: cfgMas.elemPromedios,
+                _items: cfgMas.items
+            };
+            this.charts.entregaMas = new Chart(canvasMas.getContext('2d'), {
+                type: 'bar',
+                data: { labels: cfgMas.labels, datasets: [ds] },
+                options: baseOptions(maxGlobal),
+                plugins: [ChartDataLabels]
+            });
+            this.charts.entregaMas._srcItems = masDias;
+        }
+
+        // ── Modal: Ver todos los clientes ──
+        const btnVerTodos = document.getElementById('verTodosClientesEntrega');
+        const modal = document.getElementById('modalAllEntregaClientes');
+        const modalBody = document.getElementById('modalAllEntregaBody');
+        const closeModal = () => { modal.classList.remove('modal--open'); modal.setAttribute('aria-hidden', 'true'); };
+
+        if (btnVerTodos && modal) {
+            btnVerTodos.onclick = (e) => {
+                e.preventDefault();
+                const mapDias = {};
+                clientes.forEach(c => { mapDias[c.nombre] = c; });
+                const allNombres = [...new Set([...Object.keys(mapDias), ...Object.keys(mapElem)])];
+                const allClientes = allNombres.map(nombre => ({
+                    nombre,
+                    promedioDias: mapDias[nombre]?.promedio ?? null,
+                    cantidad: mapDias[nombre]?.cantidad ?? 0,
+                    minimo: mapDias[nombre]?.minimo ?? '-',
+                    maximo: mapDias[nombre]?.maximo ?? '-',
+                    promedioElem: mapElem[nombre]?.promedio ?? null,
+                    totalUnidades: mapElem[nombre]?.totalUnidades ?? 0
+                })).sort((a, b) => (b.promedioDias || 0) - (a.promedioDias || 0));
+
+                let html = `<table style="width:100%; border-collapse:collapse; font-size:0.78rem;">
+                    <thead><tr style="border-bottom:2px solid #e5e7eb; text-align:left;">
+                        <th style="padding:7px 8px; color:#6b7280;">#</th>
+                        <th style="padding:7px 8px; color:#6b7280;">Cliente</th>
+                        <th style="padding:7px 8px; color:#6b7280; text-align:center;">Proc.</th>
+                        <th style="padding:7px 8px; color:#6b7280; text-align:right;">Prom. Días</th>
+                        <th style="padding:7px 8px; color:#6b7280; text-align:right;">Min</th>
+                        <th style="padding:7px 8px; color:#6b7280; text-align:right;">Max</th>
+                        <th style="padding:7px 8px; color:#6b7280; text-align:right;">Prom. Elem.</th>
+                    </tr></thead><tbody>`;
+                allClientes.forEach((c, i) => {
+                    const bg = i % 2 === 0 ? '#f9fafb' : '#fff';
+                    const diasColor = c.promedioDias !== null ? (c.promedioDias <= 3 ? '#22c55e' : c.promedioDias <= 7 ? '#3b82f6' : c.promedioDias <= 15 ? '#f59e0b' : '#ef4444') : '#d1d5db';
+                    const elemColor = '#8b5cf6';
+                    const diasText = c.promedioDias !== null ? `<span style="background:${diasColor}; color:#fff; padding:2px 7px; border-radius:10px; font-weight:600; font-size:0.75rem;">${Number.isInteger(c.promedioDias) ? c.promedioDias : c.promedioDias.toFixed(1)}d</span>` : '<span style="color:#d1d5db;">—</span>';
+                    const elemText = c.promedioElem !== null ? `<span style="background:${elemColor}; color:#fff; padding:2px 7px; border-radius:10px; font-weight:600; font-size:0.75rem;">${Number.isInteger(c.promedioElem) ? c.promedioElem : c.promedioElem.toFixed(1)}e</span>` : '<span style="color:#d1d5db;">—</span>';
+                    html += `<tr style="background:${bg}; border-bottom:1px solid #f3f4f6;">
+                        <td style="padding:6px 8px; color:#9ca3af;">${i + 1}</td>
+                        <td style="padding:6px 8px; font-weight:500;">${c.nombre}</td>
+                        <td style="padding:6px 8px; text-align:center; color:#6b7280;">${c.cantidad || '-'}</td>
+                        <td style="padding:6px 8px; text-align:right;">${diasText}</td>
+                        <td style="padding:6px 8px; text-align:right; color:#6b7280;">${c.minimo !== '-' ? c.minimo + 'd' : '—'}</td>
+                        <td style="padding:6px 8px; text-align:right; color:#6b7280;">${c.maximo !== '-' ? c.maximo + 'd' : '—'}</td>
+                        <td style="padding:6px 8px; text-align:right;">${elemText}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                modalBody.innerHTML = html;
+                modal.classList.add('modal--open');
+                modal.setAttribute('aria-hidden', 'false');
+            };
+        }
+
+        // Cerrar modal
+        const closeBtn = document.getElementById('closeModalAllEntrega');
+        const closeBtnFooter = document.getElementById('closeModalAllEntregaBtn');
+        if (closeBtn) closeBtn.onclick = closeModal;
+        if (closeBtnFooter) closeBtnFooter.onclick = closeModal;
+        if (modal) {
+            modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+        }
     },
 
     // ── Elementos por Categoría (Donut + Legend) ──

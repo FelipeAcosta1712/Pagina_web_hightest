@@ -1183,7 +1183,7 @@
             const completedCount = clientData.history.filter(r => r.status === 'Completado').length;
             const totalCount = activeCount + completedCount;
 
-            const informesConPdf = informesData.filter(i => i.activo && i.archivo_pdf);
+            const informesConPdf = informesData.filter(i => i.activo && i.archivo_pdf && String(i.visible_cliente || '1') !== '0');
             const informesDisponibles = informesConPdf
                 .filter(i => {
                     const estado = (i.estado || '').toLowerCase();
@@ -1394,6 +1394,7 @@
         function renderReports() {
             const f = informesFilter;
             const filtered = informesData.filter(r => {
+                if (String(r.visible_cliente || '1') === '0') return false;
                 const matchSearch = !f.search || 
                     (r.numero_proceso || '').toLowerCase().includes(f.search.toLowerCase()) ||
                     (r.n_informe || '').toLowerCase().includes(f.search.toLowerCase()) ||

@@ -2156,7 +2156,8 @@ exports.handler = async (event) => {
                     nombre_documento: nombreDocumento || `Informe ${procesoId}`,
                     archivo_pdf: publicUrl || filePath,
                     version: nextVersion,
-                    activo: true
+                    activo: true,
+                    visible_cliente: payload.visible_cliente || '1'
                 };
 
                 const { data: nuevoInforme, error: errInsert } = await supabase
@@ -2178,6 +2179,21 @@ exports.handler = async (event) => {
                     .from('informes_ensayo_ac')
                     .delete()
                     .eq('id', id);
+
+                if (error) return jsonResponse(500, { ok: false, error: error.message });
+                return jsonResponse(200, { ok: true });
+            }
+
+            // Actualizar visibilidad de informe para cliente
+            if (payload.action === 'update_informe_visibilidad') {
+                const informeId = payload.informe_id;
+                const visibleCliente = payload.visible_cliente;
+                if (!informeId) return jsonResponse(400, { ok: false, error: 'informe_id requerido' });
+
+                const { error } = await supabase
+                    .from('informes_ensayo_ac')
+                    .update({ visible_cliente: visibleCliente })
+                    .eq('id', informeId);
 
                 if (error) return jsonResponse(500, { ok: false, error: error.message });
                 return jsonResponse(200, { ok: true });
@@ -2372,7 +2388,8 @@ exports.handler = async (event) => {
                             created_at: inf.created_at || '',
                             fecha_entrega: proc.fecha_entrega_cliente || '',
                             estado: proc.estado || '',
-                            tipo: proc.tipo || 'Ensayo'
+                            tipo: proc.tipo || 'Ensayo',
+                            visible_cliente: inf.visible_cliente !== undefined ? inf.visible_cliente : '1'
                         };
                     });
 
@@ -3097,6 +3114,76 @@ exports.handler = async (event) => {
                     const informesActivos = informes.filter(i => i.activo).length;
                     const informesVigentes = new Set(informes.map(i => i.proceso_id)).size;
 
+                    // ── Promedio de Días de Entrega por Cliente ──
+                    const promedioDiasEntregaCliente = { clientes: [], promedioGeneral: 0 };
+                    const clienteDias = {};
+
+                    procesos.forEach(p => {
+                        const cliente = (p.cliente || '').trim();
+                        if (!cliente) return;
+                        if (!p.fecha_recepcion || !p.fecha_entrega_cliente) return;
+
+                        const inicio = new Date(p.fecha_recepcion);
+                        const fin = new Date(p.fecha_entrega_cliente);
+                        const dias = Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24));
+                        if (dias < 0) return;
+
+                        if (!clienteDias[cliente]) clienteDias[cliente] = [];
+                        clienteDias[cliente].push(dias);
+                    });
+
+                    let totalDiasGeneral = 0;
+                    let totalProcesosGeneral = 0;
+
+                    Object.keys(clienteDias).sort().forEach(cliente => {
+                        const diasArr = clienteDias[cliente];
+                        const suma = diasArr.reduce((a, b) => a + b, 0);
+                        const promedio = Math.round((suma / diasArr.length) * 10) / 10;
+                        promedioDiasEntregaCliente.clientes.push({
+                            nombre: cliente,
+                            promedio,
+                            cantidad: diasArr.length,
+                            minimo: Math.min(...diasArr),
+                            maximo: Math.max(...diasArr)
+                        });
+                        totalDiasGeneral += suma;
+                        totalProcesosGeneral += diasArr.length;
+                    });
+
+                    // Ordenar por promedio (mayor a menor)
+                    promedioDiasEntregaCliente.clientes.sort((a, b) => b.promedio - a.promedio);
+
+                    promedioDiasEntregaCliente.promedioGeneral = totalProcesosGeneral > 0
+                        ? Math.round((totalDiasGeneral / totalProcesosGeneral) * 10) / 10
+                        : 0;
+
+                    // ── Promedio de Elementos por Cliente ──
+                    const promedioElementosPorCliente = { clientes: [], promedioGeneral: 0 };
+                    let totalElementosGeneral = 0;
+                    let totalProcesosElemGeneral = 0;
+
+                    Object.keys(clienteUnidades).sort().forEach(cliente => {
+                        const unidades = clienteUnidades[cliente] || 0;
+                        const procesos = clienteProcesoCount[cliente] || 0;
+                        if (procesos === 0) return;
+                        const promedio = Math.round((unidades / procesos) * 10) / 10;
+                        promedioElementosPorCliente.clientes.push({
+                            nombre: cliente,
+                            promedio,
+                            totalUnidades: unidades,
+                            totalProcesos: procesos
+                        });
+                        totalElementosGeneral += unidades;
+                        totalProcesosElemGeneral += procesos;
+                    });
+
+                    // Ordenar por promedio (mayor a menor)
+                    promedioElementosPorCliente.clientes.sort((a, b) => b.promedio - a.promedio);
+
+                    promedioElementosPorCliente.promedioGeneral = totalProcesosElemGeneral > 0
+                        ? Math.round((totalElementosGeneral / totalProcesosElemGeneral) * 10) / 10
+                        : 0;
+
                     // ── Listas para filtros del dashboard (usando TODOS los procesos, sin filtro) ──
                     const allClientesForFilter = [...new Set((procesosRes.data || []).map(p => (p.cliente || '').trim()).filter(c => c && c !== '-' && c !== '—'))].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
                     const allEstadosForFilter = [...new Set((procesosRes.data || []).map(p => (p.estado || '').trim()))].filter(Boolean).sort();
@@ -3160,7 +3247,9 @@ exports.handler = async (event) => {
                             clientesPorMes,
                             allClientesForFilter,
                             allEstadosForFilter,
-                            allMesesForFilter
+                            allMesesForFilter,
+                            promedioDiasEntregaCliente,
+                            promedioElementosPorCliente
                         }
                     });
                 } catch (err) {
