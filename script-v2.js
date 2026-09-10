@@ -7208,12 +7208,11 @@ const GestionInformesModule = {
         if (clienteLabel) clienteLabel.value = proc?.cliente || proc?.empresa || '';
         if (btnCargar) btnCargar.disabled = false;
 
-        // Mostrar/ocultar campo nombre personalizado solo para CIMA SAS
+        // Mostrar campo nombre personalizado para todos los clientes
         const cimaWrapper = document.getElementById('cimaNombreArchivoWrapper');
         const cimaInput = document.getElementById('cimaNombreArchivo');
-        const esCimaSas = (proc?.cliente || '').toUpperCase().includes('CIMA');
-        if (cimaWrapper) cimaWrapper.style.display = esCimaSas ? 'block' : 'none';
-        if (cimaInput && !esCimaSas) cimaInput.value = '';
+        if (cimaWrapper) cimaWrapper.style.display = 'block';
+        if (cimaInput) cimaInput.value = '';
 
         await this.loadInformes();
     },
@@ -7336,7 +7335,6 @@ const GestionInformesModule = {
         if (select) select.value = '';
         if (clienteLabel) clienteLabel.value = '';
         if (btnCargar) btnCargar.disabled = true;
-        if (cimaWrapper) cimaWrapper.style.display = 'none';
         if (cimaInput) cimaInput.value = '';
         this._currentProcesoId = null;
         this._informes = [];
@@ -7540,13 +7538,12 @@ const GestionInformesModule = {
         const activos = this._informes.filter(i => i.activo);
         const proc = (PROCESOS_STORE?.all || []).find(p => String(p.id) === String(this._currentProcesoId));
         const fechaEntrega = proc?.fecha_entrega_cliente || '';
-        const esCimaSas = (proc?.cliente || '').toUpperCase().includes('CIMA');
         let html = '';
 
         // Informes activos destacados
         if (activos.length > 0) {
             activos.forEach((activo, idx) => {
-                const label = esCimaSas && activos.length > 1 ? `ACTIVO ${idx + 1} — v${activo.version}` : `ACTIVO — v${activo.version}`;
+                const label = activos.length > 1 ? `ACTIVO ${idx + 1} — v${activo.version}` : `ACTIVO — v${activo.version}`;
                 html += `
                     <div style="background:#e8f5e9; border:2px solid #28a745; border-radius:8px; padding:16px; margin-bottom:16px;">
                         <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
@@ -7636,7 +7633,7 @@ const GestionInformesModule = {
             const fileBase64 = await this.readFileAsBase64(file);
             const fileExt = file.name.split('.').pop() || 'pdf';
 
-            // Usar nombre personalizado si se ingresó (CIMA SAS), sino usar nombre del archivo
+            // Usar nombre personalizado si se ingresó, sino usar nombre del archivo
             const cimaInput = document.getElementById('cimaNombreArchivo');
             const customName = cimaInput?.value?.trim() || '';
             const nombreDocumento = customName || file.name.replace(/\.pdf$/i, '');

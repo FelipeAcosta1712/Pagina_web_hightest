@@ -2044,14 +2044,6 @@ exports.handler = async (event) => {
                     return jsonResponse(400, { ok: false, error: 'proceso_id y archivo_pdf requeridos' });
                 }
 
-                // Verificar si el proceso pertenece a CIMA SAS (permite múltiples informes activos)
-                const { data: procesoInfo } = await supabase
-                    .from('procesos_acreditados')
-                    .select('cliente')
-                    .eq('id', procesoId)
-                    .single();
-                const esCimaSas = (procesoInfo?.cliente || '').toUpperCase().includes('CIMA');
-
                 // Obtener última versión del proceso
                 const { data: existing } = await supabase
                     .from('informes_ensayo_ac')
@@ -2062,12 +2054,13 @@ exports.handler = async (event) => {
 
                 const nextVersion = (existing && existing.length > 0) ? (existing[0].version || 0) + 1 : 1;
 
-                // Desactivar versiones anteriores SOLO si NO es CIMA SAS
-                if (!esCimaSas) {
+                // Desactivar versiones anteriores con el mismo nombre en el mismo proceso
+                if (nombreDocumento) {
                     await supabase
                         .from('informes_ensayo_ac')
                         .update({ activo: false })
                         .eq('proceso_id', procesoId)
+                        .eq('nombre_documento', nombreDocumento)
                         .eq('activo', true);
                 }
 
@@ -2123,14 +2116,6 @@ exports.handler = async (event) => {
 
                 const publicUrl = urlData?.publicUrl || '';
 
-                // Verificar si el proceso pertenece a CIMA SAS (permite múltiples informes activos)
-                const { data: procesoInfo } = await supabase
-                    .from('procesos_acreditados')
-                    .select('cliente')
-                    .eq('id', procesoId)
-                    .single();
-                const esCimaSas = (procesoInfo?.cliente || '').toUpperCase().includes('CIMA');
-
                 // Obtener última versión
                 const { data: existing } = await supabase
                     .from('informes_ensayo_ac')
@@ -2141,12 +2126,13 @@ exports.handler = async (event) => {
 
                 const nextVersion = (existing && existing.length > 0) ? (existing[0].version || 0) + 1 : 1;
 
-                // Desactivar versiones anteriores SOLO si NO es CIMA SAS
-                if (!esCimaSas) {
+                // Desactivar versiones anteriores con el mismo nombre en el mismo proceso
+                if (nombreDocumento) {
                     await supabase
                         .from('informes_ensayo_ac')
                         .update({ activo: false })
                         .eq('proceso_id', procesoId)
+                        .eq('nombre_documento', nombreDocumento)
                         .eq('activo', true);
                 }
 
@@ -2609,14 +2595,6 @@ exports.handler = async (event) => {
                         continue;
                     }
 
-                    // Verificar si el proceso pertenece a CIMA SAS (permite múltiples informes activos)
-                    const { data: procInfo } = await supabase
-                        .from('procesos_acreditados')
-                        .select('cliente')
-                        .eq('id', procesoId)
-                        .single();
-                    const esCimaSas = (procInfo?.cliente || '').toUpperCase().includes('CIMA');
-
                     // Determinar versión
                     let nextVersion = 1;
                     let shouldDeactivate = false;
@@ -2630,12 +2608,13 @@ exports.handler = async (event) => {
                         shouldDeactivate = true;
                     }
 
-                    // Desactivar versiones anteriores SOLO si NO es CIMA SAS
-                    if (shouldDeactivate && !esCimaSas) {
+                    // Desactivar versiones anteriores con el mismo nombre en el mismo proceso
+                    if (shouldDeactivate && fileNameNoExt) {
                         await supabase
                             .from('informes_ensayo_ac')
                             .update({ activo: false })
                             .eq('proceso_id', procesoId)
+                            .eq('nombre_documento', fileNameNoExt.trim())
                             .eq('activo', true);
                     }
 
