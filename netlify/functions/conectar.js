@@ -1672,9 +1672,12 @@ exports.handler = async (event) => {
                 const normNum = (s) => String(s || '').replace(/\s+/g, '').toUpperCase();
                 const CAMPOS_VALIDOS = [
                     'clienteRecepcionNombre', 'clienteRecepcionCedula', 'clienteRecepcionCargo',
-                    'clienteEntregaNombre', 'clienteEntregaCedula', 'clienteEntregaCargo',
+                    'clienteEntregaNombre', 'clienteEntregaCargo', 'clienteEntregaCedula',
                     'highTestRecepcionNombre', 'highTestRecepcionCargo',
-                    'highTestEntregaNombre', 'highTestEntregaCargo'
+                    'highTestEntregaNombre', 'highTestEntregaCargo',
+                    // Observaciones generales y lavado (campos del FR-7.4.1 en el borrador)
+                    'observaciones',
+                    'lavado', 'elementosLavados', 'responsableLavado'
                 ];
                 const numero = normalizeText(payload.numero_proceso || payload.numero || '');
                 if (!numero) return jsonResponse(400, { ok: false, error: 'numero_proceso requerido' });

@@ -1283,7 +1283,7 @@
                                         <th data-col="num" style="padding: 12px; border: 1px solid #e6eef6; text-align: left; font-weight: 600; color: #222; width: 90px; white-space: nowrap;">Nº Recepción</th>
                                         <th data-col="cliente" style="padding: 12px; border: 1px solid #e6eef6; text-align: left; font-weight: 600; color: #222; width: 18%;">Cliente</th>
                                         <th data-col="informe" style="padding: 12px; border: 1px solid #e6eef6; text-align: left; font-weight: 600; color: #222; width: 18%;">Informe a Nombre de</th>
-                                        <th data-col="factura" style="padding: 12px; border: 1px solid #e6eef6; text-align: left; font-weight: 600; color: #222; width: 16%;">Factura a Nombre de</th>
+                                        <th id="thFacturaEstadisticas" data-col="factura" style="padding: 12px; border: 1px solid #e6eef6; text-align: left; font-weight: 600; color: #222; width: 16%;">Factura a Nombre de</th>
                                         <th data-col="items" style="padding: 12px; border: 1px solid #e6eef6; text-align: center; font-weight: 600; color: #222; width: 6%;">Items</th>
                                         <th data-col="recibidos" style="padding: 12px; border: 1px solid #e6eef6; text-align: center; font-weight: 600; color: #222;">Recibidos</th>
                                         <th data-col="entregados" style="padding: 12px; border: 1px solid #e6eef6; text-align: center; font-weight: 600; color: #222;">Entregados</th>
@@ -8095,8 +8095,10 @@
                                 <input type="text" data-campo="clienteRecepcionCedula" placeholder="Cédula" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
                                 <input type="text" data-campo="clienteRecepcionCargo" placeholder="Cargo" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
                             </div>
-                            <input type="text" data-campo="highTestRecepcionNombre" placeholder="Rep. HIGH TEST - Nombre (recepción)" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
-                            <input type="text" data-campo="highTestRecepcionCargo" placeholder="Rep. HIGH TEST - Cargo (recepción)" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
+                            <select id="completHtRecNombre" data-campo="highTestRecepcionNombre" onchange="RecepcionAnalyticsModule.completHtCargo('Recepcion')" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;">
+                                <option value="">Seleccionar representante...</option>
+                            </select>
+                            <input type="text" id="completHtRecCargo" data-campo="highTestRecepcionCargo" readonly placeholder="Se llenará automáticamente" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;background:#f8fafc;">
                         </div>
                     </div>
 
@@ -8123,8 +8125,37 @@
                                 <input type="text" data-campo="clienteEntregaCedula" placeholder="Cédula" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
                                 <input type="text" data-campo="clienteEntregaCargo" placeholder="Cargo" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
                             </div>
-                            <input type="text" data-campo="highTestEntregaNombre" placeholder="Rep. HIGH TEST - Nombre (entrega)" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
-                            <input type="text" data-campo="highTestEntregaCargo" placeholder="Rep. HIGH TEST - Cargo (entrega)" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
+                            <select id="completHtEntNombre" data-campo="highTestEntregaNombre" onchange="RecepcionAnalyticsModule.completHtCargo('Entrega')" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;">
+                                <option value="">Seleccionar representante...</option>
+                            </select>
+                            <input type="text" id="completHtEntCargo" data-campo="highTestEntregaCargo" readonly placeholder="Se llenará automáticamente" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box;background:#f8fafc;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OBSERVACIONES GENERALES Y LAVADO -->
+                <div style="margin-top:14px; border:1px solid #e2e8f0; border-radius:10px; padding:12px; background:#f8fafc;">
+                    <div style="background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; font-weight:700; font-size:13px; margin-bottom:10px;">📝 Observaciones Generales y Lavado</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <div style="grid-column:1 / -1;">
+                            <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Observaciones generales</label>
+                            <textarea data-campo="observaciones" rows="2" placeholder="Observaciones generales del caso" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+                        </div>
+                        <div>
+                            <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">¿Se realizó proceso de lavado?</label>
+                            <select data-campo="lavado" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+                                <option value="">— Sin dato —</option>
+                                <option value="SI">✅ SÍ</option>
+                                <option value="NO">❌ NO</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Cantidad de elementos lavados</label>
+                            <input type="number" min="0" data-campo="elementosLavados" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Responsables del lavado</label>
+                            <input type="text" data-campo="responsableLavado" placeholder="Nombres de los responsables" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;">
                         </div>
                     </div>
                 </div>
@@ -12135,13 +12166,13 @@
                     tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:#999;">No hay casos registrados</td></tr>';
                 } else {
                     tbody.innerHTML = paginados.map(c => {
-                        const e = c.estado.toLowerCase();
+                        const e = String(c.estado || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\s_-]+/g, '');
                         let color = '#ff9800';
-                        if (e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente') color = '#28a745';
+                        if (e === 'entrega' || e === 'entregacliente' || e === 'finalizado' || e === 'completado') color = '#28a745';
                         else if (e === 'recepcion') color = '#007bff';
-                        else if (e === 'informe-de-ensayo') color = '#9c27b0';
+                        else if (e === 'informedeenensayo') color = '#9c27b0';
                         const items = (c.items && c.items.length > 0) ? c.items.length : (c.total_items || 0);
-                        const esEntrega = e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente';
+                        const esEntrega = e === 'entrega' || e === 'entregacliente' || e === 'finalizado';
                         let accionBtns = '<button type="button" onclick="AnalisisProcesosModule.verVistaPrevia(\'' + c.cotizacion + '\', \'full\')" style="background:#f1f5f9;color:#475569;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #d1d5db;cursor:pointer;">👁️ Ver</button>';
                         accionBtns += ' <button type="button" onclick="RecepcionAnalyticsModule.eliminarCaso(\'' + c.cotizacion + '\')" style="background:#fef2f2;color:#dc2626;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #fecaca;cursor:pointer;">🗑️</button>';
                         return `<tr style="border-bottom:1px solid #ddd;">
@@ -12163,6 +12194,17 @@
             actualizarEstadisticas() {
                 const tbody = document.getElementById('estadisticasCasoTableBody');
                 if (!tbody) return;
+
+                // La completitud (firmas/datos) llega por fetch asíncrono: si aún no
+                // cargó, cargarla y recalcular para que la tarjeta "Incompletos" y la
+                // columna "Faltantes" no queden vacías por diferencia de timing.
+                if (!this._completitud && !this._completitudCargando) {
+                    this._completitudCargando = true;
+                    this._cargarCompletitud().finally(() => {
+                        this._completitudCargando = false;
+                        if (this._completitud) this.actualizarEstadisticas();
+                    });
+                }
 
                 // Calcular estadísticas reales desde los items
                 let totalRecibidos = 0;
@@ -12201,10 +12243,7 @@
                     }
                 });
 
-                const completados = this.casos.filter(c => {
-                    const e = c.estado.toLowerCase();
-                    return e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente';
-                }).length;
+                const completados = this.casos.filter(c => this._esEntregado(c)).length;
 
                 document.getElementById('stat-totalCasos').textContent = this.casos.length;
                 document.getElementById('stat-completados').textContent = completados;
@@ -12252,8 +12291,11 @@
             },
 
             _esEntregado(c) {
-                const e = String((c && c.estado) || '').toLowerCase();
-                return e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente';
+                // Acepta "Entrega cliente", "entrega-cliente", "Entrega", "Finalizado", "Completado"
+                const e = String((c && c.estado) || '').toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[\s_-]+/g, '');
+                return e === 'entrega' || e === 'entregacliente' || e === 'finalizado' || e === 'completado';
             },
 
             // Devuelve la lista de elementos faltantes del caso según su etapa:
@@ -12312,7 +12354,10 @@
                 const mostrarFaltantes = !!this._filtroIncompletos;
                 const thFaltantes = document.getElementById('thFaltantesIncompletos');
                 if (thFaltantes) thFaltantes.style.display = mostrarFaltantes ? 'table-cell' : 'none';
-                const numCols = 9 + (mostrarFaltantes ? 1 : 0);
+                // En el filtro de incompletos se oculta "Factura a Nombre de" y se muestra "Faltantes" (mismo total de columnas)
+                const thFactura = document.getElementById('thFacturaEstadisticas');
+                if (thFactura) thFactura.style.display = mostrarFaltantes ? 'none' : 'table-cell';
+                const numCols = 9;
 
                 let entries = Object.values(casoStats);
                 if (this._filtroDiscrepancias) {
@@ -12340,25 +12385,28 @@
                         const btnEditar = this._filtroDiscrepancias
                             ? ` <button type="button" onclick="RecepcionAnalyticsModule.abrirEditorEntrega('${c.cotizacion}')" style="background:#eff6ff;color:#2563eb;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #bfdbfe;cursor:pointer;" title="Editar cantidades entregadas">✏️ Editar</button>`
                             : '';
-                        const btnCompletar = mostrarFaltantes
-                            ? ` <button type="button" onclick="RecepcionAnalyticsModule.abrirEditorCompletitud('${c.cotizacion}')" style="background:#f5f3ff;color:#7c3aed;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #ddd6fe;cursor:pointer;" title="Completar datos y firmas">✏️ Completar</button>`
-                            : '';
+                        const btnCompletar = ` <button type="button" onclick="RecepcionAnalyticsModule.abrirEditorCompletitud('${c.cotizacion}')" style="background:#f5f3ff;color:#7c3aed;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #ddd6fe;cursor:pointer;" title="Completar datos, firmas, observaciones y lavado">✏️ Completar</button>`;
                         const celdaFaltantes = mostrarFaltantes
                             ? `<td style="padding:8px 10px;border:1px solid #ddd;">${this._faltantesIncompletos(c).map(f =>
                                     `<span style="display:inline-block;background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;margin:1px 2px;">${f}</span>`
                                 ).join('') || '<span style="color:#16a34a;font-size:12px;">✔ Completo</span>'}</td>`
                             : '';
+                        const btnVer = `<button type="button" onclick="AnalisisProcesosModule.verVistaPrevia('${c.cotizacion}')" style="background:#f1f5f9;color:#475569;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #d1d5db;cursor:pointer;">👁️ Ver</button>`;
+                        // En el filtro de incompletos: Completar apilado debajo de Ver
+                        const accionesHtml = mostrarFaltantes
+                            ? `<div style="display:flex;flex-direction:column;gap:4px;align-items:center;">${btnVer}${btnCompletar}</div>`
+                            : `${btnVer}${btnEditar}${btnCompletar}`;
                         return `<tr style="border-bottom:1px solid #ddd;">
                             <td style="padding:10px;border:1px solid #ddd;">${c.cotizacion}</td>
                             <td style="padding:10px;border:1px solid #ddd;">${c.cliente}</td>
                             <td style="padding:10px;border:1px solid #ddd;">${c.informeNombre}</td>
-                            <td style="padding:10px;border:1px solid #ddd;">${c.facturarNombre}</td>
+                            ${mostrarFaltantes ? '' : `<td style="padding:10px;border:1px solid #ddd;">${c.facturarNombre}</td>`}
                             <td style="padding:10px;border:1px solid #ddd;text-align:center;">${c.totalItems}</td>
                             <td style="padding:10px;border:1px solid #ddd;text-align:center;">${c.totalRecibidos}</td>
                             <td style="padding:10px;border:1px solid #ddd;text-align:center;">${c.totalEntregados}</td>
                             <td style="padding:10px;border:1px solid #ddd;text-align:center;${diffStyle}">${diff > 0 ? '+' : ''}${diff}</td>${celdaFaltantes}
                             <td style="padding:10px;border:1px solid #ddd;text-align:center;white-space:nowrap;">
-                                <button type="button" onclick="AnalisisProcesosModule.verVistaPrevia('${c.cotizacion}')" style="background:#f1f5f9;color:#475569;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #d1d5db;cursor:pointer;">👁️ Ver</button>${btnEditar}${btnCompletar}
+                                ${accionesHtml}
                             </td>
                         </tr>`;
                     }).join('');
@@ -12376,16 +12424,16 @@
             },
 
             async filtrarIncompletos() {
-                if (!this._completitud) {
-                    const ok = await this._cargarCompletitud();
-                    if (!ok) { showToast('No se pudo cargar el estado de firmas y datos', 'error'); return; }
-                }
-                if (!this._casoStats) this.actualizarEstadisticas();
+                // Siempre refrescar banderas: datos/firmas pueden haber cambiado
+                // (sincronizaciones, completar un caso desde otra pestaña, etc.).
+                this._completitud = null;
+                const ok = await this._cargarCompletitud();
+                if (!ok) { showToast('No se pudo cargar el estado de firmas y datos', 'error'); return; }
                 this._filtroDiscrepancias = false;
                 this._filtroIncompletos = true;
                 this.paginaEstadisticas = 1;
-                this._actualizarIndicadorFiltro();
-                this._renderTablaEstadisticas();
+                // Recalcula tarjeta (nº de incompletos), indicador y tabla con columna Faltantes
+                this.actualizarEstadisticas();
             },
 
             limpiarFiltroEstadisticas() {
@@ -12605,6 +12653,8 @@
                 if (btn) { btn.disabled = false; btn.innerHTML = '💾 Guardar'; }
                 document.getElementById('modalCompletarDatos').style.display = 'block';
 
+                // Poblar selects de representantes HIGH TEST (mismo listado que Recepción de Elementos)
+                const prepHt = this._prepararSelectsHt();
                 try {
                     const [resBorr, resProc] = await Promise.all([
                         fetch('/.netlify/functions/conectar', {
@@ -12618,11 +12668,15 @@
                             body: JSON.stringify({ action: 'get_proceso', numero_proceso: cotizacion })
                         }).then(r => r.json()).catch(() => null)
                     ]);
+                    await prepHt;
                     if (!this._edCompletitud || this._edCompletitud.cotizacion !== cotizacion) return;
 
                     const d = (resBorr && resBorr.ok && resBorr.data) ? resBorr.data : {};
                     const p = (resProc && resProc.ok && resProc.proceso) ? resProc.proceso : {};
                     if (!resBorr || !resBorr.ok) showToast('No se pudieron cargar los datos actuales del FR-7.4.1', 'warning');
+                    // Si el nombre guardado ya no figura en usuarios activos, agregarlo como opción
+                    this._asegurarOpcionHt('completHtRecNombre', d.highTestRecepcionNombre);
+                    this._asegurarOpcionHt('completHtEntNombre', d.highTestEntregaNombre);
                     document.querySelectorAll('#modalCompletarDatos [data-campo]').forEach(el => {
                         const v = d[el.dataset.campo];
                         if (v !== undefined && v !== null) el.value = String(v);
@@ -12641,6 +12695,64 @@
                 } catch (e) {
                     console.error('[Recepcion] Error cargando datos a completar:', e);
                 }
+            },
+
+            // Lista de representantes HIGH TEST (misma fuente que Recepción de Elementos: action get_usuarios)
+            async _prepararSelectsHt() {
+                if (!this._htUsuarios) {
+                    try {
+                        const res = await fetch('/.netlify/functions/conectar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'get_usuarios' })
+                        });
+                        const data = await res.json();
+                        const lista = (data && data.ok && Array.isArray(data.usuarios)) ? data.usuarios : [];
+                        this._htUsuarios = lista.filter(u => {
+                            const rol = String((u && u.rol) || '').trim().toLowerCase();
+                            return !rol.includes('administrador') && !rol.includes('admin');
+                        });
+                    } catch (e) {
+                        console.error('[Recepcion] Error cargando usuarios HIGH TEST:', e);
+                        this._htUsuarios = [];
+                    }
+                }
+                ['completHtRecNombre', 'completHtEntNombre'].forEach(id => {
+                    const sel = document.getElementById(id);
+                    if (!sel) return;
+                    sel.innerHTML = '<option value="">Seleccionar representante...</option>';
+                    this._htUsuarios.forEach(u => {
+                        const o = document.createElement('option');
+                        o.value = u.nombre || '';
+                        o.textContent = u.nombre || '';
+                        o.dataset.rol = u.rol || '';
+                        sel.appendChild(o);
+                    });
+                });
+            },
+
+            _asegurarOpcionHt(id, valor) {
+                const sel = document.getElementById(id);
+                if (!sel || !valor) return;
+                const existe = Array.from(sel.options || []).some(o => o.value === valor);
+                if (!existe) {
+                    const o = document.createElement('option');
+                    o.value = valor;
+                    o.textContent = valor + ' (no está en usuarios activos)';
+                    o.dataset.rol = '';
+                    sel.appendChild(o);
+                }
+            },
+
+            completHtCargo(lado) {
+                const rec = lado === 'Recepcion';
+                const sel = document.getElementById(rec ? 'completHtRecNombre' : 'completHtEntNombre');
+                const cargo = document.getElementById(rec ? 'completHtRecCargo' : 'completHtEntCargo');
+                if (!sel || !cargo) return;
+                const opt = sel.selectedOptions && sel.selectedOptions[0];
+                const rol = (opt && opt.dataset && opt.dataset.rol) || '';
+                if (sel.value && rol) cargo.value = rol;
+                else cargo.value = '';
             },
 
             _renderCompletFirma(lado) {
@@ -12865,11 +12977,11 @@
                     tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:#999;">No se encontraron resultados</td></tr>';
                 } else {
                     tbody.innerHTML = paginados.map(c => {
-                        const e = c.estado.toLowerCase();
+                        const e = String(c.estado || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\s_-]+/g, '');
                         let color = '#ff9800';
-                        if (e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente') color = '#28a745';
+                        if (e === 'entrega' || e === 'entregacliente' || e === 'finalizado' || e === 'completado') color = '#28a745';
                         else if (e === 'recepcion') color = '#007bff';
-                        else if (e === 'informe-de-ensayo') color = '#9c27b0';
+                        else if (e === 'informedeenensayo') color = '#9c27b0';
                         const items = (c.items && c.items.length > 0) ? c.items.length : (c.total_items || 0);
                         return `<tr style="border-bottom:1px solid #ddd;">
                             <td style="padding:10px;border:1px solid #ddd;">${c.cotizacion}</td>
@@ -13094,13 +13206,13 @@
                 var fechaRec = caso.fechaRecepcion || '-';
                 var fechaEnt = caso.fechaEntrega || '-';
                 var itemCount = (caso.items ? caso.items.length : 0);
-                var estado = (caso.estado || 'recepcion').toLowerCase();
-                var esEntrega = estado === 'entrega' || estado === 'finalizado' || estado === 'entrega-cliente';
+                var estado = (caso.estado || 'recepcion').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\s_-]+/g, '');
+                var esEntrega = estado === 'entrega' || estado === 'entregacliente' || estado === 'finalizado' || estado === 'completado';
 
                 var estadoColor = '#ff9800';
                 if (esEntrega) estadoColor = '#28a745';
                 else if (estado === 'recepcion') estadoColor = '#007bff';
-                else if (estado === 'informe-de-ensayo') estadoColor = '#9c27b0';
+                else if (estado === 'informedeenensayo') estadoColor = '#9c27b0';
 
                 var checked = _casosSeleccionados[num] ? 'checked' : '';
 
