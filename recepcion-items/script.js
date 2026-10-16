@@ -179,6 +179,7 @@ let predefinedItemsDataNoAcreditados = []; // Datos para Ensayos No Acreditados
 let allItemsData = {}; // Almacena todos los datos del JSON (acreditados y no acreditados)
 let currentEnsayoType = 'ensayos_acreditados'; // Tipo de ensayo actual
 let isLoadingCase = false; // Flag para rastrear si estamos cargando un caso
+let lavadoSelectionLocked = false; // Evita que la autoselección SI/NO pise la selección guardada al cargar
 
 // Referencias a inputs de búsqueda (pueden ser null hasta DOMContentLoaded)
 let searchInput1 = document.getElementById('searchInput1');
@@ -4611,8 +4612,9 @@ function collectFormData() {
             const quantity = units.length || parseInt(row.cantRecibida) || 0;
             const brandSummary = getUnitBrandGroups(units);
             const obs = String(row.observaciones || units.map(unit => unit.observations).filter(Boolean).join(' | ')).trim();
-            // Incluir si hay unidades, observaciones o datos heredados
-            if (quantity > 0 || (obs && obs.trim() !== '')) {
+            const otros = parseInt(row.cantEntregada) || parseInt(row.cantNoUsado) || parseInt(row.cantUsado) || parseInt(row.cantLavados) || 0;
+            // Incluir si hay unidades, entregadas/usadas/lavadas u observaciones
+            if (quantity > 0 || otros > 0 || (obs && obs.trim() !== '')) {
                 formData.items.push({
                     name,
                     // images guardadas en row (si vienen) o en el mapa temporal
@@ -4642,7 +4644,8 @@ function collectFormData() {
             const quantity = units.length || parseInt(row.cantRecibida) || 0;
             const brandSummary = getUnitBrandGroups(units);
             const obs = String(row.observaciones || units.map(unit => unit.observations).filter(Boolean).join(' | ')).trim();
-            if (quantity > 0 || (obs && obs.trim() !== '')) {
+            const otros = parseInt(row.cantEntregada) || parseInt(row.cantNoUsado) || parseInt(row.cantUsado) || parseInt(row.cantLavados) || 0;
+            if (quantity > 0 || otros > 0 || (obs && obs.trim() !== '')) {
                 formData.items.push({
                     name,
                     images: (row.images && Array.isArray(row.images)) ? row.images : [],
@@ -5080,6 +5083,7 @@ function resetForm() {
     if (lavadoNo) lavadoNo.checked = true;
     const responsableLavado = document.getElementById('responsableLavado');
     if (responsableLavado) responsableLavado.value = '-';
+    lavadoSelectionLocked = false;
     actualizarCantidadLavados();
 
     // Ocultar tabla de Elementos del Alcance
@@ -5299,6 +5303,49 @@ function showAlertModal(title, message, type = 'warning') {
  * @param {boolean} skipDates - Si true, no carga fechas (para importar JSON).
  * @param {boolean} isFromCompleted - Si true, bloquea el campo de recepción (casos terminados).
  */
+/**
+ * Restaura la sección de LAVADO (¿se realizó lavado? SI/NO, responsables, etc.)
+ * desde los datos del borrador. Si el borrador trae un valor SI/NO válido, bloquea
+ * la autoselección automática (lavadoSelectionLocked) mientras se carga el caso,
+ * para que actualizarCantidadLavados() no pise la selección guardada.
+ */
+function restaurarSeccionLavado(data) {
+    if (!data) return;
+    try {
+        const lavadoValor = String(data.lavado || '').trim().toUpperCase();
+        const radSi = document.getElementById('lavadoSi');
+        const radNo = document.getElementById('lavadoNo');
+        if (radSi && radNo && (lavadoValor === 'SI' || lavadoValor === 'NO')) {
+            radSi.checked = lavadoValor === 'SI';
+            radNo.checked = lavadoValor === 'NO';
+            lavadoSelectionLocked = true;
+        }
+        const esSI = !!(radSi && radSi.checked);
+        const lavadoFieldsEl = document.getElementById('lavadoFields');
+        if (lavadoFieldsEl) {
+            lavadoFieldsEl.style.display = esSI ? 'flex' : 'none';
+            lavadoFieldsEl.classList.toggle('active', esSI);
+        }
+        const respLav = document.getElementById('responsableLavado');
+        if (respLav) {
+            respLav.disabled = !esSI;
+            respLav.value = data.responsableLavado || (esSI ? '' : '-');
+        }
+        const elemLav = document.getElementById('elementosLavados');
+        if (elemLav && data.elementosLavados !== undefined && data.elementosLavados !== null && String(data.elementosLavados).trim() !== '') {
+            elemLav.value = data.elementosLavados;
+        }
+        ['tipoLavado', 'fechaLavado', 'observacionesLavado'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el && data[id] !== undefined && data[id] !== null && String(data[id]) !== '') {
+                el.value = data[id];
+            }
+        });
+    } catch (e) {
+        console.warn('⚠️ Error restaurando sección de lavado:', e);
+    }
+}
+
 function loadFormData(data, skipDates = false, isFromCompleted = false) {
     // Establecer flag para indicar que estamos cargando un caso
     isLoadingCase = true;
@@ -5375,6 +5422,9 @@ function loadFormData(data, skipDates = false, isFromCompleted = false) {
     if (empEmailEl) empEmailEl.value = data.empresaEmail || '';
     if (ccEmailEl) ccEmailEl.value = data.copiaEmail || '';
     if (nitEl && data.nitEmpresa) nitEl.value = data.nitEmpresa;
+
+    // Restaurar sección de LAVADO (SI/NO, responsables, cantidad, observaciones del lavado)
+    restaurarSeccionLavado(data);
 
     // Mostrar el Nº de Recepción cargado en la UI
     try {
@@ -5696,11 +5746,13 @@ function loadFormData(data, skipDates = false, isFromCompleted = false) {
 
     // Recalcular totales/indicadores y lavado (ejecutar siempre al final)
     setTimeout(() => {
+        isLoadingCase = false; // carga completada: permitir autoselección SI/NO si no hay selección guardada
         actualizarCantidadLavados();
+        // Reaplicar la selección/responsables guardados tras el recálculo (si el borrador los trae)
+        restaurarSeccionLavado(data);
+        lavadoSelectionLocked = false; // ediciones posteriores vuelven a autoseleccionar según el total
         updateTotals();
         updateSavedItemsPreview();
-        // Establecer flag a false después de completar la carga del caso
-        isLoadingCase = false;
     }, 1500);
 }
 
@@ -6621,36 +6673,13 @@ async function continueSelectedCase() {
         // Cargar el caso desde localStorage (descargar completo si es solo resumen)
         let draftToLoad = drafts[idx];
 
-        if (draftToLoad._isSummaryOnly && draftToLoad.cotizacion) {
-            showNotification('Descargando borrador completo...', 'info');
+        if (draftToLoad && draftToLoad.cotizacion && (draftToLoad._isSummaryOnly || !Array.isArray(draftToLoad.items))) {
+            showNotification('Cargando elementos del caso...', 'info');
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 30000);
-                const resp = await fetch('/.netlify/functions/conectar', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'get_borrador_completo', cotizacion: draftToLoad.cotizacion }),
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-                if (resp.ok) {
-                    const result = await resp.json();
-                    if (result && result.ok && result.data) {
-                        draftToLoad = result.data;
-                        // Actualizar localStorage con el borrador completo
-                        const allDrafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
-                        const updIdx = allDrafts.findIndex(d => d.cotizacion === draftToLoad.cotizacion);
-                        if (updIdx !== -1) {
-                            allDrafts[updIdx] = draftToLoad;
-                        } else {
-                            allDrafts.push(draftToLoad);
-                        }
-                        localStorage.setItem('cmr_drafts', JSON.stringify(allDrafts));
-                        console.log('✅ Borrador completo descargado y guardado:', draftToLoad.cotizacion);
-                    }
-                }
+                const completo = await asegurarBorradorConItems(draftToLoad);
+                if (completo) draftToLoad = completo;
             } catch (e) {
-                console.warn('⚠️ Error descargando borrador completo:', e.message || e);
+                console.warn('⚠️ Error cargando borrador completo:', e.message || e);
                 showNotification('⚠️ Error descargando borrador. Se cargará con datos disponibles.', 'warning');
             }
         }
@@ -7089,55 +7118,9 @@ async function importFromPDF(file) {
 })();
 
 // Abrir caso desde el listado de Casos Terminados
-async function openCompletedCase(cotizacion) {
-    if (!cotizacion) return;
-    const norm = normalizeReceptionNumber(cotizacion);
-    showNotification('Cargando caso ' + norm + '...', 'info');
-
-    // 1. Buscar en localStorage
-    const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
-    let draft = drafts.find(d => normalizeReceptionNumber(d.cotizacion || '') === norm);
-
-    // 2. Si no existe o es resumen, descargar completo
-    if (!draft || draft._isSummaryOnly) {
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000);
-            const resp = await fetch('/.netlify/functions/conectar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'get_borrador_completo', cotizacion: norm }),
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-            if (resp.ok) {
-                const result = await resp.json();
-                if (result && result.ok && result.data) {
-                    draft = result.data;
-                    // Guardar completo en localStorage
-                    const allDrafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
-                    const idx = allDrafts.findIndex(d => normalizeReceptionNumber(d.cotizacion || '') === norm);
-                    if (idx !== -1) {
-                        allDrafts[idx] = draft;
-                    } else {
-                        allDrafts.push(draft);
-                    }
-                    localStorage.setItem('cmr_drafts', JSON.stringify(allDrafts));
-                }
-            }
-        } catch (e) {
-            console.warn('⚠️ Error descargando borrador completo:', e.message || e);
-        }
-    }
-
-    // 3. Si hay borrador completo, cargarlo y salir
-    if (draft && !draft._isSummaryOnly) {
-        loadFormData(draft, false, true);
-        showNotification('Caso cargado: ' + norm, 'success');
-        return;
-    }
-
-    // 4. Fallback: reconstruir desde procesos_acreditados (casos sin borrador completo)
+// Reconstruye un caso desde la BD (proceso + detalle) con la estructura de items
+// que espera loadFormData(). Devuelve el objeto de formulario o null.
+async function reconstruirCasoDesdeBD(norm) {
     try {
         const res = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
@@ -7145,15 +7128,10 @@ async function openCompletedCase(cotizacion) {
             body: JSON.stringify({ action: 'get_proceso', numero_proceso: norm })
         });
         const data = await res.json();
-
-        if (!data.ok || !data.proceso) {
-            showNotification('No se encontró el caso ' + norm, 'error');
-            return;
-        }
+        if (!data.ok || !data.proceso) return null;
 
         const proceso = data.proceso;
 
-        // Buscar detalle del proceso (elementos/ensayos)
         let detalle = [];
         if (proceso.id) {
             const resDet = await fetch('/.netlify/functions/conectar', {
@@ -7165,7 +7143,6 @@ async function openCompletedCase(cotizacion) {
             if (detData.ok) detalle = detData.detalle || [];
         }
 
-        // Reconstruir objeto de formulario con la misma estructura que recuperarCaso()
         const form = {
             cotizacion: proceso.numero_proceso || norm,
             cliente: proceso.cliente || '',
@@ -7213,10 +7190,153 @@ async function openCompletedCase(cotizacion) {
             };
         }
 
-        // Guardar en localStorage para futuras aperturas
+        return form;
+    } catch (e) {
+        console.warn('⚠️ Error reconstruyendo caso desde BD:', e.message || e);
+        return null;
+    }
+}
+
+// Asegura que un borrador tenga sus elementos (items):
+// 1) si no los trae, descarga la versión completa del servidor;
+// 2) si el servidor tampoco los trae, los reconstruye desde la BD.
+// Así nunca se abre un caso "vacío" por falta de items.
+async function asegurarBorradorConItems(draft) {
+    if (draft && Array.isArray(draft.items)) return draft;
+    const norm = normalizeReceptionNumber((draft && draft.cotizacion) || '');
+    if (!norm) return draft;
+
+    // 1) Versión completa del servidor
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const resp = await fetch('/.netlify/functions/conectar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_borrador_completo', cotizacion: norm }),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (resp.ok) {
+            const result = await resp.json();
+            if (result && result.ok && result.data) {
+                const delServidor = result.data;
+                if (Array.isArray(delServidor.items)) {
+                    // Si el borrador local es MÁS NUEVO que el del servidor (p.ej. se
+                    // editaron observaciones/lavado y el sync falló), conservar sus campos
+                    // y usar solo los items del servidor: así no se pierden los cambios.
+                    const localTs = Date.parse((draft && draft.timestamp) || '') || 0;
+                    const serverTs = Date.parse(delServidor.timestamp || '') || 0;
+                    let finalD = delServidor;
+                    if (localTs > serverTs) {
+                        finalD = { ...delServidor, ...draft, items: delServidor.items };
+                        delete finalD._isSummaryOnly;
+                        console.log('🔁 Borrador local más nuevo: se conservan sus campos y los items del servidor (' + norm + ')');
+                    }
+                    try {
+                        const all = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
+                        const i = all.findIndex(d => normalizeReceptionNumber(d.cotizacion || '') === norm);
+                        if (i !== -1) all[i] = finalD; else all.push(finalD);
+                        localStorage.setItem('cmr_drafts', JSON.stringify(all));
+                    } catch (e) {}
+                    return finalD;
+                }
+                // El servidor tampoco tiene items: conservarlo por sus campos de formulario
+                draft = delServidor;
+            }
+        }
+    } catch (e) {
+        console.warn('⚠️ Error descargando borrador completo:', e.message || e);
+    }
+
+    // 2) Reconstruir elementos desde la BD
+    try {
+        const form = await reconstruirCasoDesdeBD(norm);
+        if (form) {
+            const merged = { ...form, ...draft };
+            merged.items = Array.isArray(form.items) ? form.items : [];
+            merged._reconstructedFromDB = true;
+            return merged;
+        }
+    } catch (e) {
+        console.warn('⚠️ Error reconstruyendo caso desde BD:', e.message || e);
+    }
+    return draft;
+}
+
+async function openCompletedCase(cotizacion) {
+    if (!cotizacion) return;
+    const norm = normalizeReceptionNumber(cotizacion);
+    showNotification('Cargando caso ' + norm + '...', 'info');
+
+    // 1. Buscar en localStorage
+    const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
+    let draft = drafts.find(d => normalizeReceptionNumber(d.cotizacion || '') === norm);
+
+    // 2. Si no existe localmente, intentar descargarlo
+    if (!draft) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            const resp = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_borrador_completo', cotizacion: norm }),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (resp.ok) {
+                const result = await resp.json();
+                if (result && result.ok && result.data) {
+                    draft = result.data;
+                    // Guardar completo en localStorage
+                    const allDrafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
+                    const idx = allDrafts.findIndex(d => normalizeReceptionNumber(d.cotizacion || '') === norm);
+                    if (idx !== -1) {
+                        allDrafts[idx] = draft;
+                    } else {
+                        allDrafts.push(draft);
+                    }
+                    localStorage.setItem('cmr_drafts', JSON.stringify(allDrafts));
+                }
+            }
+        } catch (e) {
+            console.warn('⚠️ Error descargando borrador completo:', e.message || e);
+        }
+    }
+
+    // 2b. Asegurar que traiga los elementos (resumen / borrador sin items → servidor o BD)
+    draft = await asegurarBorradorConItems(draft);
+
+    // 3. Si hay borrador completo con items, cargarlo y salir
+    if (draft && !draft._isSummaryOnly && Array.isArray(draft.items)) {
+        loadFormData(draft, false, true);
+        showNotification('Caso cargado: ' + norm, 'success');
+        return;
+    }
+
+    // 4. Fallback: reconstruir desde procesos_acreditados (casos sin borrador completo)
+    try {
+        const form = await reconstruirCasoDesdeBD(norm);
+        if (!form) {
+            showNotification('No se encontró el caso ' + norm, 'error');
+            return;
+        }
+
+        // Guardar en localStorage para futuras aperturas (fusionando con lo que
+        // ya hubiera localmente: observaciones, lavado, etc. no se pierden)
         const allDrafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
         const idx = allDrafts.findIndex(d => normalizeReceptionNumber(d.cotizacion || '') === norm);
-        const draftToSave = { ...form, _isSummaryOnly: false, _reconstructedFromDB: true, timestamp: new Date().toISOString() };
+        const prev = idx !== -1 ? allDrafts[idx] : null;
+        const draftToSave = {
+            ...(prev || {}),
+            ...form,
+            items: form.items,
+            signatureData: (prev && prev.signatureData) ? prev.signatureData : form.signatureData,
+            _isSummaryOnly: false,
+            _reconstructedFromDB: true,
+            timestamp: (prev && prev.timestamp) || new Date().toISOString()
+        };
         if (idx !== -1) {
             allDrafts[idx] = draftToSave;
         } else {
@@ -7245,41 +7365,18 @@ async function recuperarCaso(numeroProceso) {
     const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
     let caso = drafts.find(d => normalizeReceptionNumber(d.cotizacion || '') === num);
 
-    // 2. Si existe pero es resumen, descargar completo
-    if (caso && caso._isSummaryOnly) {
+    // 2. Si es resumen o no trae elementos, descargar del servidor o reconstruir desde BD
+    if (caso) {
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000);
-            const resp = await fetch('/.netlify/functions/conectar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'get_borrador_completo', cotizacion: num }),
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-            if (resp.ok) {
-                const result = await resp.json();
-                if (result && result.ok && result.data) {
-                    caso = result.data;
-                    // Guardar completo en localStorage
-                    const idx = drafts.findIndex(d => normalizeReceptionNumber(d.cotizacion || '') === num);
-                    if (idx !== -1) {
-                        drafts[idx] = caso;
-                    } else {
-                        drafts.push(caso);
-                    }
-                    localStorage.setItem('cmr_drafts', JSON.stringify(drafts));
-                    console.log('✅ Borrador completo descargado y guardado:', caso.cotizacion);
-                }
-            }
+            caso = await asegurarBorradorConItems(caso) || caso;
         } catch (e) {
-            console.warn('⚠️ Error descargando borrador completo:', e.message || e);
+            console.warn('⚠️ Error asegurando elementos del caso:', e.message || e);
             showNotification('⚠️ Error descargando borrador. Se cargará con datos disponibles.', 'warning');
         }
     }
 
-    // 3. Si existe localmente como completo, cargarlo
-    if (caso && !caso._isSummaryOnly) {
+    // 3. Si existe localmente como completo con elementos, cargarlo
+    if (caso && !caso._isSummaryOnly && Array.isArray(caso.items)) {
         console.log('Caso encontrado en drafts');
         loadFormData(caso, false);
         return;
@@ -7315,50 +7412,11 @@ async function recuperarCaso(numeroProceso) {
 
     // 5. Fallback: buscar en procesos_acreditados (casos antiguos sin borrador en Supabase)
     try {
-        const res = await fetch('/.netlify/functions/conectar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'get_proceso', numero_proceso: num })
-        });
-        const data = await res.json();
-
-        if (!data.ok || !data.proceso) {
+        const form = await reconstruirCasoDesdeBD(num);
+        if (!form) {
             alert('No se encontró el caso "' + num + '" en borradores ni en base de datos.');
             return;
         }
-
-        const proceso = data.proceso;
-
-        // Buscar detalle del proceso
-        let detalle = [];
-        if (proceso.id) {
-            const resDet = await fetch('/.netlify/functions/conectar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'get_detalle_proceso', proceso_id: proceso.id })
-            });
-            const detData = await resDet.json();
-            if (detData.ok) detalle = detData.detalle || [];
-        }
-
-        // Reconstruir objeto de formulario
-        const form = {
-            cotizacion: proceso.numero_proceso || num,
-            cliente: proceso.cliente || '',
-            status: (proceso.estado || 'recepcion').toLowerCase(),
-            fechaRecepcion: proceso.fecha_recepcion || '',
-            fechaEntrega: proceso.fecha_entrega_cliente || '',
-            informeNombre: proceso.informe_a_nombre_de || '',
-            facturarNombre: proceso.facturar_a_nombre_de || '',
-            facturar: proceso.n_remision || '',
-            items: (detalle || []).map(d => ({
-                id: d.ensayo_id,
-                quantity: d.cantidad,
-                brand: d.marca,
-                observations: d.observaciones
-            }))
-        };
-
         loadFormData(form, false);
 
     } catch (error) {
@@ -7920,8 +7978,29 @@ function toggleAutoSyncDrafts() {
 }
 
 async function syncDraftsNow() {
-    const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
+    let drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
     try {
+        // Protección: si un borrador local perdió sus items (localStorage lleno),
+        // recuperarlos del servidor antes de subir, para no borrarlos allá.
+        for (let i = 0; i < drafts.length; i++) {
+            const d = drafts[i];
+            if (!d || !d.cotizacion || Array.isArray(d.items)) continue;
+            try {
+                const resp = await fetch('/.netlify/functions/conectar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'get_borrador_completo', cotizacion: d.cotizacion })
+                });
+                const r = await resp.json();
+                if (r && r.ok && r.data && Array.isArray(r.data.items)) {
+                    drafts[i] = { ...r.data, ...d, items: r.data.items };
+                    if (!drafts[i].savedRowsData && r.data.savedRowsData) drafts[i].savedRowsData = r.data.savedRowsData;
+                    delete drafts[i]._isSummaryOnly; // ya no es resumen: trae elementos completos
+                    console.log('🔄 Items restaurados desde servidor antes de sincronizar:', d.cotizacion);
+                }
+            } catch (e) { /* continuar con el resto */ }
+        }
+
         await saveDraftsToServer(drafts);
         await loadDraftsFromServer();
         try { showNotification('✅ Sincronización completa', 'success'); } catch(e){}
@@ -9446,7 +9525,10 @@ function actualizarCantidadLavados() {
         const total = calcularTotalElementosLavados();
         elementosLavados.value = total;
 
-        // Autoseleccionar SI/NO según el total de lavados
+        // Autoseleccionar SI/NO según el total de lavados.
+        // Se omite mientras se carga un caso o si el borrador trae su propia
+        // selección (lavadoSelectionLocked) para no pisar el valor guardado.
+        if (!isLoadingCase && !lavadoSelectionLocked) {
         const lavadoSi = document.getElementById('lavadoSi');
         const lavadoNo = document.getElementById('lavadoNo');
         const lavadoFields = document.getElementById('lavadoFields');
@@ -9475,6 +9557,7 @@ function actualizarCantidadLavados() {
                     if (!responsableLavado.value) responsableLavado.value = '-';
                 }
             }
+        }
         }
     }
 }

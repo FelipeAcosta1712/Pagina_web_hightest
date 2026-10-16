@@ -19,7 +19,7 @@
                 <span class="user-info__name" id="adminUserName">Usuario</span>
                 <span class="user-info__role">Administrador</span>
             </div>
-              <a href="../fichas-tecnicas.html" class="header__user-info" id="backToFichas" aria-label="Regresar a fichas técnicas">◀ Fichas técnicas</a>
+              <a href="fichas-tecnicas.html" class="header__user-info" id="backToFichas" aria-label="Regresar a fichas técnicas">◀ Fichas técnicas</a>
               <button class="header__cta header__cta--logout" id="adminLogoutBtn" aria-label="Cerrar sesión">
                 🚪 Salir
               </button>
@@ -53,8 +53,8 @@
     <div class="control-title">CONTROL DOCUMENTAL</div>
     <div class="control-body">
       <div class="fr">FR-7.2.1.2 ANEXO C</div>
-      <div class="version"><b>Versión:</b> 01</div>
-      <div class="date"><b>Fecha:</b> 2026-03-18</div>
+      <div class="version"><b>Versión:</b> 02</div>
+      <div class="date"><b>Fecha:</b> 2026-08-11</div>
     </div>
   </div>
   </div>
@@ -85,26 +85,16 @@
           </thead>
           <tbody>
             <tr>
-              <td>Tipo de Montaje</td>
-              <td>Montaje en eslinga</td>
-            </tr>
-            <tr>
-              <td>Soporte interno</td>
-              <td>Tubo o barra no aislante de ≥ 51 mm de diámetro</td>
-            </tr>
-           
-            <tr>
-              <td>Línea de inmersión</td>
-              <td>Medida desde el puño y el borde de la axila hasta la superficie del agua</td>
-            </tr>
-            
-            <tr>
               <td>Electrodo de alta tensión</td>
-              <td>Ubicado dentro de la manga (en contacto con el agua interna)</td>
+              <td>Placa superior</td>
             </tr>
             <tr>
-              <td>Electrodo de retorno</td>
-              <td>Conectado al agua externa</td>
+              <td>Electrodo de retorno (tierra)</td>
+              <td>Placa inferior</td>
+            </tr>
+            <tr>
+              <td>Nivelación de la placas</td>
+              <td>Fija y estable: garantiza un contacto plano, continuo y uniforme con el tapete, sin espacios de aire (gaps) visibles.</td>
             </tr>
           </tbody>
         </table>
@@ -116,14 +106,13 @@
         <ul>
           <li>Inspección visual completa</li>
           <li>Elemento limpio y seco</li>
-          <li>Marcación de nivel de inmersión realizada</li>
           <li>Elemento identificado y marcado</li>
           <li>Datos iniciales ingresados en el FR-7.8</li>
           <li>Montaje preliminar correcto</li>
           <li>Electrodos correctamente instalados</li>
-          <li>Superficie seca por encima del nivel de inmersión</li>
           <li>Verificación general del montaje antes de energizar</li>
           <li>Sistema de puesta a tierra adecuada</li>
+          <li>Antes de ejecutar el ensayo, el tapete aislante debe colocarse en una posición completamente plana, sin pliegues ni deformaciones, de acuerdo con el numeral 18.1 de la norma ASTM D178.</li>
         </ul>
       </div>
       <div class="box section-5">
@@ -149,7 +138,7 @@
             <ul class="text-amb"> Condiciones dentro de rango antes y durante el ensayo</ul>
           </ul>
       </div>
-      <div class="center-node"><img src="/image/tapetes.jpg" alt="Tapetes AISLANTES" class="center-img"></div>
+      <div class="center-node"><img src="https://res.cloudinary.com/mqjict7l/image/upload/v1790718486/WhatsApp_Image_2026-09-29_at_4.46.55_PM.jpg" alt="Tapetes AISLANTES" class="center-img"></div>
       <div class="box">
         <h4>SECCIÓN 6 - SEGURIDAD</h4>
         <div class="warning-icon" aria-hidden="true" title="Advertencia">⚠️</div>
@@ -663,7 +652,7 @@
   .sheet .box.section-5 { position: relative; }
   .sheet .box.section-5 .section5-emoji {
     position: absolute;
-    top: 55px;
+    top: 45px;
     right: 18px;
     display: inline-flex;
     align-items: center;

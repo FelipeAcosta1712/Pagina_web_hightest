@@ -897,21 +897,36 @@ const DashboardModule = {
         const clientes = (this.stats.topClientesUnidades || []).slice(0, 6);
         if (clientes.length === 0) return;
 
+        const MAX_CHARS = 16;
+        const MAX_LINES = 2;
         const splitLabel = (name) => {
-            if (name.length <= 18) return name;
-            const words = name.split(' ');
+            const text = String(name || '').trim();
+            if (text.length <= MAX_CHARS) return text;
             const lines = [];
             let current = '';
-            words.forEach(w => {
-                if ((current + ' ' + w).trim().length > 18 && current) {
-                    lines.push(current.trim());
-                    current = w;
+            const push = (line) => { if (line) lines.push(line); };
+            text.split(/\s+/).forEach(word => {
+                while (word.length > MAX_CHARS) {
+                    push(current);
+                    current = '';
+                    push(word.slice(0, MAX_CHARS));
+                    word = word.slice(MAX_CHARS);
+                }
+                if (!word) return;
+                const candidate = current ? `${current} ${word}` : word;
+                if (candidate.length <= MAX_CHARS) {
+                    current = candidate;
                 } else {
-                    current = (current + ' ' + w).trim();
+                    push(current);
+                    current = word;
                 }
             });
-            if (current) lines.push(current.trim());
-            return lines;
+            push(current);
+            if (lines.length > MAX_LINES) {
+                lines.length = MAX_LINES;
+                lines[MAX_LINES - 1] = lines[MAX_LINES - 1].slice(0, MAX_CHARS - 1) + '…';
+            }
+            return lines.length === 1 ? lines[0] : lines;
         };
 
         this.charts.clientesUnidades = new Chart(canvas.getContext('2d'), {
@@ -927,11 +942,19 @@ const DashboardModule = {
                 layout: { padding: { left: 0, right: 40 } },
                 plugins: {
                     legend: { display: false },
-                    datalabels: { display: true, anchor: 'end', align: 'right', color: '#374151', font: { size: 10, weight: 'bold' }, formatter: v => v }
+                    datalabels: { display: true, anchor: 'end', align: 'right', color: '#374151', font: { size: 10, weight: 'bold' }, formatter: v => v },
+                    tooltip: {
+                        callbacks: {
+                            title: (items) => {
+                                const cliente = clientes[items[0]?.dataIndex];
+                                return cliente ? cliente.nombre : '';
+                            }
+                        }
+                    }
                 },
                 scales: {
                     x: { beginAtZero: true, grid: { display: false } },
-                    y: { ticks: { font: { size: 11 }, autoSkip: false, padding: 8 }, grid: { display: false } }
+                    y: { ticks: { font: { size: 10 }, autoSkip: false, padding: 6 }, grid: { display: false } }
                 }
             },
             plugins: [ChartDataLabels]

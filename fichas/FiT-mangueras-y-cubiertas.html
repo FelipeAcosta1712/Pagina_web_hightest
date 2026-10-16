@@ -19,14 +19,14 @@
                 <span class="user-info__name" id="adminUserName">Usuario</span>
                 <span class="user-info__role">Administrador</span>
             </div>
-              <a href="../fichas-tecnicas.html" class="header__user-info" id="backToFichas" aria-label="Regresar a fichas técnicas">◀ Fichas técnicas</a>
+              <a href="fichas-tecnicas.html" class="header__user-info" id="backToFichas" aria-label="Regresar a fichas técnicas">◀ Fichas técnicas</a>
               <button class="header__cta header__cta--logout" id="adminLogoutBtn" aria-label="Cerrar sesión">
                 🚪 Salir
               </button>
         </nav>
     </div>
 </header>
-<!-- FICHA TECNICA DE ENSAYO RIGIDEZ DIELÉCTRICA – GUANTES -->
+<!-- FICHA TECNICA DE ENSAYO RIGIDEZ DIELÉCTRICA – MANGUERAS Y CUBIERTAS -->
 <div class="envuelveant">
 <div class="envuelve">
 <link rel="stylesheet" href="../styles-v2.css">
@@ -44,17 +44,17 @@
       <span>INFORMACIÓN DEL ENSAYO</span>
     </div>
     <div class="info-ensayo">
-      <span><b>Norma:</b> ASTM F496</span>
-      <span><b>Documento interno:</b> DC-7.2.1.2 ANEXO A - PROCEDIMIENTO DE ENSAYO PARA GUANTES Y MANGAS</span>
+      <span><b>Norma:</b> ASTM F478</span>
+      <span><b>Documento interno:</b> DC-7.2.1.2 ANEXO E - PROCEDIMIENTO DE ENSAYO PARA MANGUERAS Y CUBIERTAS</span>
       <span><b>Laboratorio:</b> HIGH TEST SAS</span>
     </div>
   </div>
   <div class="control-doc" role="note" aria-label="Control documental">
     <div class="control-title">CONTROL DOCUMENTAL</div>
     <div class="control-body">
-      <div class="fr">FR-7.2.1.2 ANEXO A.1</div>
-      <div class="version"><b>Versión:</b> 01</div>
-      <div class="date"><b>Fecha:</b> 2026-03-18</div>
+      <div class="fr">FR-7.2.1.2 ANEXO E</div>
+      <div class="version"><b>Versión:</b> 02</div>
+      <div class="date"><b>Fecha:</b> 2026-08-11</div>
     </div>
   </div>
   </div>
@@ -75,7 +75,6 @@
           <li><strong>Frecuencia:</strong> 50–60 Hz</li>
           <li><strong>Rata de subida:</strong> 1000 V/s</li>
           <li><strong>Tiempo de ensayo:</strong> 1 minuto</li>
-          <li><strong>Conductividad del agua:</strong> ≥ 100 μS/cm</li>
         </ul>
         <table class="small-params-table" aria-label="Criterios operativos">
           <thead>
@@ -86,23 +85,41 @@
           </thead>
           <tbody>
             <tr>
-              <td>Medición del guante</td>
-              <td>Desde la punta del dedo medio hasta el borde del guante</td>
+              <td>Medición de la manguera</td>
+              <td>Longitud total de la sección a ensayar, medida de extremo a extremo</td>
             </tr>
            
             <tr>
-              <td>Línea de inmersión</td>
-              <td>Medida desde el borde del guante hacia abajo según distancia establecida</td>
+              <td>Línea de distancia</td>
+              <td>Medida desde el borde de la manguera según distancia establecida</td>
             </tr>
             
             <tr>
               <td>Electrodo de alta tensión</td>
-              <td>Ubicado dentro del guante (en contacto con el agua interna)</td>
+              <td>Ubicado dentro de la manguera (Mandril)</td>
             </tr>
             <tr>
               <td>Electrodo de retorno</td>
-              <td>Conectado al agua externa</td>
+              <td>Lamina conductora encima de la manguera</td>
             </tr>
+          </tbody>
+        </table>
+        <div style="margin-top:12px; font-weight:700; font-size:12px; text-align:center;">Tamaño del mandril de prueba para mangueras protectoras de línea</div>
+        <table class="small-params-table" aria-label="Tamaño de mandril de prueba para línea" style="text-align:center;">
+          <thead>
+            <tr>
+              <th style="text-align:center;">Tamaño de la manguera, diámetro interior, pulg. (mm)</th>
+              <th style="text-align:center;">Tamaño recomendado del mandril de prueba, diámetro exterior, pulg. (mm)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="text-align:center;">1/4 (6.4)</td><td style="text-align:center;">3/16 (4.8)</td></tr>
+            <tr><td style="text-align:center;">5/8 (16)</td><td style="text-align:center;">9/16 (14.3)</td></tr>
+            <tr><td style="text-align:center;">1 (25)</td><td style="text-align:center;">15/16 (23.8)</td></tr>
+            <tr><td style="text-align:center;">1 1/4 (32)</td><td style="text-align:center;">1-3/16 (30)</td></tr>
+            <tr><td style="text-align:center;">1 1/2 (38)</td><td style="text-align:center;">1-1/4 (31.8)</td></tr>
+            <tr><td style="text-align:center;">2 (51)</td><td style="text-align:center;">1-3/4 (44.4)</td></tr>
+            <tr><td style="text-align:center;">2 1/2 (63.5)</td><td style="text-align:center;">2-1/4 (57.2)</td></tr>
           </tbody>
         </table>
       </div>
@@ -113,13 +130,10 @@
         <ul>
           <li>Inspección visual completa</li>
           <li>Elemento limpio y seco</li>
-          <li>Marcación de nivel de inmersión realizada</li>
           <li>Elemento identificado y marcado</li>
           <li>Datos iniciales ingresados en el FR-7.8</li>
           <li>Montaje preliminar correcto</li>
-          <li>Nivel de agua uniforme (interno y externo)</li>
           <li>Electrodos correctamente instalados</li>
-          <li>Superficie seca por encima del nivel de inmersión</li>
           <li>Verificación general del montaje antes de energizar</li>
           <li>Sistema de puesta a tierra adecuada</li>
         </ul>
@@ -129,11 +143,9 @@
         <div class="section5-emoji" aria-hidden="true" title="Alistamiento y control">📟</div>
         <ul>
           <li>Elevador de tensión HIPOT 6CP 200</li>
-          <li>Multímetro digital</li>
           <li>Cronómetro digital</li>
           <li>Termohigrómetro</li>
           <li>Cinta métrica</li>
-          <li>Conductímetro</li>
           <ul class="text-amb">Verificación previa: Equipos disponibles, identificados, en buen estado y con calibración vigente.</ul>
         </ul>
       </div>
@@ -149,7 +161,7 @@
             <ul class="text-amb"> Condiciones dentro de rango antes y durante el ensayo</ul>
           </ul>
       </div>
-      <div class="center-node"><img src="/image/mangueras.jpg" alt="Mangueras" class="center-img"></div>
+      <div class="center-node"><img src="https://res.cloudinary.com/mqjict7l/image/upload/v1792015137/Code_Generated_Image.png" alt="Mangueras" class="center-img"></div>
       <div class="box">
         <h4>SECCIÓN 6 - SEGURIDAD</h4>
         <div class="warning-icon" aria-hidden="true" title="Advertencia">⚠️</div>
@@ -172,26 +184,16 @@
           <table class="params-table">
               <thead>
                 <tr>
-                  <th rowspan="2">Clase Guante</th>
-                  <th rowspan="2">Voltaje de prueba<br>(kV rms)</th>
-                  <th rowspan="2">Tiempo de llegada (Rampa)</th>
-                  <th colspan="4">Corriente de fuga máx. (mA)</th>
-                  <th rowspan="2">Espacios libres de arco eléctrico</th>
-                </tr>
-                <tr>
-                  <th>Guante 280 mm</th>
-                  <th>Guante 360 mm</th>
-                  <th>Guante 410 mm</th>
-                  <th>Guante 460 mm</th>
+                  <th style="width:22%;">Clase del elemento</th>
+                  <th style="width:22%;">Voltaje de prueba<br>(kV rms)</th>
+                  <th style="width:18%;">Tiempo de llegada (Rampa)</th>
+                  <th style="width:38%;">Espacios libres de<br>arco eléctrico</th>
                 </tr>
               </thead>
             <tbody>
-              <tr><td>00</td><td>2.5</td><td>2.5 s</td><td>8</td><td>12</td><td>-</td><td>-</td><td>76 mm</td></tr>
-                <tr><td>0</td><td>5</td><td>5 s</td><td>8</td><td>12</td><td>14</td><td>16</td><td>76 mm</td></tr>
-                <tr><td>1</td><td>10</td><td>10 s</td><td>-</td><td>14</td><td>16</td><td>18</td><td>76 mm</td></tr>
-                <tr><td>2</td><td>20</td><td>20 s</td><td>-</td><td>16</td><td>18</td><td>20</td><td>127 mm</td></tr>
-                <tr><td>3</td><td>30</td><td>30 s</td><td>-</td><td>18</td><td>20</td><td>22</td><td>178 mm</td></tr>
-                <tr><td>4</td><td>40</td><td>40 s</td><td>-</td><td>-</td><td>22</td><td>24</td><td>254 mm</td></tr>
+              <tr><td>2</td><td>20,0</td><td>20 s</td><td>127 mm (5.0 in)</td></tr>
+              <tr><td>3</td><td>30,0</td><td>30 s</td><td>178 mm (7.0 in)</td></tr>
+              <tr><td>4</td><td>40,0</td><td>40 s</td><td>254 mm (10.0 in)</td></tr>
             </tbody>
           </table>
         </div>
@@ -204,7 +206,6 @@
             <li>Montaje correcto del elemento</li>
             <li>Conexiones firmes y correctas</li>
             <li>Geometría adecuada del montaje</li>
-            <li>Llenado de agua uniforme </li>
             <li>Evitar proximidad de cables a elementos metálicos</li>
             <li>Incremento de tensión controlado</li>
             <li>Monitoreo continuo del elemento</li>
@@ -252,13 +253,13 @@
         <div class="accept-icon" aria-hidden="true">✔️</div>
         <div class="accept-content">
           <div class="accept-title"><span class="accept-label">CUMPLE | PASA:</span></div>
-          <div class="accept-text">Si el elemento soporta la tensión de ensayo especificada (según clase) durante 1 minuto sin presentar disrupción y la corriente de fuga medida no excede el límite máximo.</div>
+          <div class="accept-text">Si el elemento soporta la tensión de ensayo sin ruptura eléctrica durante el tiempo de aplicación.</div>
         </div>
       </div>
       <div class="fail-block">
         <div class="fail-content">
           <div class="fail-title"><span class="fail-label">NO CUMPLE | NO PASA:</span></div>
-          <div class="fail-text">Si el elemento presenta disrupción o la corriente de fuga medida excede el límite máximo.</div>
+          <div class="fail-text">Si el elemento presenta disrupción, ruptura dieléctrica.</div>
         </div>
         <div class="fail-icon" aria-hidden="true">❌</div>
       </div>
@@ -397,6 +398,9 @@
     font-weight:700;
     font-size:21px;
     color:#222;
+    text-align:center;
+    flex:1;
+    min-width:0;
   }
   .info-ensayo {
     background: #1565c04b;

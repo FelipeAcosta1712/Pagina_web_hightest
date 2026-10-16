@@ -297,7 +297,7 @@
                             <div class="dash-chart-card__header">
                                 <h3 class="dash-chart-card__title">Top 6 Clientes por Unidades Recibidas</h3>
                             </div>
-                            <div class="dash-chart-card__body">
+                            <div class="dash-chart-card__body dash-chart-card__body--labels">
                                 <canvas id="chartClientesUnidades"></canvas>
                             </div>
                             <div class="dash-chart-card__footer"><a href="#" class="dash-chart-card__link" id="verTodosClientesUnidades">Ver todos los clientes</a></div>
@@ -1024,53 +1024,115 @@
             </div>
             <div id="view-seguimiento-comercial" class="admin-view"></div>
             <div id="view-formatos" class="admin-view">
-                <div class="cot-header">
-                    <h1 class="cot-header__title">Formatos HIGH TEST</h1>
+                <div class="fmt-header">
+                    <div class="fmt-header__text">
+                        <h1 class="fmt-header__title">Formatos HIGH TEST</h1>
+                        <p class="fmt-header__subtitle">Acceda rápidamente a cada formato operativo del laboratorio.</p>
+                    </div>
+                    <div class="fmt-search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="search" id="fmtSearchInput" placeholder="Buscar formato (nombre o código)..." autocomplete="off" aria-label="Buscar formato">
+                    </div>
                 </div>
 
-                <div class="formatos-grid">
+                <div class="formatos-grid" id="formatosGrid">
                     <!-- FR-7.4.1 -->
-                    <div class="formato-card">
-                        <div class="formato-card__header">
-                            <span class="formato-card__icon">📦</span>
-                            <h3 class="formato-card__title">FR-7.4.1 - FORMATO DE RECEPCIÓN Y ENTREGA DE ITEMS</h3>
+                    <article class="formato-card" data-search="fr-7.4.1 formato recepcion entrega items plataforma ingreso elementos">
+                        <div class="formato-card__head">
+                            <span class="formato-card__icon formato-card__icon--blue">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                            </span>
+                            <div>
+                                <span class="formato-card__code">FR-7.4.1</span>
+                                <h3 class="formato-card__title">Formato de Recepción y Entrega de Items</h3>
+                            </div>
                         </div>
                         <p class="formato-card__desc">Acceda a la plataforma dedicada para el ingreso y entrega de elementos.</p>
-                        <a href="/recepcion-items/recepcion-items.html" target="_blank" rel="noopener noreferrer" class="formato-card__btn">ABRIR FT RECEPCIÓN</a>
-                    </div>
+                        <div class="formato-card__tags">
+                            <span>Plataforma dedicada</span>
+                            <span>Ingreso y entrega</span>
+                        </div>
+                        <div class="formato-card__actions">
+                            <a href="/recepcion-items/recepcion-items.html" target="_blank" rel="noopener noreferrer" class="formato-card__btn">Abrir formato
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                            </a>
+                        </div>
+                    </article>
 
                     <!-- FR-7.2 -->
-                    <div class="formato-card">
-                        <div class="formato-card__header">
-                            <span class="formato-card__icon">📝</span>
-                            <h3 class="formato-card__title">FR-7.2 - LISTA DE CHEQUEO EN SITIO</h3>
+                    <article class="formato-card" data-search="fr-7.2 lista chequeo checklist ensayos electricos sitio">
+                        <div class="formato-card__head">
+                            <span class="formato-card__icon formato-card__icon--amber">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><polyline points="9 14 11 16 15 12"/></svg>
+                            </span>
+                            <div>
+                                <span class="formato-card__code">FR-7.2</span>
+                                <h3 class="formato-card__title">Lista de Chequeo en Sitio</h3>
+                            </div>
                         </div>
                         <p class="formato-card__desc">Abra el formato FR-7.2 para la lista de chequeo de ensayos eléctricos en sitio.</p>
-                        <a href="../admin-checklist-ensayos.html" class="formato-card__btn">ABRIR CHECKLIST</a>
-                    </div>
+                        <div class="formato-card__tags">
+                            <span>Ensayos eléctricos</span>
+                            <span>Trabajo en sitio</span>
+                        </div>
+                        <div class="formato-card__actions">
+                            <a href="../admin-checklist-ensayos.html" class="formato-card__btn">Abrir checklist
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                            </a>
+                        </div>
+                    </article>
 
                     <!-- FR-7.8 -->
-                    <div class="formato-card">
-                        <div class="formato-card__header">
-                            <span class="formato-card__icon">📄</span>
-                            <h3 class="formato-card__title">FR-7.8 - INFORME DE ENSAYOS ELÉCTRICOS / MARCACIÓN</h3>
+                    <article class="formato-card" data-search="fr-7.8 informe ensayos electricos marcacion resultados proceso">
+                        <div class="formato-card__head">
+                            <span class="formato-card__icon formato-card__icon--violet">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            </span>
+                            <div>
+                                <span class="formato-card__code">FR-7.8</span>
+                                <h3 class="formato-card__title">Informe de Ensayos Eléctricos / Marcación</h3>
+                            </div>
                         </div>
                         <p class="formato-card__desc">Elija un proceso y complete el formato FR-7.8 con los resultados de los ensayos eléctricos realizados de acuerdo a su marcación.</p>
-                        <div class="formato-card__btns">
-                            <a href="/recepcion-items/recepcion-items.html?open=marcacion&from=admin" class="formato-card__btn">VER MARCACION</a>
-                            <a href="../admin-informe-ensayos.html" class="formato-card__btn">ABRIR INFORME</a>
+                        <div class="formato-card__tags">
+                            <span>Marcación</span>
+                            <span>Informe de resultados</span>
                         </div>
-                    </div>
+                        <div class="formato-card__actions">
+                            <a href="/recepcion-items/recepcion-items.html?open=marcacion&from=admin" class="formato-card__btn formato-card__btn--ghost">Ver marcación</a>
+                            <a href="../admin-informe-ensayos.html" class="formato-card__btn">Abrir informe
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                            </a>
+                        </div>
+                    </article>
 
                     <!-- FR-7.2.1.2 -->
-                    <div class="formato-card">
-                        <div class="formato-card__header">
-                            <span class="formato-card__icon">📑</span>
-                            <h3 class="formato-card__title">FR-7.2.1.2 - FICHAS TÉCNICAS DE ENSAYO</h3>
+                    <article class="formato-card" data-search="fr-7.2.1.2 fichas tecnicas ensayo anexo anexos a n detalles">
+                        <div class="formato-card__head">
+                            <span class="formato-card__icon formato-card__icon--emerald">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="9" y1="7" x2="15" y2="7"/></svg>
+                            </span>
+                            <div>
+                                <span class="formato-card__code">FR-7.2.1.2</span>
+                                <h3 class="formato-card__title">Fichas Técnicas de Ensayo</h3>
+                            </div>
                         </div>
-                        <p class="formato-card__desc">Accede a las fichas técnicas de ensayo y visualiza los detalles del FR-7.2.1.2 Anexo A al Anexo N.</p>
-                        <a href="../fichas-tecnicas.html" class="formato-card__btn">ABRIR FICHAS</a>
-                    </div>
+                        <p class="formato-card__desc">Acceda a las fichas técnicas de ensayo y visualiza los detalles del FR-7.2.1.2 Anexo A al Anexo N.</p>
+                        <div class="formato-card__tags">
+                            <span>Anexos A – N</span>
+                            <span>Fichas técnicas</span>
+                        </div>
+                        <div class="formato-card__actions">
+                            <a href="../fichas/fichas-tecnicas.html" class="formato-card__btn">Abrir fichas
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                            </a>
+                        </div>
+                    </article>
+                </div>
+
+                <div class="formatos-empty" id="formatosEmpty" style="display:none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <p>No se encontraron formatos que coincidan con tu búsqueda.</p>
                 </div>
             </div>
             <div id="view-recepcion" class="admin-view">
@@ -1198,14 +1260,20 @@
                             <div style="font-size: 28px; font-weight: 700; color: #ef4444;" id="stat-discrepancias">0</div>
                             <div style="font-size: 11px; color: #ef4444; margin-top: 4px;">Clic para filtrar</div>
                         </div>
+                        <!-- Card: Datos/Firmas Incompletos -->
+                        <div style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid #e5e7eb; border-left: 4px solid #8b5cf6; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;" onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 4px 12px rgba(139,92,246,0.3)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'" onclick="RecepcionAnalyticsModule.filtrarIncompletos()">
+                            <div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">🧾 Datos/Firmas Incompletos</div>
+                            <div style="font-size: 28px; font-weight: 700; color: #8b5cf6;" id="stat-incompletos">0</div>
+                            <div style="font-size: 11px; color: #8b5cf6; margin-top: 4px;">Clic para filtrar</div>
+                        </div>
                     </div>
 
                     <div style="background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden;">
                         <div style="padding: 16px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
                             <h3 style="margin: 0; font-size: 15px; font-weight: 700;">Resumen por Caso</h3>
-                            <div id="discrepanciaFilterIndicator" style="display: none; background: #fef2f2; color: #ef4444; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;">
-                                ⚠️ Mostrando solo discrepancias
-                                <button type="button" onclick="RecepcionAnalyticsModule.limpiarFiltroDiscrepancias()" style="background: #ef4444; color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; margin-left: 8px; font-size: 12px; line-height: 1;">✕</button>
+                            <div id="discrepanciaFilterIndicator" style="display: none; background: #fef2f2; color: #ef4444; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; align-items: center;">
+                                <span id="discrepanciaFilterIndicatorTexto">⚠️ Mostrando solo discrepancias</span>
+                                <button type="button" onclick="RecepcionAnalyticsModule.limpiarFiltroEstadisticas()" style="background: #ef4444; color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; margin-left: 8px; font-size: 12px; line-height: 1;">✕</button>
                             </div>
                         </div>
                         <div style="overflow-x: auto;">
@@ -1220,6 +1288,8 @@
                                         <th data-col="recibidos" style="padding: 12px; border: 1px solid #e6eef6; text-align: center; font-weight: 600; color: #222;">Recibidos</th>
                                         <th data-col="entregados" style="padding: 12px; border: 1px solid #e6eef6; text-align: center; font-weight: 600; color: #222;">Entregados</th>
                                         <th data-col="discrepancia" style="padding: 12px; border: 1px solid #e6eef6; text-align: center; font-weight: 600; color: #222;">Discrepancia</th>
+                                        <th id="thFaltantesIncompletos" data-col="faltantes" style="display: none; padding: 12px; border: 1px solid #e6eef6; text-align: left; font-weight: 600; color: #222; min-width: 220px;">Faltantes</th>
+                                        <th data-col="acciones" style="padding: 12px; border: 1px solid #e6eef6; text-align: center; font-weight: 600; color: #222; width: 140px; white-space: nowrap;">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody id="estadisticasCasoTableBody">
@@ -4257,81 +4327,232 @@
             color: var(--admin-text);
         }
 
+        /* Formatos View */
+        #view-formatos {
+            background: #f3f4f6;
+            min-height: 100vh;
+            padding-bottom: 1.5rem;
+        }
+
+        .fmt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 1rem;
+            flex-wrap: wrap;
+            padding: 20px 24px 0;
+        }
+
+        .fmt-header__title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0;
+        }
+
+        .fmt-header__subtitle {
+            margin: 4px 0 0;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .fmt-search {
+            position: relative;
+            flex: 0 1 320px;
+            min-width: 240px;
+        }
+
+        .fmt-search svg {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            pointer-events: none;
+        }
+
+        .fmt-search input {
+            width: 100%;
+            padding: 10px 12px 10px 36px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 13px;
+            background: #fff;
+            color: #1e293b;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            box-sizing: border-box;
+        }
+
+        .fmt-search input::placeholder {
+            color: #9ca3af;
+        }
+
+        .fmt-search input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
         /* Formatos Grid */
         .formatos-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-top: 1.5rem;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+            padding: 20px 24px 0;
         }
 
         .formato-card {
-            background: var(--admin-card-bg);
-            border: 1px solid var(--admin-border);
+            background: #fff;
+            border: 1px solid #e5e7eb;
             border-radius: 12px;
-            padding: 1.5rem;
+            padding: 1.25rem;
             display: flex;
             flex-direction: column;
-            transition: box-shadow 0.2s;
+            gap: 0.7rem;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
         }
 
         .formato-card:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+            border-color: #cbd5e1;
         }
 
-        .formato-card__header {
+        .formato-card.is-hidden {
+            display: none;
+        }
+
+        .formato-card__head {
             display: flex;
             align-items: flex-start;
-            gap: 0.5rem;
-            margin-bottom: 0.75rem;
+            gap: 0.75rem;
         }
 
         .formato-card__icon {
-            font-size: 1.2rem;
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             flex-shrink: 0;
         }
 
-        .formato-card__title {
-            font-size: 0.9rem;
+        .formato-card__icon svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .formato-card__icon--blue { background: #eff6ff; color: #2563eb; }
+        .formato-card__icon--amber { background: #fffbeb; color: #d97706; }
+        .formato-card__icon--violet { background: #f5f3ff; color: #7c3aed; }
+        .formato-card__icon--emerald { background: #ecfdf5; color: #059669; }
+
+        .formato-card__code {
+            display: inline-block;
+            font-size: 11px;
             font-weight: 700;
-            color: var(--admin-text);
+            letter-spacing: 0.03em;
+            color: #1d4ed8;
+            background: #eff6ff;
+            border-radius: 6px;
+            padding: 2px 8px;
+            margin-bottom: 4px;
+        }
+
+        .formato-card__title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1e293b;
             line-height: 1.3;
+            margin: 0;
         }
 
         .formato-card__desc {
-            font-size: 0.85rem;
-            color: var(--admin-text-muted);
+            font-size: 13px;
+            color: #64748b;
             line-height: 1.5;
             flex: 1;
-            margin-bottom: 1rem;
+            margin: 0;
+        }
+
+        .formato-card__tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .formato-card__tags span {
+            font-size: 11px;
+            font-weight: 600;
+            color: #475569;
+            background: #f1f5f9;
+            border-radius: 999px;
+            padding: 3px 10px;
+        }
+
+        .formato-card__actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
         }
 
         .formato-card__btn {
-            display: inline-block;
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
             background: #1a365d;
             color: #fff;
-            border: none;
-            border-radius: 6px;
+            border: 1px solid #1a365d;
+            border-radius: 8px;
             padding: 0.6rem 1rem;
-            font-size: 0.8rem;
+            font-size: 12.5px;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: background 0.2s, border-color 0.2s;
             text-align: center;
             text-decoration: none;
         }
 
         .formato-card__btn:hover {
             background: #0f2440;
+            border-color: #0f2440;
         }
 
-        .formato-card__btns {
+        .formato-card__btn--ghost {
+            background: #fff;
+            color: #1a365d;
+            border-color: #cbd5e1;
+        }
+
+        .formato-card__btn--ghost:hover {
+            background: #f8fafc;
+            border-color: #1a365d;
+        }
+
+        .formatos-empty {
             display: flex;
-            gap: 0.5rem;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 48px 24px;
+            color: #94a3b8;
+            font-size: 14px;
+            text-align: center;
         }
 
-        .formato-card__btns .formato-card__btn {
-            flex: 1;
+        @media (max-width: 640px) {
+            .fmt-header {
+                align-items: stretch;
+            }
+            .fmt-search {
+                flex: 1 1 100%;
+            }
+            .formatos-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         /* ========================================
@@ -4582,6 +4803,14 @@
         .dash-chart-card__body canvas {
             width: 100% !important;
             max-height: 220px;
+        }
+
+        .dash-chart-card__body--labels {
+            min-height: 205px;
+        }
+
+        .dash-chart-card__body--labels canvas {
+            max-height: 250px;
         }
 
         .dash-chart-card__body--donut {
@@ -7790,6 +8019,123 @@
         </div>
     </div>
 
+    <!-- Modal Editar Cantidades Entregadas (solo desde el filtro de discrepancias) -->
+    <div id="modalEditarEntrega" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2100; overflow-y: auto;">
+        <div style="background: white; margin: 30px auto; max-width: 780px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.25);">
+            <div style="padding: 20px; border-bottom: 2px solid #2563eb; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0; font-size: 17px;">✏️ Editar Cantidades Entregadas - <span id="editEntregaCotizacion">-</span></h2>
+                <button type="button" onclick="RecepcionAnalyticsModule.cerrarEditorEntrega()" style="background: none; border: none; font-size: 24px; cursor: pointer;">✕</button>
+            </div>
+            <div style="padding: 14px 20px 0;">
+                <div id="editEntregaAviso" style="display:none; background:#fffbeb; border:1px solid #fcd34d; color:#92400e; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:12px;"></div>
+                <div id="editEntregaCliente" style="font-size:13px; color:#475569; margin-bottom:12px;"></div>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead style="background-color: #f1f5f9; border-bottom: 2px solid #022859;">
+                            <tr>
+                                <th style="padding: 10px; text-align: left; border: 1px solid #e6eef6;">Elemento</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid #e6eef6;">Cant. Recibida</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid #e6eef6;">Cant. Entregada</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid #e6eef6;">Diferencia</th>
+                            </tr>
+                        </thead>
+                        <tbody id="editEntregaItemsBody">
+                            <tr><td colspan="4" style="padding:16px;text-align:center;color:#999;">Cargando...</td></tr>
+                        </tbody>
+                        <tfoot>
+                            <tr style="background:#f8fafc;font-weight:700;">
+                                <td style="padding:10px;border:1px solid #e6eef6;">Totales</td>
+                                <td style="padding:10px;border:1px solid #e6eef6;text-align:center;" id="editEntTotRec">0</td>
+                                <td style="padding:10px;border:1px solid #e6eef6;text-align:center;" id="editEntTotEnt">0</td>
+                                <td style="padding:10px;border:1px solid #e6eef6;text-align:center;" id="editEntTotDiff">0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div style="padding: 16px 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" onclick="RecepcionAnalyticsModule.cerrarEditorEntrega()" style="padding:10px 18px;background:#f1f5f9;color:#475569;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Cancelar</button>
+                <button type="button" id="editEntregaSaveBtn" onclick="RecepcionAnalyticsModule.guardarEditorEntrega()" style="padding:10px 18px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">💾 Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Completar Datos y Firmas (FR-7.4.1) - solo desde filtro de incompletos -->
+    <div id="modalCompletarDatos" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2150; overflow-y: auto;">
+        <div style="background: white; margin: 30px auto; max-width: 880px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.25);">
+            <div style="padding: 20px; border-bottom: 2px solid #7c3aed; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0; font-size: 17px;">🧾 Completar Datos y Firmas - <span id="completCotizacion">-</span></h2>
+                <button type="button" onclick="RecepcionAnalyticsModule.cerrarCompletitud()" style="background: none; border: none; font-size: 24px; cursor: pointer;">✕</button>
+            </div>
+            <div style="padding: 14px 20px 0;">
+                <div id="completFaltantes" style="display:none; background:#f5f3ff; border:1px solid #ddd6fe; color:#6d28d9; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:12px;"></div>
+                <div id="completCliente" style="font-size:13px; color:#475569; margin-bottom:12px;"></div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                    <!-- RECEPCIÓN -->
+                    <div>
+                        <div style="background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; font-weight:700; font-size:13px; margin-bottom:10px;">📥 Recepción</div>
+                        <div style="border:1px solid #e2e8f0; border-radius:10px; padding:12px; background:#f8fafc; margin-bottom:12px;">
+                            <div style="font-weight:700; font-size:13px; margin-bottom:8px;">✍️ Firma del cliente</div>
+                            <div id="completWrapRecepcion" style="background:#fff; border:1px dashed #cbd5e1; border-radius:8px; min-height:110px; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:4px;">
+                                <img id="completImgRecepcion" alt="Firma recepción" style="display:none; max-width:100%; max-height:150px;">
+                                <canvas id="completCanvasRecepcion" width="400" height="140" style="display:none; width:100%; touch-action:none;"></canvas>
+                                <span id="completVacioRecepcion" style="color:#94a3b8; font-size:13px;">Sin firma registrada</span>
+                            </div>
+                            <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
+                                <button type="button" onclick="RecepcionAnalyticsModule.completDibujar('Recepcion')" style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">🖊 Dibujar</button>
+                                <label style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">📁 Subir imagen<input type="file" accept="image/*" style="display:none;" onchange="RecepcionAnalyticsModule.completSubir('Recepcion', this)"></label>
+                                <button type="button" id="completQuitarRecepcion" onclick="RecepcionAnalyticsModule.completQuitar('Recepcion')" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">🗑 Quitar</button>
+                            </div>
+                            <div id="completNotaRecepcion" style="font-size:12px; color:#64748b; margin-top:6px;">—</div>
+                        </div>
+                        <div style="display:grid; gap:6px;">
+                            <input type="text" data-campo="clienteRecepcionNombre" placeholder="Nombre firmante (cliente)" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                                <input type="text" data-campo="clienteRecepcionCedula" placeholder="Cédula" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
+                                <input type="text" data-campo="clienteRecepcionCargo" placeholder="Cargo" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
+                            </div>
+                            <input type="text" data-campo="highTestRecepcionNombre" placeholder="Rep. HIGH TEST - Nombre (recepción)" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
+                            <input type="text" data-campo="highTestRecepcionCargo" placeholder="Rep. HIGH TEST - Cargo (recepción)" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
+                        </div>
+                    </div>
+
+                    <!-- ENTREGA -->
+                    <div>
+                        <div style="background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; font-weight:700; font-size:13px; margin-bottom:10px;">📤 Entrega</div>
+                        <div style="border:1px solid #e2e8f0; border-radius:10px; padding:12px; background:#f8fafc; margin-bottom:12px;">
+                            <div style="font-weight:700; font-size:13px; margin-bottom:8px;">✍️ Firma del cliente</div>
+                            <div id="completWrapEntrega" style="background:#fff; border:1px dashed #cbd5e1; border-radius:8px; min-height:110px; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:4px;">
+                                <img id="completImgEntrega" alt="Firma entrega" style="display:none; max-width:100%; max-height:150px;">
+                                <canvas id="completCanvasEntrega" width="400" height="140" style="display:none; width:100%; touch-action:none;"></canvas>
+                                <span id="completVacioEntrega" style="color:#94a3b8; font-size:13px;">Sin firma registrada</span>
+                            </div>
+                            <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
+                                <button type="button" onclick="RecepcionAnalyticsModule.completDibujar('Entrega')" style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">🖊 Dibujar</button>
+                                <label style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">📁 Subir imagen<input type="file" accept="image/*" style="display:none;" onchange="RecepcionAnalyticsModule.completSubir('Entrega', this)"></label>
+                                <button type="button" id="completQuitarEntrega" onclick="RecepcionAnalyticsModule.completQuitar('Entrega')" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">🗑 Quitar</button>
+                            </div>
+                            <div id="completNotaEntrega" style="font-size:12px; color:#64748b; margin-top:6px;">—</div>
+                        </div>
+                        <div style="display:grid; gap:6px;">
+                            <input type="text" data-campo="clienteEntregaNombre" placeholder="Nombre firmante (cliente)" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                                <input type="text" data-campo="clienteEntregaCedula" placeholder="Cédula" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
+                                <input type="text" data-campo="clienteEntregaCargo" placeholder="Cargo" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
+                            </div>
+                            <input type="text" data-campo="highTestEntregaNombre" placeholder="Rep. HIGH TEST - Nombre (entrega)" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
+                            <input type="text" data-campo="highTestEntregaCargo" placeholder="Rep. HIGH TEST - Cargo (entrega)" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="padding: 16px 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" onclick="RecepcionAnalyticsModule.cerrarCompletitud()" style="padding:10px 18px;background:#f1f5f9;color:#475569;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Cancelar</button>
+                <button type="button" id="completSaveBtn" onclick="RecepcionAnalyticsModule.guardarCompletitud()" style="padding:10px 18px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">💾 Guardar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Procesos Sin Entregar -->
     <div id="modalSinEntregar" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; overflow-y: auto;">
         <div style="background: white; margin: 20px auto; max-width: 950px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.25);">
@@ -7847,6 +8193,8 @@
 
     <!-- jsPDF para generación de PDFs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- SignaturePad para capturar firmas en el modal de completar datos -->
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
     <!-- script.js de recepcion-items para generatePDFFromCase -->
     <script src="../recepcion-items/script.js"></script>
 
@@ -8542,6 +8890,28 @@
             }
         }
 
+        // Búsqueda de formatos en la vista Formatos
+        function initFormatosSearch() {
+            const input = document.getElementById('fmtSearchInput');
+            const grid = document.getElementById('formatosGrid');
+            const empty = document.getElementById('formatosEmpty');
+            if (!input || !grid) return;
+
+            const cards = Array.from(grid.querySelectorAll('.formato-card'));
+
+            input.addEventListener('input', () => {
+                const q = input.value.trim().toLowerCase();
+                let visible = 0;
+                cards.forEach(card => {
+                    const hay = ((card.dataset.search || '') + ' ' + card.textContent).toLowerCase();
+                    const match = !q || hay.includes(q);
+                    card.classList.toggle('is-hidden', !match);
+                    if (match) visible++;
+                });
+                if (empty) empty.style.display = visible === 0 ? 'flex' : 'none';
+            });
+        }
+
         // Navegación del sidebar
         function adminNav(section) {
             // Actualizar item activo
@@ -8627,6 +8997,9 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Cargar tema guardado
             loadSavedTheme();
+
+            // Vista de formatos: búsqueda
+            initFormatosSearch();
 
             const toggle = document.getElementById('sidebarToggle');
             const sidebar = document.getElementById('adminSidebar');
@@ -11333,6 +11706,11 @@
             resultadosBusqueda: [],
             casosCargados: false,
             ultimaCarga: null,
+            _casoStats: null,
+            _filtroDiscrepancias: false,
+            _filtroIncompletos: false,
+            _completitud: null,
+            _editEntrega: null,
 
             async init(forceReload = false) {
                 if (!forceReload && this.casosCargados && this.casos.length > 0) {
@@ -11433,17 +11811,30 @@
 
             async cargarCasos() {
                 try {
-                    const [procesosCache, dataBorradores, resConteos] = await Promise.all([
+                    const [procesosCache, dataBorradores, resConteos, dataCompletitud] = await Promise.all([
                         window.__getProcesosAcreditadosCached(),
                         window.__getBorradoresResumenCached(),
                         fetch('/.netlify/functions/conectar', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ action: 'get_all_detalle_procesos' })
-                        })
+                        }).then(r => r.json()).catch(() => null),
+                        fetch('/.netlify/functions/conectar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'get_completitud_resumen' })
+                        }).then(r => r.json()).catch(() => null)
                     ]);
                     const procesos = Array.isArray(procesosCache) ? procesosCache : [];
-                    const dataConteos = await resConteos.json();
+                    const dataConteos = resConteos && resConteos.ok ? resConteos : { ok: false };
+
+                    // Banderas de firmas/datos por proceso (tarjeta de incompletos)
+                    this._completitud = (dataCompletitud && dataCompletitud.ok && dataCompletitud.resumen)
+                        ? dataCompletitud.resumen
+                        : (dataCompletitud && dataCompletitud.ok ? {} : null);
+                    if (!this._completitud) {
+                        console.warn('[Recepcion] No se pudo cargar get_completitud_resumen');
+                    }
 
                     // Mapa de conteos correctos desde detalle_procesos_ac
                     const conteosDetalle = (dataConteos.ok && dataConteos.conteos) ? dataConteos.conteos : {};
@@ -11508,6 +11899,7 @@
                                     const b = borradorByName[nombre] || {};
                                     const brandSummary = (d.marcas && d.marcas.length > 0) ? d.marcas : (b.brandSummary || '-');
                                     return {
+                                        id: d.ensayo_id || '',
                                         name: nombre,
                                         quantity: d.cantidad || 0,
                                         quantity2: d.cantidad_entregada ?? b.quantity2 ?? 0,
@@ -11568,6 +11960,9 @@
                     await this._cargarDetalleItems();
 
                     this.actualizarCardsResumen();
+
+                    // Si las estadísticas ya estaban pintadas, recalcularlas con los datos recién cargados
+                    if (this._casoStats) this.actualizarEstadisticas();
 
                     this.casosCargados = true;
                     this.ultimaCarga = new Date();
@@ -11712,7 +12107,11 @@
                 if (btn) { btn.classList.remove('btn--secondary'); btn.classList.add('btn--primary'); }
 
                 if (tabName === 'historial') this.refrescarHistorial();
-                else if (tabName === 'estadisticas') this.actualizarEstadisticas();
+                else if (tabName === 'estadisticas') {
+                    this._filtroDiscrepancias = false;
+                    this._filtroIncompletos = false;
+                    this.actualizarEstadisticas();
+                }
                 else if (tabName === 'busqueda') this.ejecutarBusqueda();
             },
 
@@ -11769,6 +12168,7 @@
                 let totalRecibidos = 0;
                 let totalEntregados = 0;
                 let discrepancias = 0;
+                let incompletos = 0;
                 const casoStats = {};
 
                 this.casos.forEach(c => {
@@ -11786,20 +12186,18 @@
                         cliente: c.cliente || '-',
                         informeNombre: c.informeNombre || '-',
                         facturarNombre: c.facturarNombre || '-',
+                        estado: c.estado || '',
                         totalItems: (c.items && c.items.length > 0) ? c.items.length : (c.total_items || 0),
                         totalRecibidos: recibidos,
                         totalEntregados: entregados
                     };
                     totalRecibidos += recibidos;
                     totalEntregados += entregados;
-                    if (recibidos !== entregados) {
-                        // Solo marcar discrepancia si hay datos de entrega registrados (entregados > 0)
-                        // o si el estado indica que ya se entregó
-                        const estadoCaso = (c.estado || '').toLowerCase();
-                        const yaEntregado = estadoCaso === 'entrega' || estadoCaso === 'finalizado' || estadoCaso === 'entrega-cliente';
-                        if (entregados > 0 || yaEntregado) {
-                            discrepancias++;
-                        }
+                    if (this._esDiscrepancia(casoStats[key])) {
+                        discrepancias++;
+                    }
+                    if (this._esIncompleto(casoStats[key])) {
+                        incompletos++;
                     }
                 });
 
@@ -11812,13 +12210,97 @@
                 document.getElementById('stat-completados').textContent = completados;
                 document.getElementById('stat-enProgreso').textContent = this.casos.length - completados;
                 document.getElementById('stat-discrepancias').textContent = discrepancias;
+                const elIncompletos = document.getElementById('stat-incompletos');
+                if (elIncompletos) elIncompletos.textContent = incompletos;
 
-                // Almacenar para filtro de discrepancias
+                // Almacenar para los filtros (discrepancias / incompletos)
                 this._casoStats = casoStats;
-                this._filtroDiscrepancias = false;
-                document.getElementById('discrepanciaFilterIndicator').style.display = 'none';
+                this._actualizarIndicadorFiltro();
 
                 this._renderTablaEstadisticas();
+            },
+
+            // Criterio ÚNICO de discrepancia: la tarjeta y el filtro usan esta misma función
+            // para que siempre coincidan el número mostrado y las filas filtradas.
+            _esDiscrepancia(c) {
+                if (!c) return false;
+                return (parseInt(c.totalRecibidos) || 0) !== (parseInt(c.totalEntregados) || 0);
+            },
+
+            // ══════════════════════════════════════════════
+            // COMPLETITUD: firmas / datos del cliente / rep. HIGH TEST
+            // ══════════════════════════════════════════════
+            async _cargarCompletitud() {
+                try {
+                    const res = await fetch('/.netlify/functions/conectar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'get_completitud_resumen' })
+                    });
+                    const data = await res.json();
+                    if (!data.ok) throw new Error(data.error || 'Error consultando completitud');
+                    this._completitud = data.resumen || {};
+                    return true;
+                } catch (e) {
+                    console.error('[Recepcion] Error cargando completitud:', e);
+                    return false;
+                }
+            },
+
+            _claveCompletitud(numero) {
+                return String(numero || '').replace(/\s+/g, '').toUpperCase();
+            },
+
+            _esEntregado(c) {
+                const e = String((c && c.estado) || '').toLowerCase();
+                return e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente';
+            },
+
+            // Devuelve la lista de elementos faltantes del caso según su etapa:
+            // - No entregado: se exige solo recepción.
+            // - Entregado/finalizado: se exige recepción + entrega.
+            _faltantesIncompletos(c) {
+                if (!c) return [];
+                if (!this._completitud) return [];
+                const f = this._completitud[this._claveCompletitud(c.cotizacion)];
+                if (!f) return ['Datos no registrados'];
+
+                const faltan = [];
+                if (!f.firmaRecepcion) faltan.push('Firma cliente (rec.)');
+                if (!f.datosClienteRecepcion) faltan.push('Datos cliente (rec.)');
+                if (!f.repHtRecepcion) faltan.push('Rep. HIGH TEST (rec.)');
+                if (this._esEntregado(c)) {
+                    if (!f.firmaEntrega) faltan.push('Firma cliente (ent.)');
+                    if (!f.datosClienteEntrega) faltan.push('Datos cliente (ent.)');
+                    if (!f.repHtEntrega) faltan.push('Rep. HIGH TEST (ent.)');
+                }
+                return faltan;
+            },
+
+            _esIncompleto(c) {
+                return this._faltantesIncompletos(c).length > 0;
+            },
+
+            _actualizarIndicadorFiltro() {
+                const ind = document.getElementById('discrepanciaFilterIndicator');
+                if (!ind) return;
+                const txt = document.getElementById('discrepanciaFilterIndicatorTexto');
+                const btn = (typeof ind.querySelector === 'function') ? ind.querySelector('button') : null;
+                if (this._filtroDiscrepancias) {
+                    ind.style.display = 'flex';
+                    ind.style.background = '#fef2f2';
+                    ind.style.color = '#ef4444';
+                    if (btn) btn.style.background = '#ef4444';
+                    if (txt) txt.textContent = '⚠️ Mostrando solo discrepancias';
+                } else if (this._filtroIncompletos) {
+                    ind.style.display = 'flex';
+                    ind.style.background = '#f5f3ff';
+                    ind.style.color = '#7c3aed';
+                    if (btn) btn.style.background = '#7c3aed';
+                    if (txt) txt.textContent = '🧾 Mostrando solo procesos incompletos';
+                } else {
+                    ind.style.display = 'none';
+                }
             },
 
             _renderTablaEstadisticas() {
@@ -11827,14 +12309,16 @@
                 const casoStats = this._casoStats;
                 if (!casoStats) return;
 
+                const mostrarFaltantes = !!this._filtroIncompletos;
+                const thFaltantes = document.getElementById('thFaltantesIncompletos');
+                if (thFaltantes) thFaltantes.style.display = mostrarFaltantes ? 'table-cell' : 'none';
+                const numCols = 9 + (mostrarFaltantes ? 1 : 0);
+
                 let entries = Object.values(casoStats);
                 if (this._filtroDiscrepancias) {
-                    entries = entries.filter(c => {
-                        if (c.totalRecibidos === c.totalEntregados) return false;
-                        const e = (c.estado || '').toLowerCase();
-                        const yaEntregado = e === 'entrega' || e === 'finalizado' || e === 'entrega-cliente';
-                        return c.totalEntregados > 0 || yaEntregado;
-                    });
+                    entries = entries.filter(c => this._esDiscrepancia(c));
+                } else if (this._filtroIncompletos) {
+                    entries = entries.filter(c => this._esIncompleto(c));
                 }
                 entries.sort((a, b) => String(b.cotizacion).localeCompare(String(a.cotizacion)));
 
@@ -11845,11 +12329,25 @@
                 const paginados = entries.slice(inicio, inicio + porPagina);
 
                 if (paginados.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:#999;">No hay discrepancias</td></tr>';
+                    const msgVacio = this._filtroDiscrepancias
+                        ? 'No hay discrepancias'
+                        : (this._filtroIncompletos ? 'No hay procesos incompletos' : 'No hay casos registrados');
+                    tbody.innerHTML = `<tr><td colspan="${numCols}" style="padding:20px;text-align:center;color:#999;">${msgVacio}</td></tr>`;
                 } else {
                     tbody.innerHTML = paginados.map(c => {
                         const diff = c.totalEntregados - c.totalRecibidos;
                         const diffStyle = diff !== 0 ? 'background:#ffebee;color:#c62828;font-weight:bold;' : '';
+                        const btnEditar = this._filtroDiscrepancias
+                            ? ` <button type="button" onclick="RecepcionAnalyticsModule.abrirEditorEntrega('${c.cotizacion}')" style="background:#eff6ff;color:#2563eb;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #bfdbfe;cursor:pointer;" title="Editar cantidades entregadas">✏️ Editar</button>`
+                            : '';
+                        const btnCompletar = mostrarFaltantes
+                            ? ` <button type="button" onclick="RecepcionAnalyticsModule.abrirEditorCompletitud('${c.cotizacion}')" style="background:#f5f3ff;color:#7c3aed;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #ddd6fe;cursor:pointer;" title="Completar datos y firmas">✏️ Completar</button>`
+                            : '';
+                        const celdaFaltantes = mostrarFaltantes
+                            ? `<td style="padding:8px 10px;border:1px solid #ddd;">${this._faltantesIncompletos(c).map(f =>
+                                    `<span style="display:inline-block;background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;margin:1px 2px;">${f}</span>`
+                                ).join('') || '<span style="color:#16a34a;font-size:12px;">✔ Completo</span>'}</td>`
+                            : '';
                         return `<tr style="border-bottom:1px solid #ddd;">
                             <td style="padding:10px;border:1px solid #ddd;">${c.cotizacion}</td>
                             <td style="padding:10px;border:1px solid #ddd;">${c.cliente}</td>
@@ -11858,9 +12356,9 @@
                             <td style="padding:10px;border:1px solid #ddd;text-align:center;">${c.totalItems}</td>
                             <td style="padding:10px;border:1px solid #ddd;text-align:center;">${c.totalRecibidos}</td>
                             <td style="padding:10px;border:1px solid #ddd;text-align:center;">${c.totalEntregados}</td>
-                            <td style="padding:10px;border:1px solid #ddd;text-align:center;${diffStyle}">${diff > 0 ? '+' : ''}${diff}</td>
-                            <td style="padding:10px;border:1px solid #ddd;text-align:center;">
-                                <button type="button" onclick="AnalisisProcesosModule.verVistaPrevia('${c.cotizacion}')" style="background:#f1f5f9;color:#475569;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #d1d5db;cursor:pointer;">👁️ Ver</button>
+                            <td style="padding:10px;border:1px solid #ddd;text-align:center;${diffStyle}">${diff > 0 ? '+' : ''}${diff}</td>${celdaFaltantes}
+                            <td style="padding:10px;border:1px solid #ddd;text-align:center;white-space:nowrap;">
+                                <button type="button" onclick="AnalisisProcesosModule.verVistaPrevia('${c.cotizacion}')" style="background:#f1f5f9;color:#475569;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #d1d5db;cursor:pointer;">👁️ Ver</button>${btnEditar}${btnCompletar}
                             </td>
                         </tr>`;
                     }).join('');
@@ -11869,17 +12367,470 @@
             },
 
             filtrarDiscrepancias() {
+                this._filtroIncompletos = false;
+                if (!this._casoStats) this.actualizarEstadisticas();
                 this._filtroDiscrepancias = true;
                 this.paginaEstadisticas = 1;
-                document.getElementById('discrepanciaFilterIndicator').style.display = 'flex';
+                this._actualizarIndicadorFiltro();
+                this._renderTablaEstadisticas();
+            },
+
+            async filtrarIncompletos() {
+                if (!this._completitud) {
+                    const ok = await this._cargarCompletitud();
+                    if (!ok) { showToast('No se pudo cargar el estado de firmas y datos', 'error'); return; }
+                }
+                if (!this._casoStats) this.actualizarEstadisticas();
+                this._filtroDiscrepancias = false;
+                this._filtroIncompletos = true;
+                this.paginaEstadisticas = 1;
+                this._actualizarIndicadorFiltro();
+                this._renderTablaEstadisticas();
+            },
+
+            limpiarFiltroEstadisticas() {
+                this._filtroDiscrepancias = false;
+                this._filtroIncompletos = false;
+                this.paginaEstadisticas = 1;
+                this._actualizarIndicadorFiltro();
                 this._renderTablaEstadisticas();
             },
 
             limpiarFiltroDiscrepancias() {
-                this._filtroDiscrepancias = false;
-                this.paginaEstadisticas = 1;
-                document.getElementById('discrepanciaFilterIndicator').style.display = 'none';
-                this._renderTablaEstadisticas();
+                this.limpiarFiltroEstadisticas();
+            },
+
+            // ══════════════════════════════════════════════
+            // EDICIÓN DE CANTIDADES ENTREGADAS (solo en filtro de discrepancias)
+            // ══════════════════════════════════════════════
+            abrirEditorEntrega(cotizacion) {
+                const caso = this.casos.find(c => c.cotizacion === cotizacion);
+                if (!caso) { showToast('Caso no encontrado', 'error'); return; }
+                const items = Array.isArray(caso.items) ? caso.items : [];
+                if (items.length === 0) { showToast('Este caso no tiene elementos registrados', 'warning'); return; }
+
+                this._editEntrega = {
+                    cotizacion: cotizacion,
+                    caso: caso,
+                    items: items.map((it, i) => ({
+                        idx: i,
+                        id: (it.id !== undefined && it.id !== null && it.id !== '') ? it.id : (it.ensayoId || it.ensayo_id || ''),
+                        name: it.name || it.elemento || it.nombre || ('Elemento ' + (i + 1)),
+                        recibidos: parseInt(it.quantity) || 0,
+                        orig: parseInt(it.quantity2) || 0,
+                        nuevo: parseInt(it.quantity2) || 0
+                    }))
+                };
+
+                const editable = !!caso.id;
+                const aviso = document.getElementById('editEntregaAviso');
+                if (aviso) {
+                    if (editable) {
+                        aviso.style.display = 'none';
+                    } else {
+                        aviso.style.display = 'block';
+                        aviso.textContent = '⚠️ Este caso no tiene un proceso registrado en la base de datos, por lo que no se puede editar aquí. Use el formato FR-7.4.1.';
+                    }
+                }
+
+                document.getElementById('editEntregaCotizacion').textContent = cotizacion;
+                document.getElementById('editEntregaCliente').innerHTML =
+                    '<strong>Cliente:</strong> ' + (caso.cliente || '-') +
+                    ' &nbsp;|&nbsp; <strong>Informe a nombre de:</strong> ' + (caso.informeNombre || '-');
+
+                const tbody = document.getElementById('editEntregaItemsBody');
+                tbody.innerHTML = this._editEntrega.items.map(it => {
+                    const diff = it.nuevo - it.recibidos;
+                    const sinId = (it.id === '' || it.id === null || it.id === undefined);
+                    const inputEditable = editable && !sinId;
+                    const celda = inputEditable
+                        ? `<input type="number" min="0" step="1" value="${it.nuevo}" data-idx="${it.idx}" oninput="RecepcionAnalyticsModule.onEditEntregaInput(this)" style="width:88px;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;text-align:center;font-size:13px;">`
+                        : `<span style="color:#64748b;">${it.nuevo}</span>${(sinId && editable) ? '<span style="color:#f59e0b;font-size:11px;margin-left:4px;" title="Sin código de ensayo: no editable">🔒</span>' : ''}`;
+                    return `<tr style="border-bottom:1px solid #eee;">
+                        <td style="padding:8px 10px;border:1px solid #ddd;">${it.name}</td>
+                        <td style="padding:8px 10px;border:1px solid #ddd;text-align:center;">${it.recibidos}</td>
+                        <td style="padding:8px 10px;border:1px solid #ddd;text-align:center;">${celda}</td>
+                        <td id="editEntDiff_${it.idx}" style="padding:8px 10px;border:1px solid #ddd;text-align:center;${diff !== 0 ? 'background:#ffebee;color:#c62828;font-weight:bold;' : 'background:#f0fdf4;color:#16a34a;'}">${diff > 0 ? '+' : ''}${diff}</td>
+                    </tr>`;
+                }).join('');
+
+                this._actualizarTotalesEditor();
+                const btn = document.getElementById('editEntregaSaveBtn');
+                if (btn) {
+                    btn.disabled = !editable;
+                    btn.style.opacity = editable ? '1' : '0.5';
+                    btn.innerHTML = '💾 Guardar';
+                }
+                document.getElementById('modalEditarEntrega').style.display = 'block';
+            },
+
+            onEditEntregaInput(input) {
+                const st = this._editEntrega;
+                if (!st) return;
+                const idx = parseInt(input.dataset.idx, 10);
+                const it = st.items.find(x => x.idx === idx);
+                if (!it) return;
+                it.nuevo = Math.max(0, parseInt(input.value, 10) || 0);
+                const diff = it.nuevo - it.recibidos;
+                const celda = document.getElementById('editEntDiff_' + idx);
+                if (celda) {
+                    celda.textContent = (diff > 0 ? '+' : '') + diff;
+                    celda.style.background = diff !== 0 ? '#ffebee' : '#f0fdf4';
+                    celda.style.color = diff !== 0 ? '#c62828' : '#16a34a';
+                    celda.style.fontWeight = diff !== 0 ? 'bold' : 'normal';
+                }
+                this._actualizarTotalesEditor();
+            },
+
+            _actualizarTotalesEditor() {
+                const st = this._editEntrega;
+                if (!st) return;
+                const rec = st.items.reduce((s, it) => s + it.recibidos, 0);
+                const ent = st.items.reduce((s, it) => s + it.nuevo, 0);
+                const diff = ent - rec;
+                const elRec = document.getElementById('editEntTotRec');
+                const elEnt = document.getElementById('editEntTotEnt');
+                const elDiff = document.getElementById('editEntTotDiff');
+                if (elRec) elRec.textContent = rec;
+                if (elEnt) elEnt.textContent = ent;
+                if (elDiff) {
+                    elDiff.textContent = (diff > 0 ? '+' : '') + diff;
+                    elDiff.style.color = diff !== 0 ? '#c62828' : '#16a34a';
+                }
+            },
+
+            cerrarEditorEntrega() {
+                const modal = document.getElementById('modalEditarEntrega');
+                if (modal) modal.style.display = 'none';
+                this._editEntrega = null;
+            },
+
+            async guardarEditorEntrega() {
+                const st = this._editEntrega;
+                if (!st) return;
+                const caso = st.caso;
+                if (!caso.id) { showToast('Este caso no tiene proceso en la base de datos', 'error'); return; }
+
+                const conId = it => (it.id !== '' && it.id !== null && it.id !== undefined);
+                const cambiados = st.items.filter(it => it.nuevo !== it.orig && conId(it));
+                const sinId = st.items.filter(it => it.nuevo !== it.orig && !conId(it));
+                if (sinId.length > 0) {
+                    showToast(sinId.length + ' elemento(s) sin código de ensayo no se pudieron guardar', 'warning');
+                }
+                if (cambiados.length === 0) {
+                    showToast('No hay cambios para guardar', 'info');
+                    return;
+                }
+
+                const btn = document.getElementById('editEntregaSaveBtn');
+                if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Guardando...'; }
+                try {
+                    const res = await fetch('/.netlify/functions/conectar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'update_cantidad_entregada_batch',
+                            proceso_id: caso.id,
+                            items: cambiados.map(it => ({ ensayo_id: it.id, cantidad_entregada: it.nuevo }))
+                        })
+                    });
+                    const data = await res.json();
+                    if (!data.ok) throw new Error(data.error || 'Error al guardar');
+                    if (!data.updated) throw new Error('No se encontraron registros en la base de datos para estos elementos');
+
+                    cambiados.forEach(ch => {
+                        if (Array.isArray(data.ensayos) && data.ensayos.length > 0 &&
+                            !data.ensayos.some(e => String(e) === String(ch.id))) return;
+                        const local = (caso.items || []).find(x =>
+                            String((x.id !== undefined && x.id !== null && x.id !== '') ? x.id : (x.ensayoId || x.ensayo_id || '')) === String(ch.id)
+                        );
+                        if (local) local.quantity2 = ch.nuevo;
+                    });
+
+                    showToast('Cantidades entregadas actualizadas (' + (data.updated || cambiados.length) + ' registros)', 'success');
+                    if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+                        showToast(data.warnings.length + ' elemento(s) no se pudieron actualizar', 'warning');
+                    }
+                    this.cerrarEditorEntrega();
+                    this.actualizarEstadisticas();
+                } catch (e) {
+                    showToast('Error al guardar: ' + e.message, 'error');
+                } finally {
+                    if (btn) { btn.disabled = false; btn.innerHTML = '💾 Guardar'; }
+                }
+            },
+
+            // ══════════════════════════════════════════════
+            // COMPLETAR DATOS Y FIRMAS (solo en filtro de incompletos)
+            // ══════════════════════════════════════════════
+            async abrirEditorCompletitud(cotizacion) {
+                const caso = this.casos.find(c => c.cotizacion === cotizacion) ||
+                    (this._casoStats ? Object.values(this._casoStats).find(c => c.cotizacion === cotizacion) : null);
+                if (!caso) { showToast('Caso no encontrado', 'error'); return; }
+
+                this._edCompletitud = {
+                    cotizacion: cotizacion,
+                    caso: caso,
+                    firmas: {
+                        Recepcion: { actual: null, nueva: null, quitar: false, dibujando: false, pad: null },
+                        Entrega: { actual: null, nueva: null, quitar: false, dibujando: false, pad: null }
+                    }
+                };
+
+                document.getElementById('completCotizacion').textContent = cotizacion;
+                const elCliente = document.getElementById('completCliente');
+                if (elCliente) {
+                    elCliente.innerHTML = '<strong>Cliente:</strong> ' + (caso.cliente || '-') +
+                        ' &nbsp;|&nbsp; <strong>Estado:</strong> ' + (caso.estado || '-');
+                }
+
+                const faltantes = this._faltantesIncompletos(caso);
+                const boxFalt = document.getElementById('completFaltantes');
+                if (boxFalt) {
+                    if (faltantes.length > 0) {
+                        boxFalt.style.display = 'block';
+                        boxFalt.innerHTML = '<strong>Falta completar:</strong> ' + faltantes.map(f =>
+                            '<span style="display:inline-block;background:#fff;color:#7c3aed;border:1px solid #ddd6fe;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;margin:1px 2px;">' + f + '</span>'
+                        ).join(' ');
+                    } else {
+                        boxFalt.style.display = 'none';
+                    }
+                }
+
+                document.querySelectorAll('#modalCompletarDatos [data-campo]').forEach(el => { el.value = ''; });
+                this._edCompletitud.camposBase = {};
+                ['Recepcion', 'Entrega'].forEach(lado => this._renderCompletFirma(lado));
+
+                const btn = document.getElementById('completSaveBtn');
+                if (btn) { btn.disabled = false; btn.innerHTML = '💾 Guardar'; }
+                document.getElementById('modalCompletarDatos').style.display = 'block';
+
+                try {
+                    const [resBorr, resProc] = await Promise.all([
+                        fetch('/.netlify/functions/conectar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'get_borrador_completo', cotizacion: cotizacion })
+                        }).then(r => r.json()).catch(() => null),
+                        fetch('/.netlify/functions/conectar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'get_proceso', numero_proceso: cotizacion })
+                        }).then(r => r.json()).catch(() => null)
+                    ]);
+                    if (!this._edCompletitud || this._edCompletitud.cotizacion !== cotizacion) return;
+
+                    const d = (resBorr && resBorr.ok && resBorr.data) ? resBorr.data : {};
+                    const p = (resProc && resProc.ok && resProc.proceso) ? resProc.proceso : {};
+                    if (!resBorr || !resBorr.ok) showToast('No se pudieron cargar los datos actuales del FR-7.4.1', 'warning');
+                    document.querySelectorAll('#modalCompletarDatos [data-campo]').forEach(el => {
+                        const v = d[el.dataset.campo];
+                        if (v !== undefined && v !== null) el.value = String(v);
+                        this._edCompletitud.camposBase[el.dataset.campo] = (el.value || '').trim();
+                    });
+
+                    const sd = (d.signatureData && typeof d.signatureData === 'object') ? d.signatureData : {};
+                    const st = this._edCompletitud;
+                    st.firmas.Recepcion.actual = p.firma_cliente_recepcion || sd.signatureCanvasRecepcion || sd.signatureCanvas || null;
+                    st.firmas.Entrega.actual = p.firma_cliente_entrega || sd.signatureCanvasEntrega || null;
+                    ['Recepcion', 'Entrega'].forEach(lado => {
+                        if (!st.firmas[lado].actual && !st.firmas[lado].nueva) st.firmas[lado].dibujando = true;
+                        this._renderCompletFirma(lado);
+                        if (st.firmas[lado].dibujando) this._initPadComplet(lado);
+                    });
+                } catch (e) {
+                    console.error('[Recepcion] Error cargando datos a completar:', e);
+                }
+            },
+
+            _renderCompletFirma(lado) {
+                const st = this._edCompletitud;
+                if (!st) return;
+                const f = st.firmas[lado];
+                const img = document.getElementById('completImg' + lado);
+                const canvas = document.getElementById('completCanvas' + lado);
+                const vacio = document.getElementById('completVacio' + lado);
+                const nota = document.getElementById('completNota' + lado);
+                const btnQuitar = document.getElementById('completQuitar' + lado);
+                if (!img || !canvas || !vacio) return;
+
+                const ocultarTodo = () => { img.style.display = 'none'; canvas.style.display = 'none'; vacio.style.display = 'none'; };
+
+                if (f.quitar) {
+                    ocultarTodo();
+                    vacio.style.display = 'block';
+                    vacio.textContent = 'Se quitará la firma al guardar';
+                    vacio.style.color = '#dc2626';
+                } else if (f.dibujando) {
+                    ocultarTodo();
+                    canvas.style.display = 'block';
+                    vacio.style.display = 'none';
+                } else if (f.nueva) {
+                    ocultarTodo();
+                    img.src = f.nueva;
+                    img.style.display = 'block';
+                } else if (f.actual) {
+                    ocultarTodo();
+                    img.src = f.actual;
+                    img.style.display = 'block';
+                } else {
+                    ocultarTodo();
+                    vacio.style.display = 'block';
+                    vacio.textContent = 'Sin firma registrada';
+                    vacio.style.color = '#94a3b8';
+                }
+
+                if (nota) {
+                    if (f.quitar) nota.textContent = '🗑 La firma actual se quitará al guardar';
+                    else if (f.dibujando) nota.textContent = f.nueva ? '🖊 Firma nueva dibujada (sin guardar)' : '🖊 Dibuja la firma con el mouse o el dedo';
+                    else if (f.nueva) nota.textContent = '🖼 Firma nueva cargada (sin guardar)';
+                    else if (f.actual) nota.textContent = '✅ Firma ya registrada';
+                    else nota.textContent = 'Sin firma registrada';
+                }
+                if (btnQuitar) btnQuitar.style.display = (f.actual || f.nueva) ? 'inline-block' : 'none';
+            },
+
+            _ajustarCanvasComplet(lado) {
+                const canvas = document.getElementById('completCanvas' + lado);
+                if (!canvas || !canvas.parentElement) return;
+                const w = canvas.parentElement.clientWidth - 8;
+                if (w > 60 && Math.abs(canvas.width - w) > 4) canvas.width = w;
+            },
+
+            _initPadComplet(lado) {
+                if (typeof window.SignaturePad === 'undefined') {
+                    showToast('No se cargó la librería de firmas: use "Subir imagen"', 'warning');
+                    return;
+                }
+                const st = this._edCompletitud;
+                if (!st) return;
+                const f = st.firmas[lado];
+                const canvas = document.getElementById('completCanvas' + lado);
+                if (!canvas) return;
+                this._ajustarCanvasComplet(lado);
+                if (f.pad) { f.pad.clear(); return; }
+                try {
+                    f.pad = new window.SignaturePad(canvas, { backgroundColor: 'rgb(255,255,255)' });
+                } catch (e) {
+                    console.error('[Recepcion] Error inicializando pad de firma:', e);
+                    showToast('No se pudo iniciar el pad de firma: use "Subir imagen"', 'warning');
+                }
+            },
+
+            completDibujar(lado) {
+                const st = this._edCompletitud;
+                if (!st) return;
+                const f = st.firmas[lado];
+                f.quitar = false;
+                f.nueva = null;
+                f.dibujando = true;
+                this._renderCompletFirma(lado);
+                this._initPadComplet(lado);
+            },
+
+            completSubir(lado, input) {
+                const file = input.files && input.files[0];
+                if (!file) return;
+                if (file.size > 2 * 1024 * 1024) {
+                    showToast('La imagen supera 2 MB: use una imagen más ligera', 'warning');
+                    input.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const st = this._edCompletitud;
+                    if (!st) return;
+                    const f = st.firmas[lado];
+                    f.nueva = String(reader.result);
+                    f.quitar = false;
+                    f.dibujando = false;
+                    if (f.pad) f.pad.clear();
+                    this._renderCompletFirma(lado);
+                };
+                reader.onerror = () => showToast('No se pudo leer la imagen', 'error');
+                reader.readAsDataURL(file);
+                input.value = '';
+            },
+
+            completQuitar(lado) {
+                const st = this._edCompletitud;
+                if (!st) return;
+                const f = st.firmas[lado];
+                if (f.quitar) {
+                    f.quitar = false;
+                    f.dibujando = false;
+                } else if (f.nueva) {
+                    f.nueva = null;
+                    f.dibujando = false;
+                    if (f.pad) f.pad.clear();
+                } else if (f.actual) {
+                    f.quitar = true;
+                    f.dibujando = false;
+                    if (f.pad) f.pad.clear();
+                }
+                this._renderCompletFirma(lado);
+            },
+
+            cerrarCompletitud() {
+                const modal = document.getElementById('modalCompletarDatos');
+                if (modal) modal.style.display = 'none';
+                this._edCompletitud = null;
+            },
+
+            async guardarCompletitud() {
+                const st = this._edCompletitud;
+                if (!st) return;
+
+                const campos = {};
+                document.querySelectorAll('#modalCompletarDatos [data-campo]').forEach(el => {
+                    const c = el.dataset.campo;
+                    const v = (el.value || '').trim();
+                    const base = (st.camposBase && st.camposBase[c] !== undefined) ? st.camposBase[c] : '';
+                    if (v !== base) campos[c] = v;
+                });
+
+                const firmas = {};
+                ['Recepcion', 'Entrega'].forEach(lado => {
+                    const f = st.firmas[lado];
+                    const key = lado === 'Recepcion' ? 'firma_cliente_recepcion' : 'firma_cliente_entrega';
+                    if (f.quitar) firmas[key] = null;
+                    else if (f.dibujando && f.pad && !f.pad.isEmpty()) firmas[key] = f.pad.toDataURL();
+                    else if (f.nueva) firmas[key] = f.nueva;
+                });
+
+                if (Object.keys(campos).length === 0 && Object.keys(firmas).length === 0) {
+                    showToast('No hay cambios para guardar', 'info');
+                    return;
+                }
+
+                const btn = document.getElementById('completSaveBtn');
+                if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Guardando...'; }
+                try {
+                    const res = await fetch('/.netlify/functions/conectar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'update_completitud_proceso',
+                            numero_proceso: st.cotizacion,
+                            campos: campos,
+                            firmas: firmas
+                        })
+                    });
+                    const data = await res.json();
+                    if (!data.ok) throw new Error(data.error || 'Error al guardar');
+
+                    showToast('Datos y firmas actualizados', 'success');
+                    if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+                        showToast(data.warnings.join('; '), 'warning');
+                    }
+                    await this._cargarCompletitud();
+                    if (this._casoStats) this.actualizarEstadisticas();
+                    this.cerrarCompletitud();
+                } catch (e) {
+                    showToast('Error al guardar: ' + e.message, 'error');
+                } finally {
+                    if (btn) { btn.disabled = false; btn.innerHTML = '💾 Guardar'; }
+                }
             },
 
             ejecutarBusqueda() {
@@ -12001,6 +12952,18 @@
             const modal = document.getElementById('modalEstadisticasDetalle');
             if (modal) modal.style.display = 'none';
         }
+
+        // Cerrar modal de edición de entregas al hacer clic fuera
+        document.addEventListener('click', function (e) {
+            const modal = document.getElementById('modalEditarEntrega');
+            if (modal && e.target === modal) {
+                RecepcionAnalyticsModule.cerrarEditorEntrega();
+            }
+            const modalComplet = document.getElementById('modalCompletarDatos');
+            if (modalComplet && e.target === modalComplet) {
+                RecepcionAnalyticsModule.cerrarCompletitud();
+            }
+        });
 
         // Hook into adminNav
         const _originalAdminNav = window.adminNav;

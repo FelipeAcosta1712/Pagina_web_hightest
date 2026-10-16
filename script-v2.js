@@ -8353,7 +8353,22 @@ const AnalisisProcesosModule = {
 
             // Firmas
             const sigRec = (signatureData.signatureCanvasRecepcion || signatureData.signatureCanvas || (signatureData.Recepcion && signatureData.Recepcion.data) || p.firma_cliente_recepcion) || null;
-            const sigEnt = (signatureData.signatureCanvasEntrega || signatureData.signatureCanvas || (signatureData.Entrega && signatureData.Entrega.data) || p.firma_cliente_entrega) || null;
+            const sigEnt = (signatureData.signatureCanvasEntrega || (signatureData.Entrega && signatureData.Entrega.data) || p.firma_cliente_entrega) || null;
+
+            // La entrega solo es obligatoria cuando el proceso ya está entregado/finalizado
+            const esEntregado = ['entrega', 'finalizado', 'entrega-cliente'].includes(estado);
+            const datoFR = (v, obligatorio) => {
+                if (v !== undefined && v !== null && String(v).trim() !== '') return escapeHtml(String(v));
+                return obligatorio
+                    ? '<span style="color:#dc2626; font-weight:600;">⚠️ Sin registrar</span>'
+                    : '<span style="color:#94a3b8;">—</span>';
+            };
+            const firmaFR = (sig, obligatorio) => {
+                if (sig) return `<img src="${sig}" style="max-width:100%; max-height:150px; border:1px solid #ccc; border-radius:8px;">`;
+                return obligatorio
+                    ? '<em style="color:#dc2626;">⚠️ Sin firma</em>'
+                    : '<em style="color:#94a3b8;">Se completa al entregar</em>';
+            };
 
             const html = `
                 <div style="border:1px solid #ddd; padding:20px; background:white; border-radius:8px;">
@@ -8400,41 +8415,41 @@ const AnalisisProcesosModule = {
                     </div>
 
                     ${observaciones ? `<div style="margin-top:16px;"><strong>Observaciones:</strong><br>${escapeHtml(observaciones)}</div>` : ''}
+                    ` : ''}
 
-                    <div style="margin-top:20px;">
+                    <div style="margin-top:20px; border-top:2px dashed #e2e8f0; padding-top:12px;">
                         <h4>Firmas: (Cliente)</h4>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
                             <div style="text-align:center;">
                                 <h5>Firma Recepción</h5>
-                                ${sigRec ? `<img src="${sigRec}" style="max-width:100%; max-height:150px; border:1px solid #ccc; border-radius:8px;">` : '<em>Sin firma</em>'}
-                                <div><strong>Nombre:</strong> ${escapeHtml(borradorData?.clienteRecepcionNombre || '-')}</div>
-                                <div><strong>Cédula:</strong> ${escapeHtml(borradorData?.clienteRecepcionCedula || '-')}</div>
-                                <div><strong>Cargo:</strong> ${escapeHtml(borradorData?.clienteRecepcionCargo || '-')}</div>
+                                ${firmaFR(sigRec, true)}
+                                <div><strong>Nombre:</strong> ${datoFR(borradorData?.clienteRecepcionNombre, true)}</div>
+                                <div><strong>Cédula:</strong> ${datoFR(borradorData?.clienteRecepcionCedula, true)}</div>
+                                <div><strong>Cargo:</strong> ${datoFR(borradorData?.clienteRecepcionCargo, true)}</div>
                             </div>
                             <div style="text-align:center;">
                                 <h5>Firma Entrega</h5>
-                                ${sigEnt ? `<img src="${sigEnt}" style="max-width:100%; max-height:150px; border:1px solid #ccc; border-radius:8px;">` : '<em>Sin firma</em>'}
-                                <div><strong>Nombre:</strong> ${escapeHtml(borradorData?.clienteEntregaNombre || '-')}</div>
-                                <div><strong>Cédula:</strong> ${escapeHtml(borradorData?.clienteEntregaCedula || '-')}</div>
-                                <div><strong>Cargo:</strong> ${escapeHtml(borradorData?.clienteEntregaCargo || '-')}</div>
+                                ${firmaFR(sigEnt, esEntregado)}
+                                <div><strong>Nombre:</strong> ${datoFR(borradorData?.clienteEntregaNombre, esEntregado)}</div>
+                                <div><strong>Cédula:</strong> ${datoFR(borradorData?.clienteEntregaCedula, esEntregado)}</div>
+                                <div><strong>Cargo:</strong> ${datoFR(borradorData?.clienteEntregaCargo, esEntregado)}</div>
                             </div>
                         </div>
                     </div>
 
-                    <div style="margin-top:20px;">
+                    <div style="margin-top:20px; border-top:2px dashed #e2e8f0; padding-top:12px;">
                         <h4>🏢 Representante HIGH TEST</h4>
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
                             <div>
-                                <div><strong>Nombre (Recepción):</strong> ${escapeHtml(borradorData?.highTestRecepcionNombre || '-')}</div>
-                                <div><strong>Cargo:</strong> ${escapeHtml(borradorData?.highTestRecepcionCargo || '-')}</div>
+                                <div><strong>Nombre (Recepción):</strong> ${datoFR(borradorData?.highTestRecepcionNombre, true)}</div>
+                                <div><strong>Cargo (Recepción):</strong> ${datoFR(borradorData?.highTestRecepcionCargo, true)}</div>
                             </div>
                             <div>
-                                <div><strong>Nombre (Entrega):</strong> ${escapeHtml(borradorData?.highTestEntregaNombre || '-')}</div>
-                                <div><strong>Cargo:</strong> ${escapeHtml(borradorData?.highTestEntregaCargo || '-')}</div>
+                                <div><strong>Nombre (Entrega):</strong> ${datoFR(borradorData?.highTestEntregaNombre, esEntregado)}</div>
+                                <div><strong>Cargo (Entrega):</strong> ${datoFR(borradorData?.highTestEntregaCargo, esEntregado)}</div>
                             </div>
                         </div>
                     </div>
-                    ` : ''}
                 </div>`;
 
             content.innerHTML = html;

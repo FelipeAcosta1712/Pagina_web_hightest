@@ -19,14 +19,14 @@
                 <span class="user-info__name" id="adminUserName">Usuario</span>
                 <span class="user-info__role">Administrador</span>
             </div>
-              <a href="../fichas-tecnicas.html" class="header__user-info" id="backToFichas" aria-label="Regresar a fichas técnicas">◀ Fichas técnicas</a>
+              <a href="fichas-tecnicas.html" class="header__user-info" id="backToFichas" aria-label="Regresar a fichas técnicas">◀ Fichas técnicas</a>
               <button class="header__cta header__cta--logout" id="adminLogoutBtn" aria-label="Cerrar sesión">
                 🚪 Salir
               </button>
         </nav>
     </div>
 </header>
-<!-- FICHA TECNICA DE ENSAYO RIGIDEZ DIELÉCTRICA – GUANTES -->
+<!-- FICHA TECNICA DE ENSAYO RIGIDEZ DIELÉCTRICA – CUBIERTAS PLÁSTICAS -->
 <div class="envuelveant">
 <div class="envuelve">
 <link rel="stylesheet" href="../styles-v2.css">
@@ -44,17 +44,17 @@
       <span>INFORMACIÓN DEL ENSAYO</span>
     </div>
     <div class="info-ensayo">
-      <span><b>Norma:</b> ASTM F496</span>
-      <span><b>Documento interno:</b> DC-7.2.1.2 ANEXO A - PROCEDIMIENTO DE ENSAYO PARA GUANTES Y MANGAS</span>
+      <span><b>Norma:</b> ASTM F712</span>
+      <span><b>Documento interno:</b> DC-7.2.1.2 ANEXO F - PROCEDIMIENTO DE ENSAYO PARA CUBIERTAS PLÁSTICAS</span>
       <span><b>Laboratorio:</b> HIGH TEST SAS</span>
     </div>
   </div>
   <div class="control-doc" role="note" aria-label="Control documental">
     <div class="control-title">CONTROL DOCUMENTAL</div>
     <div class="control-body">
-      <div class="fr">FR-7.2.1.2 ANEXO A.1</div>
-      <div class="version"><b>Versión:</b> 01</div>
-      <div class="date"><b>Fecha:</b> 2026-03-18</div>
+      <div class="fr">FR-7.2.1.2 ANEXO F</div>
+      <div class="version"><b>Versión:</b> 02</div>
+      <div class="date"><b>Fecha:</b> 2026-08-14</div>
     </div>
   </div>
   </div>
@@ -74,35 +74,24 @@
           <li><strong>Tipo de tensión:</strong> AC</li>
           <li><strong>Frecuencia:</strong> 50–60 Hz</li>
           <li><strong>Rata de subida:</strong> 1000 V/s</li>
-          <li><strong>Tiempo de ensayo:</strong> 1 minuto</li>
-          <li><strong>Conductividad del agua:</strong> ≥ 100 μS/cm</li>
         </ul>
-        <table class="small-params-table" aria-label="Criterios operativos">
+        <table class="small-params-table" aria-label="Inner Electrode Sizes">
           <thead>
             <tr>
-              <th>Ítem</th>
-              <th>Criterio operativo</th>
+              <th rowspan="2">Class</th>
+              <th colspan="2">Inner Electrode Diameter, in. (mm)</th>
+            </tr>
+            <tr>
+              <th>Min</th>
+              <th>Max</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>Medición del guante</td>
-              <td>Desde la punta del dedo medio hasta el borde del guante</td>
-            </tr>
-           
-            <tr>
-              <td>Línea de inmersión</td>
-              <td>Medida desde el borde del guante hacia abajo según distancia establecida</td>
-            </tr>
-            
-            <tr>
-              <td>Electrodo de alta tensión</td>
-              <td>Ubicado dentro del guante (en contacto con el agua interna)</td>
-            </tr>
-            <tr>
-              <td>Electrodo de retorno</td>
-              <td>Conectado al agua externa</td>
-            </tr>
+            <tr><td>2</td><td>0.25 (6.4)</td><td>0.75 (19.1)</td></tr>
+            <tr><td>3</td><td>0.25 (6.4)</td><td>0.75 (19.1)</td></tr>
+            <tr><td>4</td><td>0.25 (6.4)</td><td>0.75 (19.1)</td></tr>
+            <tr><td>5</td><td>0.50 (12.7)</td><td>1.50 (38.1)</td></tr>
+            <tr><td>6</td><td>0.75 (19.1)</td><td>2.00 (50.8)</td></tr>
           </tbody>
         </table>
       </div>
@@ -116,25 +105,15 @@
           <li>Marcación de nivel de inmersión realizada</li>
           <li>Elemento identificado y marcado</li>
           <li>Datos iniciales ingresados en el FR-7.8</li>
-          <li>Montaje preliminar correcto</li>
-          <li>Nivel de agua uniforme (interno y externo)</li>
+          <li>Montaje preliminar correcto: correspondencia geométrica del montaje conforme a la Tabla 3 de la norma ASTM F712-24</li>
           <li>Electrodos correctamente instalados</li>
-          <li>Superficie seca por encima del nivel de inmersión</li>
           <li>Verificación general del montaje antes de energizar</li>
+          <li>Registro de inspección antes de cada ensayo (FR-7.2 lista de chequeo para ensayos eléctricos en sitio): verificación de que los electrodos están correctamente según el montaje y el elemento o cubierta, firmes y estables, y no cambian durante la aplicación de tensión.</li>
           <li>Sistema de puesta a tierra adecuada</li>
-        </ul>
-      </div>
-      <div class="box section-5">
-        <h4>SECCIÓN 5 - ALISTAMIENTO Y CONTROL METROLÓGICO DE EQUIPOS</h4>
-        <div class="section5-emoji" aria-hidden="true" title="Alistamiento y control">📟</div>
-        <ul>
-          <li>Elevador de tensión HIPOT 6CP 200</li>
-          <li>Multímetro digital</li>
-          <li>Cronómetro digital</li>
-          <li>Termohigrómetro</li>
-          <li>Cinta métrica</li>
-          <li>Conductímetro</li>
-          <ul class="text-amb">Verificación previa: Equipos disponibles, identificados, en buen estado y con calibración vigente.</ul>
+          <li>Posición de servicio.</li>
+          <li>Identificación y geometría del mandril.</li>
+          <li>Posición del conductor de alta tensión, con apoyo del conductor sobre los elementos guía.</li>
+          <li>La longitud o área total técnicamente evaluable comprende la longitud o área efectivamente cubierta por el electrodo, garantizando simultáneamente la debida separación del electrodo externo respecto de las aberturas para delimitar la zona de ensayo.</li>
         </ul>
       </div>
      
@@ -149,7 +128,7 @@
             <ul class="text-amb"> Condiciones dentro de rango antes y durante el ensayo</ul>
           </ul>
       </div>
-        <div class="center-node"><img src="/image/cubiertas%20plasticas.jpeg" alt="Cubiertas plásticas" class="center-img"></div>
+        <div class="center-node"><img src="https://res.cloudinary.com/mqjict7l/image/upload/v1790687564/platicaScreenshot_1.jpg" alt="Cubiertas plásticas" class="center-img"></div>
       <div class="box">
         <h4>SECCIÓN 6 - SEGURIDAD</h4>
         <div class="warning-icon" aria-hidden="true" title="Advertencia">⚠️</div>
@@ -163,6 +142,17 @@
           <li>Formato de control de acceso diligenciado a personas involucradas</li>
         </ul>
       </div>
+      <div class="box section-5">
+        <h4>SECCIÓN 5 - ALISTAMIENTO Y CONTROL METROLÓGICO DE EQUIPOS</h4>
+        <div class="section5-emoji" aria-hidden="true" title="Alistamiento y control">📟</div>
+        <ul>
+          <li>Elevador de tensión HIPOT 6CP 200</li>
+          <li>Cronómetro digital</li>
+          <li>Termohigrómetro</li>
+          <li>Cinta métrica</li>
+          <ul class="text-amb">Verificación previa: Equipos disponibles, identificados, en buen estado y con calibración vigente.</ul>
+        </ul>
+      </div>
     </div>
     
     <div class="col-right">
@@ -172,26 +162,19 @@
           <table class="params-table">
               <thead>
                 <tr>
-                  <th rowspan="2">Clase Guante</th>
-                  <th rowspan="2">Voltaje de prueba<br>(kV rms)</th>
-                  <th rowspan="2">Tiempo de llegada (Rampa)</th>
-                  <th colspan="4">Corriente de fuga máx. (mA)</th>
-                  <th rowspan="2">Espacios libres de arco eléctrico</th>
-                </tr>
-                <tr>
-                  <th>Guante 280 mm</th>
-                  <th>Guante 360 mm</th>
-                  <th>Guante 410 mm</th>
-                  <th>Guante 460 mm</th>
+                  <th>Clase</th>
+                  <th>Voltaje de prueba<br>(kV AC r.ms)</th>
+                  <th>Tiempo de llegada<br>(Rampa) (s)</th>
+                  <th>Tiempo de prueba<br>(s)</th>
+                  <th>Espacios libres de arco eléctrico<br>entre electrodos (mm)</th>
                 </tr>
               </thead>
             <tbody>
-              <tr><td>00</td><td>2.5</td><td>2.5 s</td><td>8</td><td>12</td><td>-</td><td>-</td><td>76 mm</td></tr>
-                <tr><td>0</td><td>5</td><td>5 s</td><td>8</td><td>12</td><td>14</td><td>16</td><td>76 mm</td></tr>
-                <tr><td>1</td><td>10</td><td>10 s</td><td>-</td><td>14</td><td>16</td><td>18</td><td>76 mm</td></tr>
-                <tr><td>2</td><td>20</td><td>20 s</td><td>-</td><td>16</td><td>18</td><td>20</td><td>127 mm</td></tr>
-                <tr><td>3</td><td>30</td><td>30 s</td><td>-</td><td>18</td><td>20</td><td>22</td><td>178 mm</td></tr>
-                <tr><td>4</td><td>40</td><td>40 s</td><td>-</td><td>-</td><td>22</td><td>24</td><td>254 mm</td></tr>
+              <tr><td>2</td><td>13</td><td>13</td><td>60</td><td>127 mm</td></tr>
+              <tr><td>3</td><td>24</td><td>24</td><td>60</td><td>178 mm</td></tr>
+              <tr><td>4</td><td>32</td><td>32</td><td>60</td><td>254 mm</td></tr>
+              <tr><td>5</td><td>42</td><td>42</td><td>30</td><td>330 mm</td></tr>
+              <tr><td>6</td><td>64</td><td>64</td><td>15</td><td>381 mm</td></tr>
             </tbody>
           </table>
         </div>
@@ -251,14 +234,14 @@
       <div class="accept-block">
         <div class="accept-icon" aria-hidden="true">✔️</div>
         <div class="accept-content">
-          <div class="accept-title"><span class="accept-label">CUMPLE | PASA:</span></div>
-          <div class="accept-text">Si el elemento soporta la tensión de ensayo especificada (según clase) durante 1 minuto sin presentar disrupción y la corriente de fuga medida no excede el límite máximo.</div>
+          <div class="accept-title"><span class="accept-label">CUMPLE</span></div>
+          <div class="accept-text">El elemento soporta la tensión de ensayo especificada sin ruptura dieléctrica.</div>
         </div>
       </div>
       <div class="fail-block">
         <div class="fail-content">
-          <div class="fail-title"><span class="fail-label">NO CUMPLE | NO PASA:</span></div>
-          <div class="fail-text">Si el elemento presenta disrupción o la corriente de fuga medida excede el límite máximo.</div>
+          <div class="fail-title"><span class="fail-label">NO CUMPLE</span></div>
+          <div class="fail-text">El elemento presenta ruptura dieléctrica.</div>
         </div>
         <div class="fail-icon" aria-hidden="true">❌</div>
       </div>
@@ -809,13 +792,13 @@
     .sheet-body.grid-layout .col-center .box .box-inner { padding-top: 6px !important; padding-bottom: 6px !important; }
     .center-node { margin-top: 0 !important; margin-bottom: 0 !important; }
     /* Small vertical gap between image and adjacent box */
-    .center-node + .box { margin-top: 90px !important; }
-    .center-node img, .center-node .center-img { display:block; margin:30px 0 !important; padding:0 !important; }
+    .center-node + .box { margin-top: 20px !important; }
+    .center-node img, .center-node .center-img { display:block; margin:14px auto !important; padding:0 !important; }
 
     .sheet-body.grid-layout .center-img,
     .center-node .center-img {
-      width: 100%;
-      max-width: 850px;
+      width: auto;
+      max-width: 420px;
       height: auto;
     }
 
@@ -901,22 +884,24 @@
       width: 100%;
       margin-top: 6px;
     }
-    /* Imagen central — altura fija y sombra sutil (sin anillo dorado) */
+    /* Imagen central — altura reducida y sin recorte */
     .center-node .center-img {
-      height: 480px !important;
-      max-height: 70vh !important;
+      height: 300px !important;
+      max-height: 40vh !important;
       width: auto !important;
       max-width: 100% !important;
-      object-fit: cover !important;
+      object-fit: contain !important;
       display: block !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
       border-radius: 12px !important;
       border: none !important;
       box-shadow: 0 1px 60px rgba(228, 206, 15, 0.87) !important;
     }
     @media (max-width:1100px) {
       .center-node .center-img {
-        height: 360px !important;
-        max-height: 45vh !important;
+        height: 240px !important;
+        max-height: 35vh !important;
         border-radius: 10px !important;
         border: none !important;
         box-shadow: 0 8px 20px rgba(0,0,0,0.16) !important;

@@ -19,7 +19,7 @@
                 <span class="user-info__name" id="adminUserName">Usuario</span>
                 <span class="user-info__role">Administrador</span>
             </div>
-              <a href="../fichas-tecnicas.html" class="header__user-info" id="backToFichas" aria-label="Regresar a fichas técnicas">◀ Fichas técnicas</a>
+              <a href="fichas-tecnicas.html" class="header__user-info" id="backToFichas" aria-label="Regresar a fichas técnicas">◀ Fichas técnicas</a>
               <button class="header__cta header__cta--logout" id="adminLogoutBtn" aria-label="Cerrar sesión">
                 🚪 Salir
               </button>
@@ -44,17 +44,17 @@
       <span>INFORMACIÓN DEL ENSAYO</span>
     </div>
     <div class="info-ensayo">
-      <span><b>Norma:</b> ASTM F496</span>
-      <span><b>Documento interno:</b> DC-7.2.1.2 ANEXO A - PROCEDIMIENTO DE ENSAYO PARA GUANTES Y MANGAS</span>
+      <span><b>Norma:</b> ASTM F479</span>
+      <span><b>Documento interno:</b> DC-7.2.1.2 ANEXO D - PROCEDIMIENTO DE ENSAYO PARA MANTAS AISLANTES</span>
       <span><b>Laboratorio:</b> HIGH TEST SAS</span>
     </div>
   </div>
   <div class="control-doc" role="note" aria-label="Control documental">
     <div class="control-title">CONTROL DOCUMENTAL</div>
     <div class="control-body">
-      <div class="fr">FR-7.2.1.2 ANEXO A.1</div>
-      <div class="version"><b>Versión:</b> 01</div>
-      <div class="date"><b>Fecha:</b> 2026-03-18</div>
+      <div class="fr">FR-7.2.1.2 ANEXO D</div>
+      <div class="version"><b>Versión:</b> 02</div>
+      <div class="date"><b>Fecha:</b> 2026-08-11</div>
     </div>
   </div>
   </div>
@@ -75,7 +75,6 @@
           <li><strong>Frecuencia:</strong> 50–60 Hz</li>
           <li><strong>Rata de subida:</strong> 1000 V/s</li>
           <li><strong>Tiempo de ensayo:</strong> 1 minuto</li>
-          <li><strong>Conductividad del agua:</strong> ≥ 100 μS/cm</li>
         </ul>
         <table class="small-params-table" aria-label="Criterios operativos">
           <thead>
@@ -86,22 +85,16 @@
           </thead>
           <tbody>
             <tr>
-              <td>Medición del guante</td>
-              <td>Desde la punta del dedo medio hasta el borde del guante</td>
-            </tr>
-           
-            <tr>
-              <td>Línea de inmersión</td>
-              <td>Medida desde el borde del guante hacia abajo según distancia establecida</td>
-            </tr>
-            
-            <tr>
               <td>Electrodo de alta tensión</td>
-              <td>Ubicado dentro del guante (en contacto con el agua interna)</td>
+              <td>Placa superior</td>
             </tr>
             <tr>
-              <td>Electrodo de retorno</td>
-              <td>Conectado al agua externa</td>
+              <td>Electrodo de retorno (tierra)</td>
+              <td>Placa inferior</td>
+            </tr>
+            <tr>
+              <td>Cuñas de nivelación de la placa inferior</td>
+              <td>Fijas y mecánicamente estables: mantienen el electrodo plano, continuo y en contacto uniforme con la manta, sin espacios de aire (gaps) visibles.</td>
             </tr>
           </tbody>
         </table>
@@ -113,29 +106,30 @@
         <ul>
           <li>Inspección visual completa</li>
           <li>Elemento limpio y seco</li>
-          <li>Marcación de nivel de inmersión realizada</li>
           <li>Elemento identificado y marcado</li>
           <li>Datos iniciales ingresados en el FR-7.8</li>
           <li>Montaje preliminar correcto</li>
-          <li>Nivel de agua uniforme (interno y externo)</li>
           <li>Electrodos correctamente instalados</li>
-          <li>Superficie seca por encima del nivel de inmersión</li>
+          <li>Verificación de ausencia de relieves, tornillos sobresalientes, uniones o irregularidades en las superficies de contacto superior e inferior</li>
+          <li>Verificación de estabilidad y fijación de las cuñas de nivelación en la placa inferior (cuando aplique)</li>
+          <li>Registro de inspección antes de cada ensayo (FR-7.2 lista de chequeo para ensayos eléctricos en sitio): verificación de que las cuñas son fijas, mecánicamente estables y no cambian durante la aplicación de tensión.</li>
+          <li>Garantía de contacto plano, uniforme y continuo en toda el área del ítem</li>
           <li>Verificación general del montaje antes de energizar</li>
           <li>Sistema de puesta a tierra adecuada</li>
         </ul>
       </div>
       <div class="box section-5">
         <h4>SECCIÓN 5 - ALISTAMIENTO Y CONTROL METROLÓGICO DE EQUIPOS</h4>
-        <div class="section5-emoji" aria-hidden="true" title="Alistamiento y control">📟</div>
         <ul>
           <li>Elevador de tensión HIPOT 6CP 200</li>
-          <li>Multímetro digital</li>
           <li>Cronómetro digital</li>
           <li>Termohigrómetro</li>
           <li>Cinta métrica</li>
-          <li>Conductímetro</li>
-          <ul class="text-amb">Verificación previa: Equipos disponibles, identificados, en buen estado y con calibración vigente.</ul>
         </ul>
+        <div class="verify-row">
+          <p class="text-amb">Verificación previa: Equipos disponibles, identificados, en buen estado y con calibración vigente.</p>
+          <div class="section5-emoji" aria-hidden="true" title="Alistamiento y control">📟</div>
+        </div>
       </div>
      
     </div>
@@ -149,7 +143,10 @@
             <ul class="text-amb"> Condiciones dentro de rango antes y durante el ensayo</ul>
           </ul>
       </div>
-      <div class="center-node"><img src="/image/mantas.png" alt="Mantas" class="center-img"></div>
+      <div class="center-node">
+        <img src="https://res.cloudinary.com/mqjict7l/image/upload/v1790662991/Gemini_Generated_Image_zgawpezgawpezgaw.jpg" alt="Mantas" class="center-img">
+        <img src="https://res.cloudinary.com/mqjict7l/image/upload/v1790951313/Gemini_Generated_Image_ffi5syffi5syffi5.jpg" alt="Mantas detalle" class="center-img">
+      </div>
       <div class="box">
         <h4>SECCIÓN 6 - SEGURIDAD</h4>
         <div class="warning-icon" aria-hidden="true" title="Advertencia">⚠️</div>
@@ -163,6 +160,10 @@
           <li>Formato de control de acceso diligenciado a personas involucradas</li>
         </ul>
       </div>
+      <div class="ficha-nota">
+        <strong>Criterio de no inicio o interrupción del ensayo:</strong>
+        Se establece como criterio de no inicio o interrupción inmediata del ensayo cualquier condición que impida garantizar el contacto plano, uniforme y continuo de los electrodos con el ítem de ensayo (incluyendo la condición de montaje con cuñas). En estos casos, el montaje deberá ser corregido por completo antes de aplicar la tensión de ensayo.
+      </div>
     </div>
     
     <div class="col-right">
@@ -172,26 +173,18 @@
           <table class="params-table">
               <thead>
                 <tr>
-                  <th rowspan="2">Clase Guante</th>
-                  <th rowspan="2">Voltaje de prueba<br>(kV rms)</th>
-                  <th rowspan="2">Tiempo de llegada (Rampa)</th>
-                  <th colspan="4">Corriente de fuga máx. (mA)</th>
-                  <th rowspan="2">Espacios libres de arco eléctrico</th>
-                </tr>
-                <tr>
-                  <th>Guante 280 mm</th>
-                  <th>Guante 360 mm</th>
-                  <th>Guante 410 mm</th>
-                  <th>Guante 460 mm</th>
+                  <th>Clase del elemento</th>
+                  <th>Voltaje de prueba<br>AC (r.ms)</th>
+                  <th>Tiempo de llegada<br>(Rampa)</th>
+                  <th>Espacios libres de<br>arco eléctrico</th>
                 </tr>
               </thead>
             <tbody>
-              <tr><td>00</td><td>2.5</td><td>2.5 s</td><td>8</td><td>12</td><td>-</td><td>-</td><td>76 mm</td></tr>
-                <tr><td>0</td><td>5</td><td>5 s</td><td>8</td><td>12</td><td>14</td><td>16</td><td>76 mm</td></tr>
-                <tr><td>1</td><td>10</td><td>10 s</td><td>-</td><td>14</td><td>16</td><td>18</td><td>76 mm</td></tr>
-                <tr><td>2</td><td>20</td><td>20 s</td><td>-</td><td>16</td><td>18</td><td>20</td><td>127 mm</td></tr>
-                <tr><td>3</td><td>30</td><td>30 s</td><td>-</td><td>18</td><td>20</td><td>22</td><td>178 mm</td></tr>
-                <tr><td>4</td><td>40</td><td>40 s</td><td>-</td><td>-</td><td>22</td><td>24</td><td>254 mm</td></tr>
+              <tr><td>0</td><td>5,000 V</td><td>5 s</td><td>76 mm (3.0 in)</td></tr>
+              <tr><td>1</td><td>10,000 V</td><td>10 s</td><td>76 mm (3.0 in)</td></tr>
+              <tr><td>2</td><td>20,000 V</td><td>20 s</td><td>127 mm (5.0 in)</td></tr>
+              <tr><td>3</td><td>30,000 V</td><td>30 s</td><td>178 mm (7.0 in)</td></tr>
+              <tr><td>4</td><td>40,000 V</td><td>40 s</td><td>254 mm (10.0 in)</td></tr>
             </tbody>
           </table>
         </div>
@@ -204,7 +197,6 @@
             <li>Montaje correcto del elemento</li>
             <li>Conexiones firmes y correctas</li>
             <li>Geometría adecuada del montaje</li>
-            <li>Llenado de agua uniforme </li>
             <li>Evitar proximidad de cables a elementos metálicos</li>
             <li>Incremento de tensión controlado</li>
             <li>Monitoreo continuo del elemento</li>
@@ -219,6 +211,9 @@
             <li>Riesgos no controlados para el personal o el entorno</li>
             <li>Daños físicos en el elemento</li>
             <li>Montaje incorrecto o conexiones defectuosas</li>
+            <li>Presencia de espacios de aire (gaps), separaciones o contacto no uniforme entre los electrodos y la manta</li>
+            <li>Inestabilidad o desplazamiento de las cuñas de nivelación o elementos de soporte durante el posicionamiento</li>
+            <li>Cualquier condición que impida garantizar un montaje plano y continuo conforme al numeral 8.5 de la norma ASTM F479</li>
             <li>Presencia de interferencias o estructuras metálicas cercanas</li>
             <li>Fallas en la alimentación eléctrica o en la puesta a tierra</li>
             <li>Condiciones ambientales fuera de rango</li>
@@ -251,14 +246,14 @@
       <div class="accept-block">
         <div class="accept-icon" aria-hidden="true">✔️</div>
         <div class="accept-content">
-          <div class="accept-title"><span class="accept-label">CUMPLE | PASA:</span></div>
-          <div class="accept-text">Si el elemento soporta la tensión de ensayo especificada (según clase) durante 1 minuto sin presentar disrupción y la corriente de fuga medida no excede el límite máximo.</div>
+          <div class="accept-title"><span class="accept-label">CUMPLE ✓</span></div>
+          <div class="accept-text">El elemento soporta la tensión de prueba sin ruptura dieléctrica durante el tiempo de aplicación.</div>
         </div>
       </div>
       <div class="fail-block">
         <div class="fail-content">
-          <div class="fail-title"><span class="fail-label">NO CUMPLE | NO PASA:</span></div>
-          <div class="fail-text">Si el elemento presenta disrupción o la corriente de fuga medida excede el límite máximo.</div>
+          <div class="fail-title"><span class="fail-label">NO CUMPLE ✕</span></div>
+          <div class="fail-text">Presencia de ruptura dieléctrica, perforación o descarga disruptiva.</div>
         </div>
         <div class="fail-icon" aria-hidden="true">❌</div>
       </div>
@@ -416,6 +411,34 @@
     margin-top: 4px;
     text-align: center
   }
+
+  /* Nota destacada debajo de SECCIÓN 6 */
+  .ficha-nota {
+    margin-top: 10px;
+    padding: 12px 14px;
+    border: 2px solid #003a80;
+    border-left: 6px solid #f7cf08;
+    border-radius: 8px;
+    background: #5abbd821;
+    font-size: 13.5px;
+    line-height: 1.45;
+    text-align: justify;
+  }
+  .ficha-nota strong {
+    display: block;
+    color: #003a80;
+    font-size: 14px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  body.theme-dark .ficha-nota {
+    background: rgba(255,255,255,0.02);
+    color: #e6eef7;
+    border-color: #f7cf08;
+    border-left-color: #f7cf08;
+  }
+  body.theme-dark .ficha-nota strong { color: #f7cf08; }
 
   .info-ensayo span {
     display: block;
@@ -669,10 +692,21 @@
 
   /* Emoji para SECCIÓN 5 - Alistamiento y control metrológico */
   .sheet .box.section-5 { position: relative; }
+  .sheet .box.section-5 .verify-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 4px;
+  }
+  .sheet .box.section-5 .verify-row .text-amb {
+    flex: 1 1 auto;
+    margin: 0;
+    text-align: center;
+  }
   .sheet .box.section-5 .section5-emoji {
-    position: absolute;
-    top: 74px;
-    right: 18px;
+    position: static;
+    flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -689,6 +723,8 @@
   }
 
   @media (max-width:800px) {
+    .sheet .box.section-5 .verify-row { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .sheet .box.section-5 .verify-row .text-amb { text-align: left; }
     .sheet .box.section-5 .section5-emoji {
       position: static;
       display: inline-flex;
@@ -810,7 +846,11 @@
     .center-node { margin-top: 0 !important; margin-bottom: 0 !important; }
     /* Small vertical gap between image and adjacent box */
     .center-node + .box { margin-top: 90px !important; }
-    .center-node img, .center-node .center-img { display:block; margin:30px 0 !important; padding:0 !important; }
+    .center-node img, .center-node .center-img { display:block; margin:0 !important; padding:0 !important; }
+    .center-node .center-img + .center-img { margin-top:0 !important; }
+    .center-node .center-img + .center-img { object-position: center top !important; }
+    .center-node .center-img:first-child { margin-top:30px !important; margin-bottom: 10px !important; }
+    .center-node .center-img:last-child { margin-bottom:30px !important; }
 
     .sheet-body.grid-layout .center-img,
     .center-node .center-img {
@@ -882,15 +922,17 @@
       .small-params-table th, .small-params-table td { padding: 5px 6px; }
     }
 
-    /* Row to place two boxes side-by-side inside right column */
+    /* Row to place two boxes stacked vertically inside right column */
     .col-right .row-two {
       display: flex;
+      flex-direction: column;
       gap: 12px;
-      align-items: flex-start;
+      align-items: stretch;
     }
     .col-right .row-two .box {
-      flex: 1;
+      flex: none;
       min-width: 0;
+      width: 100%;
     }
     @media (max-width:800px) {
       .col-right .row-two { flex-direction: column; gap: 8px; }
@@ -903,9 +945,9 @@
     }
     /* Imagen central — altura fija y sombra sutil (sin anillo dorado) */
     .center-node .center-img {
-      height: 480px !important;
-      max-height: 70vh !important;
-      width: auto !important;
+      height: 235px !important;
+      max-height: 34vh !important;
+      width: 100% !important;
       max-width: 100% !important;
       object-fit: cover !important;
       display: block !important;
@@ -915,8 +957,8 @@
     }
     @media (max-width:1100px) {
       .center-node .center-img {
-        height: 360px !important;
-        max-height: 45vh !important;
+        height: 165px !important;
+        max-height: 22vh !important;
         border-radius: 10px !important;
         border: none !important;
         box-shadow: 0 8px 20px rgba(0,0,0,0.16) !important;
@@ -925,8 +967,8 @@
     @media (max-width:800px) {
       /* En móviles permitir que la imagen reduzca altura y no desborde */
       .center-node .center-img {
-        height: auto !important;
-        width: 80% !important;
+        height: 30vh !important;
+        width: 100% !important;
         max-width: 100% !important;
         object-fit: contain !important;
         border-radius: 8px !important;

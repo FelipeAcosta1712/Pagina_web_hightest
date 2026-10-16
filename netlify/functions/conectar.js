@@ -991,22 +991,49 @@ exports.handler = async (event) => {
                 }
                 const { data: existing } = await supabase
                     .from('borradores')
-                    .select('id')
+                    .select('id, datos')
                     .eq('usuario_email', usuarioEmail)
                     .limit(1);
 
                 const row = Array.isArray(existing) ? existing[0] : null;
+                const prevArr = (row && Array.isArray(row.datos)) ? row.datos : [];
+                const normB = (s) => String(s || '').replace(/\s+/g, '').toUpperCase();
+                // Protección anti-pérdida: un resumen local (_isSummaryOnly) o un borrador
+                // sin elementos NUNCA debe reemplazar un borrador completo del servidor
+                // (fue la causa de que se perdieran elementos de los casos).
+                const merged = drafts.map(incoming => {
+                    if (!incoming || typeof incoming !== 'object') return incoming;
+                    const prev = prevArr.find(d => d && typeof d === 'object' &&
+                        normB(d.cotizacion || d.quoteNumber) === normB(incoming.cotizacion || incoming.quoteNumber));
+                    if (!prev) return incoming;
+                    const incomingFull = Array.isArray(incoming.items);
+                    const prevFull = Array.isArray(prev.items);
+                    if (!incomingFull && prevFull) {
+                        if (incoming._isSummaryOnly) {
+                            return prev; // resumen: conservar el completo del servidor tal cual
+                        }
+                        // Borrador sin elementos pero con campos editados: conservar los
+                        // elementos existentes y aplicar los campos nuevos
+                        const enriched = { ...incoming, items: prev.items };
+                        if (!enriched.savedRowsData && prev.savedRowsData) enriched.savedRowsData = prev.savedRowsData;
+                        if (!enriched.signatureData && prev.signatureData) enriched.signatureData = prev.signatureData;
+                        delete enriched._isSummaryOnly;
+                        return enriched;
+                    }
+                    return incoming;
+                });
+
                 let result;
                 if (row) {
                     result = await supabase
                         .from('borradores')
-                        .update({ datos: drafts, updated_at: new Date().toISOString() })
+                        .update({ datos: merged, updated_at: new Date().toISOString() })
                         .eq('id', row.id)
                         .select('id');
                 } else {
                     result = await supabase
                         .from('borradores')
-                        .insert({ usuario_email: usuarioEmail, datos: drafts })
+                        .insert({ usuario_email: usuarioEmail, datos: merged })
                         .select('id');
                 }
                 if (result.error) {
@@ -1015,8 +1042,8 @@ exports.handler = async (event) => {
 
                 // Guardar firmas del borrador activo en columnas dedicadas
                 try {
-                    if (Array.isArray(drafts) && drafts.length > 0) {
-                        const currentDraft = drafts.find(d => d.status !== 'entrega') || drafts[drafts.length - 1];
+                    if (Array.isArray(merged) && merged.length > 0) {
+                        const currentDraft = merged.find(d => d.status !== 'entrega') || merged[merged.length - 1];
                         const firmaRec = currentDraft?.signatureData?.signatureCanvasRecepcion || null;
                         const firmaEnt = currentDraft?.signatureData?.signatureCanvasEntrega || null;
                         const firmaUpdate = {};
@@ -1042,6 +1069,32 @@ exports.handler = async (event) => {
                 if (!cotizacion || !borrador || typeof borrador !== 'object') {
                     return jsonResponse(400, { ok: false, error: 'cotizacion y borrador requeridos' });
                 }
+                // Protección anti-pérdida: si el borrador entrante NO trae elementos y el
+                // servidor SÍ los tiene, no se permita que los borre (fue la causa de la
+                // pérdida de elementos en los casos). Resumen → se conserva el completo.
+                try {
+                    const normI = (s) => String(s || '').replace(/\s+/g, '').toUpperCase();
+                    const { data: rowsP } = await supabase
+                        .from('borradores')
+                        .select('datos')
+                        .eq('usuario_email', 'shared')
+                        .limit(1);
+                    const arrP = (Array.isArray(rowsP) && rowsP[0] && Array.isArray(rowsP[0].datos)) ? rowsP[0].datos : [];
+                    const prevP = arrP.find(d => d && typeof d === 'object' &&
+                        normI(d.cotizacion || d.quoteNumber) === normI(cotizacion));
+                    if (prevP && Array.isArray(prevP.items) && !Array.isArray(borrador.items)) {
+                        if (borrador._isSummaryOnly) {
+                            return jsonResponse(200, {
+                                ok: true, saved: false, reason: 'server_full_kept',
+                                detail: 'Se conservó el borrador completo del servidor (el envío era un resumen sin elementos)'
+                            });
+                        }
+                        borrador.items = prevP.items;
+                        if (!borrador.savedRowsData && prevP.savedRowsData) borrador.savedRowsData = prevP.savedRowsData;
+                        if (!borrador.signatureData && prevP.signatureData) borrador.signatureData = prevP.signatureData;
+                        delete borrador._isSummaryOnly;
+                    }
+                } catch (e) { /* si falla la verificación, continuar con el guardado normal */ }
                 const { data: rpcResult, error: rpcError } = await supabase
                     .rpc('save_borrador_individual', {
                         p_cotizacion: cotizacion,
@@ -1250,6 +1303,52 @@ exports.handler = async (event) => {
                 return jsonResponse(200, { ok: true });
             }
 
+            // ── update_cantidad_entregada_batch: actualizar cantidades entregadas por ensayo ──
+            // Actualiza cantidad_entregada en TODAS las filas (marcas) de cada ensayo del proceso.
+            // El cliente agrega con MAX() por ensayo, por lo que asignar el mismo valor a todas
+            // las filas garantiza que el total mostrado coincida con el valor guardado.
+            if (payload.action === 'update_cantidad_entregada_batch') {
+                const procesoId = payload.proceso_id;
+                const items = payload.items;
+                if (!procesoId) {
+                    return jsonResponse(400, { ok: false, error: 'proceso_id requerido' });
+                }
+                if (!Array.isArray(items) || items.length === 0) {
+                    return jsonResponse(400, { ok: false, error: 'items debe ser un array no vacío' });
+                }
+                for (const it of items) {
+                    if (it.ensayo_id === undefined || it.ensayo_id === null || it.ensayo_id === '') {
+                        return jsonResponse(400, { ok: false, error: 'Cada item debe tener ensayo_id' });
+                    }
+                    const cant = parseInt(it.cantidad_entregada, 10);
+                    if (isNaN(cant) || cant < 0) {
+                        return jsonResponse(400, { ok: false, error: 'cantidad_entregada debe ser un entero >= 0' });
+                    }
+                }
+
+                let updated = 0;
+                const ensayosUpdated = [];
+                const errores = [];
+                for (const it of items) {
+                    const { data, error } = await supabase
+                        .from('detalle_procesos_ac')
+                        .update({ cantidad_entregada: parseInt(it.cantidad_entregada, 10) })
+                        .eq('proceso_id', procesoId)
+                        .eq('ensayo_id', it.ensayo_id)
+                        .select('id, ensayo_id');
+                    if (error) errores.push(String(it.ensayo_id) + ': ' + error.message);
+                    else if (Array.isArray(data) && data.length > 0) {
+                        updated += data.length;
+                        ensayosUpdated.push(it.ensayo_id);
+                    }
+                }
+
+                if (errores.length > 0 && updated === 0) {
+                    return jsonResponse(500, { ok: false, error: 'Error actualizando cantidades entregadas', detail: errores.join('; ') });
+                }
+                return jsonResponse(200, { ok: true, updated, ensayos: ensayosUpdated, warnings: errores.length ? errores : undefined });
+            }
+
             // ── sync_detalle_proceso: UPSERT atómico via stored procedure ──
             // Delega toda la lógica a sync_detalle_proceso() en PostgreSQL:
             //   FASE 1: FOR UPDATE (bloqueo de filas)
@@ -1395,6 +1494,332 @@ exports.handler = async (event) => {
                 }
 
                 return jsonResponse(200, { ok: true, conteos, detalleCompleto: detalleArrays });
+            }
+
+            // ── get_completitud_resumen: banderas ligeras de firmas/datos por proceso ──
+            // Devuelve SOLO booleanos por numero_proceso (sin payloads de firmas base64):
+            //   firmaRecepcion/firmaEntrega         → firma del cliente
+            //   datosClienteRecepcion/Entrega       → nombre, cédula y cargo del firmante (FR-7.4.1)
+            //   repHtRecepcion/repHtEntrega         → nombre y cargo del representante HIGH TEST
+            // Fuente: procesos_acreditados (firmas) + borradores (datos del formulario).
+            if (payload.action === 'get_completitud_resumen') {
+                const norm = (s) => String(s || '').replace(/\s+/g, '').toUpperCase();
+                const completo = (...vals) => vals.every(v => String(v === null || v === undefined ? '' : v).trim() !== '');
+                const nuevoResumen = () => ({
+                    firmaRecepcion: false,
+                    firmaEntrega: false,
+                    datosClienteRecepcion: false,
+                    datosClienteEntrega: false,
+                    repHtRecepcion: false,
+                    repHtEntrega: false
+                });
+
+                const [resProc, resBorr] = await Promise.all([
+                    supabase
+                        .from('procesos_acreditados')
+                        .select('numero_proceso, firma_cliente_recepcion, firma_cliente_entrega'),
+                    supabase
+                        .from('borradores')
+                        .select('datos')
+                        .eq('usuario_email', 'shared')
+                        .limit(1)
+                ]);
+
+                const resumen = {};
+                const advertencias = [];
+
+                if (resProc.error) {
+                    advertencias.push('procesos: ' + resProc.error.message);
+                }
+
+                (resProc.data || []).forEach(p => {
+                    const key = norm(p.numero_proceso);
+                    if (!key) return;
+                    const e = nuevoResumen();
+                    e.firmaRecepcion = !!p.firma_cliente_recepcion;
+                    e.firmaEntrega = !!p.firma_cliente_entrega;
+                    resumen[key] = e;
+                });
+
+                if (resBorr.error) {
+                    advertencias.push('borradores: ' + resBorr.error.message);
+                } else {
+                    const fila = Array.isArray(resBorr.data) && resBorr.data.length > 0 ? resBorr.data[0] : null;
+                    const drafts = fila && Array.isArray(fila.datos) ? fila.datos : [];
+                    drafts.forEach(d => {
+                        if (!d || typeof d !== 'object') return;
+                        const key = norm(d.cotizacion || d.quoteNumber || d.numero_proceso);
+                        if (!key) return;
+                        if (!resumen[key]) resumen[key] = nuevoResumen();
+                        const e = resumen[key];
+                        const sd = (d.signatureData && typeof d.signatureData === 'object') ? d.signatureData : {};
+
+                        // Firmas del cliente (OR: lo que esté registrado cuenta)
+                        e.firmaRecepcion = e.firmaRecepcion || !!(sd.signatureCanvasRecepcion || sd.signatureCanvas);
+                        e.firmaEntrega = e.firmaEntrega || !!sd.signatureCanvasEntrega;
+
+                        // Datos del cliente (firmante FR-7.4.1) — OR entre duplicados
+                        e.datosClienteRecepcion = e.datosClienteRecepcion ||
+                            completo(d.clienteRecepcionNombre, d.clienteRecepcionCedula, d.clienteRecepcionCargo);
+                        e.datosClienteEntrega = e.datosClienteEntrega ||
+                            completo(d.clienteEntregaNombre, d.clienteEntregaCedula, d.clienteEntregaCargo);
+
+                        // Representante HIGH TEST
+                        e.repHtRecepcion = e.repHtRecepcion || completo(d.highTestRecepcionNombre, d.highTestRecepcionCargo);
+                        e.repHtEntrega = e.repHtEntrega || completo(d.highTestEntregaNombre, d.highTestEntregaCargo);
+                    });
+                }
+
+                return jsonResponse(200, { ok: true, resumen, warnings: advertencias.length ? advertencias : undefined });
+            }
+
+            // ── Reconstruye un borrador completo (con items) desde la BD ──
+            // Se usa cuando un caso NO tiene borrador, para que recepción de elementos
+            // cargue los elementos en lugar de abrir el caso vacío.
+            const construirBorradorInicial = async (numero) => {
+                let proc = null;
+                const { data: exRows, error: exErr } = await supabase
+                    .from('procesos_acreditados')
+                    .select('*')
+                    .eq('numero_proceso', numero)
+                    .limit(1);
+                if (!exErr && Array.isArray(exRows) && exRows.length > 0) proc = exRows[0];
+                if (!proc) {
+                    const sinEspacios = numero.replace(/\s+/g, '');
+                    const m = sinEspacios.match(/^(R\d{2})(\d+)$/);
+                    const variants = m ? [m[1] + ' ' + m[2], m[1] + m[2]] : [];
+                    for (const v of variants) {
+                        if (v === numero) continue;
+                        const { data: vr } = await supabase
+                            .from('procesos_acreditados')
+                            .select('*')
+                            .eq('numero_proceso', v)
+                            .limit(1);
+                        if (Array.isArray(vr) && vr.length > 0) { proc = vr[0]; break; }
+                    }
+                }
+
+                let detalle = [];
+                if (proc && proc.id) {
+                    const { data: det, error: detErr } = await supabase
+                        .from('detalle_procesos_ac')
+                        .select('ensayo_id, ensayo_nombre, cantidad, cantidad_entregada, marcas, observaciones')
+                        .eq('proceso_id', proc.id);
+                    if (!detErr && Array.isArray(det)) detalle = det;
+                }
+
+                // Misma estructura que reconstruirCasoDesdeBD()/openCompletedCase en recepción
+                const items = detalle.map(d => {
+                    const units = [];
+                    let seq = 1;
+                    const marcas = Array.isArray(d.marcas) ? d.marcas : [];
+                    for (const mk of marcas) {
+                        for (let i = 0; i < (mk.count || 0); i++) {
+                            units.push({ sequence: seq++, brand: mk.brand || '', observations: d.observaciones || '', code: '' });
+                        }
+                    }
+                    if (units.length === 0 && (d.cantidad || 0) > 0) {
+                        for (let i = 0; i < d.cantidad; i++) {
+                            units.push({ sequence: seq++, brand: '', observations: d.observaciones || '', code: '' });
+                        }
+                    }
+                    return {
+                        type: 'Ensayos Alcance',
+                        name: d.ensayo_nombre || '',
+                        id: d.ensayo_id,
+                        quantity: d.cantidad || 0,
+                        quantity2: d.cantidad_entregada || 0,
+                        quantity3: 0,
+                        quantity4: 0,
+                        status: 0,
+                        units: units,
+                        observaciones: d.observaciones || '',
+                        images: []
+                    };
+                });
+
+                const ahora = new Date().toISOString();
+                const borrador = {
+                    cotizacion: numero,
+                    quoteNumber: numero,
+                    cliente: (proc && proc.cliente) || '',
+                    status: proc ? String(proc.estado || 'recepcion').toLowerCase() : 'recepcion',
+                    fechaRecepcion: (proc && proc.fecha_recepcion) ? String(proc.fecha_recepcion).substring(0, 10) : '',
+                    fechaEntrega: (proc && proc.fecha_entrega_cliente) ? String(proc.fecha_entrega_cliente).substring(0, 10) : '',
+                    informeNombre: (proc && proc.informe_a_nombre_de) || '',
+                    facturarNombre: (proc && proc.facturar_a_nombre_de) || '',
+                    facturar: (proc && proc.n_remision) || '',
+                    nitEmpresa: (proc && (proc.nit_empresa || proc.empresa)) || '',
+                    items: items,
+                    timestamp: ahora,
+                    _createdAt: ahora,
+                    _reconstructedFromDB: true
+                };
+                if (proc && (proc.firma_cliente_recepcion || proc.firma_cliente_entrega)) {
+                    borrador.signatureData = {
+                        signatureCanvasRecepcion: proc.firma_cliente_recepcion || null,
+                        signatureCanvasEntrega: proc.firma_cliente_entrega || null
+                    };
+                }
+                return borrador;
+            };
+
+            // ── update_completitud_proceso: editar/completar datos y firmas del FR-7.4.1 (admin) ──
+            // campos: { clienteRecepcionNombre, ..., highTestEntregaCargo } → string ('' limpia)
+            // firmas: { firma_cliente_recepcion, firma_cliente_entrega }   → string = set, null = quitar,
+            //         clave ausente = no tocar
+            if (payload.action === 'update_completitud_proceso') {
+                const normNum = (s) => String(s || '').replace(/\s+/g, '').toUpperCase();
+                const CAMPOS_VALIDOS = [
+                    'clienteRecepcionNombre', 'clienteRecepcionCedula', 'clienteRecepcionCargo',
+                    'clienteEntregaNombre', 'clienteEntregaCedula', 'clienteEntregaCargo',
+                    'highTestRecepcionNombre', 'highTestRecepcionCargo',
+                    'highTestEntregaNombre', 'highTestEntregaCargo'
+                ];
+                const numero = normalizeText(payload.numero_proceso || payload.numero || '');
+                if (!numero) return jsonResponse(400, { ok: false, error: 'numero_proceso requerido' });
+                const campos = (payload.campos && typeof payload.campos === 'object' && Object.keys(payload.campos).length > 0) ? payload.campos : null;
+                const firmas = (payload.firmas && typeof payload.firmas === 'object' && Object.keys(payload.firmas).length > 0) ? payload.firmas : null;
+                if (!campos && !firmas) return jsonResponse(400, { ok: false, error: 'No hay datos para actualizar' });
+
+                const advertencias = [];
+
+                // 1) Firmas → columnas dedicadas por proceso (procesos_acreditados)
+                if (firmas) {
+                    const firmaUpdate = {};
+                    if (Object.prototype.hasOwnProperty.call(firmas, 'firma_cliente_recepcion')) {
+                        firmaUpdate.firma_cliente_recepcion = firmas.firma_cliente_recepcion || null;
+                    }
+                    if (Object.prototype.hasOwnProperty.call(firmas, 'firma_cliente_entrega')) {
+                        firmaUpdate.firma_cliente_entrega = firmas.firma_cliente_entrega || null;
+                    }
+                    if (Object.keys(firmaUpdate).length > 0) {
+                        // Buscar el proceso tolerando variantes de formato del número
+                        let procId = null;
+                        const { data: exactRows, error: exErr } = await supabase
+                            .from('procesos_acreditados')
+                            .select('id')
+                            .eq('numero_proceso', numero)
+                            .limit(1);
+                        if (!exErr && Array.isArray(exactRows) && exactRows.length > 0) procId = exactRows[0].id;
+                        if (!procId) {
+                            const sinEspacios = numero.replace(/\s+/g, '');
+                            const m = sinEspacios.match(/^(R\d{2})(\d+)$/);
+                            const variants = m ? [m[1] + ' ' + m[2], m[1] + m[2]] : [];
+                            for (const v of variants) {
+                                if (v === numero) continue;
+                                const { data: vr } = await supabase
+                                    .from('procesos_acreditados')
+                                    .select('id')
+                                    .eq('numero_proceso', v)
+                                    .limit(1);
+                                if (Array.isArray(vr) && vr.length > 0) { procId = vr[0].id; break; }
+                            }
+                        }
+                        if (!procId) {
+                            advertencias.push('Proceso ' + numero + ' no encontrado en procesos_acreditados');
+                        } else {
+                            const { error: updErr } = await supabase
+                                .from('procesos_acreditados')
+                                .update(firmaUpdate)
+                                .eq('id', procId);
+                            if (updErr) advertencias.push('procesos_acreditados: ' + updErr.message);
+                        }
+                    }
+                }
+
+                // 2) Datos y firmas → draft del proceso dentro de borradores (fila shared)
+                //    Escritura por CLAVE con bloqueo optimista (updated_at): NUNCA se reescribe
+                //    el borrador completo, para no perder los elementos (items) por carreras
+                //    con los guardados simultáneos de recepción de elementos.
+                if (campos || firmas) {
+                    let guardado = false;
+                    let intento = 0;
+                    let reconstruidoDesdeBD = false;
+
+                    while (!guardado && intento < 4) {
+                        intento++;
+
+                        const { data: rows, error: rowErr } = await supabase
+                            .from('borradores')
+                            .select('id, datos, updated_at')
+                            .eq('usuario_email', 'shared')
+                            .limit(1);
+                        if (rowErr) {
+                            return jsonResponse(500, { ok: false, error: 'Error leyendo borradores', detail: rowErr.message });
+                        }
+                        const row = Array.isArray(rows) ? rows[0] : null;
+                        if (!row) {
+                            return jsonResponse(404, { ok: false, error: 'No existe la fila de borradores compartida' });
+                        }
+
+                        const drafts = Array.isArray(row.datos) ? row.datos.map(d => (d && typeof d === 'object') ? { ...d } : d) : [];
+                        let idx = drafts.findIndex(d => d && typeof d === 'object' && normNum(d.cotizacion || d.quoteNumber) === normNum(numero));
+
+                        if (idx === -1) {
+                            // Caso sin borrador: crear uno COMPLETO con los elementos desde la BD
+                            const nuevo = await construirBorradorInicial(numero);
+                            drafts.push(nuevo);
+                            idx = drafts.length - 1;
+                            reconstruidoDesdeBD = true;
+                        } else if (!Array.isArray(drafts[idx].items)) {
+                            // Borrador sin elementos (creado por versiones previas / localStorage lleno):
+                            // completarlo con los items de la BD sin tocar el resto de sus datos
+                            const completo = await construirBorradorInicial(numero);
+                            if (Array.isArray(completo.items) && completo.items.length > 0) {
+                                drafts[idx] = { ...completo, ...drafts[idx], items: completo.items };
+                                reconstruidoDesdeBD = true;
+                            }
+                        }
+
+                        // Fusionar SOLO las claves editadas (items y demás quedan intactos)
+                        if (campos) {
+                            CAMPOS_VALIDOS.forEach(c => {
+                                if (Object.prototype.hasOwnProperty.call(campos, c)) {
+                                    drafts[idx][c] = String(campos[c] === null || campos[c] === undefined ? '' : campos[c]).trim();
+                                }
+                            });
+                        }
+                        if (firmas) {
+                            if (!drafts[idx].signatureData || typeof drafts[idx].signatureData !== 'object') {
+                                drafts[idx].signatureData = {};
+                            }
+                            const sd = drafts[idx].signatureData;
+                            if (Object.prototype.hasOwnProperty.call(firmas, 'firma_cliente_recepcion')) {
+                                const val = firmas.firma_cliente_recepcion || null;
+                                if (val) sd.signatureCanvasRecepcion = val;
+                                else { delete sd.signatureCanvasRecepcion; delete sd.signatureCanvas; }
+                            }
+                            if (Object.prototype.hasOwnProperty.call(firmas, 'firma_cliente_entrega')) {
+                                const val = firmas.firma_cliente_entrega || null;
+                                if (val) sd.signatureCanvasEntrega = val;
+                                else { delete sd.signatureCanvasEntrega; }
+                            }
+                        }
+
+                        // Bloqueo optimista: solo escribe si nadie más modificó la fila
+                        let upd = supabase
+                            .from('borradores')
+                            .update({ datos: drafts, updated_at: new Date().toISOString() })
+                            .eq('id', row.id);
+                        if (row.updated_at) upd = upd.eq('updated_at', row.updated_at);
+                        const { data: updRes, error: updErr } = await upd.select('id');
+
+                        if (updErr) {
+                            return jsonResponse(500, { ok: false, error: 'Error guardando datos del proceso', detail: updErr.message });
+                        }
+                        // 0 filas afectadas = otra escritura ganó la carrera → releer y reintentar
+                        guardado = Array.isArray(updRes) && updRes.length > 0;
+                    }
+
+                    if (!guardado) {
+                        advertencias.push('No se pudo guardar por escrituras concurrentes, intente de nuevo');
+                    } else if (reconstruidoDesdeBD) {
+                        advertencias.push('Se creó/completó el borrador con sus elementos desde la base de datos');
+                    }
+                }
+
+                return jsonResponse(200, { ok: true, warnings: advertencias.length ? advertencias : undefined });
             }
 
             // Actualizar marcación de un item del detalle
