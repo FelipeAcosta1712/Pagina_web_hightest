@@ -8151,11 +8151,16 @@
                         </div>
                         <div>
                             <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Cantidad de elementos lavados</label>
-                            <input type="number" min="0" data-campo="elementosLavados" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+                            <input type="number" min="0" data-campo="elementosLavados" readonly placeholder="0" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;background:#f8fafc;color:#022859;font-weight:700;" title="Se calcula automáticamente con la suma de los lavados por elemento">
                         </div>
                         <div>
                             <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Responsables del lavado</label>
                             <input type="text" data-campo="responsableLavado" placeholder="Nombres de los responsables" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+                        </div>
+                        <div style="grid-column:1 / -1; margin-top:6px; border-top:1px dashed #cbd5e1; padding-top:10px;">
+                            <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:6px;">Por elemento: No Usado / Usado / Lavados</label>
+                            <div id="completItemsTabla" style="overflow-x:auto;"></div>
+                            <div style="font-size:11px; color:#94a3b8; margin-top:4px;">La cantidad total de lavados se calcula con la suma de la columna Lavados.</div>
                         </div>
                     </div>
                 </div>
@@ -12683,6 +12688,9 @@
                         this._edCompletitud.camposBase[el.dataset.campo] = (el.value || '').trim();
                     });
 
+                    // Tabla de edición por elemento (No Usado / Usado / Lavados)
+                    this._renderCompletItemsTabla(d, caso);
+
                     const sd = (d.signatureData && typeof d.signatureData === 'object') ? d.signatureData : {};
                     const st = this._edCompletitud;
                     st.firmas.Recepcion.actual = p.firma_cliente_recepcion || sd.signatureCanvasRecepcion || sd.signatureCanvas || null;
@@ -12889,6 +12897,67 @@
                 this._edCompletitud = null;
             },
 
+            // ── Edición por elemento (No Usado / Usado / Lavados) en el modal Completar ──
+            // Renderiza una fila por elemento del borrador; NO modifica datos, solo los muestra
+            _renderCompletItemsTabla(d, caso) {
+                const cont = document.getElementById('completItemsTabla');
+                if (!cont) return;
+                const st = this._edCompletitud;
+                st.itemsBase = {};
+                const esc = s => String(s === null || s === undefined ? '' : s)
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                const borrItems = (d && Array.isArray(d.items)) ? d.items : null;
+                const items = (borrItems && borrItems.length > 0)
+                    ? borrItems
+                    : ((caso && Array.isArray(caso.items)) ? caso.items : []);
+                if (items.length === 0) {
+                    cont.innerHTML = '<div style="color:#94a3b8; font-size:12px; padding:6px 0;">Sin elementos registrados para este caso.</div>';
+                    return;
+                }
+                const inpStyle = 'width:64px; min-width:64px; padding:4px 6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px; text-align:center; box-sizing:border-box;';
+                let html = '<table style="width:100%; border-collapse:collapse; font-size:12px;">' +
+                    '<thead><tr style="background:#f5f5f5; border-bottom:2px solid #022859;">' +
+                    '<th style="padding:5px 6px; border:1px solid #ddd; text-align:left;">Elemento</th>' +
+                    '<th style="padding:5px 6px; border:1px solid #ddd; text-align:center;">Recibidos</th>' +
+                    '<th style="padding:5px 6px; border:1px solid #ddd; text-align:center;">Entregados</th>' +
+                    '<th style="padding:5px 6px; border:1px solid #ddd; text-align:center;">No Usado</th>' +
+                    '<th style="padding:5px 6px; border:1px solid #ddd; text-align:center;">Usado</th>' +
+                    '<th style="padding:5px 6px; border:1px solid #ddd; text-align:center;">Lavados</th>' +
+                    '</tr></thead><tbody>';
+                items.forEach((it, i) => {
+                    const name = (it && (it.name || it.elemento)) || ('Elemento ' + (i + 1));
+                    const q = parseInt(it.quantity, 10) || 0;
+                    const q2 = parseInt(it.quantity2, 10) || 0;
+                    const q3 = parseInt(it.quantity3, 10) || 0;
+                    const q4 = parseInt(it.quantity4, 10) || 0;
+                    const lav = parseInt(it.status, 10) || 0;
+                    st.itemsBase[i] = { name: String(name), quantity3: q3, quantity4: q4, status: lav };
+                    html += `<tr style="border-bottom:1px solid #ddd;">
+                        <td style="padding:5px 6px; border:1px solid #ddd;">${esc(name)}</td>
+                        <td style="padding:5px 6px; border:1px solid #ddd; text-align:center;">${q}</td>
+                        <td style="padding:5px 6px; border:1px solid #ddd; text-align:center;">${q2}</td>
+                        <td style="padding:5px 6px; border:1px solid #ddd; text-align:center;"><input type="number" min="0" data-item-idx="${i}" data-item-campo="quantity3" value="${q3}" oninput="RecepcionAnalyticsModule.completItemsInput()" style="${inpStyle}"></td>
+                        <td style="padding:5px 6px; border:1px solid #ddd; text-align:center;"><input type="number" min="0" data-item-idx="${i}" data-item-campo="quantity4" value="${q4}" oninput="RecepcionAnalyticsModule.completItemsInput()" style="${inpStyle}"></td>
+                        <td style="padding:5px 6px; border:1px solid #ddd; text-align:center;"><input type="number" min="0" data-item-idx="${i}" data-item-campo="status" value="${lav}" oninput="RecepcionAnalyticsModule.completItemsInput()" style="${inpStyle}; background:#f0fdf4; font-weight:700;"></td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                cont.innerHTML = html;
+            },
+
+            // Auto-suma de la columna Lavados → campo total "elementosLavados" (readonly),
+            // igual que hace Recepción de Elementos (actualizarCantidadLavados)
+            completItemsInput() {
+                const cont = document.getElementById('completItemsTabla');
+                const totalEl = document.querySelector('#modalCompletarDatos [data-campo="elementosLavados"]');
+                if (!cont || !totalEl) return;
+                let total = 0;
+                cont.querySelectorAll('[data-item-campo="status"]').forEach(el => {
+                    total += parseInt(el.value, 10) || 0;
+                });
+                totalEl.value = String(total);
+            },
+
             async guardarCompletitud() {
                 const st = this._edCompletitud;
                 if (!st) return;
@@ -12910,7 +12979,29 @@
                     else if (f.nueva) firmas[key] = f.nueva;
                 });
 
-                if (Object.keys(campos).length === 0 && Object.keys(firmas).length === 0) {
+                // Cambios por elemento (No Usado / Usado / Lavados): solo los que difieren de su valor base
+                const itemsEditados = [];
+                const contItems = document.getElementById('completItemsTabla');
+                if (contItems && st.itemsBase) {
+                    const porIdx = {};
+                    contItems.querySelectorAll('[data-item-idx][data-item-campo]').forEach(el => {
+                        const idx = el.dataset.itemIdx;
+                        const campo = el.dataset.itemCampo;
+                        const baseObj = st.itemsBase[idx];
+                        if (!baseObj) return;
+                        const v = parseInt(el.value, 10);
+                        const val = (Number.isFinite(v) && v >= 0) ? v : 0;
+                        if (!porIdx[idx]) porIdx[idx] = { name: baseObj.name };
+                        const base = parseInt(baseObj[campo], 10) || 0;
+                        if (val !== base) porIdx[idx][campo] = val;
+                    });
+                    Object.values(porIdx).forEach(e => {
+                        const tieneCambios = ['quantity3', 'quantity4', 'status'].some(k => Object.prototype.hasOwnProperty.call(e, k));
+                        if (tieneCambios) itemsEditados.push(e);
+                    });
+                }
+
+                if (Object.keys(campos).length === 0 && Object.keys(firmas).length === 0 && itemsEditados.length === 0) {
                     showToast('No hay cambios para guardar', 'info');
                     return;
                 }
@@ -12925,7 +13016,8 @@
                             action: 'update_completitud_proceso',
                             numero_proceso: st.cotizacion,
                             campos: campos,
-                            firmas: firmas
+                            firmas: firmas,
+                            itemsEditados: itemsEditados
                         })
                     });
                     const data = await res.json();
@@ -13242,7 +13334,7 @@
             actualizarContadorSeleccionados();
         }
 
-        function descargaIndividualPDF(numProceso, tipo) {
+        async function descargaIndividualPDF(numProceso, tipo) {
             var casos = [];
             try { casos = obtenerCasosUnificados(); } catch(e) { console.error(e); }
             var caso = casos.find(function(c) { return (c.cotizacion || c.quoteNumber || c.numero_proceso) === numProceso; });
@@ -13254,10 +13346,14 @@
                 console.warn('Caso sin items, omitiendo: ' + numProceso);
                 return;
             }
+            // Caso completo (firma, nombres, cargos...) igual que al pulsar "Ver"
+            if (typeof obtenerCasoCompletoParaPDF === 'function') {
+                caso = await obtenerCasoCompletoParaPDF(caso);
+            }
             generarPDFFromCasoDirecto(caso, tipo);
         }
 
-        function descargarSeleccionados(tipo) {
+        async function descargarSeleccionados(tipo) {
             var seleccionados = [];
             for (var k in _casosSeleccionados) {
                 if (_casosSeleccionados[k]) seleccionados.push(k);
@@ -13268,7 +13364,7 @@
             if (!confirm('Se descargarán ' + seleccionados.length + ' PDFs de ' + tipoLabel + '. ¿Continuar?')) return;
 
             var index = 0;
-            function downloadNext() {
+            async function downloadNext() {
                 if (index >= seleccionados.length) {
                     alert('✅ Descarga completada.');
                     return;
@@ -13282,6 +13378,9 @@
                     caso = casosAdmin.find(function(c) { return c.cotizacion === numProceso && c.items && c.items.length > 0; });
                 }
                 if (caso && caso.items && caso.items.length > 0) {
+                    if (typeof obtenerCasoCompletoParaPDF === 'function') {
+                        caso = await obtenerCasoCompletoParaPDF(caso);
+                    }
                     if (tipo === 'ambos') {
                         generarPDFFromCasoDirecto(caso, 'recepcion');
                         setTimeout(function() { generarPDFFromCasoDirecto(caso, 'entrega'); }, 2000);
@@ -13295,18 +13394,22 @@
             downloadNext();
         }
 
-        function descargarTodosLosPDFs() {
+        async function descargarTodosLosPDFs() {
             var casos = RecepcionAnalyticsModule.casos || [];
             var conItems = casos.filter(function(c) { return c.items && c.items.length > 0; });
             if (conItems.length === 0) { alert('No hay procesos con elementos para descargar.'); return; }
             if (!confirm('Se descargarán ' + conItems.length + ' PDFs de recepción + ' + conItems.length + ' de entrega (total ' + (conItems.length * 2) + '). ¿Continuar?')) return;
 
             var index = 0;
-            function downloadNext() {
+            async function downloadNext() {
                 if (index >= conItems.length) { alert('✅ Se descargaron ' + (conItems.length * 2) + ' PDFs.'); return; }
-                generarPDFFromCasoDirecto(conItems[index], 'recepcion');
+                var caso = conItems[index];
+                if (typeof obtenerCasoCompletoParaPDF === 'function') {
+                    caso = await obtenerCasoCompletoParaPDF(caso);
+                }
+                generarPDFFromCasoDirecto(caso, 'recepcion');
                 setTimeout(function() {
-                    generarPDFFromCasoDirecto(conItems[index], 'entrega');
+                    generarPDFFromCasoDirecto(caso, 'entrega');
                 }, 2000);
                 index++;
                 setTimeout(downloadNext, 3500);

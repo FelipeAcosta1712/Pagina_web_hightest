@@ -66,6 +66,57 @@ const pickFirstValue = (row, keys) => {
     return '';
 };
 
+// Trae TODAS las filas de una tabla en bloques de 1000.
+// Supabase/PostgREST limita cada request a max_rows (1000 por defecto),
+// por lo que .range(0, 9999) NO devuelve más de 1000 filas y silencia datos.
+async function fetchAll(supabase, table, select, orderBy = 'id') {
+    const out = [];
+    const page = 1000;
+    for (let from = 0; ; from += page) {
+        const { data, error } = await supabase
+            .from(table)
+            .select(select)
+            .order(orderBy, { ascending: true })
+            .range(from, from + page - 1);
+        if (error) throw new Error(`fetchAll(${table}): ${error.message}`);
+        out.push(...(data || []));
+        if (!data || data.length < page) break;
+    }
+    return out;
+}
+
+// Igual que fetchAll pero con filtro .in('proceso_id', ids) opcional
+// (usado por el dashboard con joins a ensayos_acreditados/procesos_acreditados)
+async function fetchAllDetalle(supabase, select, procesoIds = null) {
+    const out = [];
+    const page = 1000;
+    for (let from = 0; ; from += page) {
+        let q = supabase.from('detalle_procesos_ac').select(select);
+        if (procesoIds && procesoIds.length) q = q.in('proceso_id', procesoIds);
+        const { data, error } = await q
+            .order('id', { ascending: true })
+            .range(from, from + page - 1);
+        if (error) throw new Error(`fetchAllDetalle: ${error.message}`);
+        out.push(...(data || []));
+        if (!data || data.length < page) break;
+    }
+    return out;
+}
+
+// Consulta con filtros arbitrarios paginada en bloques de 1000.
+// buildQuery() debe CREAR la consulta completa cada vez (sin .range/.limit).
+async function fetchAllPaged(buildQuery) {
+    const out = [];
+    const page = 1000;
+    for (let from = 0; ; from += page) {
+        const { data, error } = await buildQuery().range(from, from + page - 1);
+        if (error) throw new Error(error.message);
+        out.push(...(data || []));
+        if (!data || data.length < page) break;
+    }
+    return out;
+}
+
 exports.handler = async (event) => {
     // 1. Manejo de seguridad CORS
     if (event.httpMethod === 'OPTIONS') {
@@ -365,73 +416,86 @@ exports.handler = async (event) => {
             if (payload.action === 'get_procesos_acreditados') {
                 const { estado, cliente, tipo, month, date, search, limit, offset, caso_activo: activo } = payload;
 
-                let query = supabase
-                    .from('procesos_acreditados')
-                    .select('*');
+                // buildQuery crea la consulta con los filtros (sin paginación);
+                // fetchAllPaged la recorre en bloques de 1000 para no cortar filas
+                const buildQuery = () => {
+                    let query = supabase
+                        .from('procesos_acreditados')
+                        .select('*');
 
-                // filtro por activo (boolean)
-                if (activo !== undefined && activo !== null && activo !== '') {
-                    query = query.eq('caso_activo', Boolean(activo));
-                }
-
-                // filtros sencillos
-                if (estado) {
-                    // coincidencia parcial, case-insensitive
-                    query = query.ilike('estado', `%${String(estado).trim()}%`);
-                }
-
-                if (cliente) {
-                    query = query.ilike('cliente', `%${String(cliente).trim()}%`);
-                } else if (tipo) {
-                    query = query.ilike('tipo', `%${String(tipo).trim()}%`);
-                }
-
-                if (month) {
-                    // esperar formato YYYY-MM y filtrar por rango real sobre la columna date
-                    const m = String(month).trim();
-                    if (/^\d{4}-\d{2}$/.test(m)) {
-                        const [year, monthIndex] = m.split('-').map(Number);
-                        const startDate = new Date(Date.UTC(year, monthIndex - 1, 1));
-                        const endDate = new Date(Date.UTC(year, monthIndex, 1));
-                        const startIso = startDate.toISOString().slice(0, 10);
-                        const endIso = endDate.toISOString().slice(0, 10);
-
-                        query = query.gte('fecha_recepcion', startIso).lt('fecha_recepcion', endIso);
+                    // filtro por activo (boolean)
+                    if (activo !== undefined && activo !== null && activo !== '') {
+                        query = query.eq('caso_activo', Boolean(activo));
                     }
-                }
 
-                if (date) {
-                    const exactDate = String(date).trim();
-                    if (/^\d{4}-\d{2}-\d{2}$/.test(exactDate)) {
-                        query = query.eq('fecha_recepcion', exactDate);
+                    // filtros sencillos
+                    if (estado) {
+                        // coincidencia parcial, case-insensitive
+                        query = query.ilike('estado', `%${String(estado).trim()}%`);
                     }
-                }
 
-                if (search) {
-                    const s = String(search).trim();
-                    // Buscar en varias columnas comunes (usar numero_proceso)
-                    const orCond = `numero_proceso.ilike.%${s}%,cliente.ilike.%${s}%,n_informe.ilike.%${s}%`;
-                    query = query.or(orCond);
-                }
+                    if (cliente) {
+                        query = query.ilike('cliente', `%${String(cliente).trim()}%`);
+                    } else if (tipo) {
+                        query = query.ilike('tipo', `%${String(tipo).trim()}%`);
+                    }
 
-                // paginación
-                if (limit) {
-                    const l = Number(limit) || 100;
-                    query = query.limit(l);
-                }
+                    if (month) {
+                        // esperar formato YYYY-MM y filtrar por rango real sobre la columna date
+                        const m = String(month).trim();
+                        if (/^\d{4}-\d{2}$/.test(m)) {
+                            const [year, monthIndex] = m.split('-').map(Number);
+                            const startDate = new Date(Date.UTC(year, monthIndex - 1, 1));
+                            const endDate = new Date(Date.UTC(year, monthIndex, 1));
+                            const startIso = startDate.toISOString().slice(0, 10);
+                            const endIso = endDate.toISOString().slice(0, 10);
 
-                if (offset) {
-                    const o = Number(offset) || 0;
-                    query = query.range(o, (o + (Number(limit) || 99)));
-                }
+                            query = query.gte('fecha_recepcion', startIso).lt('fecha_recepcion', endIso);
+                        }
+                    }
 
-                // ordenar por fecha_recepcion desc por defecto
-                query = query.order('fecha_recepcion', { ascending: false });
+                    if (date) {
+                        const exactDate = String(date).trim();
+                        if (/^\d{4}-\d{2}-\d{2}$/.test(exactDate)) {
+                            query = query.eq('fecha_recepcion', exactDate);
+                        }
+                    }
 
-                const { data, error } = await query;
+                    if (search) {
+                        const s = String(search).trim();
+                        // Buscar en varias columnas comunes (usar numero_proceso)
+                        const orCond = `numero_proceso.ilike.%${s}%,cliente.ilike.%${s}%,n_informe.ilike.%${s}%`;
+                        query = query.or(orCond);
+                    }
 
-                if (error) {
-                    return jsonResponse(500, { ok: false, error: 'Error al consultar procesos_acreditados', detail: error.message });
+                    // ordenar por fecha_recepcion desc por defecto
+                    return query.order('fecha_recepcion', { ascending: false });
+                };
+
+                let data;
+                if (limit || offset) {
+                    // el cliente pidió una página: una sola consulta acotada
+                    let query = buildQuery();
+                    if (limit) {
+                        query = query.limit(Number(limit) || 100);
+                    }
+                    if (offset) {
+                        const o = Number(offset) || 0;
+                        query = query.range(o, (o + (Number(limit) || 99)));
+                    }
+                    const { data: page, error } = await query;
+                    if (error) {
+                        return jsonResponse(500, { ok: false, error: 'Error al consultar procesos_acreditados', detail: error.message });
+                    }
+                    data = page;
+                } else {
+                    // sin limit/offset: traer TODO paginado (PostgREST corta en 1000 filas
+                    // y al superarlas la lista de casos quedaba incompleta)
+                    try {
+                        data = await fetchAllPaged(buildQuery);
+                    } catch (e) {
+                        return jsonResponse(500, { ok: false, error: 'Error al consultar procesos_acreditados', detail: e.message });
+                    }
                 }
 
                 // Obtener conteo de items por proceso desde detalle_procesos_ac y marcaciones_ac
@@ -440,18 +504,19 @@ exports.handler = async (event) => {
                 let conteosDetalle = {};
                 let conteosMarc = {};
                 if (ids.length > 0) {
+                    // fetchAll paginado: sin .range() PostgREST corta en 1000 filas
                     const [resDetalle, resMarc] = await Promise.all([
-                        supabase.from('detalle_procesos_ac').select('proceso_id, id'),
-                        supabase.from('marcaciones_ac').select('proceso_id, elemento')
+                        fetchAll(supabase, 'detalle_procesos_ac', 'proceso_id, id'),
+                        fetchAll(supabase, 'marcaciones_ac', 'proceso_id, elemento')
                     ]);
                     // Contar filas desde detalle_procesos_ac (items reales)
-                    (resDetalle.data || []).forEach(d => {
+                    (resDetalle || []).forEach(d => {
                         const pid = String(d.proceso_id).trim();
                         if (!conteosDetalle[pid]) conteosDetalle[pid] = 0;
                         conteosDetalle[pid]++;
                     });
                     // Contar elementos distintos desde marcaciones_ac
-                    (resMarc.data || []).forEach(m => {
+                    (resMarc || []).forEach(m => {
                         const pid = String(m.proceso_id).trim();
                         if (!conteosMarc[pid]) conteosMarc[pid] = new Set();
                         if (m.elemento) conteosMarc[pid].add(m.elemento.trim());
@@ -476,11 +541,15 @@ exports.handler = async (event) => {
                     const { data: rpcResult, error: rpcError } = await supabase
                         .rpc('get_numeros_recepcion_ocupados');
                     if (rpcError) {
-                        // Fallback: si la RPC no existe, hacer select ligero
-                        const { data: rows, error: fallbackErr } = await supabase
-                            .from('procesos_acreditados')
-                            .select('numero_proceso');
-                        if (fallbackErr) return jsonResponse(500, { ok: false, error: 'Error obteniendo números ocupados', detail: fallbackErr.message });
+                        // Fallback: si la RPC no existe, hacer select ligero (paginado con
+                        // fetchAll: al llegar a 1000 procesos quedarían números sin registrar
+                        // y se podrían crear recepciones duplicadas)
+                        let rows;
+                        try {
+                            rows = await fetchAll(supabase, 'procesos_acreditados', 'numero_proceso');
+                        } catch (e) {
+                            return jsonResponse(500, { ok: false, error: 'Error obteniendo números ocupados', detail: e.message });
+                        }
                         const nums = (rows || []).map(r => String(r.numero_proceso || '').trim()).filter(Boolean);
                         return jsonResponse(200, { ok: true, numeros: nums });
                     }
@@ -1462,16 +1531,18 @@ exports.handler = async (event) => {
             // Obtener conteo de items por todos los procesos (para modal PDFs)
             if (payload.action === 'get_all_detalle_procesos') {
                 // Contar desde ambas tablas y usar el mayor
+                // fetchAll paginado: sin .range() PostgREST corta en 1000 filas y
+                // faltaban items en la tabla Recibidos/Entregados (ej. R26 0439: 8 en vez de 18)
                 const [resDetalle, resMarc] = await Promise.all([
-                    supabase.from('detalle_procesos_ac').select('proceso_id, id, ensayo_id, cantidad, cantidad_entregada, marca, observaciones, ensayos_acreditados(nombre, categoria)'),
-                    supabase.from('marcaciones_ac').select('proceso_id, elemento')
+                    fetchAllDetalle(supabase, 'proceso_id, id, ensayo_id, cantidad, cantidad_entregada, marca, observaciones, ensayos_acreditados(nombre, categoria)'),
+                    fetchAll(supabase, 'marcaciones_ac', 'proceso_id, elemento')
                 ]);
 
                 const conteos = {};
                 const detalleCompleto = {};
 
                 // Agrupar por proceso_id → ensayo_id (una fila por ensayo, sumando cantidades de marcas)
-                (resDetalle.data || []).forEach(d => {
+                (resDetalle || []).forEach(d => {
                     const pid = String(d.proceso_id).trim();
                     const eid = d.ensayo_id || d.id;
                     if (!conteos[pid]) conteos[pid] = 0;
@@ -1504,7 +1575,7 @@ exports.handler = async (event) => {
 
                 // Contar elementos distintos desde marcaciones_ac
                 const marcPorProceso = {};
-                (resMarc.data || []).forEach(m => {
+                (resMarc || []).forEach(m => {
                     const pid = String(m.proceso_id).trim();
                     if (!marcPorProceso[pid]) marcPorProceso[pid] = new Set();
                     if (m.elemento) marcPorProceso[pid].add(m.elemento.trim());
@@ -1708,7 +1779,14 @@ exports.handler = async (event) => {
                 if (!numero) return jsonResponse(400, { ok: false, error: 'numero_proceso requerido' });
                 const campos = (payload.campos && typeof payload.campos === 'object' && Object.keys(payload.campos).length > 0) ? payload.campos : null;
                 const firmas = (payload.firmas && typeof payload.firmas === 'object' && Object.keys(payload.firmas).length > 0) ? payload.firmas : null;
-                if (!campos && !firmas) return jsonResponse(400, { ok: false, error: 'No hay datos para actualizar' });
+                // Edición por elemento: [{ name, quantity3 (No Usado), quantity4 (Usado), status (Lavados) }]
+                // Solo los campos presentes en cada objeto se actualizan; el resto del item queda intacto
+                let itemsEditados = null;
+                if (Array.isArray(payload.itemsEditados) && payload.itemsEditados.length > 0) {
+                    itemsEditados = payload.itemsEditados
+                        .filter(e => e && typeof e === 'object' && String(e.name || e.elemento || '').trim() !== '');
+                }
+                if (!campos && !firmas && !itemsEditados) return jsonResponse(400, { ok: false, error: 'No hay datos para actualizar' });
 
                 const advertencias = [];
 
@@ -1756,11 +1834,11 @@ exports.handler = async (event) => {
                     }
                 }
 
-                // 2) Datos y firmas → draft del proceso dentro de borradores (fila shared)
+                // 2) Datos, firmas y elementos editados → draft del proceso dentro de borradores (fila shared)
                 //    Escritura por CLAVE con bloqueo optimista (updated_at): NUNCA se reescribe
                 //    el borrador completo, para no perder los elementos (items) por carreras
                 //    con los guardados simultáneos de recepción de elementos.
-                if (campos || firmas) {
+                if (campos || firmas || itemsEditados) {
                     let guardado = false;
                     let intento = 0;
                     let reconstruidoDesdeBD = false;
@@ -1823,6 +1901,31 @@ exports.handler = async (event) => {
                                 if (val) sd.signatureCanvasEntrega = val;
                                 else { delete sd.signatureCanvasEntrega; }
                             }
+                        }
+
+                        // Edición por elemento (No Usado / Usado / Lavados):
+                        // SOLO se toca el campo enviado de cada item; nada más se modifica
+                        if (itemsEditados) {
+                            const normName = s => String(s || '').trim().toLowerCase();
+                            const draftItems = Array.isArray(drafts[idx].items) ? drafts[idx].items : [];
+                            if (!Array.isArray(drafts[idx].items) || drafts[idx].items.length === 0) {
+                                advertencias.push('El borrador no tiene elementos; no se pudieron editar No Usado/Usado/Lavados');
+                            }
+                            itemsEditados.forEach(e => {
+                                const target = draftItems.find(it =>
+                                    it && typeof it === 'object' &&
+                                    normName(it.name || it.elemento) === normName(e.name || e.elemento));
+                                if (!target) {
+                                    advertencias.push('Elemento no encontrado en el borrador: ' + String(e.name || e.elemento));
+                                    return;
+                                }
+                                ['quantity3', 'quantity4', 'status'].forEach(k => {
+                                    if (Object.prototype.hasOwnProperty.call(e, k)) {
+                                        const v = parseInt(e[k], 10);
+                                        if (Number.isFinite(v) && v >= 0) target[k] = v;
+                                    }
+                                });
+                            });
                         }
 
                         // Bloqueo optimista: solo escribe si nadie más modificó la fila
@@ -2080,12 +2183,10 @@ exports.handler = async (event) => {
                 });
 
                 try {
-                    const [procesosRes, detalleRes] = await Promise.all([
-                        supabase.from('procesos_acreditados').select('id, numero_proceso'),
-                        supabase.from('detalle_procesos_ac').select('id, proceso_id')
+                    const [procesos, detalles] = await Promise.all([
+                        fetchAll(supabase, 'procesos_acreditados', 'id, numero_proceso'),
+                        fetchAll(supabase, 'detalle_procesos_ac', 'id, proceso_id')
                     ]);
-                    const procesos = procesosRes.data || [];
-                    const detalles = detalleRes.data || [];
 
                     const idToNum = {};
                     procesos.forEach(p => {
@@ -2427,14 +2528,16 @@ exports.handler = async (event) => {
                 // 2. Si no encontró, buscar sin espacios ni guiones
                 if (!proceso) {
                     const stripped = nInforme.replace(/[\s\-]/g, '');
-                    const { data: todos } = await supabase
-                        .from('procesos_acreditados')
-                        .select('*');
-                    if (todos) {
+                    // fetchAll: paginado, sin corte de 1000 filas (sino los procesos
+                    // más recientes no se podían encontrar por n_informe)
+                    try {
+                        const todos = await fetchAll(supabase, 'procesos_acreditados', '*');
                         proceso = todos.find(p => {
                             const pNorm = (p.n_informe || '').toUpperCase().replace(/[\s\-]/g, '');
                             return pNorm === stripped;
                         }) || null;
+                    } catch (e) {
+                        proceso = null;
                     }
                 }
 
@@ -2690,21 +2793,13 @@ exports.handler = async (event) => {
 
             // ── STATS DE INFORMES ──
             if (payload.action === 'get_informes_stats') {
-                // Traer todos los procesos acreditados
-                const { data: todosProcesos, error: errorProcesos } = await supabase
-                    .from('procesos_acreditados')
-                    .select('id');
-
-                if (errorProcesos) return jsonResponse(500, { ok: false, error: errorProcesos.message });
+                // Traer todos los procesos acreditados (fetchAll: paginado, sin corte de 1000)
+                const todosProcesos = await fetchAll(supabase, 'procesos_acreditados', 'id');
 
                 const procesos = todosProcesos || [];
 
                 // Traer informes para saber qué procesos tienen registro en la tabla de informes
-                const { data: informesRows, error: errorInformes } = await supabase
-                    .from('informes_ensayo_ac')
-                    .select('id, version, activo, created_at, proceso_id');
-
-                if (errorInformes) return jsonResponse(500, { ok: false, error: errorInformes.message });
+                const informesRows = await fetchAll(supabase, 'informes_ensayo_ac', 'id, version, activo, created_at, proceso_id');
 
                 const rows = informesRows || [];
 
@@ -2747,21 +2842,14 @@ exports.handler = async (event) => {
             // ── PROCESOS SIN INFORME ──
             if (payload.action === 'get_procesos_sin_informe') {
                 try {
-                    // Traer todos los procesos acreditados
-                    const { data: todosProcesos, error: errorProcesos } = await supabase
-                        .from('procesos_acreditados')
-                        .select('*');
-
-                    if (errorProcesos) return jsonResponse(500, { ok: false, error: errorProcesos.message });
+                    // Traer todos los procesos acreditados (fetchAll: paginado, sin corte de 1000)
+                    const todosProcesos = await fetchAll(supabase, 'procesos_acreditados', '*');
 
                     const procesos = todosProcesos || [];
 
-                    // Traer procesos que tienen al menos un informe
-                    const { data: informesRows, error: errorInformes } = await supabase
-                        .from('informes_ensayo_ac')
-                        .select('proceso_id');
-
-                    if (errorInformes) return jsonResponse(500, { ok: false, error: errorInformes.message });
+                    // Traer procesos que tienen al menos un informe (paginado: informes_ensayo_ac
+                    // superará 1000 filas y un informe existente no visto se duplicaría)
+                    const informesRows = await fetchAll(supabase, 'informes_ensayo_ac', 'proceso_id');
 
                     const procesosConInforme = new Set((informesRows || []).map(r => r.proceso_id).filter(Boolean));
 
@@ -2854,9 +2942,8 @@ exports.handler = async (event) => {
                 const pdfFiles = (files || []).filter(f => f.name && f.name.toLowerCase().endsWith('.pdf'));
 
                 // 2. Obtener todos los procesos para buscar por numero_proceso
-                const { data: procesos } = await supabase
-                    .from('procesos_acreditados')
-                    .select('id, numero_proceso');
+                //    (fetchAll: paginado, sin corte de 1000 filas)
+                const procesos = await fetchAll(supabase, 'procesos_acreditados', 'id, numero_proceso');
 
                 const procesoMap = {};
                 (procesos || []).forEach(p => {
@@ -2864,9 +2951,8 @@ exports.handler = async (event) => {
                 });
 
                 // 3. Obtener informes existentes para evitar duplicados
-                const { data: existentes } = await supabase
-                    .from('informes_ensayo_ac')
-                    .select('proceso_id, nombre_documento');
+                //    (paginado: si no se ven todos, se re-importarían informes ya existentes)
+                const existentes = await fetchAll(supabase, 'informes_ensayo_ac', 'proceso_id, nombre_documento');
 
                 const existentesSet = new Set();
                 (existentes || []).forEach(e => {
@@ -2965,20 +3051,17 @@ exports.handler = async (event) => {
 
                 if (!files.length) return jsonResponse(400, { ok: false, error: 'No se enviaron archivos' });
 
-                // Obtener todos los procesos
-                const { data: procesos } = await supabase
-                    .from('procesos_acreditados')
-                    .select('id, numero_proceso');
+                // Obtener todos los procesos (fetchAll: paginado, sin corte de 1000 filas)
+                const procesos = await fetchAll(supabase, 'procesos_acreditados', 'id, numero_proceso');
 
                 const procesoMap = {};
                 (procesos || []).forEach(p => {
                     if (p.numero_proceso) procesoMap[p.numero_proceso.trim()] = p.id;
                 });
 
-                // Obtener informes existentes
-                const { data: existentes } = await supabase
-                    .from('informes_ensayo_ac')
-                    .select('proceso_id, nombre_documento, version, activo');
+                // Obtener informes existentes (paginado: si no se ven todos,
+                // esta carga masiva duplicaría informes ya registrados)
+                const existentes = await fetchAll(supabase, 'informes_ensayo_ac', 'proceso_id, nombre_documento, version, activo');
 
                 const existentesMap = {};
                 (existentes || []).forEach(e => {
@@ -3115,11 +3198,14 @@ exports.handler = async (event) => {
 
             // ── BACKFILL: Llenar informe_a_nombre_de con cliente donde esté vacío ──
             if (payload.action === 'backfill_informe_a_nombre_de') {
-                const { data: procesos, error: fetchErr } = await supabase
-                    .from('procesos_acreditados')
-                    .select('id, cliente, informe_a_nombre_de');
-
-                if (fetchErr) return jsonResponse(500, { ok: false, error: fetchErr.message });
+                // fetchAll: paginado, sin corte de 1000 filas (sino los procesos más
+                // recientes quedarían sin backfillear)
+                let procesos;
+                try {
+                    procesos = await fetchAll(supabase, 'procesos_acreditados', 'id, cliente, informe_a_nombre_de');
+                } catch (e) {
+                    return jsonResponse(500, { ok: false, error: e.message });
+                }
 
                 const vacios = (procesos || []).filter(p => {
                     const v = (p.informe_a_nombre_de || '').trim();
@@ -3158,23 +3244,25 @@ exports.handler = async (event) => {
                     const dashEstado = payload.estado || '';
                     const dashMes = payload.mes || '';
 
-                    const [clientesRes, procesosRes, cotizacionesRes, informesRes, ensayosRes, detalleElementosRes, marcacionesRes] = await Promise.all([
-                        supabase.from('clientes').select('id, created_at').range(0, 9999),
-                        supabase.from('procesos_acreditados').select('*').range(0, 9999),
-                        supabase.from('cotizaciones_ac').select('id, cliente, estado, total_valor, created_at, cotizacion').range(0, 9999),
-                        supabase.from('informes_ensayo_ac').select('id, proceso_id, created_at, activo').range(0, 9999),
-                        supabase.from('ensayos_acreditados').select('id, nombre, categoria').range(0, 9999),
-                        supabase.from('detalle_procesos_ac').select('proceso_id, cantidad').range(0, 9999),
-                        supabase.from('marcaciones_ac').select('id, proceso_id, estado').range(0, 9999)
+                    // fetchAll pagina en bloques de 1000: .range(0,9999) solo devuelve
+                    // 1000 filas (límite PostgREST) y truncaba silenciosamente los datos
+                    const [clientesArr, procesosArr, cotizacionesArr, informesArr, ensayosArr, detalleElementosArr, marcacionesArr] = await Promise.all([
+                        fetchAll(supabase, 'clientes', 'id, created_at'),
+                        fetchAll(supabase, 'procesos_acreditados', '*'),
+                        fetchAll(supabase, 'cotizaciones_ac', 'id, cliente, estado, total_valor, created_at, cotizacion'),
+                        fetchAll(supabase, 'informes_ensayo_ac', 'id, proceso_id, created_at, activo'),
+                        fetchAll(supabase, 'ensayos_acreditados', 'id, nombre, categoria'),
+                        fetchAll(supabase, 'detalle_procesos_ac', 'proceso_id, cantidad'),
+                        fetchAll(supabase, 'marcaciones_ac', 'id, proceso_id, estado')
                     ]);
 
-                    const clientes = clientesRes.data || [];
-                    let procesos = procesosRes.data || [];
-                    const cotizaciones = cotizacionesRes.data || [];
-                    const informes = informesRes.data || [];
-                    const ensayos = ensayosRes.data || [];
-                    const detalleElementosAll = detalleElementosRes.data || [];
-                    const marcaciones = marcacionesRes.data || [];
+                    const clientes = clientesArr || [];
+                    let procesos = procesosArr || [];
+                    const cotizaciones = cotizacionesArr || [];
+                    const informes = informesArr || [];
+                    const ensayos = ensayosArr || [];
+                    const detalleElementosAll = detalleElementosArr || [];
+                    const marcaciones = marcacionesArr || [];
 
                     // ── Aplicar filtros del dashboard ──
                     if (dashFechaDesde) {
@@ -3313,18 +3401,9 @@ exports.handler = async (event) => {
                     // ── Top 10 elementos más recibidos (desde detalle_procesos_ac) ──
                     let detalleElementos;
                     if (hasActiveFilters) {
-                        const { data: filteredDetalle } = await supabase
-                            .from('detalle_procesos_ac')
-                            .select('cantidad, proceso_id, ensayos_acreditados(nombre)')
-                            .in('proceso_id', [...filteredProcesoIds])
-                            .range(0, 9999);
-                        detalleElementos = filteredDetalle || [];
+                        detalleElementos = await fetchAllDetalle(supabase, 'cantidad, proceso_id, ensayos_acreditados(nombre)', [...filteredProcesoIds]);
                     } else {
-                        const { data: allDetalle } = await supabase
-                            .from('detalle_procesos_ac')
-                            .select('cantidad, proceso_id, ensayos_acreditados(nombre)')
-                            .range(0, 9999);
-                        detalleElementos = allDetalle || [];
+                        detalleElementos = await fetchAllDetalle(supabase, 'cantidad, proceso_id, ensayos_acreditados(nombre)');
                     }
                     const elementosPorCantidad = {};
                     const elementoRecepciones = {};
@@ -3370,18 +3449,9 @@ exports.handler = async (event) => {
                     // ── Elementos por Categoría ──
                     let detalleConEnsayo;
                     if (hasActiveFilters) {
-                        const { data: filteredCat } = await supabase
-                            .from('detalle_procesos_ac')
-                            .select('cantidad, ensayos_acreditados(categoria)')
-                            .in('proceso_id', [...filteredProcesoIds])
-                            .range(0, 9999);
-                        detalleConEnsayo = filteredCat || [];
+                        detalleConEnsayo = await fetchAllDetalle(supabase, 'cantidad, ensayos_acreditados(categoria)', [...filteredProcesoIds]);
                     } else {
-                        const { data: allCat } = await supabase
-                            .from('detalle_procesos_ac')
-                            .select('cantidad, ensayos_acreditados(categoria)')
-                            .range(0, 9999);
-                        detalleConEnsayo = allCat || [];
+                        detalleConEnsayo = await fetchAllDetalle(supabase, 'cantidad, ensayos_acreditados(categoria)');
                     }
                     const categoriaUnidades = {};
                     (detalleConEnsayo || []).forEach(d => {
@@ -3397,18 +3467,9 @@ exports.handler = async (event) => {
                     // ── Top 5 Clientes por Unidades Recibidas ──
                     let detalleConProceso;
                     if (hasActiveFilters) {
-                        const { data: filteredCP } = await supabase
-                            .from('detalle_procesos_ac')
-                            .select('cantidad, proceso_id, procesos_acreditados(cliente)')
-                            .in('proceso_id', [...filteredProcesoIds])
-                            .range(0, 9999);
-                        detalleConProceso = filteredCP || [];
+                        detalleConProceso = await fetchAllDetalle(supabase, 'cantidad, proceso_id, procesos_acreditados(cliente)', [...filteredProcesoIds]);
                     } else {
-                        const { data: allCP } = await supabase
-                            .from('detalle_procesos_ac')
-                            .select('cantidad, proceso_id, procesos_acreditados(cliente)')
-                            .range(0, 9999);
-                        detalleConProceso = allCP || [];
+                        detalleConProceso = await fetchAllDetalle(supabase, 'cantidad, proceso_id, procesos_acreditados(cliente)');
                     }
                     const clienteUnidades = {};
                     (detalleConProceso || []).forEach(d => {
@@ -3617,10 +3678,10 @@ exports.handler = async (event) => {
                         : 0;
 
                     // ── Listas para filtros del dashboard (usando TODOS los procesos, sin filtro) ──
-                    const allClientesForFilter = [...new Set((procesosRes.data || []).map(p => (p.cliente || '').trim()).filter(c => c && c !== '-' && c !== '—'))].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-                    const allEstadosForFilter = [...new Set((procesosRes.data || []).map(p => (p.estado || '').trim()))].filter(Boolean).sort();
+                    const allClientesForFilter = [...new Set((procesosArr || []).map(p => (p.cliente || '').trim()).filter(c => c && c !== '-' && c !== '—'))].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+                    const allEstadosForFilter = [...new Set((procesosArr || []).map(p => (p.estado || '').trim()))].filter(Boolean).sort();
                     const allMesesMap = {};
-                    (procesosRes.data || []).forEach(p => {
+                    (procesosArr || []).forEach(p => {
                         const f = (p.fecha_recepcion || '').substring(0, 7);
                         if (f && /^\d{4}-\d{2}$/.test(f) && !allMesesMap[f]) {
                             allMesesMap[f] = true;
@@ -3695,16 +3756,12 @@ exports.handler = async (event) => {
                 const stats = { procesosReconstruidos: 0, procesosOmitidos: 0, registrosInsertados: 0, elementosSinCoincidencia: [] };
 
                 try {
-                    // 1. Obtener todos los procesos
-                    const { data: procesos, error: errProcesos } = await supabase
-                        .from('procesos_acreditados')
-                        .select('id, numero_proceso, cliente');
-                    if (errProcesos) return jsonResponse(500, { ok: false, error: 'Error leyendo procesos: ' + errProcesos.message });
+                    // 1. Obtener todos los procesos (fetchAll: paginado, sin corte de 1000)
+                    const procesos = await fetchAll(supabase, 'procesos_acreditados', 'id, numero_proceso, cliente');
 
-                    // 2. Obtener procesos que YA tienen detalle
-                    const { data: conDetalle } = await supabase
-                        .from('detalle_procesos_ac')
-                        .select('proceso_id');
+                    // 2. Obtener procesos que YA tienen detalle (si no paginaba, los últimos 8
+                    //    parecían "sin detalle" y este backfill habría duplicado sus filas)
+                    const conDetalle = await fetchAll(supabase, 'detalle_procesos_ac', 'proceso_id');
                     const idsConDetalle = new Set((conDetalle || []).map(d => d.proceso_id));
 
                     // 3. Filtrar solo procesos sin detalle
@@ -4393,13 +4450,16 @@ exports.handler = async (event) => {
                 try {
                     const { desde, hasta } = payload;
 
-                    // Query base
-                    let query = supabase.from('procesos_acreditados').select('*');
-                    if (desde) query = query.gte('fecha_recepcion', desde);
-                    if (hasta) query = query.lte('fecha_recepcion', hasta);
-
-                    const { data: procesos, error } = await query;
-                    if (error) throw error;
+                    // Query base (fetchAllPaged: recorre los filtros de fecha en bloques
+                    // de 1000 filas; sin esto, al pasar de 1000 procesos el reporte se
+                    // quedaba con datos incompletos)
+                    const buildQuery = () => {
+                        let q = supabase.from('procesos_acreditados').select('*');
+                        if (desde) q = q.gte('fecha_recepcion', desde);
+                        if (hasta) q = q.lte('fecha_recepcion', hasta);
+                        return q;
+                    };
+                    const procesos = await fetchAllPaged(buildQuery);
 
                     const total = (procesos || []).length;
 

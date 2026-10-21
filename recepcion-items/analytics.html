@@ -496,23 +496,39 @@
     function togglePDFCaso(num, checked) { _casosSeleccionados[num] = checked; actualizarContadorPDFs(); }
     function actualizarContadorPDFs() { let c = 0; for (let k in _casosSeleccionados) if (_casosSeleccionados[k]) c++; document.getElementById('contadorSeleccionados').textContent = c; }
 
-    function descargarSeleccionados(tipo) {
+    async function descargarSeleccionados(tipo) {
         const sel = Object.keys(_casosSeleccionados).filter(k => _casosSeleccionados[k]);
         if (!sel.length) return alert('No hay casos seleccionados.');
         const casos = obtenerCasosUnificados().filter(c => sel.includes(c.cotizacion || c.quoteNumber) && c.items && c.items.length > 0);
         if (!casos.length) return alert('No hay casos válidos.');
-        casos.forEach(c => { generarPDFFromCasoDirecto(c, tipo === 'ambos' ? 'recepcion' : tipo); if (tipo === 'ambos') setTimeout(() => generarPDFFromCasoDirecto(c, 'entrega'), 1500); });
+        for (const c of casos) {
+            // Caso completo (firma, nombres, cargos...) igual que al pulsar "Ver"
+            const casoCompleto = await obtenerCasoCompletoParaPDF(c);
+            generarPDFFromCasoDirecto(casoCompleto, tipo === 'ambos' ? 'recepcion' : tipo);
+            if (tipo === 'ambos') {
+                await new Promise(r => setTimeout(r, 1500));
+                generarPDFFromCasoDirecto(casoCompleto, 'entrega');
+            }
+        }
     }
 
-    function descargaIndividualPDF(num, tipo) {
+    async function descargaIndividualPDF(num, tipo) {
         const caso = obtenerCasosUnificados().find(c => (c.cotizacion || c.quoteNumber) === num);
-        if (caso) generarPDFFromCasoDirecto(caso, tipo);
+        if (caso) {
+            const casoCompleto = await obtenerCasoCompletoParaPDF(caso);
+            generarPDFFromCasoDirecto(casoCompleto, tipo);
+        }
     }
 
-    function descargarTodosLosPDFs() {
+    async function descargarTodosLosPDFs() {
         const casos = obtenerCasosUnificados().filter(c => c.items && c.items.length > 0);
         if (!casos.length) return alert('No hay casos con items.');
-        casos.forEach(c => { generarPDFFromCasoDirecto(c, 'recepcion'); setTimeout(() => generarPDFFromCasoDirecto(c, 'entrega'), 1500); });
+        for (const c of casos) {
+            const casoCompleto = await obtenerCasoCompletoParaPDF(c);
+            generarPDFFromCasoDirecto(casoCompleto, 'recepcion');
+            await new Promise(r => setTimeout(r, 1500));
+            generarPDFFromCasoDirecto(casoCompleto, 'entrega');
+        }
     }
 
     function generarPDFFromCasoDirecto(caso, tipo) {

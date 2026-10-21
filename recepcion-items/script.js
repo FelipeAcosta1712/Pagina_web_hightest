@@ -10327,7 +10327,7 @@ function procesoACaso(p) {
     if (!p) return null;
     const nroProceso = p.numero_proceso || '';
     const estadoRaw = p.estado || '';
-    return {
+    const caso = {
         cotizacion: nroProceso,
         quoteNumber: nroProceso,
         cliente: p.cliente || '',
@@ -10343,14 +10343,21 @@ function procesoACaso(p) {
         facturarNombre: p.facturar_a_nombre_de || '',
         timestamp: p.updated_at || p.created_at || '',
         _source: 'supabase_proceso',
-        caso_activo: p.caso_activo !== undefined ? p.caso_activo : true,
-        firma_cliente_recepcion: p.firma_cliente_recepcion || null,
-        firma_cliente_entrega: p.firma_cliente_entrega || null,
-        signatureData: {
-            signatureCanvasRecepcion: p.firma_cliente_recepcion || null,
-            signatureCanvasEntrega: p.firma_cliente_entrega || null
-        }
+        caso_activo: p.caso_activo !== undefined ? p.caso_activo : true
     };
+    // SOLO crear signatureData si hay firmas reales: un objeto {null, null} NO se
+    // considera vacío en _insertIfNewer y sobrescribiría la firma local guardada
+    const firmaRec = p.firma_cliente_recepcion || null;
+    const firmaEnt = p.firma_cliente_entrega || null;
+    if (firmaRec || firmaEnt) {
+        caso.firma_cliente_recepcion = firmaRec;
+        caso.firma_cliente_entrega = firmaEnt;
+        caso.signatureData = {
+            signatureCanvasRecepcion: firmaRec,
+            signatureCanvasEntrega: firmaEnt
+        };
+    }
+    return caso;
 }
 
 function _getKeyCaso(c) {
@@ -10409,7 +10416,13 @@ function _insertIfNewer(map, caso) {
             ];
             preserveFields.forEach(f => {
                 const val = caso[f];
-                const isEmpty = val === null || val === undefined || val === '' || val === 'NO DEFINIDA' || (Array.isArray(val) && val.length === 0);
+                let isEmpty = val === null || val === undefined || val === '' || val === 'NO DEFINIDA' || (Array.isArray(val) && val.length === 0);
+                // Objetos con TODOS los valores vacíos también cuentan como vacíos
+                // (p.ej. signatureData: {null, null} no debe tapar la firma real local)
+                if (!isEmpty && val && typeof val === 'object' && !Array.isArray(val)) {
+                    const vals = Object.values(val);
+                    isEmpty = vals.length === 0 || vals.every(v => v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0));
+                }
                 if (isEmpty && existing[f]) {
                     caso[f] = existing[f];
                 }
@@ -14770,6 +14783,76 @@ function closeMarcacion() {
 // GENERACIÓN DE PDF DESDE CASO (sin depender del DOM/formulario)
 // =======================================================
 
+// ── Descarga de PDFs: obtener caso COMPLETO antes de generar ──
+// generatePDFFromCase necesita firma, nombres, cargos, lavado, etc., pero
+// "obtenerCasosUnificados()" y las listas del admin solo traen resúmenes ligeros
+// (sin firmas). "Ver" usa get_borrador_completo (que además fusiona las firmas
+// desde procesos_acreditados). Este helper repite esa MISMA llamada para que el
+// PDF descargado salga idéntico a lo que se ve en "Ver".
+async function obtenerCasoCompletoParaPDF(caso) {
+    if (!caso || typeof caso !== 'object') return caso;
+    const num = caso.cotizacion || caso.quoteNumber || caso.numero_proceso || '';
+    if (!num) return caso;
+
+    const fetchJSON = async (body, timeoutMs = 20000) => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            const resp = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                signal: controller.signal
+            });
+            if (!resp.ok) return null;
+            return await resp.json();
+        } finally {
+            clearTimeout(timeoutId);
+        }
+    };
+
+    try {
+        // 1) Borrador completo (mismo origen que "Ver": firma en JSON, nombres, cargos, lavado...)
+        const result = await fetchJSON({ action: 'get_borrador_completo', cotizacion: num });
+        const full = (result && result.ok && result.data && Array.isArray(result.data.items) && result.data.items.length > 0)
+            ? result.data : null;
+
+        // Fusión: el borrador completo manda; los campos que SOLO existen localmente se conservan
+        let merged = caso;
+        if (full) {
+            merged = { ...caso, ...full };
+            if (!Array.isArray(full.items) || full.items.length === 0) merged.items = caso.items;
+            if (!full.signatureData && caso.signatureData) merged.signatureData = caso.signatureData;
+            if (!full.formData && caso.formData) merged.formData = caso.formData;
+        }
+
+        // 2) Fallback de firma desde columnas del proceso (MISMO fallback que hace
+        //    loadFormData en "Ver" cuando el borrador no trae signatureData, línea ~5723)
+        const tieneFirma = !!(merged.signatureData &&
+            Object.values(merged.signatureData).some(v => v));
+        if (!tieneFirma) {
+            const rProc = await fetchJSON({ action: 'get_proceso', numero_proceso: num });
+            const proc = (rProc && rProc.ok && rProc.proceso) ? rProc.proceso : null;
+            if (proc && (proc.firma_cliente_recepcion || proc.firma_cliente_entrega)) {
+                merged = { ...merged };
+                if (!merged.signatureData || typeof merged.signatureData !== 'object') merged.signatureData = {};
+                if (proc.firma_cliente_recepcion) {
+                    merged.signatureData.signatureCanvasRecepcion = proc.firma_cliente_recepcion;
+                    merged.firma_cliente_recepcion = proc.firma_cliente_recepcion;
+                }
+                if (proc.firma_cliente_entrega) {
+                    merged.signatureData.signatureCanvasEntrega = proc.firma_cliente_entrega;
+                    merged.firma_cliente_entrega = proc.firma_cliente_entrega;
+                }
+            }
+        }
+        return merged;
+    } catch (e) {
+        console.warn('⚠️ obtenerCasoCompletoParaPDF falló, se usa el caso disponible:', e.message || e);
+        return caso;
+    }
+}
+
 function generatePDFFromCase(caso, tipo) {
     if (__pdfGenerating) { showNotification('Generación de PDF en curso, por favor espera...', 'info'); return; }
     __pdfGenerating = true;
@@ -15059,8 +15142,8 @@ function generatePDFFromCase(caso, tipo) {
     }
     doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
 
-    const sigRec = caso.signatureData?.['signatureCanvasRecepcion'] || caso.signatureData?.Recepcion?.data || null;
-    const sigEnt = caso.signatureData?.['signatureCanvasEntrega'] || caso.signatureData?.Entrega?.data || null;
+    const sigRec = caso.signatureData?.['signatureCanvasRecepcion'] || caso.signatureData?.Recepcion?.data || caso.firma_cliente_recepcion || null;
+    const sigEnt = caso.signatureData?.['signatureCanvasEntrega'] || caso.signatureData?.Entrega?.data || caso.firma_cliente_entrega || null;
 
     if (tipo === 'entrega') {
         doc.text('Cliente (Recepción)', margin + 2, y + 6);
@@ -15124,17 +15207,18 @@ function generatePDFFromCase(caso, tipo) {
     }
 }
 
-function descargarPDFFromCase(numRecepcion, tipo) {
+async function descargarPDFFromCase(numRecepcion, tipo) {
     const casos = obtenerCasosUnificados();
     const caso = casos.find(c => (c.cotizacion || c.quoteNumber || c.numero_proceso) === numRecepcion);
     if (!caso) {
         showNotification('Caso no encontrado.', 'error');
         return;
     }
-    generatePDFFromCase(caso, tipo);
+    const casoCompleto = await obtenerCasoCompletoParaPDF(caso);
+    generatePDFFromCase(casoCompleto, tipo);
 }
 
-function descargarTodosPDFs(tipo) {
+async function descargarTodosPDFs(tipo) {
     const casos = obtenerCasosUnificados();
     const casosValidos = casos.filter(c => {
         if (!c.items || c.items.length === 0) return false;
@@ -15156,12 +15240,13 @@ function descargarTodosPDFs(tipo) {
     if (!confirm(confirmMsg)) return;
 
     let index = 0;
-    function downloadNext() {
+    async function downloadNext() {
         if (index >= casosValidos.length) {
             showNotification(`✅ Se descargaron ${casosValidos.length} PDFs de ${tipo === 'recepcion' ? 'recepción' : 'entrega'}.`, 'success');
             return;
         }
-        generatePDFFromCase(casosValidos[index], tipo);
+        const casoCompleto = await obtenerCasoCompletoParaPDF(casosValidos[index]);
+        generatePDFFromCase(casoCompleto, tipo);
         index++;
         setTimeout(downloadNext, 1500);
     }
