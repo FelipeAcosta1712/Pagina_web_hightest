@@ -541,6 +541,27 @@ exports.handler = async (event) => {
                 const payloadActivo = payload.caso_activo;
                 if (!numero || !estado) return jsonResponse(400, { ok: false, error: 'numero_proceso y estado son requeridos' });
 
+                // Resolver variantes de formato del número (R260173 ⇄ R26 0173) como get_proceso
+                const numeroVariants = new Set([numero]);
+                const numeroSinEspacios = numero.replace(/\s+/g, '');
+                const mNumero = numeroSinEspacios.match(/^(R\d{2})(\d+)$/);
+                if (mNumero) {
+                    numeroVariants.add(mNumero[1] + ' ' + mNumero[2]);
+                    numeroVariants.add(mNumero[1] + mNumero[2]);
+                }
+                let numeroAlmacenado = null;
+                const { data: filasNum, error: errNum } = await supabase
+                    .from('procesos_acreditados')
+                    .select('numero_proceso')
+                    .in('numero_proceso', Array.from(numeroVariants))
+                    .limit(1);
+                if (!errNum && filasNum && filasNum.length > 0) {
+                    numeroAlmacenado = filasNum[0].numero_proceso;
+                }
+                if (!numeroAlmacenado) {
+                    return jsonResponse(404, { ok: false, error: 'Proceso no encontrado', numero_proceso: numero });
+                }
+
                 let lastError = null;
                 for (const estadoCandidate of buildStatusCandidates(estado)) {
                     const updateData = { estado: estadoCandidate };
@@ -556,12 +577,16 @@ exports.handler = async (event) => {
                     const { data, error } = await supabase
                         .from('procesos_acreditados')
                         .update(updateData)
-                        .eq('numero_proceso', numero)
+                        .eq('numero_proceso', numeroAlmacenado)
                         .select()
                         .limit(1);
 
                     if (!error) {
-                        return jsonResponse(200, { ok: true, proceso: Array.isArray(data) ? data[0] : data });
+                        // 0 filas actualizadas: no reportar éxito falso
+                        if (!data || data.length === 0) {
+                            return jsonResponse(404, { ok: false, error: 'Proceso no encontrado para actualizar', numero_proceso: numeroAlmacenado });
+                        }
+                        return jsonResponse(200, { ok: true, proceso: data[0] });
                     }
 
                     lastError = error;

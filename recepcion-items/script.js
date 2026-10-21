@@ -6301,8 +6301,6 @@ function generatePDF() {
     generatedPDF = doc.output('datauristring');
     try {
         doc.save(pdfName);
-        // Marcar borrador como entrega completada cuando exista cotización
-        try { updateDraftStatus(formData.cotizacion, 'entrega'); } catch (e) {}
         showNotification('✅ PDF de entrega generado exitosamente', 'success');
         // Refrescar historial de reportes y cambiar a la pestaña
         try { refrescarHistorial(); showReportsTab('historial'); } catch(e){}
@@ -6607,20 +6605,48 @@ function generatePDFRecepcion() {
 // ===============================
 // Gestión de Casos en Progreso
 // ===============================
+
+// ¿El estado local del borrador indica caso entregado/finalizado?
+function esEstadoLocalCompletado(status) {
+    const s = String(status || '').toLowerCase().replace(/[\s_-]+/g, '');
+    return s === 'entrega' || s === 'entregacliente' || s === 'finalizado' || s === 'completado';
+}
+
+// ¿El proceso está entregado/finalizado en la BD? (usa el caché de procesos si está cargado)
+function procesoBDCompletado(cotizacion) {
+    try {
+        const cacheData = window.__procesosAcreditadosCache?.data;
+        if (!cacheData || !Array.isArray(cacheData)) return false;
+        const key = normalizeCotizacion(cotizacion);
+        if (!key) return false;
+        const proc = cacheData.find(p => normalizeCotizacion(p.numero_proceso) === key);
+        if (!proc) return false;
+        const e = String(proc.estado || '').toLowerCase().replace(/[\s_-]+/g, '');
+        if (e.includes('entrega') || e.includes('finalizado') || e.includes('completado')) return true;
+        if (proc.fecha_entrega_cliente || proc.fechaEntrega) return true;
+        return false;
+    } catch (e) { return false; }
+}
+
+// Un caso solo está "en progreso" si NO está completado ni local ni en la BD
+function esCasoEnProgreso(d) {
+    if (!d) return false;
+    if (esEstadoLocalCompletado(d.status)) return false;
+    if (procesoBDCompletado(d.cotizacion)) return false;
+    return true;
+}
+
 function listOpenCases() {
     // Usamos los borradores existentes como "casos en progreso"
     const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
-    // Deduplicar por cotizacion, quedándose con el último (más reciente)
+    // Deduplicar por cotizacion (normalizada), quedándose con el último (más reciente)
     const seen = new Map();
     drafts.forEach((d, i) => {
-        const key = d.cotizacion || `__idx_${i}`;
-        if (!seen.has(key)) {
-            seen.set(key, { d, originalIndex: i });
-        } else {
-            seen.set(key, { d, originalIndex: i });
-        }
+        const key = d.cotizacion ? normalizeCotizacion(d.cotizacion) : `__idx_${i}`;
+        seen.set(key, { d, originalIndex: i });
     });
-    const pending = Array.from(seen.values()).filter(obj => !(obj.d.status && obj.d.status === 'entrega'));
+    // Excluir todo caso finalizado: local ('entrega'/'finalizado') o en la BD
+    const pending = Array.from(seen.values()).filter(obj => esCasoEnProgreso(obj.d));
     return pending.map((obj, i) => ({
         idx: i + 1,
         originalIndex: obj.originalIndex,
@@ -6638,15 +6664,24 @@ function refreshCasesSelect() {
         opt.value = '';
         opt.textContent = 'No hay casos en progreso';
         sel.appendChild(opt);
-        return;
+    } else {
+        cases.forEach((c, i) => {
+            const opt = document.createElement('option');
+            // Guardamos el índice original del borrador en el value
+            opt.value = (c.originalIndex !== undefined ? c.originalIndex : i).toString();
+            opt.textContent = c.label;
+            sel.appendChild(opt);
+        });
     }
-    cases.forEach((c, i) => {
-        const opt = document.createElement('option');
-        // Guardamos el índice original del borrador en el value
-        opt.value = (c.originalIndex !== undefined ? c.originalIndex : i).toString();
-        opt.textContent = c.label;
-        sel.appendChild(opt);
-    });
+    // Si el caché de la BD aún no está cargado, cargarlo y volver a renderizar
+    // para excluir casos que en el servidor ya están finalizados
+    try {
+        if (!window.__procesosAcreditadosCache?.data && typeof window.__getProcesosAcreditadosCached === 'function') {
+            window.__getProcesosAcreditadosCached()
+                .then(() => { if (document.getElementById('openCasesSelect') === sel) refreshCasesSelect(); })
+                .catch(() => {});
+        }
+    } catch (e) { /* no bloquear por error de caché */ }
 }
 async function continueSelectedCase() {
     const sel = document.getElementById('openCasesSelect');
@@ -7662,7 +7697,7 @@ async function loadDraftsFromServer() {
  * @param {Array|Object} draftOrArray - Array completo de borradores O un borrador individual
  * @returns {boolean} true si se guardó, false si no (incluyendo server_newer)
  */
-async function saveDraftsToServer(draftOrArray) {
+async function saveDraftsToServer(draftOrArray, _esReintento = false) {
     try {
         const userEmail = getCurrentUserEmail() || 'shared';
 
@@ -7746,7 +7781,7 @@ async function saveDraftsToServer(draftOrArray) {
         // server_newer: el servidor tiene una versión más reciente
         if (res.saved === false && res.reason === 'server_newer') {
             console.log(`⚠️ Servidor tiene versión más nueva de ${draft.cotizacion} (${res.server_timestamp})`);
-            // Descargar la versión completa del servidor y actualizar localStorage
+            // Descargar la versión completa del servidor y MERGEAR con el local (no pisar)
             try {
                 const fullResp = await fetch('/.netlify/functions/conectar', {
                     method: 'POST',
@@ -7755,15 +7790,53 @@ async function saveDraftsToServer(draftOrArray) {
                 });
                 const fullRes = await fullResp.json();
                 if (fullRes && fullRes.ok && fullRes.data) {
+                    const serverDraft = fullRes.data;
                     const localDrafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
-                    const idx = localDrafts.findIndex(d => d.cotizacion === draft.cotizacion);
+                    const key = normalizeCotizacion(draft.cotizacion);
+                    const idx = localDrafts.findIndex(d => d.cotizacion && normalizeCotizacion(d.cotizacion) === key);
                     if (idx !== -1) {
-                        localDrafts[idx] = fullRes.data;
+                        const local = localDrafts[idx];
+
+                        // Si el local está completado ('entrega') y el servidor no,
+                        // el local es la versión autoritativa: reenviarla con timestamp nuevo (un solo reintento)
+                        if (local.status === 'entrega' && serverDraft.status !== 'entrega' && !_esReintento) {
+                            const reenvio = { ...local, timestamp: new Date().toISOString() };
+                            localDrafts[idx] = reenvio;
+                            try { localStorage.setItem('cmr_drafts', JSON.stringify(localDrafts)); } catch (e) {}
+                            console.log(`🔁 Reenviando borrador completado al servidor: ${draft.cotizacion}`);
+                            return await saveDraftsToServer(reenvio, true);
+                        }
+
+                        // Merge normal: partir de la versión del servidor,
+                        // preservar campos de entrega del local si faltan en el servidor
+                        const merged = { ...serverDraft };
+                        const camposEntrega = ['clienteEntregaNombre', 'clienteEntregaCedula', 'clienteEntregaCargo',
+                                               'highTestEntregaNombre', 'highTestEntregaCargo',
+                                               'fechaFirmaEntrega', 'fechaEntrega'];
+                        for (const c of camposEntrega) {
+                            const valLocal = local?.[c];
+                            const valServer = serverDraft?.[c];
+                            if (valLocal && !valServer) merged[c] = valLocal;
+                        }
+                        // signatureData: merge por clave para no perder firmas locales
+                        if (local?.signatureData) {
+                            merged.signatureData = { ...(serverDraft.signatureData || {}) };
+                            for (const k of Object.keys(local.signatureData)) {
+                                if (!merged.signatureData[k] && local.signatureData[k]) {
+                                    merged.signatureData[k] = local.signatureData[k];
+                                }
+                            }
+                        }
+                        // Si el local está completado y el servidor también, conservar el estado completado
+                        if (local.status === 'entrega' || serverDraft.status === 'entrega') {
+                            merged.status = 'entrega';
+                        }
+                        localDrafts[idx] = merged;
                     } else {
-                        localDrafts.push(fullRes.data);
+                        localDrafts.push(serverDraft);
                     }
-                    localStorage.setItem('cmr_drafts', JSON.stringify(localDrafts));
-                    console.log(`🔄 localStorage actualizado con versión del servidor: ${draft.cotizacion}`);
+                    try { localStorage.setItem('cmr_drafts', JSON.stringify(localDrafts)); } catch (e) {}
+                    console.log(`🔄 localStorage actualizado con merge del servidor: ${draft.cotizacion}`);
                 }
             } catch (e) {
                 console.warn('No se pudo descargar versión del servidor:', e);
@@ -8758,7 +8831,8 @@ async function actualizarProcesoAEntrega() {
 
         if (!numeroProceso) {
             console.warn('Sin número de proceso para actualizar a entrega');
-            return;
+            showNotification('No se pudo guardar: falta el Nº de Recepción', 'error');
+            return false;
         }
 
         const response = await fetch('/.netlify/functions/conectar', {
@@ -8775,14 +8849,25 @@ async function actualizarProcesoAEntrega() {
 
         const result = await response.json();
 
-        if (!response.ok) {
+        if (!response.ok || !result?.ok) {
             console.warn('Error actualizando proceso a entrega:', result?.error);
-            return;
+            showNotification('No se pudo guardar la entrega en el servidor: ' + (result?.error || 'error de conexión'), 'error');
+            return false;
         }
 
         showNotification('Proceso actualizado a ENTREGA CLIENTE en el panel', 'success');
+        // Actualizar el caché local de procesos para que el dropdown de
+        // "Casos en progreso" excluya el caso entregado de inmediato
+        try {
+            if (result?.proceso && typeof window.__actualizarProcesoEnCache === 'function') {
+                window.__actualizarProcesoEnCache(result.proceso);
+            }
+        } catch (e) { /* no bloquear por error de caché */ }
+        return true;
     } catch (error) {
         console.error('Error actualizando proceso a entrega:', error);
+        showNotification('No se pudo guardar la entrega: sin conexión con el servidor', 'error');
+        return false;
     }
 }
 
@@ -9046,16 +9131,23 @@ async function pdfRecepcionAction() {
 
 // Abre cliente de correo tras generar PDF completo si hay email del cliente
 async function pdfCompletoAction() {
-    // Prevenir generación duplicada de entrega si ya existe un borrador marcado como 'entrega'
+    // Si el borrador local ya está marcado como 'entrega', ofrecer reintento
+    // (puede ser un fallo previo del guardado: el PDF se descargó pero la BD no se actualizó)
     try {
         const cot = document.getElementById('quoteNumber')?.value;
         if (cot) {
             const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
-            const existing = drafts.find(d => d.cotizacion && d.cotizacion === cot);
-            if (existing && existing.status === 'entrega') {
-                alert('La entrega ya fue completada para este Nº de Recepción. No se puede generar otra entrega.');
-                showNotification('Entrega ya completada para este caso', 'warning');
-                return;
+            const key = normalizeCotizacion(cot);
+            const idx = drafts.findIndex(d => d.cotizacion && normalizeCotizacion(d.cotizacion) === key);
+            if (idx !== -1 && drafts[idx].status === 'entrega') {
+                const reintentar = confirm('Este caso ya fue marcado como entregado.\n¿Deseas volver a guardar la entrega en el servidor y regenerar el PDF?');
+                if (!reintentar) {
+                    showNotification('Entrega ya completada para este caso', 'warning');
+                    return;
+                }
+                // Permitir el reintento: volver el estado local a recepcion
+                drafts[idx].status = 'recepcion';
+                localStorage.setItem('cmr_drafts', JSON.stringify(drafts));
             }
         }
     } catch (e) { /* no bloquear por error en comprobación localStorage */ }
@@ -9071,21 +9163,24 @@ async function pdfCompletoAction() {
         showNotification('⚠️ Complete los campos obligatorios antes de generar el PDF', 'warning');
         return;
     }
-    // Solo genera el PDF Completo; no abre correo automáticamente
-    generatePDF();
 
-    // Actualizar proceso existente a ENTREGA CLIENTE en BD
-    await actualizarProcesoAEntrega();
+    // ============================================================
+    // ORDEN CORRECTO: PRIMERO GUARDAR EN SERVIDOR, DESPUÉS EL PDF
+    // ============================================================
 
-    // Sincronizar DOM → savedRowsData para que guardarDetalleProceso tenga los datos actuales
+    // 1. Actualizar proceso a ENTREGA CLIENTE en BD (estado + fecha + firma entrega)
+    //    Si falla, NO se genera el PDF: evita descargar archivos de entregas no registradas
+    const okEstado = await actualizarProcesoAEntrega();
+    if (!okEstado) {
+        showAlertModal('No se pudo guardar la entrega', '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;"><span style="color:#dc2626;font-size:15px;flex-shrink:0;margin-top:1px;">&#10006;</span><span style="font-size:14px;color:#374151;">La entrega NO se registró en el servidor y el PDF no se generó.\nVerifica tu conexión e inténtalo de nuevo.</span></div>');
+        return;
+    }
+
+    // 2. Sincronizar DOM → savedRowsData para que guardarDetalleProceso tenga los datos actuales
     saveCurrentTableData('ensayos_acreditados');
     saveCurrentTableData('ensayos_no_acreditados');
 
-    // DEBUG 1: savedRowsData completo antes de guardarDetalleProceso (entrega)
-    console.log('=== DEBUG 1 (entrega): savedRowsData.ensayos_acreditados ANTES de guardarDetalleProceso ===');
-    console.log(JSON.stringify(savedRowsData.ensayos_acreditados, null, 2));
-
-    // Actualizar cantidad_entregada en detalle_procesos_ac
+    // 3. Actualizar cantidad_entregada en detalle_procesos_ac (no crítico: no bloquea el PDF)
     const cot2 = document.getElementById('quoteNumber')?.value;
     if (cot2) {
         try {
@@ -9101,10 +9196,22 @@ async function pdfCompletoAction() {
         } catch(e) { console.error('Error sincronizando detalle en entrega:', e); }
     }
 
-    // Marcar borrador como completado (guarda formulario + status 'entrega' en servidor)
+    // 4. Marcar borrador como completado (local + servidor)
+    //    El estado en la BD ya quedó; si falla solo afecta el dropdown local
     if (cot2) {
-        try { await updateDraftStatus(cot2, 'entrega'); } catch(e) {}
+        try {
+            const okBorrador = await updateDraftStatus(cot2, 'entrega');
+            if (!okBorrador) {
+                showNotification('Advertencia: el estado local del caso no se pudo marcar como entregado', 'warning');
+            }
+        } catch(e) {
+            console.error('Error marcando borrador como entrega:', e);
+            showNotification('Advertencia: el estado local del caso no se pudo marcar como entregado', 'warning');
+        }
     }
+
+    // 5. Recién ahora generar y descargar el PDF
+    generatePDF();
 }
 
 // =======================================================
@@ -9202,18 +9309,29 @@ async function saveAsDraft() {
     showNotification('✅ Borrador guardado - Puedes continuar cuando lo desees', 'success');
 }
 
+// Helper: normalizar cotización para comparar (sin espacios extra, mayúsculas)
+function normalizeCotizacion(c) {
+    return String(c || '').replace(/\s+/g, '').toUpperCase();
+}
+
 // Helper: buscar índice de borrador por cotización
 function findDraftIndexByCotizacion(cotizacion) {
     const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
-    return drafts.findIndex(d => d.cotizacion && d.cotizacion === cotizacion);
+    const key = normalizeCotizacion(cotizacion);
+    return drafts.findIndex(d => d.cotizacion && normalizeCotizacion(d.cotizacion) === key);
 }
 
 // Helper: actualizar estado de un borrador (p.ej. 'recepcion' o 'entrega')
 async function updateDraftStatus(cotizacion, status) {
     if (!cotizacion) return false;
     const drafts = JSON.parse(localStorage.getItem('cmr_drafts') || '[]');
-    const idx = drafts.findIndex(d => d.cotizacion && d.cotizacion === cotizacion);
-    if (idx === -1) return false;
+    const key = normalizeCotizacion(cotizacion);
+    let idx = drafts.findIndex(d => d.cotizacion && normalizeCotizacion(d.cotizacion) === key);
+    if (idx === -1) {
+        // Crear borrador mínimo para no perder el cambio de estado
+        drafts.push({ cotizacion: cotizacion, status: status, timestamp: new Date().toISOString() });
+        idx = drafts.length - 1;
+    }
     
     // Actualizar status y timestamp
     drafts[idx].status = status;
@@ -9231,9 +9349,21 @@ async function updateDraftStatus(cotizacion, status) {
         }
     }
     
-    localStorage.setItem('cmr_drafts', JSON.stringify(drafts));
-    try { await saveDraftsToServer(drafts[idx]); } catch(e) {}
+    try {
+        localStorage.setItem('cmr_drafts', JSON.stringify(drafts));
+    } catch (e) {
+        // Cuota de localStorage llena (borradores con firmas base64 pesan mucho)
+        console.warn('No se pudo guardar el estado del caso en localStorage (cuota llena):', e);
+        showNotification('No se pudo actualizar el estado local del caso: almacenamiento lleno', 'error');
+        return false;
+    }
+    let okServer = true;
+    try { okServer = await saveDraftsToServer(drafts[idx]); } catch(e) { okServer = false; }
     setTimeout(refreshCasesSelect, 100);
+    if (!okServer) {
+        showNotification('El estado del caso no se pudo sincronizar con el servidor', 'warning');
+        return false;
+    }
     return true;
 }
 
