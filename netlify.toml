@@ -1,3 +1,8 @@
 [build]
   publish = "." # Aquí le decimos que use la carpeta raíz para el frontend
   functions = "netlify/functions" # Aquí vive nuestro backend gratis
+
+[functions]
+  # Sube el límite de la función de 10s a 26s (máximo de Netlify).
+  # Si tu plan requiere activación por soporte, el valor ya queda configurado.
+  timeout = 26

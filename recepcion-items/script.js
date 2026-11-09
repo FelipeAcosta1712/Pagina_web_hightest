@@ -2,6 +2,46 @@
 // VARIABLES GLOBALES Y CONFIGURACIÓN
 // =======================================================
 
+// Fetch resiliente local (para páginas que NO cargan script-v2.js):
+// timeout de 25s + hasta 2 reintentos con backoff, solo para lecturas.
+window.__fetchResiliente = async function(action, params) {
+    const esLectura = !/^(add_|save_|update_|delete_|register_|login|create_)/.test(action);
+    const intentosMax = esLectura ? 3 : 1;
+    let ultimoError = null;
+
+    for (let intento = 0; intento < intentosMax; intento++) {
+        if (intento > 0) {
+            await new Promise(r => setTimeout(r, intento * 2000));
+        }
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 25000);
+        try {
+            const res = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(Object.assign({ action: action }, params || {})),
+                signal: ctrl.signal
+            });
+            if (res.status === 429 || res.status >= 500) {
+                ultimoError = new Error('El servidor respondió ' + res.status);
+                continue;
+            }
+            if (!res.ok) {
+                throw new Error('El servidor respondió ' + res.status);
+            }
+            return await res.json();
+        } catch (e) {
+            ultimoError = (e && e.name === 'AbortError')
+                ? new Error('Tiempo de espera agotado (timeout) al consultar ' + action)
+                : e;
+            if (!esLectura) throw ultimoError;
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+    throw ultimoError || new Error('Error desconocido al consultar ' + action);
+};
+
 // Caché compartida de get_procesos_acreditados
 window.__procesosAcreditadosCache = {
     data: null,
@@ -21,16 +61,17 @@ window.__getProcesosAcreditadosCached = async function() {
 
     cache.promise = (async () => {
         try {
-            const res = await fetch('/.netlify/functions/conectar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'get_procesos_acreditados' })
-            });
+            let json;
+            if (typeof fetchFromDatabase === 'function') {
+                // script-v2.js: timeout 25s + reintentos con backoff
+                json = await fetchFromDatabase('get_procesos_acreditados');
+            } else {
+                // Página sin script-v2.js: helper local resiliente
+                json = await window.__fetchResiliente('get_procesos_acreditados');
+            }
 
-            const json = await res.json();
-
-            if (!res.ok || !json.ok || !Array.isArray(json.procesos)) {
-                throw new Error(json.error || 'Error obteniendo procesos acreditados');
+            if (!json || !json.ok || !Array.isArray(json.procesos)) {
+                throw new Error((json && json.error) || 'Error obteniendo procesos acreditados');
             }
 
             cache.data = json.procesos;
@@ -87,16 +128,15 @@ window.__getBorradoresResumenCached = async function(forceRefresh = false) {
 
     cache.promise = (async () => {
         try {
-            const res = await fetch('/.netlify/functions/conectar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'get_borradores_resumen' })
-            });
+            let json;
+            if (typeof fetchFromDatabase === 'function') {
+                json = await fetchFromDatabase('get_borradores_resumen');
+            } else {
+                json = await window.__fetchResiliente('get_borradores_resumen');
+            }
 
-            const json = await res.json();
-
-            if (!res.ok || !json.ok || !Array.isArray(json.data)) {
-                throw new Error(json.error || 'Error obteniendo resumen de borradores');
+            if (!json || !json.ok || !Array.isArray(json.data)) {
+                throw new Error((json && json.error) || 'Error obteniendo resumen de borradores');
             }
 
             cache.data = json.data;

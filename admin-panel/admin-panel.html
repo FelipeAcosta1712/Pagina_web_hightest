@@ -167,6 +167,9 @@
                     </div>
                 </div>
 
+                <!-- Error de carga del dashboard (oculto por defecto) -->
+                <div id="dashLoadError" style="display:none; align-items:center; gap:12px; margin:10px 0; padding:12px 16px; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; color:#b91c1c; font-size:14px; font-weight:600;"></div>
+
                 <!-- KPI Cards Row -->
                 <div class="dash-stats-row">
                     <div class="dash-stat-card">
@@ -1141,6 +1144,9 @@
                     <p class="cot-header__subtitle">Reportes, historial y análisis de recepción y entrega de elementos</p>
                 </div>
 
+                <!-- Error de carga de casos (oculto por defecto) -->
+                <div id="recLoadError" style="display:none; align-items:center; gap:12px; margin:0 24px 12px; padding:12px 16px; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; color:#b91c1c; font-size:14px; font-weight:600;"></div>
+
                 <!-- Acceso rápido -->
                 <div style="padding: 0 24px 20px; display: flex; gap: 16px; flex-wrap: wrap; align-items: stretch;">
                     <a href="/recepcion-items/recepcion-items.html" target="_blank" style="display: flex; align-items: center; gap: 12px; padding: 20px 24px; background: #fff; border: 2px solid #2563eb; border-radius: 12px; text-decoration: none; color: #1e293b; min-width: 260px; transition: all 0.2s;">
@@ -1269,11 +1275,14 @@
                     </div>
 
                     <div style="background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden;">
-                        <div style="padding: 16px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="padding: 16px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
                             <h3 style="margin: 0; font-size: 15px; font-weight: 700;">Resumen por Caso</h3>
-                            <div id="discrepanciaFilterIndicator" style="display: none; background: #fef2f2; color: #ef4444; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; align-items: center;">
-                                <span id="discrepanciaFilterIndicatorTexto">⚠️ Mostrando solo discrepancias</span>
-                                <button type="button" onclick="RecepcionAnalyticsModule.limpiarFiltroEstadisticas()" style="background: #ef4444; color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; margin-left: 8px; font-size: 12px; line-height: 1;">✕</button>
+                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                <input type="text" id="buscadorEstadisticas" oninput="RecepcionAnalyticsModule.buscarEnEstadisticas(this.value)" placeholder="🔍 Buscar Nº, cliente, informe..." autocomplete="off" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; min-width: 240px;">
+                                <div id="discrepanciaFilterIndicator" style="display: none; background: #fef2f2; color: #ef4444; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; align-items: center;">
+                                    <span id="discrepanciaFilterIndicatorTexto">⚠️ Mostrando solo discrepancias</span>
+                                    <button type="button" onclick="RecepcionAnalyticsModule.limpiarFiltroEstadisticas()" style="background: #ef4444; color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; margin-left: 8px; font-size: 12px; line-height: 1;">✕</button>
+                                </div>
                             </div>
                         </div>
                         <div style="overflow-x: auto;">
@@ -9144,15 +9153,9 @@
 
             // Dashboard charts are now managed by admin-dashboard.js (DashboardModule)
 
-            // Precargar recepción de elementos en segundo plano al cargar la página
-            function precargarRecepcion() {
-                if (typeof RecepcionAnalyticsModule !== 'undefined' && RecepcionAnalyticsModule.init) {
-                    RecepcionAnalyticsModule.init();
-                } else {
-                    setTimeout(precargarRecepcion, 200);
-                }
-            }
-            setTimeout(precargarRecepcion, 500);
+            // La recepción ya NO se precarga al abrir el panel (ahorraba 3 peticiones
+            // pesadas al arranque). Se carga desde adminNav('recepcion') al entrar
+            // a la sección, y desde abrirModalDescargaPDFs() si hace falta.
         });
     </script>
 
@@ -11745,6 +11748,7 @@
             _casoStats: null,
             _filtroDiscrepancias: false,
             _filtroIncompletos: false,
+            _busquedaEstadisticas: '',
             _completitud: null,
             _editEntrega: null,
 
@@ -11850,16 +11854,22 @@
                     const [procesosCache, dataBorradores, resConteos, dataCompletitud] = await Promise.all([
                         window.__getProcesosAcreditadosCached(),
                         window.__getBorradoresResumenCached(),
-                        fetch('/.netlify/functions/conectar', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ action: 'get_all_detalle_procesos' })
-                        }).then(r => r.json()).catch(() => null),
-                        fetch('/.netlify/functions/conectar', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ action: 'get_completitud_resumen' })
-                        }).then(r => r.json()).catch(() => null)
+                        (typeof fetchFromDatabase === 'function'
+                            ? fetchFromDatabase('get_all_detalle_procesos')
+                            : fetch('/.netlify/functions/conectar', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'get_all_detalle_procesos' })
+                            }).then(r => r.json())
+                        ).catch(() => null),
+                        (typeof fetchFromDatabase === 'function'
+                            ? fetchFromDatabase('get_completitud_resumen')
+                            : fetch('/.netlify/functions/conectar', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'get_completitud_resumen' })
+                            }).then(r => r.json())
+                        ).catch(() => null)
                     ]);
                     const procesos = Array.isArray(procesosCache) ? procesosCache : [];
                     const dataConteos = resConteos && resConteos.ok ? resConteos : { ok: false };
@@ -12002,10 +12012,25 @@
 
                     this.casosCargados = true;
                     this.ultimaCarga = new Date();
+                    this._mostrarErrorCarga(null);
 
                 } catch (e) {
                     console.error('Error cargando casos de recepción:', e);
+                    this._mostrarErrorCarga(e);
                 }
+            },
+
+            _mostrarErrorCarga(err) {
+                const el = document.getElementById('recLoadError');
+                if (!el) return;
+                if (!err) { el.style.display = 'none'; el.innerHTML = ''; return; }
+                const msg = (err && err.message) ? err.message : 'Error desconocido';
+                const safe = String(msg).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+                el.style.display = 'flex';
+                el.innerHTML = '<span>No se pudieron cargar los casos de recepción: ' + safe + '</span>' +
+                    '<button type="button" id="recRetryBtn" style="padding:6px 14px; border:none; border-radius:8px; background:#dc2626; color:#fff; font-weight:700; font-size:13px; cursor:pointer;">Reintentar</button>';
+                const btn = document.getElementById('recRetryBtn');
+                if (btn) btn.onclick = () => { el.style.display = 'none'; this.cargarCasos(); };
             },
 
             async _cargarDetalleItems() {
@@ -12370,6 +12395,15 @@
                 } else if (this._filtroIncompletos) {
                     entries = entries.filter(c => this._esIncompleto(c));
                 }
+                // Buscador (funciona con cualquier filtro activo: incompletos, discrepancias o vista general)
+                const qBusq = String(this._busquedaEstadisticas || '').trim().toLowerCase();
+                if (qBusq) {
+                    entries = entries.filter(c => {
+                        const faltantesTxt = (this._esIncompleto(c) ? this._faltantesIncompletos(c).join(' ') : '');
+                        return [c.cotizacion, c.cliente, c.informeNombre, c.facturarNombre, faltantesTxt]
+                            .some(v => String(v || '').toLowerCase().includes(qBusq));
+                    });
+                }
                 entries.sort((a, b) => String(b.cotizacion).localeCompare(String(a.cotizacion)));
 
                 const porPagina = 20;
@@ -12379,9 +12413,11 @@
                 const paginados = entries.slice(inicio, inicio + porPagina);
 
                 if (paginados.length === 0) {
-                    const msgVacio = this._filtroDiscrepancias
-                        ? 'No hay discrepancias'
-                        : (this._filtroIncompletos ? 'No hay procesos incompletos' : 'No hay casos registrados');
+                    const msgVacio = qBusq
+                        ? `No se encontraron resultados para "${this._busquedaEstadisticas}"`
+                        : (this._filtroDiscrepancias
+                            ? 'No hay discrepancias'
+                            : (this._filtroIncompletos ? 'No hay procesos incompletos' : 'No hay casos registrados'));
                     tbody.innerHTML = `<tr><td colspan="${numCols}" style="padding:20px;text-align:center;color:#999;">${msgVacio}</td></tr>`;
                 } else {
                     tbody.innerHTML = paginados.map(c => {
@@ -12441,9 +12477,18 @@
                 this.actualizarEstadisticas();
             },
 
+            buscarEnEstadisticas(valor) {
+                this._busquedaEstadisticas = String(valor || '');
+                this.paginaEstadisticas = 1;
+                this._renderTablaEstadisticas();
+            },
+
             limpiarFiltroEstadisticas() {
                 this._filtroDiscrepancias = false;
                 this._filtroIncompletos = false;
+                this._busquedaEstadisticas = '';
+                const inpBusq = document.getElementById('buscadorEstadisticas');
+                if (inpBusq) inpBusq.value = '';
                 this.paginaEstadisticas = 1;
                 this._actualizarIndicadorFiltro();
                 this._renderTablaEstadisticas();

@@ -134,22 +134,55 @@ const isValidPhone = (phone) => {
 /**
  * Helper genérico para llamar al Netlify Function `conectar`.
  * Devuelve el JSON parseado o lanza un Error si falla.
+ * - Timeout de 25s por intento (AbortController).
+ * - Hasta 2 reintentos con backoff para errores transitorios (red/timeout/5xx).
  */
-async function fetchFromDatabase(action, params = {}) {
+async function fetchFromDatabase(action, params = {}, options = {}) {
     const body = Object.assign({ action }, params);
-    const res = await fetch('/.netlify/functions/conectar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-    });
+    const retries = options.retries != null ? options.retries : 2;
+    const timeoutMs = options.timeoutMs || 25000;
+    // Las escrituras no se reintentan solas para evitar duplicados
+    const isRead = options.readonly !== false && !/^(add_|save_|update_|delete_|create_|upload_|restore_|import_|backfill_|repair_|migrar_|duplicate_|generar_)/.test(action);
 
-    if (!res.ok) {
-        throw new Error('Network response was not ok: ' + res.status);
+    let lastError;
+    for (let attempt = 0; attempt <= (isRead ? retries : 0); attempt++) {
+        if (attempt > 0) {
+            await new Promise(r => setTimeout(r, attempt * 2000));
+        }
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            const res = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                signal: controller.signal,
+            });
+
+            if (!res.ok) {
+                const err = new Error('Network response was not ok: ' + res.status);
+                err.status = res.status;
+                // 504/502/503/429 y 5xx: vale la pena reintentar
+                if (res.status < 500 && res.status !== 429) throw Object.assign(err, { fatal: true });
+                throw err;
+            }
+
+            const data = await res.json();
+            if (!data || typeof data !== 'object') throw new Error('Invalid JSON response from server');
+            return data;
+        } catch (error) {
+            lastError = error;
+            if (error && error.fatal) break;
+            if (error && error.name === 'AbortError') {
+                lastError = new Error('Tiempo de espera agotado (timeout). El servidor tardó demasiado en responder.');
+                lastError.timeout = true;
+            }
+            // JSON inválido o error de red: continuar con reintento si queda
+        } finally {
+            clearTimeout(timer);
+        }
     }
-
-    const data = await res.json();
-    if (!data || typeof data !== 'object') throw new Error('Invalid JSON response from server');
-    return data;
+    throw lastError || new Error('Error desconocido de red');
 }
 
 /**

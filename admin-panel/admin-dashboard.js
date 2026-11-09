@@ -96,27 +96,54 @@ const DashboardModule = {
 
     async loadStats() {
         try {
-            const body = { action: 'get_dashboard_stats' };
-            if (this.filters.mes) body.mes = this.filters.mes;
-            if (this.filters.cliente) body.cliente = this.filters.cliente;
-            if (this.filters.estado) body.estado = this.filters.estado;
+            const params = {};
+            if (this.filters.mes) params.mes = this.filters.mes;
+            if (this.filters.cliente) params.cliente = this.filters.cliente;
+            if (this.filters.estado) params.estado = this.filters.estado;
 
-            const res = await fetch('/.netlify/functions/conectar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-            const data = await res.json();
-            if (data.ok) {
+            // fetchFromDatabase (script-v2.js) ya aplica timeout de 25s + reintentos con backoff
+            let data;
+            if (typeof fetchFromDatabase === 'function') {
+                data = await fetchFromDatabase('get_dashboard_stats', params);
+            } else {
+                const res = await fetch('/.netlify/functions/conectar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(Object.assign({ action: 'get_dashboard_stats' }, params))
+                });
+                if (!res.ok) throw new Error('El servidor respondió ' + res.status);
+                data = await res.json();
+            }
+
+            if (data && data.ok) {
                 this.stats = data.stats;
                 this.populateFilters();
                 this.renderAll();
+                this.hideLoadError();
             } else {
-                console.error('Error cargando stats:', data.error);
+                throw new Error((data && data.error) || 'Error desconocido del servidor');
             }
         } catch (err) {
             console.error('Error de red:', err);
+            this.showLoadError(err);
         }
+    },
+
+    showLoadError(err) {
+        const el = document.getElementById('dashLoadError');
+        if (!el) return;
+        const msg = (err && err.message) ? err.message : 'Error desconocido';
+        el.style.display = 'flex';
+        el.innerHTML = '<span>No se pudo cargar el dashboard: ' +
+            String(msg).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])) +
+            '</span><button type="button" id="dashRetryBtn" style="padding:6px 14px; border:none; border-radius:8px; background:#dc2626; color:#fff; font-weight:700; font-size:13px; cursor:pointer;">Reintentar</button>';
+        const btn = document.getElementById('dashRetryBtn');
+        if (btn) btn.onclick = () => { this.hideLoadError(); this.loadStats(); };
+    },
+
+    hideLoadError() {
+        const el = document.getElementById('dashLoadError');
+        if (el) el.style.display = 'none';
     },
 
     formatCurrency(value) {
