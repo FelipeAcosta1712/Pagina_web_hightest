@@ -416,122 +416,55 @@ exports.handler = async (event) => {
             if (payload.action === 'get_procesos_acreditados') {
                 const { estado, cliente, tipo, month, date, search, limit, offset, caso_activo: activo } = payload;
 
-                // buildQuery crea la consulta con los filtros (sin paginación);
-                // fetchAllPaged la recorre en bloques de 1000 para no cortar filas
-                const buildQuery = () => {
-                    let query = supabase
-                        .from('procesos_acreditados')
-                        .select('*');
+                // Fase 2: RPC get_procesos_list (solo lectura, sin firmas base64).
+                // Devuelve las columnas ligeras + total_items agregado en SQL.
+                // (La columna 'tipo' no existe en procesos_acreditados, se ignora
+                //  igual que antes de forma práctica: ningún llamador la envía.)
 
-                    // filtro por activo (boolean)
-                    if (activo !== undefined && activo !== null && activo !== '') {
-                        query = query.eq('caso_activo', Boolean(activo));
-                    }
-
-                    // filtros sencillos
-                    if (estado) {
-                        // coincidencia parcial, case-insensitive
-                        query = query.ilike('estado', `%${String(estado).trim()}%`);
-                    }
-
-                    if (cliente) {
-                        query = query.ilike('cliente', `%${String(cliente).trim()}%`);
-                    } else if (tipo) {
-                        query = query.ilike('tipo', `%${String(tipo).trim()}%`);
-                    }
-
-                    if (month) {
-                        // esperar formato YYYY-MM y filtrar por rango real sobre la columna date
-                        const m = String(month).trim();
-                        if (/^\d{4}-\d{2}$/.test(m)) {
-                            const [year, monthIndex] = m.split('-').map(Number);
-                            const startDate = new Date(Date.UTC(year, monthIndex - 1, 1));
-                            const endDate = new Date(Date.UTC(year, monthIndex, 1));
-                            const startIso = startDate.toISOString().slice(0, 10);
-                            const endIso = endDate.toISOString().slice(0, 10);
-
-                            query = query.gte('fecha_recepcion', startIso).lt('fecha_recepcion', endIso);
-                        }
-                    }
-
-                    if (date) {
-                        const exactDate = String(date).trim();
-                        if (/^\d{4}-\d{2}-\d{2}$/.test(exactDate)) {
-                            query = query.eq('fecha_recepcion', exactDate);
-                        }
-                    }
-
-                    if (search) {
-                        const s = String(search).trim();
-                        // Buscar en varias columnas comunes (usar numero_proceso)
-                        const orCond = `numero_proceso.ilike.%${s}%,cliente.ilike.%${s}%,n_informe.ilike.%${s}%`;
-                        query = query.or(orCond);
-                    }
-
-                    // ordenar por fecha_recepcion desc por defecto
-                    return query.order('fecha_recepcion', { ascending: false });
-                };
-
-                let data;
-                if (limit || offset) {
-                    // el cliente pidió una página: una sola consulta acotada
-                    let query = buildQuery();
-                    if (limit) {
-                        query = query.limit(Number(limit) || 100);
-                    }
-                    if (offset) {
-                        const o = Number(offset) || 0;
-                        query = query.range(o, (o + (Number(limit) || 99)));
-                    }
-                    const { data: page, error } = await query;
-                    if (error) {
-                        return jsonResponse(500, { ok: false, error: 'Error al consultar procesos_acreditados', detail: error.message });
-                    }
-                    data = page;
-                } else {
-                    // sin limit/offset: traer TODO paginado (PostgREST corta en 1000 filas
-                    // y al superarlas la lista de casos quedaba incompleta)
-                    try {
-                        data = await fetchAllPaged(buildQuery);
-                    } catch (e) {
-                        return jsonResponse(500, { ok: false, error: 'Error al consultar procesos_acreditados', detail: e.message });
+                // Rango de fechas del filtro por mes: mismo cálculo que la versión JS
+                let pFechaDesde = null;
+                let pFechaHasta = null;
+                if (month) {
+                    const m = String(month).trim();
+                    if (/^\d{4}-\d{2}$/.test(m)) {
+                        const [year, monthIndex] = m.split('-').map(Number);
+                        const startDate = new Date(Date.UTC(year, monthIndex - 1, 1));
+                        const endDate = new Date(Date.UTC(year, monthIndex, 1));
+                        pFechaDesde = startDate.toISOString().slice(0, 10);
+                        pFechaHasta = endDate.toISOString().slice(0, 10);
                     }
                 }
 
-                // Obtener conteo de items por proceso desde detalle_procesos_ac y marcaciones_ac
-                const procesos = data || [];
-                const ids = procesos.map(p => p.id).filter(Boolean);
-                let conteosDetalle = {};
-                let conteosMarc = {};
-                if (ids.length > 0) {
-                    // fetchAll paginado: sin .range() PostgREST corta en 1000 filas
-                    const [resDetalle, resMarc] = await Promise.all([
-                        fetchAll(supabase, 'detalle_procesos_ac', 'proceso_id, id'),
-                        fetchAll(supabase, 'marcaciones_ac', 'proceso_id, elemento')
-                    ]);
-                    // Contar filas desde detalle_procesos_ac (items reales)
-                    (resDetalle || []).forEach(d => {
-                        const pid = String(d.proceso_id).trim();
-                        if (!conteosDetalle[pid]) conteosDetalle[pid] = 0;
-                        conteosDetalle[pid]++;
-                    });
-                    // Contar elementos distintos desde marcaciones_ac
-                    (resMarc || []).forEach(m => {
-                        const pid = String(m.proceso_id).trim();
-                        if (!conteosMarc[pid]) conteosMarc[pid] = new Set();
-                        if (m.elemento) conteosMarc[pid].add(m.elemento.trim());
-                    });
+                let pFechaExacta = null;
+                if (date) {
+                    const exactDate = String(date).trim();
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(exactDate)) {
+                        pFechaExacta = exactDate;
+                    }
                 }
-                procesos.forEach(p => {
-                    const pid = String(p.id).trim();
-                    const desdeDetalle = conteosDetalle[pid] || 0;
-                    const desdeMarc = conteosMarc[pid] ? conteosMarc[pid].size : 0;
-                    p.total_items = Math.max(desdeDetalle, desdeMarc);
-                    delete p.firma_cliente_recepcion;
-                    delete p.firma_cliente_entrega;
+
+                // Nota: sin limit pero con offset, la versión anterior devolvía
+                // 100 filas (range offset..offset+99). Se conserva ese comportamiento.
+                const pLimit = limit ? (Number(limit) || 100) : (offset ? 100 : null);
+                const pOffset = offset ? (Number(offset) || 0) : null;
+
+                const { data, error } = await supabase.rpc('get_procesos_list', {
+                    p_estado: estado ? String(estado).trim() : null,
+                    p_cliente: cliente ? String(cliente).trim() : null,
+                    p_fecha_desde: pFechaDesde,
+                    p_fecha_hasta: pFechaHasta,
+                    p_fecha_exacta: pFechaExacta,
+                    p_search: search ? String(search).trim() : null,
+                    p_activo: (activo !== undefined && activo !== null && activo !== '') ? Boolean(activo) : null,
+                    p_limit: pLimit,
+                    p_offset: pOffset
                 });
 
-                return jsonResponse(200, { ok: true, procesos });
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al consultar procesos_acreditados', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true, procesos: data || [] });
             }
 
             // Obtener SOLO los números de proceso ocupados (~2.5 KB vs ~1 MB de get_procesos_acreditados)
@@ -1530,66 +1463,19 @@ exports.handler = async (event) => {
 
             // Obtener conteo de items por todos los procesos (para modal PDFs)
             if (payload.action === 'get_all_detalle_procesos') {
-                // Contar desde ambas tablas y usar el mayor
-                // fetchAll paginado: sin .range() PostgREST corta en 1000 filas y
-                // faltaban items en la tabla Recibidos/Entregados (ej. R26 0439: 8 en vez de 18)
-                const [resDetalle, resMarc] = await Promise.all([
-                    fetchAllDetalle(supabase, 'proceso_id, id, ensayo_id, cantidad, cantidad_entregada, marca, observaciones, ensayos_acreditados(nombre, categoria)'),
-                    fetchAll(supabase, 'marcaciones_ac', 'proceso_id, elemento')
-                ]);
-
-                const conteos = {};
-                const detalleCompleto = {};
-
-                // Agrupar por proceso_id → ensayo_id (una fila por ensayo, sumando cantidades de marcas)
-                (resDetalle || []).forEach(d => {
-                    const pid = String(d.proceso_id).trim();
-                    const eid = d.ensayo_id || d.id;
-                    if (!conteos[pid]) conteos[pid] = 0;
-                    conteos[pid]++;
-
-                    if (!detalleCompleto[pid]) detalleCompleto[pid] = {};
-                    if (!detalleCompleto[pid][eid]) {
-                        detalleCompleto[pid][eid] = {
-                            ensayo_id: eid,
-                            ensayo_nombre: d.ensayos_acreditados?.nombre || '',
-                            ensayo_categoria: d.ensayos_acreditados?.categoria || '',
-                            cantidad: 0,
-                            cantidad_entregada: 0,
-                            marcas: [],
-                            observaciones: ''
-                        };
-                    }
-                    const entry = detalleCompleto[pid][eid];
-                    entry.cantidad += d.cantidad || 0;
-                    entry.cantidad_entregada = Math.max(entry.cantidad_entregada || 0, d.cantidad_entregada || 0);
-                    if (d.marca) entry.marcas.push({ count: d.cantidad || 0, brand: d.marca });
-                    if (d.observaciones && !entry.observaciones) entry.observaciones = d.observaciones;
-                });
-
-                // Convertir a arrays para enviar al cliente
-                const detalleArrays = {};
-                for (const pid in detalleCompleto) {
-                    detalleArrays[pid] = Object.values(detalleCompleto[pid]);
+                // Fase 2: RPC get_all_detalle_procesos (solo lectura).
+                // El agrupado por proceso/ensayo y los conteos ahora se hacen en
+                // SQL; antes se bajaban detalle_procesos_ac (con JOIN) y
+                // marcaciones_ac completas y se agrupaban en JS.
+                const { data, error } = await supabase.rpc('get_all_detalle_procesos');
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al consultar detalle de procesos', detail: error.message });
                 }
-
-                // Contar elementos distintos desde marcaciones_ac
-                const marcPorProceso = {};
-                (resMarc || []).forEach(m => {
-                    const pid = String(m.proceso_id).trim();
-                    if (!marcPorProceso[pid]) marcPorProceso[pid] = new Set();
-                    if (m.elemento) marcPorProceso[pid].add(m.elemento.trim());
+                return jsonResponse(200, {
+                    ok: true,
+                    conteos: (data && data.conteos) || {},
+                    detalleCompleto: (data && data.detalleCompleto) || {}
                 });
-
-                // Usar el mayor de ambos conteos
-                for (const pid in marcPorProceso) {
-                    const marcCount = marcPorProceso[pid].size;
-                    if (!conteos[pid] || marcCount > conteos[pid]) {
-                        conteos[pid] = marcCount;
-                    }
-                }
-
-                return jsonResponse(200, { ok: true, conteos, detalleCompleto: detalleArrays });
             }
 
             // ── get_completitud_resumen: banderas ligeras de firmas/datos por proceso ──
@@ -1597,76 +1483,15 @@ exports.handler = async (event) => {
             //   firmaRecepcion/firmaEntrega         → firma del cliente
             //   datosClienteRecepcion/Entrega       → nombre, cédula y cargo del firmante (FR-7.4.1)
             //   repHtRecepcion/repHtEntrega         → nombre y cargo del representante HIGH TEST
-            // Fuente: procesos_acreditados (firmas) + borradores (datos del formulario).
+            // Fase 2: RPC get_completitud_resumen (solo lectura). Antes se bajaban
+            // las firmas base64 de TODOS los procesos y el JSON completo de
+            // borradores (12.5 MB) para calcular estos booleanos en JS.
             if (payload.action === 'get_completitud_resumen') {
-                const norm = (s) => String(s || '').replace(/\s+/g, '').toUpperCase();
-                const completo = (...vals) => vals.every(v => String(v === null || v === undefined ? '' : v).trim() !== '');
-                const nuevoResumen = () => ({
-                    firmaRecepcion: false,
-                    firmaEntrega: false,
-                    datosClienteRecepcion: false,
-                    datosClienteEntrega: false,
-                    repHtRecepcion: false,
-                    repHtEntrega: false
-                });
-
-                const [resProc, resBorr] = await Promise.all([
-                    supabase
-                        .from('procesos_acreditados')
-                        .select('numero_proceso, firma_cliente_recepcion, firma_cliente_entrega'),
-                    supabase
-                        .from('borradores')
-                        .select('datos')
-                        .eq('usuario_email', 'shared')
-                        .limit(1)
-                ]);
-
-                const resumen = {};
-                const advertencias = [];
-
-                if (resProc.error) {
-                    advertencias.push('procesos: ' + resProc.error.message);
+                const { data, error } = await supabase.rpc('get_completitud_resumen');
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al consultar completitud', detail: error.message });
                 }
-
-                (resProc.data || []).forEach(p => {
-                    const key = norm(p.numero_proceso);
-                    if (!key) return;
-                    const e = nuevoResumen();
-                    e.firmaRecepcion = !!p.firma_cliente_recepcion;
-                    e.firmaEntrega = !!p.firma_cliente_entrega;
-                    resumen[key] = e;
-                });
-
-                if (resBorr.error) {
-                    advertencias.push('borradores: ' + resBorr.error.message);
-                } else {
-                    const fila = Array.isArray(resBorr.data) && resBorr.data.length > 0 ? resBorr.data[0] : null;
-                    const drafts = fila && Array.isArray(fila.datos) ? fila.datos : [];
-                    drafts.forEach(d => {
-                        if (!d || typeof d !== 'object') return;
-                        const key = norm(d.cotizacion || d.quoteNumber || d.numero_proceso);
-                        if (!key) return;
-                        if (!resumen[key]) resumen[key] = nuevoResumen();
-                        const e = resumen[key];
-                        const sd = (d.signatureData && typeof d.signatureData === 'object') ? d.signatureData : {};
-
-                        // Firmas del cliente (OR: lo que esté registrado cuenta)
-                        e.firmaRecepcion = e.firmaRecepcion || !!(sd.signatureCanvasRecepcion || sd.signatureCanvas);
-                        e.firmaEntrega = e.firmaEntrega || !!sd.signatureCanvasEntrega;
-
-                        // Datos del cliente (firmante FR-7.4.1) — OR entre duplicados
-                        e.datosClienteRecepcion = e.datosClienteRecepcion ||
-                            completo(d.clienteRecepcionNombre, d.clienteRecepcionCedula, d.clienteRecepcionCargo);
-                        e.datosClienteEntrega = e.datosClienteEntrega ||
-                            completo(d.clienteEntregaNombre, d.clienteEntregaCedula, d.clienteEntregaCargo);
-
-                        // Representante HIGH TEST
-                        e.repHtRecepcion = e.repHtRecepcion || completo(d.highTestRecepcionNombre, d.highTestRecepcionCargo);
-                        e.repHtEntrega = e.repHtEntrega || completo(d.highTestEntregaNombre, d.highTestEntregaCargo);
-                    });
-                }
-
-                return jsonResponse(200, { ok: true, resumen, warnings: advertencias.length ? advertencias : undefined });
+                return jsonResponse(200, { ok: true, resumen: data || {} });
             }
 
             // ── Reconstruye un borrador completo (con items) desde la BD ──
@@ -3244,25 +3069,23 @@ exports.handler = async (event) => {
                     const dashEstado = payload.estado || '';
                     const dashMes = payload.mes || '';
 
-                    // fetchAll pagina en bloques de 1000: .range(0,9999) solo devuelve
-                    // 1000 filas (límite PostgREST) y truncaba silenciosamente los datos
-                    const [clientesArr, procesosArr, cotizacionesArr, informesArr, ensayosArr, detalleElementosArr, marcacionesArr] = await Promise.all([
-                        fetchAll(supabase, 'clientes', 'id, created_at'),
-                        fetchAll(supabase, 'procesos_acreditados', '*'),
-                        fetchAll(supabase, 'cotizaciones_ac', 'id, cliente, estado, total_valor, created_at, cotizacion'),
-                        fetchAll(supabase, 'informes_ensayo_ac', 'id, proceso_id, created_at, activo'),
-                        fetchAll(supabase, 'ensayos_acreditados', 'id, nombre, categoria'),
-                        fetchAll(supabase, 'detalle_procesos_ac', 'proceso_id, cantidad'),
-                        fetchAll(supabase, 'marcaciones_ac', 'id, proceso_id, estado')
-                    ]);
+                    // Fase 2: RPC get_dashboard_source (solo lectura). Una sola
+                    // consulta ligera con las fuentes ya agregadas en SQL, en vez
+                    // de 7 fetchAll (que incluían procesos AC con ~33 MB de firmas
+                    // que el dashboard no usa) + 3 fetchAllDetalle con JOINs.
+                    const { data: fuente, error: errFuente } = await supabase.rpc('get_dashboard_source');
+                    if (errFuente) {
+                        throw new Error('get_dashboard_source: ' + errFuente.message);
+                    }
 
-                    const clientes = clientesArr || [];
-                    let procesos = procesosArr || [];
-                    const cotizaciones = cotizacionesArr || [];
-                    const informes = informesArr || [];
-                    const ensayos = ensayosArr || [];
-                    const detalleElementosAll = detalleElementosArr || [];
-                    const marcaciones = marcacionesArr || [];
+                    const clientes = (fuente && fuente.clientes) || [];
+                    const procesosArr = (fuente && fuente.procesos) || [];
+                    let procesos = procesosArr;
+                    const cotizaciones = (fuente && fuente.cotizaciones) || [];
+                    const informes = (fuente && fuente.informes) || [];
+                    const ensayos = (fuente && fuente.ensayos) || [];
+                    const detalleElementosAll = (fuente && fuente.detalle) || [];
+                    const marcacionesResumenBase = (fuente && fuente.marcacionesResumen) || { total: 0, marcados: 0, pendientes: 0 };
 
                     // ── Aplicar filtros del dashboard ──
                     if (dashFechaDesde) {
@@ -3294,15 +3117,17 @@ exports.handler = async (event) => {
                     const filteredProcesoIds = new Set(procesos.map(p => p.id));
                     const hasActiveFilters = dashFechaDesde || dashFechaHasta || dashMes || dashCliente || dashEstado;
 
-                    // Último cliente creado
+                    // Último cliente creado (ya viene en la fuente: se ordena en JS)
                     let ultimoCliente = null;
                     let penultimoCliente = null;
                     try {
-                        const { data: latestClients } = await supabase
-                            .from('clientes')
-                            .select('*')
-                            .order('created_at', { ascending: false })
-                            .limit(2);
+                        const latestClients = [...clientes]
+                            .sort((a, b) => {
+                                const ta = a && a.created_at ? new Date(a.created_at).getTime() : 0;
+                                const tb = b && b.created_at ? new Date(b.created_at).getTime() : 0;
+                                return tb - ta;
+                            })
+                            .slice(0, 2);
                         if (latestClients && latestClients.length > 0) {
                             const c = latestClients[0];
                             const nombre = pickFirstValue(c, ['nombre', 'nombre_completo', 'contacto', 'representante', 'nombre_empresa', 'empresa', 'razon_social']) || c.email || 'Sin nombre';
@@ -3399,16 +3224,17 @@ exports.handler = async (event) => {
                     const valorTotalCotizado = cotizaciones.reduce((sum, c) => sum + (parseFloat(c.total_valor) || 0), 0);
 
                     // ── Top 10 elementos más recibidos (desde detalle_procesos_ac) ──
-                    let detalleElementos;
-                    if (hasActiveFilters) {
-                        detalleElementos = await fetchAllDetalle(supabase, 'cantidad, proceso_id, ensayos_acreditados(nombre)', [...filteredProcesoIds]);
-                    } else {
-                        detalleElementos = await fetchAllDetalle(supabase, 'cantidad, proceso_id, ensayos_acreditados(nombre)');
-                    }
+                    // La fuente ya trae todo el detalle ligero con los JOINs
+                    // resueltos; el filtro por procesos filtrados se aplica en JS
+                    // (antes eran 3 fetchAllDetalle separados con el mismo filtro).
+                    const detalleFiltrado = hasActiveFilters
+                        ? detalleElementosAll.filter(d => filteredProcesoIds.has(d.proceso_id))
+                        : detalleElementosAll;
+                    const detalleElementos = detalleFiltrado;
                     const elementosPorCantidad = {};
                     const elementoRecepciones = {};
                     detalleElementos.forEach(d => {
-                        const nombre = (d.ensayos_acreditados?.nombre || '').trim();
+                        const nombre = (d.ensayo_nombre || '').trim();
                         if (!nombre || nombre === '-') return;
                         const cant = parseInt(d.cantidad) || 0;
                         elementosPorCantidad[nombre] = (elementosPorCantidad[nombre] || 0) + cant;
@@ -3447,15 +3273,10 @@ exports.handler = async (event) => {
                     });
 
                     // ── Elementos por Categoría ──
-                    let detalleConEnsayo;
-                    if (hasActiveFilters) {
-                        detalleConEnsayo = await fetchAllDetalle(supabase, 'cantidad, ensayos_acreditados(categoria)', [...filteredProcesoIds]);
-                    } else {
-                        detalleConEnsayo = await fetchAllDetalle(supabase, 'cantidad, ensayos_acreditados(categoria)');
-                    }
+                    const detalleConEnsayo = detalleFiltrado;
                     const categoriaUnidades = {};
                     (detalleConEnsayo || []).forEach(d => {
-                        const cat = d.ensayos_acreditados?.categoria || 'Otros';
+                        const cat = d.ensayo_categoria || 'Otros';
                         const cant = parseInt(d.cantidad) || 0;
                         categoriaUnidades[cat] = (categoriaUnidades[cat] || 0) + cant;
                     });
@@ -3465,15 +3286,10 @@ exports.handler = async (event) => {
                         .sort((a, b) => b.unidades - a.unidades);
 
                     // ── Top 5 Clientes por Unidades Recibidas ──
-                    let detalleConProceso;
-                    if (hasActiveFilters) {
-                        detalleConProceso = await fetchAllDetalle(supabase, 'cantidad, proceso_id, procesos_acreditados(cliente)', [...filteredProcesoIds]);
-                    } else {
-                        detalleConProceso = await fetchAllDetalle(supabase, 'cantidad, proceso_id, procesos_acreditados(cliente)');
-                    }
+                    const detalleConProceso = detalleFiltrado;
                     const clienteUnidades = {};
                     (detalleConProceso || []).forEach(d => {
-                        const cliente = (d.procesos_acreditados?.cliente || '').trim();
+                        const cliente = (d.cliente || '').trim();
                         if (!cliente || cliente === '-' || cliente === '—') return;
                         clienteUnidades[cliente] = (clienteUnidades[cliente] || 0) + (parseInt(d.cantidad) || 0);
                     });
@@ -3596,13 +3412,12 @@ exports.handler = async (event) => {
                         finalizado: procesosFinalizados
                     };
 
-                    // ── Marcaciones resumen ──
-                    const marcacionesResumen = { total: marcaciones.length, marcados: 0, pendientes: 0 };
-                    marcaciones.forEach(m => {
-                        const est = (m.estado || '').toLowerCase();
-                        if (est === 'marcado') marcacionesResumen.marcados++;
-                        else if (est === 'pendiente') marcacionesResumen.pendientes++;
-                    });
+                    // ── Marcaciones resumen (ya agregado en SQL por la RPC) ──
+                    const marcacionesResumen = {
+                        total: parseInt(marcacionesResumenBase.total, 10) || 0,
+                        marcados: parseInt(marcacionesResumenBase.marcados, 10) || 0,
+                        pendientes: parseInt(marcacionesResumenBase.pendientes, 10) || 0
+                    };
 
                     const informesActivos = informes.filter(i => i.activo).length;
                     const informesVigentes = new Set(informes.map(i => i.proceso_id)).size;
