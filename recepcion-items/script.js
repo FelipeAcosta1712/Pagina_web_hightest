@@ -3,7 +3,7 @@
 // =======================================================
 
 // Fetch resiliente local (para páginas que NO cargan script-v2.js):
-// timeout de 25s + hasta 2 reintentos con backoff, solo para lecturas.
+// timeout de 30s + hasta 2 reintentos con backoff, solo para lecturas.
 window.__fetchResiliente = async function(action, params) {
     const esLectura = !/^(add_|save_|update_|delete_|register_|login|create_)/.test(action);
     const intentosMax = esLectura ? 3 : 1;
@@ -14,7 +14,7 @@ window.__fetchResiliente = async function(action, params) {
             await new Promise(r => setTimeout(r, intento * 2000));
         }
         const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 25000);
+        const timer = setTimeout(() => ctrl.abort(), 30000);
         try {
             const res = await fetch('/.netlify/functions/conectar', {
                 method: 'POST',
@@ -14834,7 +14834,7 @@ async function obtenerCasoCompletoParaPDF(caso) {
     const num = caso.cotizacion || caso.quoteNumber || caso.numero_proceso || '';
     if (!num) return caso;
 
-    const fetchJSON = async (body, timeoutMs = 20000) => {
+    const fetchJSON = async (body, timeoutMs = 30000) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
         try {

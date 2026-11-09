@@ -421,7 +421,8 @@ exports.handler = async (event) => {
                 const buildQuery = () => {
                     let query = supabase
                         .from('procesos_acreditados')
-                        .select('*');
+                        // Sin firmas base64 (~33 MB): ya se borraban antes de responder
+                        .select('id,numero_proceso,cliente,estado,fecha_recepcion,fecha_entrega_cliente,fecha_finalizado,created_at,caso_activo,n_informe,informe_a_nombre_de,facturar_a_nombre_de,fecha_ejecucion,n_remision,responsable_marcacion,lpdp_cliente_recepcion,lpdp_cliente_entrega');
 
                     // filtro por activo (boolean)
                     if (activo !== undefined && activo !== null && activo !== '') {
@@ -1610,10 +1611,20 @@ exports.handler = async (event) => {
                     repHtEntrega: false
                 });
 
-                const [resProc, resBorr] = await Promise.all([
+                // Consultas ligeras: solo numero_proceso (sin firmas base64).
+                // neq('') excluye NULL y vacío → mismos booleanos que !!firma.
+                const [resTodos, resRec, resEnt, resBorr] = await Promise.all([
                     supabase
                         .from('procesos_acreditados')
-                        .select('numero_proceso, firma_cliente_recepcion, firma_cliente_entrega'),
+                        .select('numero_proceso'),
+                    supabase
+                        .from('procesos_acreditados')
+                        .select('numero_proceso')
+                        .neq('firma_cliente_recepcion', ''),
+                    supabase
+                        .from('procesos_acreditados')
+                        .select('numero_proceso')
+                        .neq('firma_cliente_entrega', ''),
                     supabase
                         .from('borradores')
                         .select('datos')
@@ -1624,17 +1635,35 @@ exports.handler = async (event) => {
                 const resumen = {};
                 const advertencias = [];
 
-                if (resProc.error) {
-                    advertencias.push('procesos: ' + resProc.error.message);
+                if (resTodos.error) {
+                    advertencias.push('procesos: ' + resTodos.error.message);
+                }
+                if (resRec.error) {
+                    advertencias.push('firmas recepción: ' + resRec.error.message);
+                }
+                if (resEnt.error) {
+                    advertencias.push('firmas entrega: ' + resEnt.error.message);
                 }
 
-                (resProc.data || []).forEach(p => {
+                // Entrada base (todas en false): el front distingue clave ausente
+                // ("Datos no registrados") de clave presente con banderas en false
+                (resTodos.data || []).forEach(p => {
                     const key = norm(p.numero_proceso);
                     if (!key) return;
-                    const e = nuevoResumen();
-                    e.firmaRecepcion = !!p.firma_cliente_recepcion;
-                    e.firmaEntrega = !!p.firma_cliente_entrega;
-                    resumen[key] = e;
+                    resumen[key] = nuevoResumen();
+                });
+
+                (resRec.data || []).forEach(p => {
+                    const key = norm(p.numero_proceso);
+                    if (!key) return;
+                    if (!resumen[key]) resumen[key] = nuevoResumen();
+                    resumen[key].firmaRecepcion = true;
+                });
+                (resEnt.data || []).forEach(p => {
+                    const key = norm(p.numero_proceso);
+                    if (!key) return;
+                    if (!resumen[key]) resumen[key] = nuevoResumen();
+                    resumen[key].firmaEntrega = true;
                 });
 
                 if (resBorr.error) {
@@ -3248,7 +3277,7 @@ exports.handler = async (event) => {
                     // 1000 filas (límite PostgREST) y truncaba silenciosamente los datos
                     const [clientesArr, procesosArr, cotizacionesArr, informesArr, ensayosArr, detalleElementosArr, marcacionesArr] = await Promise.all([
                         fetchAll(supabase, 'clientes', 'id, created_at'),
-                        fetchAll(supabase, 'procesos_acreditados', '*'),
+                        fetchAll(supabase, 'procesos_acreditados', 'id,numero_proceso,cliente,estado,fecha_recepcion,fecha_entrega_cliente,fecha_finalizado,created_at,caso_activo,n_informe,informe_a_nombre_de,facturar_a_nombre_de,fecha_ejecucion,n_remision,responsable_marcacion,lpdp_cliente_recepcion,lpdp_cliente_entrega'),
                         fetchAll(supabase, 'cotizaciones_ac', 'id, cliente, estado, total_valor, created_at, cotizacion'),
                         fetchAll(supabase, 'informes_ensayo_ac', 'id, proceso_id, created_at, activo'),
                         fetchAll(supabase, 'ensayos_acreditados', 'id, nombre, categoria'),

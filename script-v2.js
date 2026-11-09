@@ -134,13 +134,13 @@ const isValidPhone = (phone) => {
 /**
  * Helper genérico para llamar al Netlify Function `conectar`.
  * Devuelve el JSON parseado o lanza un Error si falla.
- * - Timeout de 25s por intento (AbortController).
+ * - Timeout de 30s por intento (AbortController).
  * - Hasta 2 reintentos con backoff para errores transitorios (red/timeout/5xx).
  */
 async function fetchFromDatabase(action, params = {}, options = {}) {
     const body = Object.assign({ action }, params);
     const retries = options.retries != null ? options.retries : 2;
-    const timeoutMs = options.timeoutMs || 25000;
+    const timeoutMs = options.timeoutMs || 30000;
     // Las escrituras no se reintentan solas para evitar duplicados
     const isRead = options.readonly !== false && !/^(add_|save_|update_|delete_|create_|upload_|restore_|import_|backfill_|repair_|migrar_|duplicate_|generar_)/.test(action);
 
