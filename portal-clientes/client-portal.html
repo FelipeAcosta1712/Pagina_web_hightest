@@ -968,6 +968,52 @@
             cotizaciones: []
         };
 
+        // --- 1b. Guardia de sesión y registro de visita ---
+        // La identidad SIEMPRE la valida el backend mediante la cookie
+        // HttpOnly; localStorage se usa solo para datos de presentación.
+        async function validarSesionPortal() {
+            try {
+                const resp = await fetch('/.netlify/functions/conectar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'validar_sesion_cliente' })
+                });
+                const json = await resp.json().catch(() => ({}));
+                if (resp.ok && json.ok && json.cliente) {
+                    // Solo información básica y no sensible
+                    const basico = {
+                        id: json.cliente.id,
+                        name: json.cliente.name,
+                        email: json.cliente.email,
+                        company: json.cliente.company,
+                        loginTime: new Date().toLocaleString(),
+                        userType: 'client'
+                    };
+                    localStorage.setItem('hightest_client', JSON.stringify(basico));
+                    return json.cliente;
+                }
+            } catch (err) {
+                console.warn('Guardia: no se pudo validar la sesión', err);
+            }
+            // Sin sesión válida (no existe, vencida o revocada):
+            // limpiar datos locales y salir al inicio.
+            localStorage.removeItem('clientData');
+            localStorage.removeItem('hightest_client');
+            localStorage.removeItem('clientSession');
+            window.location.href = '../index.html';
+            return null;
+        }
+
+        // Registro de visita independiente: un fallo aquí no bloquea el portal.
+        // El deduplicado de 30 minutos lo aplica el backend vía la cookie.
+        function registrarVisitaPortal() {
+            fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'registrar_visita_cliente' })
+            }).catch(() => {});
+        }
+
         async function loadClientData() {
             let email = '';
 
@@ -1059,8 +1105,23 @@
         }
 
         // --- 3. Logout ---
-        function clientLogout() {
+        async function clientLogout() {
             if (confirm('¿Estás seguro que deseas cerrar sesión?')) {
+                // Revocar la sesión en el servidor y expirar la cookie.
+                // Se espera (con tope de 3 s) para que el backend aplique
+                // el Set-Cookie de revocación antes de salir.
+                try {
+                    await Promise.race([
+                        fetch('/.netlify/functions/conectar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'logout_cliente' })
+                        }),
+                        new Promise((res) => setTimeout(res, 3000))
+                    ]);
+                } catch (err) {
+                    console.warn('No se pudo contactar el logout del servidor:', err);
+                }
                 localStorage.removeItem('clientData');
                 localStorage.removeItem('hightest_client');
                 localStorage.removeItem('clientSession');
@@ -2317,6 +2378,14 @@
 
         // --- 5. Inicializar ---
         document.addEventListener('DOMContentLoaded', async () => {
+            // GUARDIA: validar la sesión contra el backend ANTES de cargar
+            // cualquier información del portal.
+            const clienteValidado = await validarSesionPortal();
+            if (!clienteValidado) return; // ya redirigió a ../index.html
+
+            // Registro de visita: independiente de la carga del portal
+            registrarVisitaPortal();
+
             setTab('dashboard');
             await loadClientData();
             lucide.createIcons();

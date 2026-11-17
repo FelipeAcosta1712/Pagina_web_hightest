@@ -49,6 +49,10 @@
                         <svg class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                         <span>Clientes</span>
                     </button>
+                    <button class="admin-sidebar__item" data-section="accesos-clientes" onclick="adminNav('accesos-clientes')">
+                        <svg class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                        <span>Accesos Clientes</span>
+                    </button>
                     <button class="admin-sidebar__item" data-section="productos" onclick="adminNav('productos')">
                         <svg class="admin-sidebar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
                         <span>Listado de Precios</span>
@@ -939,6 +943,83 @@
                         </div>
                     </div>
                 </section>
+            </div>
+            <div id="view-accesos-clientes" class="admin-view">
+                <div class="cot-header">
+                    <h1 class="cot-header__title">Accesos Clientes</h1>
+                    <p class="cot-header__subtitle">Registro de ingresos al Portal de Clientes: logins, visitas con sesión activa e intentos fallidos</p>
+                </div>
+
+                <!-- Estado de carga / error / sin datos -->
+                <div id="accesosEstado" style="margin:0 24px 16px;display:none;"></div>
+
+                <!-- Tarjetas resumen -->
+                <div id="accesosCards" style="padding:0 24px 20px;display:grid;grid-template-columns:repeat(5,1fr);gap:16px;"></div>
+
+                <!-- Filtros -->
+                <div style="padding:0 24px 16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <label style="font-size:13px;font-weight:600;color:#475569;">Desde:</label>
+                        <input type="date" id="accesosFechaDesde" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <label style="font-size:13px;font-weight:600;color:#475569;">Hasta:</label>
+                        <input type="date" id="accesosFechaHasta" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;">
+                    </div>
+                    <button onclick="cargarAccesosCliente()" style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Actualizar</button>
+                    <button onclick="limpiarFiltrosAccesos()" style="padding:8px 16px;background:#f1f5f9;color:#475569;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Limpiar</button>
+                    <span id="accesosFiltroResumen" style="font-size:12px;color:#94a3b8;margin-left:auto;"></span>
+                </div>
+
+                <!-- Tabla por cliente -->
+                <div style="padding:0 24px 20px;">
+                    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;">
+                        <h3 style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:4px;">Ingresos por cliente</h3>
+                        <p style="font-size:12px;color:#64748b;margin-bottom:14px;">Contadores históricos registrados en la base de datos</p>
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+                                <thead>
+                                    <tr style="background:#f8fafc;">
+                                        <th style="text-align:left;padding:10px 14px;font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Cliente / Empresa</th>
+                                        <th style="text-align:left;padding:10px 14px;font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Email</th>
+                                        <th style="text-align:center;padding:10px 14px;font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Ingresos</th>
+                                        <th style="text-align:center;padding:10px 14px;font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Logins</th>
+                                        <th style="text-align:center;padding:10px 14px;font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Visitas</th>
+                                        <th style="text-align:left;padding:10px 14px;font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Último acceso</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="accesosTbodyClientes"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla historial -->
+                <div style="padding:0 24px 20px;">
+                    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;">
+                        <h3 style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:4px;">Historial de accesos</h3>
+                        <p style="font-size:12px;color:#64748b;margin-bottom:14px;">Cada ingreso registrado, del más reciente al más antiguo</p>
+                        <div style="overflow-x:auto;max-height:480px;">
+                            <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+                                <thead>
+                                    <tr style="background:#f8fafc;">
+                                        <th style="text-align:left;padding:10px 14px;font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Fecha y hora</th>
+                                        <th style="text-align:left;padding:10px 14px;font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Cliente / Empresa</th>
+                                        <th style="text-align:left;padding:10px 14px;font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Email</th>
+                                        <th style="text-align:left;padding:10px 14px;font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Tipo</th>
+                                        <th style="text-align:left;padding:10px 14px;font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Estado</th>
+                                        <th style="text-align:left;padding:10px 14px;font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Motivo</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="accesosTbodyHistorial"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin:0 24px 32px;padding:12px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;font-size:12px;color:#1e40af;line-height:1.5;">
+                    <strong>Cómo se registran los datos:</strong> un <strong>Login</strong> es cada vez que el cliente ingresa con correo y contraseña (exitoso o fallido). Una <strong>Visita</strong> es cada entrada al portal con la sesión ya guardada (se cuenta máximo una vez cada 30 minutos por cliente, para no duplicar al refrescar la página).
+                </div>
             </div>
             <div id="view-productos" class="admin-view">
                 <div class="cot-header">
@@ -8755,6 +8836,219 @@
         }
 
         // ═══════════════════════════════════════════════
+        // ACCESOS CLIENTES (datos reales de Supabase)
+        // ═══════════════════════════════════════════════
+        // Requiere ejecutar en Supabase: sql/crear_accesos_clientes_sesiones.sql
+        // y sql/corregir_rpc_registrar_acceso_cliente.sql
+
+        let accesosCache = { historial: [], clientes: [] };
+
+        function accesosEstadoUI(modo, mensaje) {
+            const el = document.getElementById('accesosEstado');
+            if (!el) return;
+            if (modo === 'cargando') {
+                el.style.display = 'block';
+                el.innerHTML = '<div style="padding:12px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;font-size:12.5px;color:#1e40af;display:flex;align-items:center;gap:10px;">' +
+                    '<span style="width:14px;height:14px;border:2px solid #93c5fd;border-top-color:#1d4ed8;border-radius:50%;display:inline-block;animation:accesosSpin 0.8s linear infinite;"></span>' +
+                    'Consultando accesos en la base de datos...</div>' +
+                    '<style>@keyframes accesosSpin{to{transform:rotate(360deg)}}</style>';
+                return;
+            }
+            if (modo === 'error' || modo === 'noautorizado') {
+                const esNoAuth = modo === 'noautorizado';
+                el.style.display = 'block';
+                el.innerHTML = '<div style="padding:12px 16px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;font-size:12.5px;color:#b91c1c;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">' +
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
+                    '<span style="flex:1;">' + (esNoAuth
+                        ? 'Acceso restringido: solo el rol <strong>administrador</strong> puede consultar los accesos de clientes. Si ya iniciaste como administrador, <strong>cierra sesión y vuelve a iniciar</strong> para obtener el permiso de consulta (la sesión anterior no lo incluye).'
+                        : 'No se pudieron cargar los accesos. ' + (mensaje || '')) + '</span>' +
+                    '<button onclick="cargarAccesosCliente()" style="padding:7px 14px;background:#b91c1c;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">Reintentar</button>' +
+                    '</div>';
+                return;
+            }
+            el.style.display = 'none';
+            el.innerHTML = '';
+        }
+
+        function accesosFiltrarFechas(historial) {
+            const desde = document.getElementById('accesosFechaDesde')?.value || '';
+            const hasta = document.getElementById('accesosFechaHasta')?.value || '';
+            return (historial || []).filter(a => {
+                const dia = String(a.fecha_acceso || '').slice(0, 10);
+                if (desde && dia < desde) return false;
+                if (hasta && dia > hasta) return false;
+                return true;
+            });
+        }
+
+
+        const accesosFmtFecha = (iso) => {
+            const f = new Date(iso);
+            return f.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) +
+                ', ' + f.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit', hour12: true });
+        };
+
+        const accesosBadgeTipo = (tipo) => tipo === 'visita'
+            ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:700;background:#d1fae5;color:#059669;white-space:nowrap;"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span>Visita</span>'
+            : '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:700;background:#dbeafe;color:#1d4ed8;white-space:nowrap;"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span>Login</span>';
+
+        const accesosBadgeEstado = (exitoso) => exitoso
+            ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:700;background:#ecfdf5;color:#047857;white-space:nowrap;"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span>Exitoso</span>'
+            : '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:700;background:#fee2e2;color:#dc2626;white-space:nowrap;"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span>Fallido</span>';
+
+        function renderAccesosCliente(historialFiltrado, clientesLista) {
+            const datos = historialFiltrado || [];
+            const total = datos.length;
+            const logins = datos.filter(a => a.tipo === 'login' && a.exitoso).length;
+            const visitas = datos.filter(a => a.tipo === 'visita').length;
+            const fallidos = datos.filter(a => !a.exitoso).length;
+            const emailsUnicos = [...new Set(datos.map(a => a.email))];
+            const hoy = new Date().toISOString().slice(0, 10);
+            const accesosHoy = datos.filter(a => String(a.fecha_acceso || '').slice(0, 10) === hoy).length;
+
+            const tdBase = 'padding:11px 14px;font-size:12.5px;color:#334155;border-bottom:1px solid #f1f5f9;';
+
+            // Tarjetas resumen
+            const cards = [
+                { mod: '2563eb', bg: 'eff6ff', label: 'Total entradas', value: total, hint: accesosHoy + ' hoy', icon: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>' },
+                { mod: '8b5cf6', bg: 'f3e8ff', label: 'Logins', value: logins, hint: 'con credenciales', icon: '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>' },
+                { mod: '10b981', bg: 'ecfdf5', label: 'Visitas', value: visitas, hint: 'sesión guardada', icon: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>' },
+                { mod: 'ef4444', bg: 'fef2f2', label: 'Fallidos', value: fallidos, hint: 'clave errada', icon: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>' },
+                { mod: 'f59e0b', bg: 'fffbeb', label: 'Clientes activos', value: emailsUnicos.length, hint: 'en el periodo', icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>' }
+            ];
+
+            const cardsEl = document.getElementById('accesosCards');
+            if (cardsEl) {
+                cardsEl.innerHTML = cards.map(c =>
+                    '<div style="background:#fff;border:1px solid #e5e7eb;border-left:4px solid #' + c.mod + ';border-radius:12px;padding:16px;display:flex;align-items:flex-start;gap:12px;">' +
+                        '<div style="width:38px;height:38px;border-radius:10px;background:#' + c.bg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+                            '<svg viewBox="0 0 24 24" fill="none" stroke="#' + c.mod + '" stroke-width="2" width="20" height="20">' + c.icon + '</svg>' +
+                        '</div>' +
+                        '<div>' +
+                            '<div style="font-size:10.5px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">' + c.label + '</div>' +
+                            '<div style="font-size:26px;font-weight:700;color:#1e293b;margin-top:2px;line-height:1.1;">' + c.value + '</div>' +
+                            '<div style="font-size:11px;color:#94a3b8;margin-top:2px;">' + c.hint + '</div>' +
+                        '</div>' +
+                    '</div>'
+                ).join('');
+            }
+
+            // Tabla por cliente: contadores históricos reales de la base de datos
+            // (solo clientes con al menos 1 ingreso; los de cero no se listan)
+            const lista = (clientesLista || [])
+                .filter(c => (c.total_ingresos || 0) > 0)
+                .sort((a, b) => (b.total_ingresos || 0) - (a.total_ingresos || 0));
+            const tbodyClientes = document.getElementById('accesosTbodyClientes');
+            if (tbodyClientes) {
+                tbodyClientes.innerHTML = lista.length
+                    ? lista.map(c =>
+                        '<tr>' +
+                            '<td style="' + tdBase + 'font-weight:700;color:#1e293b;">' + (c.empresa || c.email) + '</td>' +
+                            '<td style="' + tdBase + "font-family:'SF Mono','Consolas',monospace;font-size:11.5px;color:#475569;\">" + c.email + '</td>' +
+                            '<td style="' + tdBase + 'text-align:center;font-weight:700;">' + (c.total_ingresos || 0) + '</td>' +
+                            '<td style="' + tdBase + 'text-align:center;">' + accesosBadgeTipo('login').replace('Login', c.total_logins || 0) + '</td>' +
+                            '<td style="' + tdBase + 'text-align:center;">' + accesosBadgeTipo('visita').replace('Visita', c.total_visitas || 0) + '</td>' +
+                            '<td style="' + tdBase + '">' + (c.ultimo_acceso ? accesosFmtFecha(c.ultimo_acceso) : '—') + '</td>' +
+                        '</tr>'
+                    ).join('')
+                    : '<tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;font-size:13px;">Sin accesos registrados todavía</td></tr>';
+            }
+
+            // Tabla historial
+            const ordenado = [...datos].sort((a, b) => String(b.fecha_acceso || '').localeCompare(String(a.fecha_acceso || '')));
+            const tbodyHist = document.getElementById('accesosTbodyHistorial');
+            if (tbodyHist) {
+                tbodyHist.innerHTML = ordenado.length
+                    ? ordenado.map(a =>
+                        '<tr>' +
+                            '<td style="' + tdBase + 'font-weight:700;">' + accesosFmtFecha(a.fecha_acceso) + '</td>' +
+                            '<td style="' + tdBase + 'font-weight:700;color:#1e293b;">' + (a.empresa || a.email) + '</td>' +
+                            '<td style="' + tdBase + "font-family:'SF Mono','Consolas',monospace;font-size:11.5px;color:#475569;\">" + a.email + '</td>' +
+                            '<td style="' + tdBase + '">' + accesosBadgeTipo(a.tipo) + '</td>' +
+                            '<td style="' + tdBase + '">' + accesosBadgeEstado(a.exitoso) + '</td>' +
+                            '<td style="' + tdBase + 'color:#94a3b8;font-size:12px;">' + (a.motivo || '-') + '</td>' +
+                        '</tr>'
+                    ).join('')
+                    : '<tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;font-size:13px;">Sin accesos en el periodo seleccionado</td></tr>';
+            }
+
+            const resumen = document.getElementById('accesosFiltroResumen');
+            if (resumen) resumen.textContent = total + ' accesos en el periodo · ' + emailsUnicos.length + ' clientes con actividad';
+        }
+
+        function limpiarFiltrosAccesos() {
+            const fin = new Date();
+            const ini = new Date();
+            ini.setDate(ini.getDate() - 14);
+            const fDesde = document.getElementById('accesosFechaDesde');
+            const fHasta = document.getElementById('accesosFechaHasta');
+            if (fDesde) fDesde.value = ini.toISOString().slice(0, 10);
+            if (fHasta) fHasta.value = fin.toISOString().slice(0, 10);
+            // Re-render con el caché y también refresca desde el servidor
+            cargarAccesosCliente();
+        }
+
+        async function cargarAccesosCliente() {
+            // Token administrativo entregado por el login interno (7 días).
+            // La autorización la valida el backend con el rol real en la BD.
+            let tokenAdmin = '';
+            try {
+                const guardado = JSON.parse(localStorage.getItem('hightest_user') || '{}');
+                // script-v2.js guarda el campo como sessionToken (camelCase)
+                tokenAdmin = guardado.session_token || guardado.sessionToken || '';
+            } catch (e) {}
+
+            if (!tokenAdmin) {
+                console.warn('[Accesos Clientes] hightest_user no tiene session_token. Causa habitual: sesión iniciada antes de actualizar el backend. Solución: cerrar sesión y volver a iniciar.');
+                accesosEstadoUI('noautorizado');
+                renderAccesosCliente([], []);
+                return;
+            }
+
+            accesosEstadoUI('cargando');
+            try {
+                console.log('[Accesos Clientes] consultando get_accesos_clientes...');
+                const res = await fetch('/.netlify/functions/conectar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'get_accesos_clientes', session_token: tokenAdmin })
+                });
+                const data = await res.json().catch(() => ({}));
+                console.log('[Accesos Clientes] respuesta HTTP ' + res.status + ':', data && data.ok ? ('ok, clientes=' + (data.clientes || []).length + ', historial=' + (data.historial || []).length) : data);
+
+                if (res.status === 403) {
+                    accesosEstadoUI('noautorizado');
+                    renderAccesosCliente([], []);
+                    return;
+                }
+                if (!res.ok || !data.ok) {
+                    accesosEstadoUI('error', (data && data.error) || ('HTTP ' + res.status));
+                    renderAccesosCliente([], []);
+                    return;
+                }
+
+                accesosCache = { historial: data.historial || [], clientes: data.clientes || [] };
+                accesosEstadoUI('oculto');
+                if (accesosCache.clientes.length === 0 && accesosCache.historial.length === 0) {
+                    // Estructura lista pero sin ningún acceso registrado todavía
+                    renderAccesosCliente([], []);
+                    const vacio = document.getElementById('accesosEstado');
+                    if (vacio) {
+                        vacio.style.display = 'block';
+                        vacio.innerHTML = '<div style="padding:12px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;font-size:12.5px;color:#475569;">' +
+                            'La estructura de accesos está lista, pero todavía no hay ingresos registrados. Haz un login en el <strong>Portal de Clientes</strong> (o el botón de certificados) y vuelve a consultar.</div>';
+                    }
+                    return;
+                }
+                renderAccesosCliente(accesosFiltrarFechas(accesosCache.historial), accesosCache.clientes);
+            } catch (err) {
+                console.error('[Accesos Clientes] error:', err);
+                accesosEstadoUI('error', 'No hubo respuesta del servidor. Verifica que netlify dev esté corriendo.');
+                renderAccesosCliente([], []);
+            }
+        }
+
+        // ═══════════════════════════════════════════════
         // REPORTES
         // ═══════════════════════════════════════════════
         let reportesData = null;
@@ -8983,6 +9277,9 @@
             if (section === 'clientes' && window.AdminPanelManager) {
                 window.AdminPanelManager.loadClientes();
             }
+            if (section === 'accesos-clientes') {
+                cargarAccesosCliente();
+            }
             if (section === 'informe-ensayo') {
                 if (window.GestionInformesModule) {
                     window.GestionInformesModule.init?.();
@@ -8999,6 +9296,9 @@
             }
             if (section === 'reportes') {
                 cargarReportes();
+            }
+            if (section === 'accesos-clientes') {
+                cargarAccesosCliente();
             }
 
             // Cerrar sidebar en móvil
@@ -9081,6 +9381,18 @@
             if (sidebarLogoutBtn) {
                 sidebarLogoutBtn.addEventListener('click', function() {
                     if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+                        // Revocar el token administrativo en el servidor (best-effort)
+                        try {
+                            const guardado = JSON.parse(localStorage.getItem('hightest_user') || '{}');
+                            const tokenAdmin = guardado.session_token || guardado.sessionToken;
+                            if (tokenAdmin) {
+                                fetch('/.netlify/functions/conectar', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ action: 'revocar_sesion_usuario', session_token: tokenAdmin })
+                                }).catch(function() {});
+                            }
+                        } catch (e) {}
                         localStorage.removeItem('hightest_user');
                         window.location.href = '../index.html';
                     }

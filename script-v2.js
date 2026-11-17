@@ -2451,7 +2451,11 @@ const AuthManager = {
                 loginTime: new Date().toLocaleString(),
                 userType: 'hightest',
                 role: userRole,
-                remember
+                remember,
+                // Token administrativo independiente (7 días): solo autoriza
+                // consultas nuevas del backend (ej. Accesos Clientes).
+                // La sesión interna actual del panel no cambia.
+                sessionToken: resultado?.session_token || null
             };
 
             this.saveUserToStorage();
@@ -2483,6 +2487,16 @@ const AuthManager = {
      */
     logout() {
         if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+            // Revocar el token administrativo en el servidor (best-effort;
+            // el cierre de sesión nunca depende de esta llamada).
+            const tokenAdmin = (this.currentUser && this.currentUser.sessionToken) || '';
+            if (tokenAdmin) {
+                fetch('/.netlify/functions/conectar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'revocar_sesion_usuario', session_token: tokenAdmin })
+                }).catch(() => {});
+            }
             localStorage.removeItem(this.storageKey);
             this.currentUser = null;
             this.updateUIBasedOnAuthStatus();

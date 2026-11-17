@@ -7,9 +7,9 @@ const jsonHeaders = {
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS'
 };
 
-const jsonResponse = (statusCode, payload) => ({
+const jsonResponse = (statusCode, payload, extraHeaders) => ({
     statusCode,
-    headers: jsonHeaders,
+    headers: Object.assign({}, jsonHeaders, extraHeaders || {}),
     body: JSON.stringify(payload)
 });
 
@@ -64,6 +64,134 @@ const pickFirstValue = (row, keys) => {
         }
     }
     return '';
+};
+
+const crypto = require('crypto');
+
+// ═══════════════════════════════════════════════════════════════
+// SESIONES Y SEGURIDAD DE CLIENTES (módulo accesos clientes)
+// ═══════════════════════════════════════════════════════════════
+
+const COOKIE_SESION_CLIENTE = 'ht_cliente_sesion';
+const SESION_CLIENTE_MS = 30 * 24 * 60 * 60 * 1000;   // 30 días
+const SESION_ADMIN_MS = 7 * 24 * 60 * 60 * 1000;      // 7 días (independiente)
+
+// Cookie "Secure" siempre en producción (HTTPS de Netlify). En entorno
+// local (netlify dev -> CONTEXT=dev) se omite Secure para permitir
+// pruebas en http://localhost SIN debilitar la configuración de producción.
+const esEntornoLocal = () => process.env.CONTEXT === 'dev';
+
+const construirCookieSesion = (token, maxAgeSegundos) => {
+    const partes = [
+        COOKIE_SESION_CLIENTE + '=' + token,
+        'HttpOnly',
+        'SameSite=Lax',
+        'Path=/',
+        'Max-Age=' + maxAgeSegundos
+    ];
+    if (!esEntornoLocal()) partes.push('Secure');
+    return partes.join('; ');
+};
+
+const cookieSesionActiva = (token) => construirCookieSesion(token, 30 * 24 * 60 * 60);
+const cookieSesionRevocada = () => construirCookieSesion('', 0);
+
+const parsearCookies = (header) => {
+    const out = {};
+    if (!header) return out;
+    String(header).split(';').forEach((parte) => {
+        const i = parte.indexOf('=');
+        if (i > -1) {
+            try {
+                out[parte.slice(0, i).trim()] = decodeURIComponent(parte.slice(i + 1).trim());
+            } catch (e) {
+                out[parte.slice(0, i).trim()] = parte.slice(i + 1).trim();
+            }
+        }
+    });
+    return out;
+};
+
+const obtenerTokenCookie = (event) => {
+    const cookies = parsearCookies(event && event.headers && (event.headers.cookie || event.headers.Cookie));
+    return cookies[COOKIE_SESION_CLIENTE] || '';
+};
+
+// Solo hash en Supabase; el token en claro nunca se persiste ni se loguea
+const hashToken = (token) => crypto.createHash('sha256').update(String(token)).digest('hex');
+
+const generarTokenSesion = () => crypto.randomBytes(32).toString('hex');
+
+// ── scrypt para contraseñas de clientes ────────────────────────
+const SCRYPT_N = 16384;
+const SCRYPT_R = 8;
+const SCRYPT_P = 1;
+const SCRYPT_KEYLEN = 32;
+
+const generarHashPassword = (contrasena) => {
+    const salt = crypto.randomBytes(16);
+    const hash = crypto.scryptSync(String(contrasena), salt, SCRYPT_KEYLEN, {
+        N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P
+    });
+    return 'scrypt$' + SCRYPT_N + '$' + SCRYPT_R + '$' + SCRYPT_P + '$' +
+        salt.toString('base64') + '$' + hash.toString('base64');
+};
+
+const verificarHashPassword = (contrasena, hashAlmacenado) => {
+    try {
+        const partes = String(hashAlmacenado || '').split('$');
+        if (partes.length !== 6 || partes[0] !== 'scrypt') return false;
+        const n = parseInt(partes[1], 10);
+        const r = parseInt(partes[2], 10);
+        const p = parseInt(partes[3], 10);
+        const salt = Buffer.from(partes[4], 'base64');
+        const hashEsperado = Buffer.from(partes[5], 'base64');
+        const hashCalculado = crypto.scryptSync(String(contrasena), salt, hashEsperado.length, {
+            N: n, r: r, p: p
+        });
+        return crypto.timingSafeEqual(hashCalculado, hashEsperado);
+    } catch (e) {
+        return false;
+    }
+};
+
+// Registro de accesos vía RPC. Nunca interrumpe el flujo: los errores
+// quedan solo en logs del servidor (sin datos sensibles).
+async function registrarAccesoClienteSeguro(supabase, { id, tipo, exitoso, motivo }) {
+    try {
+        const { error } = await supabase.rpc('registrar_acceso_cliente', {
+            p_cliente_id: id,
+            p_tipo: tipo,
+            p_exitoso: !!exitoso,
+            p_motivo: motivo || ''
+        });
+        if (error) {
+            console.error('Registro de acceso no almacenado (el flujo continúa):', error.message || error);
+        }
+    } catch (err) {
+        console.error('Registro de acceso no almacenado (el flujo continúa):', (err && err.message) || err);
+    }
+}
+
+// Campos sensibles de clientes que NO deben salir en respuestas
+// genéricas (hash de sesión, expiración e historial de accesos).
+// La columna heredada `password` se conserva en la respuesta durante
+// la transición porque el panel de administración la usa para
+// precargar el formulario de edición; desaparecerá al migrar todos.
+const CAMPOS_SENSIBLES_CLIENTE = [
+    'password_hash',
+    'session_token_hash',
+    'session_expira_en',
+    'accesos_historial'
+];
+
+const limpiarCliente = (fila) => {
+    if (!fila) return fila;
+    const copia = Object.assign({}, fila);
+    CAMPOS_SENSIBLES_CLIENTE.forEach((campo) => {
+        delete copia[campo];
+    });
+    return copia;
 };
 
 // Trae TODAS las filas de una tabla en bloques de 1000.
@@ -144,20 +272,44 @@ exports.handler = async (event) => {
                     .eq('password', String(payload.password))
                     .single();
 
-                if (error || !data) {
+                if (error || !data || !data.id || !data.email) {
                     return jsonResponse(401, { ok: false, error: 'Credenciales inválidas' });
                 }
 
-                return jsonResponse(200, { ok: true, user: data });
+                // Token de sesión administrativa INDEPENDIENTE (7 días).
+                // NO modifica la sesión interna actual del panel; solo
+                // autoriza consultas nuevas (ej. get_accesos_clientes).
+                // Se guarda únicamente el hash SHA-256 del token.
+                let sessionToken = null;
+                try {
+                    sessionToken = generarTokenSesion();
+                    const { error: errTok } = await supabase
+                        .from('usuarios')
+                        .update({
+                            session_token_hash: hashToken(sessionToken),
+                            session_expira_en: new Date(Date.now() + SESION_ADMIN_MS).toISOString()
+                        })
+                        .eq('id', data.id);
+                    if (errTok) {
+                        console.error('Token administrativo no generado (el login continúa):', errTok.message || errTok);
+                        sessionToken = null;
+                    }
+                } catch (errTok) {
+                    console.error('Token administrativo no generado (el login continúa):', (errTok && errTok.message) || errTok);
+                    sessionToken = null;
+                }
+
+                return jsonResponse(200, { ok: true, user: data, session_token: sessionToken });
             }
 
-            // Login para clientes (tabla `clientes`)
+            // Login para clientes (tabla `clientes`) con sesión persistente
+            // de 30 días (cookie HttpOnly) y migración progresiva a scrypt.
             if (payload.action === 'login_cliente') {
                 const email = normalizeText(payload.email).toLowerCase();
                 const password = normalizeText(payload.password);
 
-                // Traer el cliente por email y comparar la clave en backend.
-                // Esto tolera variaciones comunes de nombre de columnas en la tabla.
+                // Traer el cliente por email. Las contraseñas se verifican aquí
+                // en el backend: hash scrypt si existe, columna heredada si no.
                 const { data, error } = await supabase
                     .from('clientes')
                     .select('*')
@@ -173,34 +325,69 @@ exports.handler = async (event) => {
                 }
 
                 const clientRow = Array.isArray(data) ? data[0] : null;
-                if (!clientRow) {
+                if (!clientRow || !clientRow.id || !clientRow.email) {
+                    // Correo desconocido: no hay fila, no se registra intento
                     return jsonResponse(401, { ok: false, error: 'Credenciales de cliente inválidas' });
                 }
 
-                const storedPassword = pickFirstValue(clientRow, [
-                    'password',
-                    'password_cliente',
-                    'contrasena',
-                    'contraseña',
-                    'clave',
-                    'pin'
-                ]);
+                // 1) Con password_hash -> verificación scrypt.
+                // 2) Sin hash -> comparación temporal contra la columna heredada.
+                let passwordValida = false;
+                if (clientRow.password_hash) {
+                    passwordValida = verificarHashPassword(password, clientRow.password_hash);
+                } else {
+                    passwordValida = password !== '' && normalizeText(clientRow.password) === password;
+                }
 
-                if (!storedPassword) {
-                    return jsonResponse(500, {
-                        ok: false,
-                        error: 'La tabla clientes no expone una columna de contraseña compatible',
-                        detail: 'Se esperó alguna de estas columnas: password, password_cliente, contrasena, clave o pin.'
+                if (!passwordValida) {
+                    // Login fallido: se registra vía RPC (no modifica ultimo_acceso)
+                    await registrarAccesoClienteSeguro(supabase, {
+                        id: clientRow.id, tipo: 'login', exitoso: false, motivo: 'Credenciales inválidas'
                     });
-                }
-
-                const passwordMatches = normalizeText(storedPassword) === password;
-
-                if (!passwordMatches) {
                     return jsonResponse(401, { ok: false, error: 'Credenciales de cliente inválidas' });
                 }
 
-                // Normalizar respuesta para el cliente
+                // Migración progresiva a scrypt: generar hash y limpiar la
+                // contraseña heredada. Si falla, NO se borra la heredada ni
+                // se bloquea al cliente (el login continúa).
+                if (!clientRow.password_hash) {
+                    const nuevoHash = generarHashPassword(password);
+                    const { error: errHash } = await supabase
+                        .from('clientes')
+                        .update({ password_hash: nuevoHash, password: '' })
+                        .eq('id', clientRow.id);
+                    if (errHash) {
+                        console.error('Migración de contraseña diferida (el login continúa):', errHash.message || errHash);
+                        await supabase
+                            .from('clientes')
+                            .update({ password_hash: nuevoHash })
+                            .eq('id', clientRow.id);
+                    }
+                }
+
+                // Login exitoso: contadores/historial vía RPC (dedupe incluido)
+                await registrarAccesoClienteSeguro(supabase, {
+                    id: clientRow.id, tipo: 'login', exitoso: true
+                });
+
+                // Sesión persistente de 30 días: token aleatorio en cookie
+                // HttpOnly; en Supabase solo su hash SHA-256 y la expiración.
+                let headersSesion = {};
+                const tokenSesion = generarTokenSesion();
+                const { error: errSesion } = await supabase
+                    .from('clientes')
+                    .update({
+                        session_token_hash: hashToken(tokenSesion),
+                        session_expira_en: new Date(Date.now() + SESION_CLIENTE_MS).toISOString()
+                    })
+                    .eq('id', clientRow.id);
+                if (errSesion) {
+                    console.error('Sesión de cliente no creada (el login continúa):', errSesion.message || errSesion);
+                } else {
+                    headersSesion = { 'Set-Cookie': cookieSesionActiva(tokenSesion) };
+                }
+
+                // Normalizar respuesta para el cliente (igual que antes)
                 const user = {
                     id: clientRow.id || clientRow.client_id || Date.now(),
                     email: pickFirstValue(clientRow, ['email', 'correo', 'correo_electronico']),
@@ -208,7 +395,7 @@ exports.handler = async (event) => {
                     company: pickFirstValue(clientRow, ['nombre_empresa', 'empresa', 'razon_social', 'razón_social']) || null
                 };
 
-                return jsonResponse(200, { ok: true, user, tipo: 'cliente' });
+                return jsonResponse(200, { ok: true, user, tipo: 'cliente' }, headersSesion);
             }
 
             if (payload.action === 'get_cliente_profile') {
@@ -333,7 +520,7 @@ exports.handler = async (event) => {
                     return jsonResponse(500, { ok: false, error: 'Error al obtener clientes', detail: error.message });
                 }
 
-                return jsonResponse(200, { ok: true, clientes: data || [] });
+                return jsonResponse(200, { ok: true, clientes: (data || []).map(limpiarCliente) });
             }
 
             // Obtener cliente por nombre (para buscar NIT)
@@ -350,7 +537,7 @@ exports.handler = async (event) => {
                 if (error) return jsonResponse(500, { ok: false, error: error.message });
                 if (!data || data.length === 0) return jsonResponse(200, { ok: false, error: 'Cliente no encontrado' });
 
-                return jsonResponse(200, { ok: true, cliente: data[0] });
+                return jsonResponse(200, { ok: true, cliente: limpiarCliente(data[0]) });
             }
 
             // Obtener lista de ensayos acreditados
@@ -874,10 +1061,14 @@ exports.handler = async (event) => {
                     return jsonResponse(400, { ok: false, error: 'Faltan campos requeridos' });
                 }
 
+                // Contraseña de cliente: se almacena SOLO como hash scrypt.
+                // `password` queda vacío como placeholder por si la columna es
+                // obligatoria; el secreto real vive en password_hash.
                 const baseInsert = {
                     nombre_empresa: nombre_empresa.trim(),
                     email: email.trim().toLowerCase(),
-                    password,
+                    password_hash: generarHashPassword(password),
+                    password: '',
                     telefono: telefono || '',
                     direccion: direccion || '',
                     contacto_principal: contacto_principal || ''
@@ -936,7 +1127,9 @@ exports.handler = async (event) => {
                     contacto_principal: contacto_principal || ''
                 };
                 if (password && password.trim()) {
-                    baseUpdate.password = password;
+                    // Contraseña modificada: solo hash scrypt; se limpia la heredada
+                    baseUpdate.password_hash = generarHashPassword(password);
+                    baseUpdate.password = '';
                 }
 
                 const updateCandidates = [
@@ -992,6 +1185,199 @@ exports.handler = async (event) => {
                 }
 
                 return jsonResponse(200, { ok: true, message: 'Cliente eliminado exitosamente' });
+            }
+
+            // ============================================
+            // SESIONES Y ACCESOS DE CLIENTES
+            // ============================================
+
+            // Valida la cookie de sesión del portal (30 días).
+            // No acepta identidad por body: solo la cookie HttpOnly.
+            if (payload.action === 'validar_sesion_cliente') {
+                const token = obtenerTokenCookie(event);
+                if (!token) {
+                    return jsonResponse(401, { ok: false, error: 'Sin sesión activa' });
+                }
+
+                const { data: filas, error: errSesion } = await supabase
+                    .from('clientes')
+                    .select('id, email, nombre_empresa, contacto_principal, session_expira_en')
+                    .eq('session_token_hash', hashToken(token))
+                    .limit(1);
+                if (errSesion) {
+                    return jsonResponse(500, { ok: false, error: 'No se pudo validar la sesión', detail: errSesion.message });
+                }
+
+                const fila = Array.isArray(filas) ? filas[0] : null;
+                if (!fila || !fila.id) {
+                    return jsonResponse(401, { ok: false, error: 'Sesión inválida o revocada' });
+                }
+
+                const expira = fila.session_expira_en ? new Date(fila.session_expira_en) : null;
+                if (!expira || expira.getTime() <= Date.now()) {
+                    // Vencida: limpiar el hash para no dejar residuos
+                    await supabase
+                        .from('clientes')
+                        .update({ session_token_hash: null, session_expira_en: null })
+                        .eq('id', fila.id);
+                    return jsonResponse(401, { ok: false, error: 'Sesión vencida' });
+                }
+
+                return jsonResponse(200, {
+                    ok: true,
+                    cliente: {
+                        id: fila.id,
+                        email: fila.email,
+                        name: fila.contacto_principal || fila.nombre_empresa || fila.email,
+                        company: fila.nombre_empresa || fila.email
+                    }
+                });
+            }
+
+            // Registra visita al portal. Identifica al cliente EXCLUSIVAMENTE
+            // por la cookie; el deduplicado de 30 minutos lo aplica la RPC
+            // (referencia: último acceso exitoso, login o visita).
+            if (payload.action === 'registrar_visita_cliente') {
+                const token = obtenerTokenCookie(event);
+                if (!token) {
+                    return jsonResponse(401, { ok: false, error: 'Sin sesión activa' });
+                }
+
+                const { data: filas, error: errSesion } = await supabase
+                    .from('clientes')
+                    .select('id, session_expira_en')
+                    .eq('session_token_hash', hashToken(token))
+                    .limit(1);
+                if (errSesion) {
+                    return jsonResponse(500, { ok: false, error: 'No se pudo validar la sesión', detail: errSesion.message });
+                }
+
+                const fila = Array.isArray(filas) ? filas[0] : null;
+                if (!fila || !fila.id) {
+                    return jsonResponse(401, { ok: false, error: 'Sesión inválida o revocada' });
+                }
+
+                const expira = fila.session_expira_en ? new Date(fila.session_expira_en) : null;
+                if (!expira || expira.getTime() <= Date.now()) {
+                    return jsonResponse(401, { ok: false, error: 'Sesión vencida' });
+                }
+
+                await registrarAccesoClienteSeguro(supabase, {
+                    id: fila.id, tipo: 'visita', exitoso: true
+                });
+                return jsonResponse(200, { ok: true });
+            }
+
+            // Cierra la sesión del portal: revoca el token en Supabase y
+            // expira la cookie. Responde ok aunque la sesión ya estuviera vencida.
+            if (payload.action === 'logout_cliente') {
+                const token = obtenerTokenCookie(event);
+                if (token) {
+                    const { data: filas } = await supabase
+                        .from('clientes')
+                        .select('id')
+                        .eq('session_token_hash', hashToken(token))
+                        .limit(1);
+                    const fila = Array.isArray(filas) ? filas[0] : null;
+                    if (fila && fila.id) {
+                        const { error: errRev } = await supabase
+                            .from('clientes')
+                            .update({ session_token_hash: null, session_expira_en: null })
+                            .eq('id', fila.id);
+                        if (errRev) {
+                            console.error('No se pudo revocar la sesión del cliente:', errRev.message || errRev);
+                        }
+                    }
+                }
+                return jsonResponse(200, { ok: true }, { 'Set-Cookie': cookieSesionRevocada() });
+            }
+
+            // Estadísticas de accesos para el panel administrativo.
+            // Exige token administrativo vigente y rol EXACTO 'administrador'.
+            if (payload.action === 'get_accesos_clientes') {
+                const tokenAdmin = normalizeText(payload.session_token);
+                if (!tokenAdmin) {
+                    return jsonResponse(403, { ok: false, error: 'No autorizado' });
+                }
+
+                const { data: filasUsu, error: errUsu } = await supabase
+                    .from('usuarios')
+                    .select('id, email, nombre, rol, session_expira_en')
+                    .eq('session_token_hash', hashToken(tokenAdmin))
+                    .limit(1);
+                if (errUsu) {
+                    return jsonResponse(500, { ok: false, error: 'No se pudo validar la sesión administrativa', detail: errUsu.message });
+                }
+
+                const adminRow = Array.isArray(filasUsu) ? filasUsu[0] : null;
+                if (!adminRow || !adminRow.id) {
+                    return jsonResponse(403, { ok: false, error: 'No autorizado' });
+                }
+
+                const expiraAdmin = adminRow.session_expira_en ? new Date(adminRow.session_expira_en) : null;
+                if (!expiraAdmin || expiraAdmin.getTime() <= Date.now()) {
+                    return jsonResponse(403, { ok: false, error: 'Sesión administrativa vencida' });
+                }
+
+                // El rol se comprueba en la base de datos, no en el navegador
+                if (String(adminRow.rol || '').trim().toLowerCase() !== 'administrador') {
+                    return jsonResponse(403, { ok: false, error: 'Solo el rol administrador puede consultar los accesos de clientes' });
+                }
+
+                const { data: clientesData, error: errCli } = await supabase
+                    .from('clientes')
+                    .select('id, email, nombre_empresa, ultimo_acceso, total_ingresos, total_logins, total_visitas, total_fallidos, accesos_historial')
+                    .order('ultimo_acceso', { ascending: false, nullsFirst: false });
+                if (errCli) {
+                    return jsonResponse(500, { ok: false, error: 'No se pudo consultar los accesos', detail: errCli.message });
+                }
+
+                const clientesLista = (clientesData || []).map((c) => ({
+                    id: c.id,
+                    email: c.email,
+                    empresa: c.nombre_empresa || c.email,
+                    ultimo_acceso: c.ultimo_acceso || null,
+                    total_ingresos: c.total_ingresos || 0,
+                    total_logins: c.total_logins || 0,
+                    total_visitas: c.total_visitas || 0,
+                    total_fallidos: c.total_fallidos || 0
+                }));
+
+                // Historial aplanado para la tabla del panel
+                const historial = [];
+                (clientesData || []).forEach((c) => {
+                    let eventos = c.accesos_historial;
+                    if (!Array.isArray(eventos)) eventos = [];
+                    eventos.forEach((ev) => {
+                        if (!ev || typeof ev !== 'object') return;
+                        historial.push({
+                            fecha_acceso: ev.fecha || null,
+                            email: c.email,
+                            empresa: c.nombre_empresa || c.email,
+                            tipo: ev.tipo || '',
+                            exitoso: !!ev.exitoso,
+                            motivo: ev.motivo || ''
+                        });
+                    });
+                });
+                historial.sort((a, b) => String(b.fecha_acceso || '').localeCompare(String(a.fecha_acceso || '')));
+
+                return jsonResponse(200, { ok: true, clientes: clientesLista, historial });
+            }
+
+            // Revoca el token administrativo al cerrar sesión del panel
+            if (payload.action === 'revocar_sesion_usuario') {
+                const tokenAdmin = normalizeText(payload.session_token);
+                if (tokenAdmin) {
+                    const { error: errRev } = await supabase
+                        .from('usuarios')
+                        .update({ session_token_hash: null, session_expira_en: null })
+                        .eq('session_token_hash', hashToken(tokenAdmin));
+                    if (errRev) {
+                        console.error('No se pudo revocar la sesión administrativa:', errRev.message || errRev);
+                    }
+                }
+                return jsonResponse(200, { ok: true });
             }
 
             // ============================================
