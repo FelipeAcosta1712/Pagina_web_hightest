@@ -74,7 +74,7 @@ const crypto = require('crypto');
 
 const COOKIE_SESION_CLIENTE = 'ht_cliente_sesion';
 const SESION_CLIENTE_MS = 30 * 24 * 60 * 60 * 1000;   // 30 días
-const SESION_ADMIN_MS = 7 * 24 * 60 * 60 * 1000;      // 7 días (independiente)
+const SESION_ADMIN_MS = 30 * 24 * 60 * 60 * 1000;     // 30 días
 
 // Cookie "Secure" siempre en producción (HTTPS de Netlify). En entorno
 // local (netlify dev -> CONTEXT=dev) se omite Secure para permitir
@@ -223,8 +223,9 @@ const limpiarCliente = (fila) => {
 };
 
 // Valida el token de sesión administrativa (emitido por la acción
-// 'login') contra la tabla usuarios. El rol se comprueba aquí, no en
-// el navegador. opts.requireAdministrador exige rol 'administrador'.
+// 'login') contra la tabla sesiones_usuarios (sesiones múltiples: una
+// por navegador/dispositivo). El rol se comprueba aquí, no en el
+// navegador. opts.requireAdministrador exige rol 'administrador'.
 // Devuelve { admin } o { error } con la respuesta lista para retornar.
 // Además registra la ACTIVIDAD del usuario: si pasaron 30 minutos o
 // más desde su ultimo_acceso, lo actualiza sin bloquear la respuesta
@@ -237,22 +238,32 @@ async function validarSesionAdmin(supabase, payload, opts = {}) {
         return { error: jsonResponse(403, { ok: false, error: 'No autorizado: se requiere sesión administrativa' }) };
     }
 
-    const { data: filasUsu, error: errUsu } = await supabase
-        .from('usuarios')
-        .select('id, email, nombre, rol, session_expira_en, ultimo_acceso')
-        .eq('session_token_hash', hashToken(tokenAdmin))
+    // La sesión se busca por token_hash en la tabla de sesiones;
+    // los datos del usuario se resuelven con la fila relacionada.
+    const { data: filasSes, error: errSes } = await supabase
+        .from('sesiones_usuarios')
+        .select('id, expira_en, usuarios (id, email, nombre, rol, ultimo_acceso)')
+        .eq('token_hash', hashToken(tokenAdmin))
         .limit(1);
-    if (errUsu) {
-        return { error: jsonResponse(500, { ok: false, error: 'No se pudo validar la sesión administrativa', detail: errUsu.message }) };
+    if (errSes) {
+        return { error: jsonResponse(500, { ok: false, error: 'No se pudo validar la sesión administrativa', detail: errSes.message }) };
     }
 
-    const adminRow = Array.isArray(filasUsu) ? filasUsu[0] : null;
-    if (!adminRow || !adminRow.id) {
+    const sesRow = Array.isArray(filasSes) ? filasSes[0] : null;
+    const adminRow = sesRow && sesRow.usuarios && sesRow.usuarios.id ? sesRow.usuarios : null;
+    if (!adminRow) {
         return { error: jsonResponse(403, { ok: false, error: 'No autorizado' }) };
     }
 
-    const expiraAdmin = adminRow.session_expira_en ? new Date(adminRow.session_expira_en) : null;
+    const expiraAdmin = sesRow.expira_en ? new Date(sesRow.expira_en) : null;
     if (!expiraAdmin || expiraAdmin.getTime() <= Date.now()) {
+        // Vencida: limpiar la fila para no dejar residuos
+        supabase
+            .from('sesiones_usuarios')
+            .delete()
+            .eq('id', sesRow.id)
+            .then(() => {})
+            .catch(() => {});
         return { error: jsonResponse(403, { ok: false, error: 'Sesión administrativa vencida' }) };
     }
 
@@ -398,23 +409,22 @@ exports.handler = async (event) => {
 
                 const data = { id: usuRow.id, email: usuRow.email, nombre: usuRow.nombre, rol: usuRow.rol };
 
-                // Token de sesión administrativa INDEPENDIENTE (7 días).
-                // NO modifica la sesión interna actual del panel; solo
-                // autoriza consultas nuevas (ej. get_accesos_clientes).
-                // Se guarda únicamente el hash SHA-256 del token.
-                // El mismo update registra la fecha/hora real del último
-                // acceso (columna ultimo_acceso de la tabla usuarios).
+                // Token de sesión administrativa INDEPENDIENTE (30 días).
+                // Sesiones MÚLTIPLES: cada login crea una fila nueva en
+                // sesiones_usuarios, así iniciar sesión en un navegador
+                // NO invalida la sesión de los demás. Solo se guarda el
+                // hash SHA-256 del token; el update registra la fecha/
+                // hora real del último acceso (columna ultimo_acceso).
                 let sessionToken = null;
                 try {
                     sessionToken = generarTokenSesion();
                     const { error: errTok } = await supabase
-                        .from('usuarios')
-                        .update({
-                            session_token_hash: hashToken(sessionToken),
-                            session_expira_en: new Date(Date.now() + SESION_ADMIN_MS).toISOString(),
-                            ultimo_acceso: new Date().toISOString()
-                        })
-                        .eq('id', data.id);
+                        .from('sesiones_usuarios')
+                        .insert({
+                            usuario_id: data.id,
+                            token_hash: hashToken(sessionToken),
+                            expira_en: new Date(Date.now() + SESION_ADMIN_MS).toISOString()
+                        });
                     if (errTok) {
                         console.error('Token administrativo no generado (el login continúa):', errTok.message || errTok);
                         sessionToken = null;
@@ -422,6 +432,14 @@ exports.handler = async (event) => {
                 } catch (errTok) {
                     console.error('Token administrativo no generado (el login continúa):', (errTok && errTok.message) || errTok);
                     sessionToken = null;
+                }
+                if (sessionToken) {
+                    supabase
+                        .from('usuarios')
+                        .update({ ultimo_acceso: new Date().toISOString() })
+                        .eq('id', data.id)
+                        .then(() => {})
+                        .catch(() => {});
                 }
 
                 return jsonResponse(200, { ok: true, user: data, session_token: sessionToken });
@@ -496,16 +514,19 @@ exports.handler = async (event) => {
                 });
 
                 // Sesión persistente de 30 días: token aleatorio en cookie
-                // HttpOnly; en Supabase solo su hash SHA-256 y la expiración.
+                // HttpOnly. Sesiones MÚLTIPLES: cada login inserta una fila
+                // en sesiones_clientes, así iniciar sesión en otro navegador
+                // NO invalida la sesión de los demás. En Supabase solo el
+                // hash SHA-256 y la expiración.
                 let headersSesion = {};
                 const tokenSesion = generarTokenSesion();
                 const { error: errSesion } = await supabase
-                    .from('clientes')
-                    .update({
-                        session_token_hash: hashToken(tokenSesion),
-                        session_expira_en: new Date(Date.now() + SESION_CLIENTE_MS).toISOString()
-                    })
-                    .eq('id', clientRow.id);
+                    .from('sesiones_clientes')
+                    .insert({
+                        cliente_id: clientRow.id,
+                        token_hash: hashToken(tokenSesion),
+                        expira_en: new Date(Date.now() + SESION_CLIENTE_MS).toISOString()
+                    });
                 if (errSesion) {
                     console.error('Sesión de cliente no creada (el login continúa):', errSesion.message || errSesion);
                 } else {
@@ -797,18 +818,22 @@ exports.handler = async (event) => {
 
                 const nuevaPassword = generarPasswordSegura(16);
 
+                // Restablecer contraseña revoca TODAS las sesiones del
+                // usuario (todos los dispositivos) por seguridad.
                 const { error: errUpdUsu } = await supabase
                     .from('usuarios')
                     .update({
                         password_hash: generarHashPassword(nuevaPassword),
-                        password: '',
-                        session_token_hash: null,
-                        session_expira_en: null
+                        password: ''
                     })
                     .eq('id', id);
                 if (errUpdUsu) {
                     return jsonResponse(500, { ok: false, error: 'No se pudo restablecer la contraseña', detail: errUpdUsu.message });
                 }
+                await supabase
+                    .from('sesiones_usuarios')
+                    .delete()
+                    .eq('usuario_id', id);
 
                 return jsonResponse(200, {
                     ok: true,
@@ -1556,18 +1581,22 @@ exports.handler = async (event) => {
 
                 const nuevaPassword = generarPasswordSegura(16);
 
+                // Restablecer contraseña revoca TODAS las sesiones del
+                // cliente (todos los dispositivos) por seguridad.
                 const { error: errUpd } = await supabase
                     .from('clientes')
                     .update({
                         password_hash: generarHashPassword(nuevaPassword),
-                        password: '',
-                        session_token_hash: null,
-                        session_expira_en: null
+                        password: ''
                     })
                     .eq('id', id);
                 if (errUpd) {
                     return jsonResponse(500, { ok: false, error: 'No se pudo restablecer la contraseña', detail: errUpd.message });
                 }
+                await supabase
+                    .from('sesiones_clientes')
+                    .delete()
+                    .eq('cliente_id', id);
 
                 // Auditoría: evento password_reset sin secretos
                 // (motivo = identificación del administrador).
@@ -1595,6 +1624,7 @@ exports.handler = async (event) => {
 
             // Valida la cookie de sesión del portal (30 días).
             // No acepta identidad por body: solo la cookie HttpOnly.
+            // Sesiones múltiples: se busca en sesiones_clientes.
             if (payload.action === 'validar_sesion_cliente') {
                 const token = obtenerTokenCookie(event);
                 if (!token) {
@@ -1602,26 +1632,27 @@ exports.handler = async (event) => {
                 }
 
                 const { data: filas, error: errSesion } = await supabase
-                    .from('clientes')
-                    .select('id, email, nombre_empresa, contacto_principal, session_expira_en')
-                    .eq('session_token_hash', hashToken(token))
+                    .from('sesiones_clientes')
+                    .select('id, expira_en, clientes (id, email, nombre_empresa, contacto_principal)')
+                    .eq('token_hash', hashToken(token))
                     .limit(1);
                 if (errSesion) {
                     return jsonResponse(500, { ok: false, error: 'No se pudo validar la sesión', detail: errSesion.message });
                 }
 
-                const fila = Array.isArray(filas) ? filas[0] : null;
-                if (!fila || !fila.id) {
+                const sesFila = Array.isArray(filas) ? filas[0] : null;
+                const fila = sesFila && sesFila.clientes && sesFila.clientes.id ? sesFila.clientes : null;
+                if (!fila) {
                     return jsonResponse(401, { ok: false, error: 'Sesión inválida o revocada' });
                 }
 
-                const expira = fila.session_expira_en ? new Date(fila.session_expira_en) : null;
+                const expira = sesFila.expira_en ? new Date(sesFila.expira_en) : null;
                 if (!expira || expira.getTime() <= Date.now()) {
-                    // Vencida: limpiar el hash para no dejar residuos
+                    // Vencida: limpiar la fila para no dejar residuos
                     await supabase
-                        .from('clientes')
-                        .update({ session_token_hash: null, session_expira_en: null })
-                        .eq('id', fila.id);
+                        .from('sesiones_clientes')
+                        .delete()
+                        .eq('id', sesFila.id);
                     return jsonResponse(401, { ok: false, error: 'Sesión vencida' });
                 }
 
@@ -1646,20 +1677,21 @@ exports.handler = async (event) => {
                 }
 
                 const { data: filas, error: errSesion } = await supabase
-                    .from('clientes')
-                    .select('id, session_expira_en')
-                    .eq('session_token_hash', hashToken(token))
+                    .from('sesiones_clientes')
+                    .select('id, expira_en, clientes (id)')
+                    .eq('token_hash', hashToken(token))
                     .limit(1);
                 if (errSesion) {
                     return jsonResponse(500, { ok: false, error: 'No se pudo validar la sesión', detail: errSesion.message });
                 }
 
-                const fila = Array.isArray(filas) ? filas[0] : null;
-                if (!fila || !fila.id) {
+                const sesFila = Array.isArray(filas) ? filas[0] : null;
+                const fila = sesFila && sesFila.clientes && sesFila.clientes.id ? sesFila.clientes : null;
+                if (!fila) {
                     return jsonResponse(401, { ok: false, error: 'Sesión inválida o revocada' });
                 }
 
-                const expira = fila.session_expira_en ? new Date(fila.session_expira_en) : null;
+                const expira = sesFila.expira_en ? new Date(sesFila.expira_en) : null;
                 if (!expira || expira.getTime() <= Date.now()) {
                     return jsonResponse(401, { ok: false, error: 'Sesión vencida' });
                 }
@@ -1670,25 +1702,18 @@ exports.handler = async (event) => {
                 return jsonResponse(200, { ok: true });
             }
 
-            // Cierra la sesión del portal: revoca el token en Supabase y
-            // expira la cookie. Responde ok aunque la sesión ya estuviera vencida.
+            // Cierra la sesión del portal: revoca SOLO la sesión del
+            // dispositivo actual (sesiones múltiples) y expira la cookie.
+            // Responde ok aunque la sesión ya estuviera vencida.
             if (payload.action === 'logout_cliente') {
                 const token = obtenerTokenCookie(event);
                 if (token) {
-                    const { data: filas } = await supabase
-                        .from('clientes')
-                        .select('id')
-                        .eq('session_token_hash', hashToken(token))
-                        .limit(1);
-                    const fila = Array.isArray(filas) ? filas[0] : null;
-                    if (fila && fila.id) {
-                        const { error: errRev } = await supabase
-                            .from('clientes')
-                            .update({ session_token_hash: null, session_expira_en: null })
-                            .eq('id', fila.id);
-                        if (errRev) {
-                            console.error('No se pudo revocar la sesión del cliente:', errRev.message || errRev);
-                        }
+                    const { error: errRev } = await supabase
+                        .from('sesiones_clientes')
+                        .delete()
+                        .eq('token_hash', hashToken(token));
+                    if (errRev) {
+                        console.error('No se pudo revocar la sesión del cliente:', errRev.message || errRev);
                     }
                 }
                 return jsonResponse(200, { ok: true }, { 'Set-Cookie': cookieSesionRevocada() });
@@ -1702,22 +1727,29 @@ exports.handler = async (event) => {
                     return jsonResponse(403, { ok: false, error: 'No autorizado' });
                 }
 
-                const { data: filasUsu, error: errUsu } = await supabase
-                    .from('usuarios')
-                    .select('id, email, nombre, rol, session_expira_en')
-                    .eq('session_token_hash', hashToken(tokenAdmin))
+                const { data: filasSes, error: errSes } = await supabase
+                    .from('sesiones_usuarios')
+                    .select('id, expira_en, usuarios (id, email, nombre, rol)')
+                    .eq('token_hash', hashToken(tokenAdmin))
                     .limit(1);
-                if (errUsu) {
-                    return jsonResponse(500, { ok: false, error: 'No se pudo validar la sesión administrativa', detail: errUsu.message });
+                if (errSes) {
+                    return jsonResponse(500, { ok: false, error: 'No se pudo validar la sesión administrativa', detail: errSes.message });
                 }
 
-                const adminRow = Array.isArray(filasUsu) ? filasUsu[0] : null;
-                if (!adminRow || !adminRow.id) {
+                const sesRow = Array.isArray(filasSes) ? filasSes[0] : null;
+                const adminRow = sesRow && sesRow.usuarios && sesRow.usuarios.id ? sesRow.usuarios : null;
+                if (!adminRow) {
                     return jsonResponse(403, { ok: false, error: 'No autorizado' });
                 }
 
-                const expiraAdmin = adminRow.session_expira_en ? new Date(adminRow.session_expira_en) : null;
+                const expiraAdmin = sesRow.expira_en ? new Date(sesRow.expira_en) : null;
                 if (!expiraAdmin || expiraAdmin.getTime() <= Date.now()) {
+                    supabase
+                        .from('sesiones_usuarios')
+                        .delete()
+                        .eq('id', sesRow.id)
+                        .then(() => {})
+                        .catch(() => {});
                     return jsonResponse(403, { ok: false, error: 'Sesión administrativa vencida' });
                 }
 
@@ -1767,14 +1799,16 @@ exports.handler = async (event) => {
                 return jsonResponse(200, { ok: true, clientes: clientesLista, historial });
             }
 
-            // Revoca el token administrativo al cerrar sesión del panel
+            // Cierra la sesión del panel: revoca SOLO la sesión del
+            // dispositivo actual (sesiones múltiples); las demás
+            // sesiones del mismo usuario permanecen activas.
             if (payload.action === 'revocar_sesion_usuario') {
                 const tokenAdmin = normalizeText(payload.session_token);
                 if (tokenAdmin) {
                     const { error: errRev } = await supabase
-                        .from('usuarios')
-                        .update({ session_token_hash: null, session_expira_en: null })
-                        .eq('session_token_hash', hashToken(tokenAdmin));
+                        .from('sesiones_usuarios')
+                        .delete()
+                        .eq('token_hash', hashToken(tokenAdmin));
                     if (errRev) {
                         console.error('No se pudo revocar la sesión administrativa:', errRev.message || errRev);
                     }

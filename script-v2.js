@@ -2452,7 +2452,7 @@ const AuthManager = {
                 userType: 'hightest',
                 role: userRole,
                 remember,
-                // Token administrativo independiente (7 días): solo autoriza
+                // Token administrativo independiente (30 días): solo autoriza
                 // consultas nuevas del backend (ej. Accesos Clientes).
                 // La sesión interna actual del panel no cambia.
                 sessionToken: resultado?.session_token || null

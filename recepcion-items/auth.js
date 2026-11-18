@@ -83,7 +83,7 @@ async function authenticateUser(email, password) {
         }
 
         const user = buildUserFromRole(result.user);
-        // Token de sesión administrativa emitido por el backend (7 días).
+        // Token de sesión administrativa emitido por el backend (30 días).
         // Autoriza consultas/operaciones protegidas (ej. get_clientes,
         // add_cliente). Se guarda dentro de la sesión; nunca es una
         // contraseña ni un dato de cliente.
