@@ -94,12 +94,24 @@ const DashboardModule = {
         }
     },
 
+    // Token de sesión administrativa (localStorage hightest_user);
+    // get_dashboard_stats exige sesión válida en el backend.
+    getAdminSessionToken() {
+        try {
+            const guardado = JSON.parse(localStorage.getItem('hightest_user') || '{}');
+            return guardado.session_token || guardado.sessionToken || '';
+        } catch (e) {
+            return '';
+        }
+    },
+
     async loadStats() {
         try {
             const params = {};
             if (this.filters.mes) params.mes = this.filters.mes;
             if (this.filters.cliente) params.cliente = this.filters.cliente;
             if (this.filters.estado) params.estado = this.filters.estado;
+            params.session_token = this.getAdminSessionToken();
 
             // fetchFromDatabase (script-v2.js) ya aplica timeout de 25s + reintentos con backoff
             let data;

@@ -226,6 +226,11 @@ const limpiarCliente = (fila) => {
 // 'login') contra la tabla usuarios. El rol se comprueba aquí, no en
 // el navegador. opts.requireAdministrador exige rol 'administrador'.
 // Devuelve { admin } o { error } con la respuesta lista para retornar.
+// Además registra la ACTIVIDAD del usuario: si pasaron 30 minutos o
+// más desde su ultimo_acceso, lo actualiza sin bloquear la respuesta
+// (fire-and-forget; un fallo no afecta la operación en curso).
+const ACTIVIDAD_ADMIN_INTERVALO_MS = 30 * 60 * 1000;
+
 async function validarSesionAdmin(supabase, payload, opts = {}) {
     const tokenAdmin = normalizeText(payload.session_token);
     if (!tokenAdmin) {
@@ -234,7 +239,7 @@ async function validarSesionAdmin(supabase, payload, opts = {}) {
 
     const { data: filasUsu, error: errUsu } = await supabase
         .from('usuarios')
-        .select('id, email, nombre, rol, session_expira_en')
+        .select('id, email, nombre, rol, session_expira_en, ultimo_acceso')
         .eq('session_token_hash', hashToken(tokenAdmin))
         .limit(1);
     if (errUsu) {
@@ -253,6 +258,17 @@ async function validarSesionAdmin(supabase, payload, opts = {}) {
 
     if (opts.requireAdministrador && String(adminRow.rol || '').trim().toLowerCase() !== 'administrador') {
         return { error: jsonResponse(403, { ok: false, error: 'Solo el rol administrador puede realizar esta operación' }) };
+    }
+
+    // Registro de actividad (máximo 1 escritura cada 30 min por usuario)
+    const ultimoAcceso = adminRow.ultimo_acceso ? new Date(adminRow.ultimo_acceso).getTime() : 0;
+    if (Date.now() - ultimoAcceso >= ACTIVIDAD_ADMIN_INTERVALO_MS) {
+        supabase
+            .from('usuarios')
+            .update({ ultimo_acceso: new Date().toISOString() })
+            .eq('id', adminRow.id)
+            .then(() => {})
+            .catch(() => {});
     }
 
     return { admin: adminRow };
@@ -386,6 +402,8 @@ exports.handler = async (event) => {
                 // NO modifica la sesión interna actual del panel; solo
                 // autoriza consultas nuevas (ej. get_accesos_clientes).
                 // Se guarda únicamente el hash SHA-256 del token.
+                // El mismo update registra la fecha/hora real del último
+                // acceso (columna ultimo_acceso de la tabla usuarios).
                 let sessionToken = null;
                 try {
                     sessionToken = generarTokenSesion();
@@ -393,7 +411,8 @@ exports.handler = async (event) => {
                         .from('usuarios')
                         .update({
                             session_token_hash: hashToken(sessionToken),
-                            session_expira_en: new Date(Date.now() + SESION_ADMIN_MS).toISOString()
+                            session_expira_en: new Date(Date.now() + SESION_ADMIN_MS).toISOString(),
+                            ultimo_acceso: new Date().toISOString()
                         })
                         .eq('id', data.id);
                     if (errTok) {
@@ -689,11 +708,14 @@ exports.handler = async (event) => {
                 const baseUpdate = {
                     nombre: String(nombre).trim(),
                     email: String(email).trim().toLowerCase(),
-                    rol: String(rol).trim(),
-                    area: area || '',
-                    telefono: telefono || '',
-                    documento: documento || ''
+                    rol: String(rol).trim()
                 };
+                // area/telefono/documento solo se actualizan si el cliente
+                // los envía; si no llegan se conservan los valores actuales
+                // (la UI ya no muestra esos campos).
+                if (area !== undefined) baseUpdate.area = area || '';
+                if (telefono !== undefined) baseUpdate.telefono = telefono || '';
+                if (documento !== undefined) baseUpdate.documento = documento || '';
                 if (estado) {
                     baseUpdate.estado = normalizeText(estado).toLowerCase();
                     baseUpdate.activo = baseUpdate.estado === 'activo';
@@ -4032,6 +4054,11 @@ exports.handler = async (event) => {
             // DASHBOARD - Estadísticas generales
             // =============================================
             if (payload.action === 'get_dashboard_stats') {
+                // Requiere sesión administrativa: protege el dashboard y
+                // registra actividad del usuario (via validarSesionAdmin).
+                const vDashAdmin = await validarSesionAdmin(supabase, payload);
+                if (vDashAdmin.error) return vDashAdmin.error;
+
                 try {
                     const dashFechaDesde = payload.fecha_desde || '';
                     const dashFechaHasta = payload.fecha_hasta || '';
