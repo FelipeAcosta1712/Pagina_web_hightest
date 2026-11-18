@@ -27,6 +27,23 @@ let currentUser = null;
 let sessionTimer = null;
 let warningTimer = null;
 
+/**
+ * Devuelve el token de sesión administrativa almacenado en la sesión
+ * local (localStorage 'hightest_session'). Se usa para autorizar en el
+ * backend operaciones de clientes (get_clientes, add_cliente, etc.).
+ */
+function getSesionTokenAdmin() {
+    try {
+        const raw = localStorage.getItem(SESSION_CONFIG.storageKey);
+        if (!raw) return '';
+        const session = JSON.parse(raw);
+        return session?.sessionToken || '';
+    } catch (e) {
+        return '';
+    }
+}
+window.getSesionTokenAdmin = getSesionTokenAdmin;
+
 // =======================================================
 // FUNCIONES DE AUTENTICACIÓN
 // =======================================================
@@ -66,7 +83,12 @@ async function authenticateUser(email, password) {
         }
 
         const user = buildUserFromRole(result.user);
-        return { success: true, user };
+        // Token de sesión administrativa emitido por el backend (7 días).
+        // Autoriza consultas/operaciones protegidas (ej. get_clientes,
+        // add_cliente). Se guarda dentro de la sesión; nunca es una
+        // contraseña ni un dato de cliente.
+        const sessionToken = result.session_token || result.user?.session_token || '';
+        return { success: true, user, sessionToken };
     } catch (error) {
         return { success: false, error: error?.message || 'No se pudo autenticar' };
     }
@@ -92,6 +114,7 @@ async function login(email, password) {
     // Crear sesión
     const session = {
         user: result.user,
+        sessionToken: result.sessionToken || '',
         loginTime: Date.now(),
         lastActivity: Date.now(),
         sessionId: generateSessionId()

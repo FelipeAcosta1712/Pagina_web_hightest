@@ -155,6 +155,33 @@ const verificarHashPassword = (contrasena, hashAlmacenado) => {
     }
 };
 
+// ── Generador de contraseñas seguras (crypto) ───────────────────
+// 16+ caracteres con al menos una mayúscula, una minúscula, un
+// número y un carácter especial. Sin caracteres ambiguos
+// (0/O/1/l/I). La contraseña nunca se almacena ni se loguea:
+// solo su hash scrypt.
+const PW_MAYUS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+const PW_MINUS = 'abcdefghijkmnpqrstuvwxyz';
+const PW_DIGITOS = '23456789';
+const PW_ESPECIALES = '!@#$%*+=?';
+
+const generarPasswordSegura = (longitud = 16) => {
+    const len = Math.max(16, Number(longitud) || 16);
+    const rnd = (max) => crypto.randomBytes(4).readUInt32BE(0) % max;
+    const grupos = [PW_MAYUS, PW_MINUS, PW_DIGITOS, PW_ESPECIALES];
+    const todos = PW_MAYUS + PW_MINUS + PW_DIGITOS + PW_ESPECIALES;
+    const chars = grupos.map((g) => g[rnd(g.length)]);
+    while (chars.length < len) chars.push(todos[rnd(todos.length)]);
+    // Fisher-Yates con bytes aleatorios criptográficos
+    for (let i = chars.length - 1; i > 0; i--) {
+        const j = rnd(i + 1);
+        const tmp = chars[i];
+        chars[i] = chars[j];
+        chars[j] = tmp;
+    }
+    return chars.join('');
+};
+
 // Registro de accesos vía RPC. Nunca interrumpe el flujo: los errores
 // quedan solo en logs del servidor (sin datos sensibles).
 async function registrarAccesoClienteSeguro(supabase, { id, tipo, exitoso, motivo }) {
@@ -174,11 +201,12 @@ async function registrarAccesoClienteSeguro(supabase, { id, tipo, exitoso, motiv
 }
 
 // Campos sensibles de clientes que NO deben salir en respuestas
-// genéricas (hash de sesión, expiración e historial de accesos).
-// La columna heredada `password` se conserva en la respuesta durante
-// la transición porque el panel de administración la usa para
-// precargar el formulario de edición; desaparecerá al migrar todos.
+// genéricas (contraseña legada, hash de contraseña, hash de sesión,
+// expiración e historial de accesos). Las contraseñas de los clientes
+// ya no se consultan ni se precargan en ningún formulario: para
+// entregar credenciales se usa la acción reset_password_cliente.
 const CAMPOS_SENSIBLES_CLIENTE = [
+    'password',
     'password_hash',
     'session_token_hash',
     'session_expira_en',
@@ -193,6 +221,42 @@ const limpiarCliente = (fila) => {
     });
     return copia;
 };
+
+// Valida el token de sesión administrativa (emitido por la acción
+// 'login') contra la tabla usuarios. El rol se comprueba aquí, no en
+// el navegador. opts.requireAdministrador exige rol 'administrador'.
+// Devuelve { admin } o { error } con la respuesta lista para retornar.
+async function validarSesionAdmin(supabase, payload, opts = {}) {
+    const tokenAdmin = normalizeText(payload.session_token);
+    if (!tokenAdmin) {
+        return { error: jsonResponse(403, { ok: false, error: 'No autorizado: se requiere sesión administrativa' }) };
+    }
+
+    const { data: filasUsu, error: errUsu } = await supabase
+        .from('usuarios')
+        .select('id, email, nombre, rol, session_expira_en')
+        .eq('session_token_hash', hashToken(tokenAdmin))
+        .limit(1);
+    if (errUsu) {
+        return { error: jsonResponse(500, { ok: false, error: 'No se pudo validar la sesión administrativa', detail: errUsu.message }) };
+    }
+
+    const adminRow = Array.isArray(filasUsu) ? filasUsu[0] : null;
+    if (!adminRow || !adminRow.id) {
+        return { error: jsonResponse(403, { ok: false, error: 'No autorizado' }) };
+    }
+
+    const expiraAdmin = adminRow.session_expira_en ? new Date(adminRow.session_expira_en) : null;
+    if (!expiraAdmin || expiraAdmin.getTime() <= Date.now()) {
+        return { error: jsonResponse(403, { ok: false, error: 'Sesión administrativa vencida' }) };
+    }
+
+    if (opts.requireAdministrador && String(adminRow.rol || '').trim().toLowerCase() !== 'administrador') {
+        return { error: jsonResponse(403, { ok: false, error: 'Solo el rol administrador puede realizar esta operación' }) };
+    }
+
+    return { admin: adminRow };
+}
 
 // Trae TODAS las filas de una tabla en bloques de 1000.
 // Supabase/PostgREST limita cada request a max_rows (1000 por defecto),
@@ -263,18 +327,60 @@ exports.handler = async (event) => {
             const payload = JSON.parse(event.body || '{}');
             // console.log('ACTION RECIBIDA:', payload.action);
 
-            // Login para usuarios internos (admin/técnicos)
+            // Login para usuarios internos (admin/técnicos).
+            // Contraseñas con hash scrypt; los usuarios legacy (contraseña
+            // en texto plano) se migran en diferido al primer login
+            // exitoso, sin bloquear su acceso.
             if (payload.action === 'login') {
-                const { data, error } = await supabase
-                    .from('usuarios')
-                    .select('id, email, nombre, rol')
-                    .eq('email', String(payload.email).trim())
-                    .eq('password', String(payload.password))
-                    .single();
+                const emailUsu = String(payload.email || '').trim();
+                const passwordUsu = String(payload.password || '');
 
-                if (error || !data || !data.id || !data.email) {
+                if (!emailUsu || !passwordUsu) {
                     return jsonResponse(401, { ok: false, error: 'Credenciales inválidas' });
                 }
+
+                const { data: filasUsu, error: errUsu } = await supabase
+                    .from('usuarios')
+                    .select('id, email, nombre, rol, password, password_hash')
+                    .eq('email', emailUsu)
+                    .limit(1);
+
+                if (errUsu) {
+                    console.error('Login interno no pudo consultar usuarios:', errUsu.message || errUsu);
+                    return jsonResponse(500, { ok: false, error: 'Error al validar credenciales' });
+                }
+
+                const usuRow = Array.isArray(filasUsu) ? filasUsu[0] : null;
+                if (!usuRow || !usuRow.id || !usuRow.email) {
+                    return jsonResponse(401, { ok: false, error: 'Credenciales inválidas' });
+                }
+
+                // 1) Con password_hash -> verificación scrypt.
+                // 2) Sin hash -> comparación temporal contra la columna heredada.
+                let passwordValida = false;
+                if (usuRow.password_hash) {
+                    passwordValida = verificarHashPassword(passwordUsu, usuRow.password_hash);
+                } else {
+                    passwordValida = passwordUsu !== '' && String(usuRow.password || '') === passwordUsu;
+                }
+
+                if (!passwordValida) {
+                    return jsonResponse(401, { ok: false, error: 'Credenciales inválidas' });
+                }
+
+                // Migración diferida a scrypt: generar hash y limpiar la
+                // contraseña heredada. Si falla, el login continúa.
+                if (!usuRow.password_hash) {
+                    const { error: errHash } = await supabase
+                        .from('usuarios')
+                        .update({ password_hash: generarHashPassword(passwordUsu), password: '' })
+                        .eq('id', usuRow.id);
+                    if (errHash) {
+                        console.error('Migración de contraseña interna diferida (el login continúa):', errHash.message || errHash);
+                    }
+                }
+
+                const data = { id: usuRow.id, email: usuRow.email, nombre: usuRow.nombre, rol: usuRow.rol };
 
                 // Token de sesión administrativa INDEPENDIENTE (7 días).
                 // NO modifica la sesión interna actual del panel; solo
@@ -459,8 +565,13 @@ exports.handler = async (event) => {
                 return jsonResponse(200, { ok: true, usuarios: data || [] });
             }
 
-            // Obtener todos los usuarios con campos completos para el panel de administración
+            // Obtener todos los usuarios con campos completos para el panel
+            // de administración (requiere sesión interna). Nunca devuelve
+            // contraseñas ni hashes: solo el indicador seguro 'protegida'.
             if (payload.action === 'get_all_usuarios') {
+                const vAdmin = await validarSesionAdmin(supabase, payload);
+                if (vAdmin.error) return vAdmin.error;
+
                 const { data, error } = await supabase
                     .from('usuarios')
                     .select('*')
@@ -481,7 +592,8 @@ exports.handler = async (event) => {
                     area: u.area || u.departamento || u.department || '',
                     ultimo_acceso: u.ultimo_acceso || u.last_login || u.ultimo_inicio || '',
                     fecha_registro: u.fecha_registro || u.created_at || u.fecha_creacion || '',
-                    avatar: u.avatar || u.foto || u.photo || u.imagen || ''
+                    avatar: u.avatar || u.foto || u.photo || u.imagen || '',
+                    protegida: !!u.password_hash
                 }));
 
                 return jsonResponse(200, { ok: true, usuarios });
@@ -509,8 +621,187 @@ exports.handler = async (event) => {
                 return jsonResponse(200, { ok: true, usuario: data?.[0] || null });
             }
 
-            // Obtener lista de clientes
+            // ═══════════════════════════════════════════════════════════
+            // CRUD Y RESTABLECIMIENTO DE USUARIOS INTERNOS
+            // Todas exigen rol EXACTO 'administrador'. Las contraseñas
+            // SOLO se guardan como hash scrypt y nunca se devuelven,
+            // salvo la generada por restablecimiento/creación automática,
+            // que se entrega UNA sola vez en la respuesta.
+            // ═══════════════════════════════════════════════════════════
+
+            // Crear usuario interno
+            if (payload.action === 'add_usuario') {
+                const vAdmin = await validarSesionAdmin(supabase, payload, { requireAdministrador: true });
+                if (vAdmin.error) return vAdmin.error;
+
+                const { nombre, email, password, rol, area, telefono, documento } = payload;
+
+                if (!nombre || !email || !rol) {
+                    return jsonResponse(400, { ok: false, error: 'Nombre, correo y rol son requeridos' });
+                }
+
+                // Contraseña: si el administrador la escribe, se usa; si no,
+                // el backend genera una segura que se muestra una sola vez.
+                const passwordFinal = (password && String(password).trim())
+                    ? String(password).trim()
+                    : generarPasswordSegura(16);
+                const passwordGenerada = !(password && String(password).trim());
+
+                const { data, error } = await supabase
+                    .from('usuarios')
+                    .insert([{
+                        nombre: String(nombre).trim(),
+                        email: String(email).trim().toLowerCase(),
+                        password_hash: generarHashPassword(passwordFinal),
+                        password: '',
+                        rol: String(rol).trim(),
+                        area: area || '',
+                        telefono: telefono || '',
+                        documento: documento || '',
+                        estado: 'activo',
+                        activo: true
+                    }])
+                    .select('id, nombre, email, rol, estado');
+
+                if (error) {
+                    if (error.message.includes('duplicate')) {
+                        return jsonResponse(409, { ok: false, error: 'El email ya existe' });
+                    }
+                    return jsonResponse(500, { ok: false, error: 'Error al crear usuario', detail: error.message });
+                }
+
+                const respuesta = { ok: true, usuario: data?.[0] || null, password_generada: passwordGenerada };
+                if (passwordGenerada) respuesta.password_nueva = passwordFinal;
+                return jsonResponse(200, respuesta);
+            }
+
+            // Actualizar usuario interno
+            if (payload.action === 'update_usuario') {
+                const vAdmin = await validarSesionAdmin(supabase, payload, { requireAdministrador: true });
+                if (vAdmin.error) return vAdmin.error;
+
+                const { id, nombre, email, password, rol, area, telefono, documento, estado } = payload;
+
+                if (!id || !nombre || !email || !rol) {
+                    return jsonResponse(400, { ok: false, error: 'Id, nombre, correo y rol son requeridos' });
+                }
+
+                const baseUpdate = {
+                    nombre: String(nombre).trim(),
+                    email: String(email).trim().toLowerCase(),
+                    rol: String(rol).trim(),
+                    area: area || '',
+                    telefono: telefono || '',
+                    documento: documento || ''
+                };
+                if (estado) {
+                    baseUpdate.estado = normalizeText(estado).toLowerCase();
+                    baseUpdate.activo = baseUpdate.estado === 'activo';
+                }
+                if (password && String(password).trim()) {
+                    // Contraseña modificada: solo hash scrypt; se limpia la heredada
+                    if (String(password).trim().length < 8) {
+                        return jsonResponse(400, { ok: false, error: 'La nueva contraseña debe tener al menos 8 caracteres' });
+                    }
+                    baseUpdate.password_hash = generarHashPassword(String(password).trim());
+                    baseUpdate.password = '';
+                }
+
+                const { data, error } = await supabase
+                    .from('usuarios')
+                    .update(baseUpdate)
+                    .eq('id', id)
+                    .select('id, nombre, email, rol, estado');
+
+                if (error) {
+                    if (error.message.includes('duplicate')) {
+                        return jsonResponse(409, { ok: false, error: 'El email ya existe' });
+                    }
+                    return jsonResponse(500, { ok: false, error: 'Error al actualizar usuario', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true, usuario: data?.[0] || null });
+            }
+
+            // Eliminar usuario interno (no permite eliminarse a sí mismo)
+            if (payload.action === 'delete_usuario') {
+                const vAdmin = await validarSesionAdmin(supabase, payload, { requireAdministrador: true });
+                if (vAdmin.error) return vAdmin.error;
+
+                const { id } = payload;
+                if (!id) {
+                    return jsonResponse(400, { ok: false, error: 'Id de usuario requerido' });
+                }
+                if (String(id) === String(vAdmin.admin.id)) {
+                    return jsonResponse(400, { ok: false, error: 'No puedes eliminar tu propia cuenta de administrador' });
+                }
+
+                const { error } = await supabase
+                    .from('usuarios')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) {
+                    return jsonResponse(500, { ok: false, error: 'Error al eliminar usuario', detail: error.message });
+                }
+
+                return jsonResponse(200, { ok: true, message: 'Usuario eliminado exitosamente' });
+            }
+
+            // Restablecer contraseña de un usuario interno (genera nueva
+            // segura y PERMANENTE, muestra una sola vez, revoca su sesión).
+            if (payload.action === 'reset_password_usuario') {
+                const vAdmin = await validarSesionAdmin(supabase, payload, { requireAdministrador: true });
+                if (vAdmin.error) return vAdmin.error;
+
+                const { id } = payload;
+                if (!id) {
+                    return jsonResponse(400, { ok: false, error: 'Id de usuario requerido' });
+                }
+
+                const { data: filasUsuT, error: errUsuT } = await supabase
+                    .from('usuarios')
+                    .select('id, email, nombre')
+                    .eq('id', id)
+                    .limit(1);
+                if (errUsuT) {
+                    return jsonResponse(500, { ok: false, error: 'No se pudo consultar el usuario', detail: errUsuT.message });
+                }
+
+                const usuT = Array.isArray(filasUsuT) ? filasUsuT[0] : null;
+                if (!usuT || !usuT.id) {
+                    return jsonResponse(404, { ok: false, error: 'Usuario no encontrado' });
+                }
+
+                const nuevaPassword = generarPasswordSegura(16);
+
+                const { error: errUpdUsu } = await supabase
+                    .from('usuarios')
+                    .update({
+                        password_hash: generarHashPassword(nuevaPassword),
+                        password: '',
+                        session_token_hash: null,
+                        session_expira_en: null
+                    })
+                    .eq('id', id);
+                if (errUpdUsu) {
+                    return jsonResponse(500, { ok: false, error: 'No se pudo restablecer la contraseña', detail: errUpdUsu.message });
+                }
+
+                return jsonResponse(200, {
+                    ok: true,
+                    password_nueva: nuevaPassword,
+                    usuario: { id: usuT.id, email: usuT.email, nombre: usuT.nombre }
+                });
+            }
+
+            // Obtener lista de clientes (requiere sesión interna).
+            // Nunca devuelve contraseñas ni hashes: solo un indicador
+            // seguro 'protegida' para mostrar el estado en el panel.
             if (payload.action === 'get_clientes') {
+                const vAdmin = await validarSesionAdmin(supabase, payload);
+                if (vAdmin.error) return vAdmin.error;
+
                 const { data, error } = await supabase
                     .from('clientes')
                     .select('*')
@@ -520,7 +811,11 @@ exports.handler = async (event) => {
                     return jsonResponse(500, { ok: false, error: 'Error al obtener clientes', detail: error.message });
                 }
 
-                return jsonResponse(200, { ok: true, clientes: (data || []).map(limpiarCliente) });
+                return jsonResponse(200, { ok: true, clientes: (data || []).map((row) => {
+                    const copia = limpiarCliente(row);
+                    copia.protegida = !!(row && row.password_hash);
+                    return copia;
+                }) });
             }
 
             // Obtener cliente por nombre (para buscar NIT)
@@ -1053,21 +1348,34 @@ exports.handler = async (event) => {
                 return jsonResponse(result.ok ? 200 : 500, result);
             }
 
-            // Agregar nuevo cliente
+            // Agregar nuevo cliente (requiere sesión interna)
             if (payload.action === 'add_cliente') {
+                const vAdmin = await validarSesionAdmin(supabase, payload);
+                if (vAdmin.error) return vAdmin.error;
+
                 const { nombre_empresa, nit, email, password, telefono, direccion, contacto_principal } = payload;
 
-                if (!nombre_empresa || !nit || !email || !password) {
+                if (!nombre_empresa || !nit || !email) {
                     return jsonResponse(400, { ok: false, error: 'Faltan campos requeridos' });
                 }
 
-                // Contraseña de cliente: se almacena SOLO como hash scrypt.
-                // `password` queda vacío como placeholder por si la columna es
-                // obligatoria; el secreto real vive en password_hash.
+                // Contraseña del cliente:
+                //  - Si el administrador la escribe en el formulario, se usa.
+                //  - Si no llega (alta desde Recepción), el backend genera una
+                //    aleatoria criptográficamente segura y PERMANENTE, que
+                //    nunca se devuelve ni se muestra: el administrador la
+                //    entregará al cliente con reset_password_cliente.
+                // En ambos casos SOLO se almacena el hash scrypt.
+                const passwordFinal = (password && String(password).trim())
+                    ? String(password).trim()
+                    : generarPasswordSegura(16);
+
+                // Se almacena SOLO como hash scrypt. `password` queda vacío
+                // como placeholder por si la columna es obligatoria.
                 const baseInsert = {
                     nombre_empresa: nombre_empresa.trim(),
                     email: email.trim().toLowerCase(),
-                    password_hash: generarHashPassword(password),
+                    password_hash: generarHashPassword(passwordFinal),
                     password: '',
                     telefono: telefono || '',
                     direccion: direccion || '',
@@ -1108,11 +1416,15 @@ exports.handler = async (event) => {
                     return jsonResponse(500, { ok: false, error: 'Error al crear cliente', detail: error.message });
                 }
 
-                return jsonResponse(200, { ok: true, cliente: data[0] });
+                // Respuesta sin datos sensibles (sin password ni hash)
+                return jsonResponse(200, { ok: true, cliente: limpiarCliente(data[0]) });
             }
 
-            // Actualizar cliente
+            // Actualizar cliente (requiere sesión interna)
             if (payload.action === 'update_cliente') {
+                const vAdmin = await validarSesionAdmin(supabase, payload);
+                if (vAdmin.error) return vAdmin.error;
+
                 const { id, nombre_empresa, nit, email, password, telefono, direccion, contacto_principal } = payload;
 
                 if (!id || !nombre_empresa || !nit || !email) {
@@ -1164,11 +1476,15 @@ exports.handler = async (event) => {
                     return jsonResponse(500, { ok: false, error: 'Error al actualizar cliente', detail: error.message });
                 }
 
-                return jsonResponse(200, { ok: true, cliente: data[0] });
+                // Respuesta sin datos sensibles (sin password ni hash)
+                return jsonResponse(200, { ok: true, cliente: limpiarCliente(data[0]) });
             }
 
-            // Eliminar cliente
+            // Eliminar cliente (requiere sesión interna)
             if (payload.action === 'delete_cliente') {
+                const vAdmin = await validarSesionAdmin(supabase, payload);
+                if (vAdmin.error) return vAdmin.error;
+
                 const { id } = payload;
 
                 if (!id) {
@@ -1185,6 +1501,70 @@ exports.handler = async (event) => {
                 }
 
                 return jsonResponse(200, { ok: true, message: 'Cliente eliminado exitosamente' });
+            }
+
+            // Restablecer contraseña de un cliente (SOLO rol administrador).
+            // Genera una nueva contraseña segura y PERMANENTE (sin
+            // vencimiento ni cambio obligatorio), guarda únicamente el hash
+            // scrypt y revoca las sesiones activas de ese cliente. La
+            // contraseña se devuelve UNA sola vez en esta respuesta: nunca
+            // se persiste en texto plano, ni se loguea, ni queda en historial.
+            if (payload.action === 'reset_password_cliente') {
+                const vAdmin = await validarSesionAdmin(supabase, payload, { requireAdministrador: true });
+                if (vAdmin.error) return vAdmin.error;
+
+                const { id } = payload;
+                if (!id) {
+                    return jsonResponse(400, { ok: false, error: 'ID de cliente requerido' });
+                }
+
+                const { data: filasCli, error: errCli } = await supabase
+                    .from('clientes')
+                    .select('id, email, nombre_empresa')
+                    .eq('id', id)
+                    .limit(1);
+                if (errCli) {
+                    return jsonResponse(500, { ok: false, error: 'No se pudo consultar el cliente', detail: errCli.message });
+                }
+
+                const cliente = Array.isArray(filasCli) ? filasCli[0] : null;
+                if (!cliente || !cliente.id) {
+                    return jsonResponse(404, { ok: false, error: 'Cliente no encontrado' });
+                }
+
+                const nuevaPassword = generarPasswordSegura(16);
+
+                const { error: errUpd } = await supabase
+                    .from('clientes')
+                    .update({
+                        password_hash: generarHashPassword(nuevaPassword),
+                        password: '',
+                        session_token_hash: null,
+                        session_expira_en: null
+                    })
+                    .eq('id', id);
+                if (errUpd) {
+                    return jsonResponse(500, { ok: false, error: 'No se pudo restablecer la contraseña', detail: errUpd.message });
+                }
+
+                // Auditoría: evento password_reset sin secretos
+                // (motivo = identificación del administrador).
+                await registrarAccesoClienteSeguro(supabase, {
+                    id: cliente.id,
+                    tipo: 'password_reset',
+                    exitoso: true,
+                    motivo: 'Administrador: ' + (vAdmin.admin.email || vAdmin.admin.nombre || 'desconocido')
+                });
+
+                return jsonResponse(200, {
+                    ok: true,
+                    password_nueva: nuevaPassword,
+                    cliente: {
+                        id: cliente.id,
+                        email: cliente.email,
+                        nombre_empresa: cliente.nombre_empresa
+                    }
+                });
             }
 
             // ============================================

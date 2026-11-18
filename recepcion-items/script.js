@@ -3332,7 +3332,7 @@ async function loadCompaniesAndElements() {
             const backendResponse = await fetch('/.netlify/functions/conectar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'get_clientes' })
+                body: JSON.stringify({ action: 'get_clientes', session_token: (typeof getSesionTokenAdmin === 'function' ? getSesionTokenAdmin() : '') })
             });
 
             const backendJson = await backendResponse.json();
@@ -3723,9 +3723,10 @@ async function guardarNuevoClienteLocal() {
     const emailRe = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
     if (!emailRe.test(email)) { showNotification('Correo inválido', 'warning'); return; }
 
-    // La tabla clientes usa contraseña, así que generamos una temporal cuando el alta viene desde recepción.
-    const passwordTemporal = `HT-${String(nit).replace(/\D/g, '').slice(-6) || 'CLIENTE'}-${Date.now().toString().slice(-4)}`;
-
+    // El backend genera automáticamente una contraseña segura y
+    // permanente (hash scrypt). Recepción NUNCA la recibe, la ve o
+    // puede recuperarla: el administrador entregará credenciales al
+    // cliente mediante "Restablecer contraseña" en el módulo Clientes.
     try {
         const response = await fetch('/.netlify/functions/conectar', {
             method: 'POST',
@@ -3735,14 +3736,19 @@ async function guardarNuevoClienteLocal() {
                 nombre_empresa: nombre,
                 nit,
                 email,
-                password: passwordTemporal,
                 telefono,
                 direccion,
-                contacto_principal: contacto
+                contacto_principal: contacto,
+                session_token: (typeof getSesionTokenAdmin === 'function' ? getSesionTokenAdmin() : '')
             })
         });
 
         const result = await response.json();
+
+        if (response.status === 403) {
+            showNotification('⛔ Sesión administrativa vencida o sin permisos. Vuelve a iniciar sesión para crear clientes.', 'error');
+            return;
+        }
 
         if (response.ok && result?.ok && result?.cliente) {
             const clienteDb = result.cliente;
@@ -3783,7 +3789,7 @@ async function guardarNuevoClienteLocal() {
             }
 
             closeNuevoClienteModal();
-            showNotification('✅ Cliente guardado en la base de datos de clientes', 'success');
+            showNotification('✅ Cliente guardado. El administrador le generará sus credenciales con "Restablecer contraseña".', 'success', 6000);
             return;
         }
 

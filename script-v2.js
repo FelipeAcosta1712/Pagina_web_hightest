@@ -4538,6 +4538,11 @@ const AdminPanelManager = {
                 if (clientModalTitle) clientModalTitle.textContent = 'Nuevo Cliente';
                 if (clientEditId) clientEditId.value = '';
                 if (clientForm) clientForm.reset();
+                // Modo creación: la contraseña es obligatoria
+                const passwordLabel = document.getElementById('clientPasswordLabel');
+                const passwordHint = document.getElementById('clientPasswordHint');
+                if (passwordLabel) passwordLabel.textContent = 'Contraseña *';
+                if (passwordHint) passwordHint.style.display = 'none';
                 this.openClientModal();
             });
         }
@@ -4585,7 +4590,7 @@ const AdminPanelManager = {
             const response = await fetch('/.netlify/functions/conectar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'get_clientes' })
+                body: JSON.stringify({ action: 'get_clientes', session_token: this.getAdminSessionToken() })
             });
 
             const result = await response.json();
@@ -4645,12 +4650,17 @@ const AdminPanelManager = {
                 ''
             );
             const emailEsc = escapeHtml(cliente.email);
-            const pwd = cliente.password ? String(cliente.password) : '';
-            const pwdEsc = escapeHtml(pwd);
             const idEsc = escapeHtml(cliente.id);
             const telEsc = escapeHtml(cliente.telefono || cliente.phone || '');
             const dirEsc = escapeHtml(cliente.direccion || cliente.address || '');
             const contactEsc = escapeHtml(cliente.contacto_principal || cliente.contacto || '');
+
+            // Estado de la contraseña (indicador seguro calculado por el
+            // backend; nunca expone contraseñas ni hashes).
+            const protegida = !!cliente.protegida;
+            const estadoBadge = protegida
+                ? '<span style="background:#dcfce7;color:#166534;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:600;">Protegida</span>'
+                : '<span style="background:#fef9c3;color:#854d0e;padding:3px 8px;border-radius:12px;font-size:10px;font-weight:600;">Pendiente de migración</span>';
 
             // Escapes para pasar en onclick (single-quoted)
             const escForOnclick = (v) => String(v || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
@@ -4660,20 +4670,16 @@ const AdminPanelManager = {
                 <td style="padding: 5px 6px;"><strong style="font-size: 11px;">${nombreEsc}</strong></td>
                 <td style="padding: 5px 6px; min-width: 110px;">${nitEsc || '-'}</td>
                 <td style="padding: 5px 6px; word-break: break-word;">${emailEsc}</td>
-                <td style="padding: 5px 6px;">
-                    <div class="password-cell">
-                        <span class="password-mask" data-password="${pwdEsc}" style="font-size: 11px;">${pwd ? '*'.repeat(Math.max(4, pwd.length)) : ''}</span>
-                        <button type="button" class="password-toggle-small" onclick="AdminPanelManager.toggleTablePasswordVisibility(this)" title="Ver contraseña" style="font-size: 10px;">👁️</button>
-                    </div>
-                </td>
+                <td style="padding: 5px 6px; text-align: center;">${estadoBadge}</td>
                 <td style="padding: 5px 6px; white-space: nowrap;">${telEsc || '-'}</td>
                 <td style="padding: 5px 6px; word-break: break-word;">${dirEsc || '-'}</td>
                 <td style="padding: 5px 6px; word-break: break-word;">${contactEsc || '-'}</td>
                 <td style="padding: 5px 6px; white-space: nowrap; font-size: 11px;">${fecha}</td>
                 <td style="padding: 5px 6px;">
                     <div class="action-buttons" style="gap: 3px;">
-                        <button class="btn btn--small btn--outline" onclick="AdminPanelManager.editCliente('${escForOnclick(idEsc)}', '${escForOnclick(cliente.nombre_empresa)}', '${escForOnclick(nitEsc)}', '${escForOnclick(cliente.email)}', '${escForOnclick(pwd)}', '${escForOnclick(cliente.telefono || '')}', '${escForOnclick(cliente.direccion || '')}', '${escForOnclick(cliente.contacto_principal || '')}')" style="padding: 3px 6px; font-size: 11px;">✏️</button>
-                        <button class="btn btn--small btn--error" onclick="AdminPanelManager.deleteCliente('${escForOnclick(idEsc)}', '${escForOnclick(cliente.nombre_empresa)}')" style="padding: 3px 6px; font-size: 11px;">🗑️</button>
+                        <button class="btn btn--small btn--outline" onclick="AdminPanelManager.editCliente('${escForOnclick(idEsc)}', '${escForOnclick(cliente.nombre_empresa)}', '${escForOnclick(nitEsc)}', '${escForOnclick(cliente.email)}', '${escForOnclick(cliente.telefono || '')}', '${escForOnclick(cliente.direccion || '')}', '${escForOnclick(cliente.contacto_principal || '')}')" style="padding: 3px 6px; font-size: 11px;" title="Editar">✏️</button>
+                        <button class="btn btn--small btn--outline" onclick="AdminPanelManager.abrirRestablecer('${escForOnclick(idEsc)}', '${escForOnclick(cliente.nombre_empresa)}', ${protegida})" style="padding: 3px 6px; font-size: 11px;" title="Restablecer contraseña">🔑</button>
+                        <button class="btn btn--small btn--error" onclick="AdminPanelManager.deleteCliente('${escForOnclick(idEsc)}', '${escForOnclick(cliente.nombre_empresa)}')" style="padding: 3px 6px; font-size: 11px;" title="Eliminar">🗑️</button>
                     </div>
                 </td>
             </tr>
@@ -4729,6 +4735,16 @@ const AdminPanelManager = {
             emptyRow.style.display = 'none';
         }
     },
+    // Token de sesión administrativa (emitido por el login interno y
+    // guardado en localStorage por CertificatesAuthManager).
+    getAdminSessionToken() {
+        try {
+            const guardado = JSON.parse(localStorage.getItem('hightest_user') || '{}');
+            return guardado.session_token || guardado.sessionToken || '';
+        } catch (e) {
+            return '';
+        }
+    },
 
     async saveClient() {
         const editId = document.getElementById('clientEditId')?.value || '';
@@ -4740,13 +4756,38 @@ const AdminPanelManager = {
         const direccion = document.getElementById('clientDireccion')?.value.trim() || '';
         const contacto = document.getElementById('clientContacto')?.value.trim() || '';
 
-        if (!nombre || !nit || !email || !password) {
+        if (!nombre || !nit || !email) {
             alert('Por favor completa todos los campos');
+            return;
+        }
+
+        // Contraseña: obligatoria solo al crear. Al editar, dejarla vacía
+        // conserva la actual (el backend no la toca). Mínimo 8 caracteres.
+        if (editId) {
+            if (password && password.length < 8) {
+                alert('La nueva contraseña debe tener al menos 8 caracteres');
+                return;
+            }
+        } else {
+            if (!password) {
+                alert('Por favor completa todos los campos');
+                return;
+            }
+            if (password.length < 8) {
+                alert('La contraseña debe tener al menos 8 caracteres');
+                return;
+            }
+        }
+
+        const tokenAdmin = this.getAdminSessionToken();
+        if (!tokenAdmin) {
+            alert('Tu sesión administrativa no está activa. Cierra sesión y vuelve a ingresar para continuar.');
             return;
         }
 
         try {
             const action = editId ? 'update_cliente' : 'add_cliente';
+
             const response = await fetch('/.netlify/functions/conectar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -4759,7 +4800,8 @@ const AdminPanelManager = {
                     password: password,
                     telefono,
                     direccion,
-                    contacto_principal: contacto
+                    contacto_principal: contacto,
+                    session_token: tokenAdmin
                 })
             });
 
@@ -4781,13 +4823,17 @@ const AdminPanelManager = {
         }
     },
 
-    editCliente(id, nombre, nit, email, password, telefono, direccion, contacto) {
+    // Abre el formulario en modo edición. La contraseña NUNCA se precarga:
+    // el campo queda vacío y es opcional (vacío = conservar la actual).
+    editCliente(id, nombre, nit, email, telefono, direccion, contacto) {
         const title = document.getElementById('clientModalTitle');
         const editId = document.getElementById('clientEditId');
         const nombreInput = document.getElementById('clientNombre');
         const nitInput = document.getElementById('clientNit');
         const emailInput = document.getElementById('clientEmail');
         const passwordInput = document.getElementById('clientPassword');
+        const passwordLabel = document.getElementById('clientPasswordLabel');
+        const passwordHint = document.getElementById('clientPasswordHint');
         const telInput = document.getElementById('clientTelefono');
         const dirInput = document.getElementById('clientDireccion');
         const contactInput = document.getElementById('clientContacto');
@@ -4799,7 +4845,9 @@ const AdminPanelManager = {
         nombreInput.value = String(nombre || '').toUpperCase();
         nitInput.value = String(nit || '');
         emailInput.value = String(email || '').toLowerCase();
-        passwordInput.value = String(password || '');
+        passwordInput.value = '';
+        if (passwordLabel) passwordLabel.textContent = 'Nueva contraseña (opcional)';
+        if (passwordHint) passwordHint.style.display = 'block';
         if (telInput) telInput.value = String(telefono || '');
         if (dirInput) dirInput.value = String(direccion || '');
         if (contactInput) contactInput.value = String(contacto || '');
@@ -4821,38 +4869,6 @@ const AdminPanelManager = {
         modal.setAttribute('aria-hidden', 'true');
     },
 
-    async updateCliente(id, nombre, nit, email, password, telefono, direccion, contacto) {
-        try {
-            const response = await fetch('/.netlify/functions/conectar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'update_cliente',
-                    id: id,
-                    nombre_empresa: nombre,
-                    nit: nit,
-                    email: email,
-                    password: password,
-                    telefono: telefono || '',
-                    direccion: direccion || '',
-                    contacto_principal: contacto || ''
-                })
-            });
-
-            const result = await response.json();
-
-            if (result.ok) {
-                alert('✅ Cliente actualizado exitosamente');
-                await this.loadClientes();
-            } else {
-                alert(`❌ Error: ${result.error}`);
-            }
-        } catch (error) {
-            console.error('Error updating client:', error);
-            alert('Error al actualizar el cliente');
-        }
-    },
-
     deleteCliente(id, nombre) {
         if (!confirm(`¿Estás seguro de que deseas eliminar a ${nombre}?`)) {
             return;
@@ -4862,13 +4878,20 @@ const AdminPanelManager = {
     },
 
     async executeDeleteCliente(id) {
+        const tokenAdmin = this.getAdminSessionToken();
+        if (!tokenAdmin) {
+            alert('Tu sesión administrativa no está activa. Cierra sesión y vuelve a ingresar para continuar.');
+            return;
+        }
+
         try {
             const response = await fetch('/.netlify/functions/conectar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'delete_cliente',
-                    id: id
+                    id: id,
+                    session_token: tokenAdmin
                 })
             });
 
@@ -4886,36 +4909,125 @@ const AdminPanelManager = {
         }
     },
 
-    togglePasswordVisibility(fieldId) {
-        const field = document.getElementById(fieldId);
-        if (field.type === 'password') {
-            field.type = 'text';
-        } else {
-            field.type = 'password';
-        }
+    // ═══════════════════════════════════════════════════════════
+    // RESTABLECIMIENTO DE CONTRASEÑA DE CLIENTE
+    // Solo administrador. La nueva contraseña se muestra UNA sola
+    // vez en el modal de entrega; nunca se guarda en el navegador
+    // ni en almacenamiento. Sin vencimiento ni cambio obligatorio.
+    // ═══════════════════════════════════════════════════════════
+
+    abrirRestablecer(id, nombre, protegida) {
+        // Elimina cualquier modal previo
+        document.getElementById('resetPwdConfirmModal')?.remove();
+
+        const estado = protegida
+            ? '<span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;">Protegida</span>'
+            : '<span style="background:#fef9c3;color:#854d0e;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;">Pendiente de migración</span>';
+
+        const modal = document.createElement('div');
+        modal.id = 'resetPwdConfirmModal';
+        modal.className = 'modal';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:10050;';
+        modal.innerHTML = `
+            <div style="background:#fff;border-radius:14px;max-width:440px;width:92%;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.25);">
+                <h3 style="margin:0 0 6px;font-size:17px;color:#1e293b;">Restablecer contraseña</h3>
+                <p style="margin:0 0 14px;font-size:13px;color:#475569;">Se generará una nueva contraseña segura y permanente. Las sesiones activas de este cliente quedarán revocadas.</p>
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;font-size:13px;color:#334155;margin-bottom:16px;">
+                    <div><strong>Cliente:</strong> ${String(nombre || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+                    <div style="margin-top:6px;"><strong>Estado de contraseña:</strong> ${estado}</div>
+                </div>
+                <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <button type="button" id="resetPwdCancelBtn" style="padding:8px 16px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#475569;font-size:13px;font-weight:600;cursor:pointer;">Cancelar</button>
+                    <button type="button" id="resetPwdConfirmBtn" style="padding:8px 16px;border-radius:8px;border:none;background:#2563eb;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Restablecer contraseña</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.querySelector('#resetPwdCancelBtn').onclick = () => modal.remove();
+        modal.onclick = (ev) => { if (ev.target === modal) modal.remove(); };
+        modal.querySelector('#resetPwdConfirmBtn').onclick = async () => {
+            modal.remove();
+            await this.confirmarRestablecer(id, nombre);
+        };
     },
 
-    toggleTablePasswordVisibility(button) {
-        const mask = button.previousElementSibling;
-        if (!mask) return;
-
-        const password = mask.dataset.password || '';
-        const isVisible = mask.dataset.visible === 'true';
-
-        if (isVisible) {
-            // Cambiar a asteriscos (ocultar)
-            mask.textContent = password ? '*'.repeat(Math.max(6, password.length)) : '';
-            mask.dataset.visible = 'false';
-            button.textContent = '👁️';
-            button.title = 'Ver contraseña';
+    async confirmarRestablecer(id, nombre) {
+        const tokenAdmin = this.getAdminSessionToken();
+        if (!tokenAdmin) {
+            alert('Tu sesión administrativa no está activa. Cierra sesión y vuelve a ingresar para continuar.');
             return;
         }
 
-        // Cambiar a visible
-        mask.textContent = password;
-        mask.dataset.visible = 'true';
-        button.textContent = '🙈';
-        button.title = 'Ocultar contraseña';
+        let result;
+        try {
+            const response = await fetch('/.netlify/functions/conectar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'reset_password_cliente',
+                    id: id,
+                    session_token: tokenAdmin
+                })
+            });
+            result = await response.json();
+        } catch (error) {
+            console.error('Error restableciendo contraseña:', error);
+            alert('Error al restablecer la contraseña. Intente nuevamente.');
+            return;
+        }
+
+        if (!result.ok) {
+            alert(`❌ Error: ${result.error || 'No se pudo restablecer la contraseña'}`);
+            return;
+        }
+
+        // Modal de entrega única: la contraseña solo existe aquí en memoria.
+        // Al cerrar se limpia y no vuelve a mostrarse ni se guarda en ningún
+        // lado (localStorage/sessionStorage/logs).
+        document.getElementById('resetPwdDeliveryModal')?.remove();
+
+        const delivery = document.createElement('div');
+        delivery.id = 'resetPwdDeliveryModal';
+        delivery.className = 'modal';
+        delivery.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:10051;';
+        delivery.innerHTML = `
+            <div style="background:#fff;border-radius:14px;max-width:480px;width:92%;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.25);">
+                <h3 style="margin:0 0 6px;font-size:17px;color:#1e293b;">✅ Contraseña restablecida</h3>
+                <p style="margin:0 0 4px;font-size:13px;color:#475569;">Cliente: <strong>${String(nombre || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</strong></p>
+                <p style="margin:10px 0 4px;font-size:13px;color:#334155;">Nueva contraseña (se muestra <strong>solo esta vez</strong>):</p>
+                <div style="display:flex;gap:8px;margin:8px 0 12px;">
+                    <input type="text" id="resetPwdValue" readonly value="${String(result.password_nueva || '').replace(/"/g, '&quot;').replace(/</g, '&lt;')}" style="flex:1;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-family:'SF Mono',monospace;font-size:14px;font-weight:600;color:#0f172a;background:#f8fafc;user-select:all;">
+                    <button type="button" id="resetPwdCopyBtn" style="padding:10px 14px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#475569;font-size:13px;font-weight:600;cursor:pointer;">📋 Copiar</button>
+                </div>
+                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:16px;">
+                    ⚠️ Entregue esta contraseña al cliente por un canal seguro. No se volverá a mostrar: si se pierde, deberá restablecerla nuevamente. Las sesiones anteriores del cliente quedaron revocadas.
+                </div>
+                <div style="display:flex;justify-content:flex-end;">
+                    <button type="button" id="resetPwdCloseBtn" style="padding:8px 16px;border-radius:8px;border:none;background:#2563eb;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Ya la copié / Cerrar</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(delivery);
+        delivery.querySelector('#resetPwdCopyBtn').onclick = async () => {
+            try {
+                await navigator.clipboard.writeText(result.password_nueva || '');
+            } catch (e) {
+                const campo = delivery.querySelector('#resetPwdValue');
+                if (campo) { campo.select(); document.execCommand('copy'); }
+            }
+            const btn = delivery.querySelector('#resetPwdCopyBtn');
+            if (btn) { btn.textContent = '✅ Copiada'; }
+        };
+        const cerrar = () => {
+            // Limpieza definitiva: la contraseña desaparece del DOM y de memoria
+            const campo = delivery.querySelector('#resetPwdValue');
+            if (campo) campo.value = '';
+            result.password_nueva = null;
+            delivery.remove();
+            this.loadClientes();
+        };
+        delivery.querySelector('#resetPwdCloseBtn').onclick = cerrar;
+        delivery.onclick = (ev) => { if (ev.target === delivery) cerrar(); };
     },
 
     logout() {

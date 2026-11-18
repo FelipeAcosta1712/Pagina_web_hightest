@@ -924,7 +924,7 @@
                                         <th style="padding: 6px 8px; white-space: nowrap;">Empresa</th>
                                         <th style="padding: 6px 8px; white-space: nowrap;">NIT / CC</th>
                                         <th style="padding: 6px 8px; white-space: nowrap;">Email</th>
-                                        <th style="padding: 6px 8px; white-space: nowrap;">Contraseña</th>
+                                        <th style="padding: 6px 8px; white-space: nowrap;">Estado de contraseña</th>
                                         <th style="padding: 6px 8px; white-space: nowrap;">Teléfono</th>
                                         <th style="padding: 6px 8px; white-space: nowrap;">Dirección</th>
                                         <th style="padding: 6px 8px; white-space: nowrap;">Contacto</th>
@@ -2207,6 +2207,7 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                             <input type="text" id="usrSearchGlobal" class="usr-search-global__input" placeholder="Buscar usuario, correo o rol...">
                         </div>
+                        <button type="button" id="usrNewUserBtn" class="admin-btn admin-btn--primary" style="margin-left:10px;padding:10px 18px;border-radius:10px;background:#2563eb;color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">➕ Nuevo Usuario</button>
                     </div>
                 </div>
 
@@ -2294,13 +2295,14 @@
                                     <th>Rol</th>
                                     <th>Área</th>
                                     <th>Estado</th>
+                                    <th>Contraseña</th>
                                     <th>Último acceso</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="usrTableBody">
                                 <tr class="usr-table__loading">
-                                    <td colspan="7" style="text-align:center; padding:2rem; color:#94a3b8;">
+                                    <td colspan="8" style="text-align:center; padding:2rem; color:#94a3b8;">
                                         <div class="usr-spinner"></div>
                                         <p style="margin-top:8px;">Cargando usuarios...</p>
                                     </td>
@@ -2394,7 +2396,7 @@
                                 <div class="usr-detail__section">
                                     <h4 class="usr-detail__section-title">Accesos Directos</h4>
                                     <div class="usr-detail__shortcuts">
-                                        <button class="usr-detail__shortcut-btn" title="Restablecer contraseña">
+                                        <button class="usr-detail__shortcut-btn" title="Restablecer contraseña" onclick="UsuariosPanel.abrirRestablecer()">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                                             Restablecer contraseña
                                         </button>
@@ -3227,11 +3229,11 @@
                     <input type="email" id="clientEmail" class="control__input" placeholder="correo@empresa.com" required style="text-transform: lowercase;" oninput="this.value = this.value.toLowerCase()">
                 </div>
                 <div class="form-group">
-                    <label for="clientPassword">Contraseña *</label>
+                    <label for="clientPassword" id="clientPasswordLabel">Contraseña *</label>
                     <div class="password-input-wrapper">
-                        <input type="password" id="clientPassword" class="control__input" placeholder="Contraseña segura" required>
-                        <button type="button" class="password-toggle" onclick="AdminPanelManager.togglePasswordVisibility('clientPassword')" title="Mostrar/ocultar contraseña">👁️</button>
+                        <input type="password" id="clientPassword" class="control__input" placeholder="Contraseña segura (mínimo 8 caracteres)" autocomplete="new-password">
                     </div>
+                    <small id="clientPasswordHint" style="display:none;color:#64748b;font-size:11px;margin-top:4px;">Deja el campo vacío para conservar la contraseña actual del cliente.</small>
                 </div>
                 <div class="form-group">
                     <label for="clientTelefono">Teléfono</label>
@@ -9508,10 +9510,24 @@
                 if (resetBtn) resetBtn.addEventListener('click', () => this.resetFilters());
                 if (closeDetail) closeDetail.addEventListener('click', () => this.closeDetail());
 
+                // Nuevo usuario
+                const newUserBtn = document.getElementById('usrNewUserBtn');
+                if (newUserBtn) newUserBtn.addEventListener('click', () => this.openUserForm(null));
+
                 // Detail tabs
                 document.querySelectorAll('.usr-detail__tab').forEach(tab => {
                     tab.addEventListener('click', () => this.switchDetailTab(tab.dataset.detailTab));
                 });
+            },
+
+            // Token de sesión administrativa (localStorage hightest_user)
+            getAdminSessionToken() {
+                try {
+                    const guardado = JSON.parse(localStorage.getItem('hightest_user') || '{}');
+                    return guardado.session_token || guardado.sessionToken || '';
+                } catch (e) {
+                    return '';
+                }
             },
 
             async loadUsuarios() {
@@ -9519,12 +9535,15 @@
                     const response = await fetch('/.netlify/functions/conectar', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'get_all_usuarios' })
+                        body: JSON.stringify({ action: 'get_all_usuarios', session_token: this.getAdminSessionToken() })
                     });
                     const result = await response.json();
                     if (result.ok && Array.isArray(result.usuarios)) {
                         this.usuarios = result.usuarios;
                     } else {
+                        if (response.status === 403) {
+                            console.warn('[Usuarios] ' + (result.error || 'No autorizado') + '. Cierra sesión y vuelve a ingresar.');
+                        }
                         this.usuarios = [];
                     }
                 } catch (error) {
@@ -9633,7 +9652,7 @@
                 if (pageItems.length === 0) {
                     tbody.innerHTML = `
                         <tr>
-                            <td colspan="7" style="text-align:center; padding:2rem; color:#94a3b8;">
+                            <td colspan="8" style="text-align:center; padding:2rem; color:#94a3b8;">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40" style="margin-bottom:8px; opacity:0.4;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                                 <p>No se encontraron usuarios</p>
                             </td>
@@ -9652,6 +9671,11 @@
                     const statusClass = (u.estado || '').toLowerCase() === 'activo' ? 'activo' : 'inactivo';
                     const lastAccess = this.formatDate(u.ultimo_acceso);
                     const isSelected = this.selectedUserId === u.id;
+                    // Estado de la contraseña (indicador seguro del backend)
+                    const pwdBadge = u.protegida
+                        ? '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;">Protegida</span>'
+                        : '<span style="background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;">Pendiente</span>';
+                    const idStr = String(u.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
                     return `
                         <tr class="${isSelected ? 'usr-table__row--selected' : ''}" onclick="UsuariosPanel.selectUser(${u.id})" style="cursor:pointer;">
@@ -9670,16 +9694,20 @@
                             <td><span class="usr-badge ${roleClass}">${this.escapeHtml(this.formatRol(u.rol))}</span></td>
                             <td>${this.escapeHtml(u.area || '—')}</td>
                             <td><span class="usr-badge usr-badge--${statusClass}">${statusClass === 'activo' ? 'Activo' : 'Inactivo'}</span></td>
+                            <td>${pwdBadge}</td>
                             <td>${lastAccess}</td>
                             <td>
                                 <div class="usr-table__actions" onclick="event.stopPropagation()">
                                     <button class="usr-action-btn" title="Ver" onclick="UsuariosPanel.selectUser(${u.id})">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                                     </button>
-                                    <button class="usr-action-btn" title="Editar">
+                                    <button class="usr-action-btn" title="Editar" onclick="UsuariosPanel.openUserForm(${u.id})">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                     </button>
-                                    <button class="usr-action-btn" title="Eliminar">
+                                    <button class="usr-action-btn" title="Restablecer contraseña" onclick="UsuariosPanel.abrirRestablecerId('${idStr}')">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                    </button>
+                                    <button class="usr-action-btn" title="Eliminar" onclick="UsuariosPanel.eliminarUsuario(${u.id})">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                                     </button>
                                 </div>
@@ -9813,6 +9841,234 @@
                     console.error('Error actualizando estado:', error);
                     alert('Error de conexión');
                 }
+            },
+
+            // ═══════════════════════════════════════════════════════════
+            // CRUD Y RESTABLECIMIENTO DE USUARIOS INTERNOS
+            // La contraseña nunca se precarga ni se muestra: solo se
+            // genera una nueva (opcional en el formulario) y el
+            // restablecimiento la muestra UNA sola vez en el modal.
+            // ═══════════════════════════════════════════════════════════
+
+            abrirUserFormModal(user) {
+                document.getElementById('usrFormModal')?.remove();
+                const esEdicion = !!user;
+                const roles = [...new Set(this.usuarios.map(u => (u.rol || '').trim()).filter(Boolean))].sort();
+                const rolOptions = roles.map(r => `<option value="${this.escapeHtml(r)}" ${user && (user.rol || '') === r ? 'selected' : ''}>${this.escapeHtml(this.formatRol(r))}</option>`).join('');
+
+                const modal = document.createElement('div');
+                modal.id = 'usrFormModal';
+                modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:10050;';
+                modal.innerHTML = `
+                    <div style="background:#fff;border-radius:14px;max-width:460px;width:92%;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.25);max-height:90vh;overflow:auto;">
+                        <h3 style="margin:0 0 6px;font-size:17px;color:#1e293b;">${esEdicion ? 'Editar Usuario' : 'Nuevo Usuario'}</h3>
+                        <p style="margin:0 0 14px;font-size:13px;color:#64748b;">${esEdicion ? 'Deja la contraseña vacía para conservar la actual.' : 'La contraseña es opcional: si la dejas vacía se genera una segura que se mostrará una sola vez.'}</p>
+                        <div style="display:flex;flex-direction:column;gap:10px;">
+                            <div><label style="font-size:12px;font-weight:600;color:#334155;display:block;margin-bottom:4px;">Nombre *</label><input id="usrFormNombre" type="text" value="${user ? this.escapeHtml(user.nombre || '') : ''}" style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;"></div>
+                            <div><label style="font-size:12px;font-weight:600;color:#334155;display:block;margin-bottom:4px;">Correo *</label><input id="usrFormEmail" type="email" value="${user ? this.escapeHtml(user.email || '') : ''}" style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;"></div>
+                            <div><label style="font-size:12px;font-weight:600;color:#334155;display:block;margin-bottom:4px;">Rol *</label><select id="usrFormRol" style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;background:#fff;">${user ? '' : '<option value="">Selecciona un rol...</option>'}${rolOptions}</select></div>
+                            <div><label style="font-size:12px;font-weight:600;color:#334155;display:block;margin-bottom:4px;">Área</label><input id="usrFormArea" type="text" value="${user ? this.escapeHtml(user.area || '') : ''}" style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;"></div>
+                            <div><label style="font-size:12px;font-weight:600;color:#334155;display:block;margin-bottom:4px;">Teléfono</label><input id="usrFormTelefono" type="text" value="${user ? this.escapeHtml(user.telefono || '') : ''}" style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;"></div>
+                            <div><label style="font-size:12px;font-weight:600;color:#334155;display:block;margin-bottom:4px;">Documento</label><input id="usrFormDocumento" type="text" value="${user ? this.escapeHtml(user.documento || '') : ''}" style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;"></div>
+                            <div>
+                                <label style="font-size:12px;font-weight:600;color:#334155;display:block;margin-bottom:4px;">${esEdicion ? 'Nueva contraseña (opcional)' : 'Contraseña (opcional)'}</label>
+                                <input id="usrFormPassword" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;">
+                                ${esEdicion ? '<small style="color:#64748b;font-size:11px;">Vacío = conservar la contraseña actual</small>' : '<small style="color:#64748b;font-size:11px;">Vacío = el sistema genera una segura y te la muestra una sola vez</small>'}
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+                            <button type="button" id="usrFormCancelBtn" style="padding:8px 16px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#475569;font-size:13px;font-weight:600;cursor:pointer;">Cancelar</button>
+                            <button type="button" id="usrFormSaveBtn" style="padding:8px 16px;border-radius:8px;border:none;background:#2563eb;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">${esEdicion ? 'Guardar cambios' : 'Crear usuario'}</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                modal.querySelector('#usrFormCancelBtn').onclick = () => modal.remove();
+                modal.onclick = (ev) => { if (ev.target === modal) modal.remove(); };
+                modal.querySelector('#usrFormSaveBtn').onclick = async () => {
+                    await this.guardarUsuario(user, modal);
+                };
+                modal.querySelector('#usrFormNombre').focus();
+            },
+
+            openUserForm(id) {
+                const user = id ? this.usuarios.find(u => u.id === id) : null;
+                this.abrirUserFormModal(user || null);
+            },
+
+            async guardarUsuario(user, modal) {
+                const nombre = modal.querySelector('#usrFormNombre').value.trim();
+                const email = modal.querySelector('#usrFormEmail').value.trim().toLowerCase();
+                const rol = modal.querySelector('#usrFormRol').value.trim();
+                const area = modal.querySelector('#usrFormArea').value.trim();
+                const telefono = modal.querySelector('#usrFormTelefono').value.trim();
+                const documento = modal.querySelector('#usrFormDocumento').value.trim();
+                const password = modal.querySelector('#usrFormPassword').value;
+
+                if (!nombre || !email || !rol) {
+                    alert('Nombre, correo y rol son obligatorios');
+                    return;
+                }
+                if (password && password.length < 8) {
+                    alert('La contraseña debe tener al menos 8 caracteres');
+                    return;
+                }
+
+                const tokenAdmin = this.getAdminSessionToken();
+                if (!tokenAdmin) {
+                    alert('Tu sesión administrativa no está activa. Cierra sesión y vuelve a ingresar.');
+                    return;
+                }
+
+                const action = user ? 'update_usuario' : 'add_usuario';
+                try {
+                    const response = await fetch('/.netlify/functions/conectar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action,
+                            id: user ? user.id : undefined,
+                            nombre, email, rol, area, telefono, documento,
+                            password: password || undefined,
+                            session_token: tokenAdmin
+                        })
+                    });
+                    const result = await response.json();
+                    if (!result.ok) {
+                        alert('❌ Error: ' + (result.error || 'No se pudo guardar'));
+                        return;
+                    }
+
+                    modal.remove();
+
+                    if (result.password_nueva) {
+                        // Contraseña generada por el backend: entrega única
+                        this.mostrarModalPasswordGenerada(
+                            '✅ Usuario creado',
+                            'Usuario: ' + (result.usuario?.nombre || nombre),
+                            result.password_nueva
+                        );
+                    } else {
+                        alert(user ? '✅ Usuario actualizado exitosamente' : '✅ Usuario creado exitosamente');
+                    }
+
+                    await this.loadUsuarios();
+                } catch (error) {
+                    console.error('Error guardando usuario:', error);
+                    alert('Error de conexión');
+                }
+            },
+
+            async eliminarUsuario(id) {
+                const user = this.usuarios.find(u => u.id === id);
+                if (!user) return;
+                if (!confirm(`¿Estás seguro de que deseas eliminar al usuario ${user.nombre}? Esta acción no se puede deshacer.`)) return;
+
+                const tokenAdmin = this.getAdminSessionToken();
+                if (!tokenAdmin) {
+                    alert('Tu sesión administrativa no está activa. Cierra sesión y vuelve a ingresar.');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/.netlify/functions/conectar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'delete_usuario', id: user.id, session_token: tokenAdmin })
+                    });
+                    const result = await response.json();
+                    if (!result.ok) {
+                        alert('❌ Error: ' + (result.error || 'No se pudo eliminar'));
+                        return;
+                    }
+                    alert('✅ Usuario eliminado exitosamente');
+                    if (this.selectedUserId === user.id) { this.selectedUserId = null; this.closeDetail(); }
+                    await this.loadUsuarios();
+                } catch (error) {
+                    console.error('Error eliminando usuario:', error);
+                    alert('Error de conexión');
+                }
+            },
+
+            // Desde el panel de detalle (usuario seleccionado)
+            abrirRestablecer() {
+                const user = this.usuarios.find(u => u.id === this.selectedUserId);
+                if (!user) { alert('Selecciona un usuario primero'); return; }
+                this.abrirRestablecerId(user.id);
+            },
+
+            async abrirRestablecerId(id) {
+                const user = this.usuarios.find(u => u.id === id) ||
+                    { id: id, nombre: 'Usuario', email: '' };
+                if (!confirm(`Se generará una nueva contraseña segura y permanente para ${user.nombre}. Sus sesiones activas quedarán revocadas. ¿Continuar?`)) return;
+
+                const tokenAdmin = this.getAdminSessionToken();
+                if (!tokenAdmin) {
+                    alert('Tu sesión administrativa no está activa. Cierra sesión y vuelve a ingresar.');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/.netlify/functions/conectar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'reset_password_usuario', id: user.id, session_token: tokenAdmin })
+                    });
+                    const result = await response.json();
+                    if (!result.ok) {
+                        alert('❌ Error: ' + (result.error || 'No se pudo restablecer'));
+                        return;
+                    }
+                    this.mostrarModalPasswordGenerada('✅ Contraseña restablecida', 'Usuario: ' + (result.usuario?.nombre || user.nombre), result.password_nueva);
+                    await this.loadUsuarios();
+                } catch (error) {
+                    console.error('Error restableciendo contraseña:', error);
+                    alert('Error de conexión');
+                }
+            },
+
+            // Modal de entrega única (la contraseña solo existe aquí en
+            // memoria; al cerrar se limpia y no vuelve a mostrarse).
+            mostrarModalPasswordGenerada(titulo, subtitulo, passwordNueva) {
+                document.getElementById('usrPwdDeliveryModal')?.remove();
+                const delivery = document.createElement('div');
+                delivery.id = 'usrPwdDeliveryModal';
+                delivery.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:10051;';
+                delivery.innerHTML = `
+                    <div style="background:#fff;border-radius:14px;max-width:480px;width:92%;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.25);">
+                        <h3 style="margin:0 0 6px;font-size:17px;color:#1e293b;">${titulo}</h3>
+                        <p style="margin:0 0 4px;font-size:13px;color:#475569;">${subtitulo}</p>
+                        <p style="margin:10px 0 4px;font-size:13px;color:#334155;">Nueva contraseña (se muestra <strong>solo esta vez</strong>):</p>
+                        <div style="display:flex;gap:8px;margin:8px 0 12px;">
+                            <input type="text" id="usrPwdValue" readonly value="${String(passwordNueva || '').replace(/"/g, '&quot;').replace(/</g, '&lt;')}" style="flex:1;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-family:'SF Mono',monospace;font-size:14px;font-weight:600;color:#0f172a;background:#f8fafc;user-select:all;">
+                            <button type="button" id="usrPwdCopyBtn" style="padding:10px 14px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#475569;font-size:13px;font-weight:600;cursor:pointer;">📋 Copiar</button>
+                        </div>
+                        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:16px;">
+                            ⚠️ Entregue esta contraseña por un canal seguro. No se volverá a mostrar: si se pierde, deberá restablecerla nuevamente. Las sesiones activas del usuario quedaron revocadas.
+                        </div>
+                        <div style="display:flex;justify-content:flex-end;">
+                            <button type="button" id="usrPwdCloseBtn" style="padding:8px 16px;border-radius:8px;border:none;background:#2563eb;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Ya la copié / Cerrar</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(delivery);
+                delivery.querySelector('#usrPwdCopyBtn').onclick = async () => {
+                    try {
+                        await navigator.clipboard.writeText(passwordNueva || '');
+                    } catch (e) {
+                        const campo = delivery.querySelector('#usrPwdValue');
+                        if (campo) { campo.select(); document.execCommand('copy'); }
+                    }
+                    const btn = delivery.querySelector('#usrPwdCopyBtn');
+                    if (btn) btn.textContent = '✅ Copiada';
+                };
+                const cerrar = () => {
+                    const campo = delivery.querySelector('#usrPwdValue');
+                    if (campo) campo.value = '';
+                    delivery.remove();
+                };
+                delivery.querySelector('#usrPwdCloseBtn').onclick = cerrar;
+                delivery.onclick = (ev) => { if (ev.target === delivery) cerrar(); };
             },
 
             formatRol(rol) {
